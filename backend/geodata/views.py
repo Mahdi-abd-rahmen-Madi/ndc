@@ -10,6 +10,7 @@ from .serializers import (
     AntennaSpecificationSerializer, TerrainLoadCalculationSerializer
 )
 from .services import terrain_service
+from .services_address import address_service
 
 
 class AntennaEquipmentViewSet(viewsets.ModelViewSet):
@@ -351,3 +352,106 @@ class TerrainLoadCalculationViewSet(viewsets.ModelViewSet):
             })
         
         serializer.save()
+
+
+class GeocodingSearchViewSet(viewsets.ViewSet):
+    """ViewSet for geocoding search functionality"""
+    permission_classes = [permissions.AllowAny]  # Allow public access for frontend
+    
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        """Search for addresses using geocoding API"""
+        query = request.query_params.get('q', '').strip()
+        limit = int(request.query_params.get('limit', 5))
+        terrain_type = request.query_params.get('terrain_type', None)
+        
+        if not query:
+            return Response(
+                {'error': 'Search query parameter "q" is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            if terrain_type and terrain_type in address_service.terrain_search_terms:
+                # Get addresses for specific terrain type
+                addresses = address_service.get_random_addresses(limit, terrain_type)
+                # Filter by search query if provided
+                if query:
+                    addresses = [
+                        addr for addr in addresses 
+                        if query.lower() in addr.get('city', '').lower() or 
+                           query.lower() in addr.get('label', '').lower()
+                    ]
+            else:
+                # Direct search using geocoding API
+                addresses = address_service.search_addresses(query, limit)
+                # Convert to frontend format
+                formatted_addresses = []
+                for addr in addresses:
+                    props = addr.get('properties', {})
+                    geometry = addr.get('geometry', {})
+                    coordinates = geometry.get('coordinates', [])
+                    
+                    if len(coordinates) == 2:
+                        formatted_addr = {
+                            'label': props.get('label', ''),
+                            'name': props.get('name', ''),
+                            'postcode': props.get('postcode', ''),
+                            'city': props.get('city', ''),
+                            'context': props.get('context', ''),
+                            'type': props.get('type', ''),
+                            'importance': props.get('importance', 0),
+                            'longitude': coordinates[0],
+                            'latitude': coordinates[1],
+                            'target_terrain': None
+                        }
+                        formatted_addresses.append(formatted_addr)
+                
+                addresses = formatted_addresses
+            
+            return Response({
+                'results': addresses,
+                'count': len(addresses),
+                'query': query,
+                'terrain_type': terrain_type
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def terrain_types(self, request):
+        """Get available terrain types with descriptions"""
+        terrain_descriptions = {
+            '0': 'Water/coastal areas',
+            'II': 'Open countryside',
+            'IIIa': 'Campaign with obstacles',
+            'IIIb': 'Urbanized/industrial',
+            'IV': 'Dense urban'
+        }
+        
+        return Response({
+            'terrain_types': terrain_descriptions
+        })
+    
+    @action(detail=False, methods=['get'])
+    def random_addresses(self, request):
+        """Get random addresses for testing"""
+        count = int(request.query_params.get('count', 10))
+        terrain_type = request.query_params.get('terrain_type', None)
+        
+        try:
+            addresses = address_service.get_random_addresses(count, terrain_type)
+            return Response({
+                'results': addresses,
+                'count': len(addresses),
+                'terrain_type': terrain_type
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

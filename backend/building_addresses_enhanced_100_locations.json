@@ -1,0 +1,1103 @@
+[
+  {
+    "lat_lng": "45.953027, -0.503722",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 64.20765362580534,
+      "complex_agriculture": 1.8738918977914905,
+      "forest": 1.99978715834249,
+      "urban": 31.918667318060688,
+      "coastal": 0.0
+    },
+    "note": "Target coordinate - should be IIIa"
+  },
+  {
+    "lat_lng": "44.126752, 1.446679",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 2.339656650198872,
+      "complex_agriculture": 84.53096241038615,
+      "forest": 11.215353386069692,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.972872, 1.554922",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 19.31193488673013,
+      "complex_agriculture": 31.377639347053787,
+      "forest": 49.31042576621609,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.603587, 1.06841",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 64.46512454331835,
+      "complex_agriculture": 0.0,
+      "forest": 35.53487545668163,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.144201, -0.680805",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 35.42811046719096,
+      "complex_agriculture": 54.036944003880826,
+      "forest": 0.0,
+      "urban": 8.150526061279697,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.119658, 3.272579",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 82.62734968230852,
+      "complex_agriculture": 6.82011668642995,
+      "forest": 0.0,
+      "urban": 10.552533631261522,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.637108, 2.602622",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 30.29293214980339,
+      "complex_agriculture": 7.148064371110065,
+      "forest": 62.55900347908655,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.721577, -1.210191",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 53.693918477631755,
+      "complex_agriculture": 46.1961619274892,
+      "forest": 0.10991959487904185,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "43.233979, 1.202839",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 73.41489222892527,
+      "complex_agriculture": 22.96639649114265,
+      "forest": 3.415727108790449,
+      "urban": 0.20298417114164258,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.708801, 2.562295",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 59.23400768503657,
+      "complex_agriculture": 20.87836999648559,
+      "forest": 5.176473406282991,
+      "urban": 4.940413423302844,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.683481, 1.85687",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 1.2864270286498318,
+      "complex_agriculture": 5.975422477124603,
+      "forest": 92.73815049422555,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.36075, 7.325641",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.5287808914350379,
+      "complex_agriculture": 8.223734465626315,
+      "forest": 82.13109935735235,
+      "urban": 9.116385285586285,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "42.380442, 2.023492",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 2.4279793625459773,
+      "complex_agriculture": 1.1989735799663659,
+      "forest": 93.0847423155007,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.171799, -2.947024",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 88.44556323520561,
+      "complex_agriculture": 11.55443676479439,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.324909, 2.170623",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 71.52326492811223,
+      "complex_agriculture": 17.919138001694044,
+      "forest": 10.557597070193731,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.912267, 3.169231",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 55.58676534325715,
+      "complex_agriculture": 0.5775037792897469,
+      "forest": 43.8357308774531,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "41.908693, 9.045317",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 2.3941024906699226,
+      "forest": 97.31789614643385,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.103932, 6.26469",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 66.58957852188279,
+      "forest": 15.491670659419379,
+      "urban": 17.918750818697852,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.248519, 3.018695",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 56.90985856235694,
+      "complex_agriculture": 1.244206241277832,
+      "forest": 27.270997811386465,
+      "urban": 7.592516215494355,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.927627, 1.093533",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 52.48133291035467,
+      "complex_agriculture": 8.153182573161155,
+      "forest": 30.16959293543059,
+      "urban": 9.195891581053578,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.504418, 2.6266",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 13.929754149158924,
+      "complex_agriculture": 0.0,
+      "forest": 45.53048358380229,
+      "urban": 40.53754163582161,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.599453, 5.333707",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 7.306837728304585,
+      "forest": 92.69316227169543,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.683763, 4.142309",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 80.20662658619025,
+      "complex_agriculture": 3.9446897848896656,
+      "forest": 12.670034369205704,
+      "urban": 3.1786492597143585,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.632944, -0.944127",
+    "terrain_type": "IV",
+    "spatial_extent": {
+      "agriculture": 78.58075201351566,
+      "complex_agriculture": 10.562194457220887,
+      "forest": 5.276715761067862,
+      "urban": 5.580337768195563,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "43.705798, 5.160255",
+    "terrain_type": "IV",
+    "spatial_extent": {
+      "agriculture": 14.6158669216017,
+      "complex_agriculture": 43.965320160408474,
+      "forest": 25.694056221931273,
+      "urban": 12.215656572533089,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.022937, 1.488832",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 100.0,
+      "complex_agriculture": 0.0,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.054639, 3.899368",
+    "terrain_type": "IV",
+    "spatial_extent": {
+      "agriculture": 12.302365224333043,
+      "complex_agriculture": 20.085869954892786,
+      "forest": 0.801759939535712,
+      "urban": 62.555998481737106,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.842044, 6.501388",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 93.49051208645152,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.383378, 6.379713",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 28.417353737148215,
+      "complex_agriculture": 37.371837886754115,
+      "forest": 27.26217658502317,
+      "urban": 6.948631791074482,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.062594, -0.381905",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 68.43983172787462,
+      "complex_agriculture": 31.560168272125384,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.200177, 2.817941",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 70.52361222824945,
+      "complex_agriculture": 0.0,
+      "forest": 27.95361730324358,
+      "urban": 1.5227704685069587,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.211043, 3.393836",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 59.71252360973327,
+      "complex_agriculture": 15.426354124308912,
+      "forest": 22.367785079880946,
+      "urban": 2.4933371860768845,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.421523, 4.180227",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 30.95193919575226,
+      "forest": 52.69516048237814,
+      "urban": 12.187716416264088,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.054289, -1.722804",
+    "terrain_type": "IV",
+    "spatial_extent": {
+      "agriculture": 39.881926514634344,
+      "complex_agriculture": 31.552545866302566,
+      "forest": 0.0,
+      "urban": 8.028737613761379,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.735255, 4.475826",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 45.655112091146535,
+      "complex_agriculture": 31.279842102254484,
+      "forest": 14.088058379490805,
+      "urban": 8.97698742710817,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.487298, -0.093296",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 38.366087913465535,
+      "complex_agriculture": 11.645367969062821,
+      "forest": 49.98854411747164,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.969858, 5.535766",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 85.94547466388397,
+      "complex_agriculture": 4.368502809161576,
+      "forest": 9.655166106181397,
+      "urban": 0.030856420773048357,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.970685, -2.23916",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 5.274986297958394,
+      "complex_agriculture": 0.0,
+      "forest": 94.72501370204158,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.734027, 6.430606",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 9.914643461633876,
+      "complex_agriculture": 20.20081373377638,
+      "forest": 53.794396189609714,
+      "urban": 16.090146614980014,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.153953, 1.56865",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 15.327367167097131,
+      "complex_agriculture": 7.135395242781501,
+      "forest": 16.00158461112284,
+      "urban": 61.53565297899852,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.069797, 0.171868",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 59.348710670660445,
+      "complex_agriculture": 3.140520931594631,
+      "forest": 31.41616818737343,
+      "urban": 6.094600210371497,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.018331, 2.825479",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 97.54939352263796,
+      "complex_agriculture": 0.0,
+      "forest": 0.955865657441104,
+      "urban": 1.4947408199209515,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.047888, 0.648964",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 70.60312826596638,
+      "complex_agriculture": 0.0,
+      "forest": 23.579964567419008,
+      "urban": 5.816907166614622,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.490916, 0.412751",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 50.959573701209116,
+      "complex_agriculture": 0.0,
+      "forest": 38.74729568997689,
+      "urban": 10.293130608814007,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.906435, 1.31189",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.05576771753197177,
+      "complex_agriculture": 46.16774117740624,
+      "forest": 53.77649110506179,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.868979, -0.63508",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 99.55346511024142,
+      "complex_agriculture": 0.4465348897585696,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.413411, -1.743515",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 35.07723301435458,
+      "complex_agriculture": 58.87068481986325,
+      "forest": 6.05208216578218,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "43.505613, -1.504943",
+    "terrain_type": "0",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.6808648973815824,
+      "forest": 0.0,
+      "urban": 64.95796981817132,
+      "coastal": 8.873334425607275
+    }
+  },
+  {
+    "lat_lng": "43.551172, 1.932374",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 100.0,
+      "complex_agriculture": 0.0,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "50.858682, 1.924248",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 84.719593731692,
+      "complex_agriculture": 5.731010288636616,
+      "forest": 0.0,
+      "urban": 7.758930634526434,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.97809, 3.094383",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 85.26894944839222,
+      "complex_agriculture": 7.441057689237115,
+      "forest": 7.28999286237067,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.869387, 4.20281",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 98.83418501891549,
+      "complex_agriculture": 0.0,
+      "forest": 0.0,
+      "urban": 1.16581498108452,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.149175, 6.162628",
+    "terrain_type": "0",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 3.766470538958601,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.348696, 2.479362",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 61.64844390909173,
+      "complex_agriculture": 24.69712742842444,
+      "forest": 0.0,
+      "urban": 13.654428662483845,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.467901, 2.047816",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 6.111689620794376,
+      "complex_agriculture": 85.92247954002538,
+      "forest": 7.96583083918025,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "43.959981, 2.97948",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 31.248830731378884,
+      "complex_agriculture": 45.20183102464067,
+      "forest": 18.632203231859492,
+      "urban": 4.917135012120976,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.398267, 6.195903",
+    "terrain_type": "0",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 61.874688968543204,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.060423, 5.898282",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 17.1184963871357,
+      "complex_agriculture": 0.0,
+      "forest": 81.75249221035446,
+      "urban": 1.129011402509853,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.045316, -3.19763",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 55.14345119343924,
+      "complex_agriculture": 34.39224386724609,
+      "forest": 10.170922283086401,
+      "urban": 0.2933826562282699,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.701203, 7.361703",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 46.21547480023928,
+      "complex_agriculture": 8.559085940185941,
+      "forest": 18.09814975592287,
+      "urban": 13.815309327004524,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.367739, 6.767851",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.06072733450913101,
+      "forest": 97.14394697351624,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.367153, 6.136072",
+    "terrain_type": "IV",
+    "spatial_extent": {
+      "agriculture": 35.95819417956574,
+      "complex_agriculture": 9.589020632057002,
+      "forest": 6.3696880408846575,
+      "urban": 48.0548366859659,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.085033, 0.686762",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 61.24235330736204,
+      "complex_agriculture": 29.46575736511596,
+      "forest": 9.291889327522005,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.318425, 1.864388",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 32.47606373664478,
+      "complex_agriculture": 11.610111566501946,
+      "forest": 55.913824696853275,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.849806, 3.042813",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 74.39950949543336,
+      "complex_agriculture": 15.585022842754606,
+      "forest": 3.5702192010875975,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.367297, 5.702486",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 8.9601044819151,
+      "complex_agriculture": 4.1698301987282385,
+      "forest": 81.17345489635493,
+      "urban": 5.696610423001736,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.461706, -4.498661",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 75.12065072405932,
+      "complex_agriculture": 20.425417351452133,
+      "forest": 0.0,
+      "urban": 4.453931924488557,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.398508, 5.638321",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 33.70014491775716,
+      "complex_agriculture": 0.44534848490427154,
+      "forest": 65.85450659733857,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.839946, -0.731802",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 76.90434401339535,
+      "complex_agriculture": 23.095655986604648,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.792508, 2.475794",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 62.7685600423944,
+      "complex_agriculture": 3.3522351775802974,
+      "forest": 14.654103627974195,
+      "urban": 19.010419495598597,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.622875, 6.542866",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 83.31672981107614,
+      "complex_agriculture": 0.383037439144179,
+      "forest": 14.707571891079468,
+      "urban": 1.5926608587002289,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.986962, -0.57366",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 63.81481321774538,
+      "complex_agriculture": 21.93185214422059,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.617751, -0.273343",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 11.125004741852235,
+      "urban": 3.0433487380416966,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.401843, 6.767907",
+    "terrain_type": "0",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 26.47279152602116,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.410759, 4.877238",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 20.041648514744324,
+      "complex_agriculture": 1.7377348563515866,
+      "forest": 78.22061662890408,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.329999, 1.859714",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 39.8961189378031,
+      "complex_agriculture": 22.571053048155726,
+      "forest": 37.53282801404118,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.656651, -1.539709",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 61.54925490227258,
+      "complex_agriculture": 24.69464477578751,
+      "forest": 8.18583306856259,
+      "urban": 5.570267253377327,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.537609, 7.314231",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 15.241070194796757,
+      "complex_agriculture": 30.486359949099622,
+      "forest": 37.96629386239109,
+      "urban": 16.306275993712525,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "47.354699, 6.515144",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 16.385194551513578,
+      "complex_agriculture": 37.83499618025428,
+      "forest": 45.77980926823216,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.916483, 3.149736",
+    "terrain_type": "IV",
+    "spatial_extent": {
+      "agriculture": 48.01013461915493,
+      "complex_agriculture": 6.438094908276846,
+      "forest": 35.52995699542448,
+      "urban": 10.02181347714376,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.07894, 0.627359",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 72.96837027689439,
+      "complex_agriculture": 0.0,
+      "forest": 23.774739874648375,
+      "urban": 3.256889848457225,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.319981, 3.943245",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.5839088474042488,
+      "forest": 99.41609115259574,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.762469, 0.673023",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 80.9115926495154,
+      "complex_agriculture": 0.8612553672727782,
+      "forest": 18.22715198321184,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.405842, 6.693496",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 11.56019579113812,
+      "complex_agriculture": 24.14877944585311,
+      "forest": 51.85649679516138,
+      "urban": 9.789085131773124,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.452605, 0.682165",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 5.873468951447272,
+      "complex_agriculture": 79.51402759075766,
+      "forest": 2.904549063463359,
+      "urban": 5.775790596319693,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "43.903503, 2.918942",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 14.127162555181306,
+      "complex_agriculture": 31.77625903417808,
+      "forest": 54.0965784106406,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.355689, 2.796488",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 19.683344599942355,
+      "complex_agriculture": 0.0,
+      "forest": 66.13397492944692,
+      "urban": 7.607153890503756,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.424908, -3.301844",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 62.959386515936956,
+      "complex_agriculture": 26.542395268251802,
+      "forest": 10.498218215811246,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.442797, 5.230842",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 64.74245827453105,
+      "complex_agriculture": 6.530412181307743,
+      "forest": 15.700313217203233,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.956383, 3.665456",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 92.98314056802121,
+      "complex_agriculture": 0.0,
+      "forest": 2.480574769355535,
+      "urban": 4.5362846626232445,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "48.443653, 7.228314",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 92.52269297187979,
+      "urban": 7.477307028120217,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "46.136522, -0.687803",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 77.25356114465166,
+      "complex_agriculture": 11.116975953805818,
+      "forest": 4.031537509204263,
+      "urban": 7.597925392338246,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.19487, -1.279175",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 75.22599608226021,
+      "complex_agriculture": 24.77400391773978,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.185284, 2.986275",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 0.7687855746479544,
+      "complex_agriculture": 99.23121442535205,
+      "forest": 0.0,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "45.866087, -0.732614",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 66.3104256214346,
+      "complex_agriculture": 28.4287670434886,
+      "forest": 0.0,
+      "urban": 2.857025757475779,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "50.176578, 3.613378",
+    "terrain_type": "II",
+    "spatial_extent": {
+      "agriculture": 82.86302957159296,
+      "complex_agriculture": 0.0,
+      "forest": 5.965442495836243,
+      "urban": 11.171527932570786,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.053157, 3.342783",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 51.832426905764784,
+      "complex_agriculture": 0.0,
+      "forest": 35.95265755759415,
+      "urban": 5.8565088279611865,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "49.086408, 6.076862",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 3.9258445310006045,
+      "complex_agriculture": 4.639006217528665,
+      "forest": 51.12621256946726,
+      "urban": 28.24553757291733,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "44.620277, 2.86805",
+    "terrain_type": "IIIa",
+    "spatial_extent": {
+      "agriculture": 72.11094924029821,
+      "complex_agriculture": 2.9662275494797785,
+      "forest": 24.922823210222017,
+      "urban": 0.0,
+      "coastal": 0.0
+    }
+  },
+  {
+    "lat_lng": "42.54658, 8.730613",
+    "terrain_type": "0",
+    "spatial_extent": {
+      "agriculture": 0.0,
+      "complex_agriculture": 0.0,
+      "forest": 80.34978611679537,
+      "urban": 1.8488761872816288,
+      "coastal": 0.3698472982946599
+    }
+  }
+]

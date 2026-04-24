@@ -23,7 +23,7 @@ class AntennaEquipment(models.Model):
     
     # Terrain classification mapping from CLC Code_18 to terrain types
     CLC_CODE_TO_TERRAIN = {
-        # Terrain 0: Water/coastal areas
+        # Terrain 0: Water/coastal areas (Mer, océan, lacs, côte exposée au vent)
         '511': '0',   # Water courses
         '512': '0',   # Water bodies  
         '521': '0',   # Coastal lagoons
@@ -32,26 +32,27 @@ class AntennaEquipment(models.Model):
         '423': '0',   # Intertidal flats
         '421': '0',   # Salt marshes
         '422': '0',   # Salines
+        # Additional water codes for complete coverage
+        '331': '0',   # Beaches, dunes, sands (côte directement exposée au vent)
+        '332': '0',   # Bare rocks
+        '333': '0',   # Sparsely vegetated areas
+        '334': '0',   # Burnt areas
+        '335': '0',   # Glaciers and perpetual snow
         
-        # Terrain II: Open countryside (rase campagne)
+        # Terrain II: Open countryside (rase campagne) - Champs agricoles, prairie, quelques arbres ou bâtiments isolés
         '211': 'II',   # Non-irrigated arable land
         '212': 'II',   # Permanently irrigated land
         '213': 'II',   # Rice fields
         '231': 'II',   # Pastures
-        '331': 'II',   # Beaches - dunes - sands
-        '332': 'II',   # Bare rocks
-        '333': 'II',   # Sparsely vegetated areas
-        '334': 'II',   # Burnt areas
-        '335': 'II',   # Glaciers and perpetual snow
         
-        # Terrain IIIa: Campaign with obstacles (bocage, habitat dispersé)
+        # Terrain IIIa: Campaign with obstacles (bocage, habitat dispersé) - Bocage, vignobles, haies, habitat dispersé
         '221': 'IIIa', # Vineyards
         '222': 'IIIa', # Fruit trees and berry plantations
         '223': 'IIIa', # Olive groves
         '241': 'IIIa', # Annual crops associated with permanent crops
-        '242': 'IIIa', # Complex cultivation patterns
+        '242': 'IIIa', # Complex cultivation patterns (typical bocage)
         '243': 'IIIa', # Land principally occupied by agriculture with significant areas of natural vegetation
-        '244': 'IIIa', # Agro-forestry areas
+        '244': 'IIIa', # Agro-forestry areas (classic bocage)
         '311': 'IIIa', # Broad-leaved forest
         '312': 'IIIa', # Coniferous forest
         '313': 'IIIa', # Mixed forest
@@ -62,7 +63,7 @@ class AntennaEquipment(models.Model):
         '411': 'IIIa', # Inland marshes
         '412': 'IIIa', # Peat bogs
         
-        # Terrain IIIb: Urbanized/industrial zones (bocage denser)
+        # Terrain IIIb: Zone semi-urbaine / plus dense - Zones industrielles, zones agricoles denses, vergers, maisons rapprochées
         '121': 'IIIb', # Industrial or commercial units
         '122': 'IIIb', # Road and rail networks and associated land
         '123': 'IIIb', # Port areas
@@ -72,7 +73,7 @@ class AntennaEquipment(models.Model):
         '133': 'IIIb', # Construction sites
         '142': 'IIIb', # Sport and leisure facilities
         
-        # Terrain IV: Dense urban zones
+        # Terrain IV: Zone urbaine dense - Ville, immeubles, bâtiments hauts (>15m), densité importante
         '111': 'IV',   # Continuous urban fabric
         '112': 'IV',   # Discontinuous urban fabric
         '141': 'IV',   # Green urban areas

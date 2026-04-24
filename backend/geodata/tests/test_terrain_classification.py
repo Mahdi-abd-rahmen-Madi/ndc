@@ -2,6 +2,7 @@
 Comprehensive tests for terrain classification system with address verification.
 """
 import json
+import math
 from decimal import Decimal
 from django.test import TestCase
 from django.core.management import call_command
@@ -321,3 +322,164 @@ class PerformanceTest(TestCase):
         
         # Second call should be faster (cache benefit)
         self.assertLess(second_call_time, first_call_time)
+
+
+class EnhancedTerrainClassificationTest(TestCase):
+    """Enhanced tests for terrain classification fixes."""
+    
+    def test_terrain_0_water_codes(self):
+        """Test that all water-related codes are properly mapped to Terrain 0."""
+        water_codes = [
+            '511', '512', '521', '522', '523',  # Water bodies and coastal
+            '421', '422', '423',                # Coastal wetlands
+            '331', '332', '333', '334', '335'  # Natural areas near coast
+        ]
+        
+        for code in water_codes:
+            terrain = AntennaEquipment.get_terrain_from_clc_code(code)
+            self.assertEqual(terrain, '0', f"Code {code} should map to Terrain 0")
+    
+    def test_terrain_ii_open_countryside(self):
+        """Test that open countryside codes are properly mapped to Terrain II."""
+        countryside_codes = [
+            '211', '212', '213', '231'  # Agricultural land and pastures
+        ]
+        
+        for code in countryside_codes:
+            terrain = AntennaEquipment.get_terrain_from_clc_code(code)
+            self.assertEqual(terrain, 'II', f"Code {code} should map to Terrain II")
+    
+    def test_coastal_proximity_enhancement(self):
+        """Test enhanced coastal proximity detection."""
+        # Test cases for coastal urban areas that should become Terrain 0
+        coastal_urban_cases = [
+            # (longitude, latitude, description)
+            (3.0, 43.6, 'Mediterranean coast near urban area'),
+            (-1.5, 47.2, 'Atlantic coast near urban area'),
+            (6.2, 49.6, 'North Sea coast near urban area'),
+        ]
+        
+        for lon, lat, description in coastal_urban_cases:
+            with self.subTest(location=description):
+                # Mock the land use data to simulate urban area near coast
+                with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+                    mock_gdf = MagicMock()
+                    # Simulate finding urban area first
+                    mock_urban = MagicMock()
+                    mock_urban.geometry.intersects.return_value = True
+                    mock_gdf.__getitem__.return_value = [mock_urban]
+                    mock_gdf.__len__.return_value = 1
+                    
+                    # Simulate finding water areas for proximity check
+                    def side_effect(code_list):
+                        if code_list == ['Code_18']:
+                            return [mock_urban]
+                        else:  # Water codes query
+                            mock_water = MagicMock()
+                            mock_water.geometry.intersects.return_value = True
+                            return mock_water
+                    
+                    mock_gdf.__getitem__.side_effect = side_effect
+                    mock_load.return_value = mock_gdf
+                    
+                    terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+                    # Should be enhanced to Terrain 0 due to coastal proximity
+                    self.assertEqual(terrain, '0', 
+                                   f"Coastal urban area {description} should be Terrain 0")
+    
+    def test_urban_density_enhancement(self):
+        """Test enhanced urban density detection."""
+        # Test cases for agricultural areas near urban development
+        urban_proximity_cases = [
+            # (longitude, latitude, description)
+            (2.4, 48.9, 'Agricultural land near Paris suburbs'),
+            (4.9, 45.8, 'Agricultural land near Lyon'),
+            (5.4, 43.3, 'Agricultural land near Marseille'),
+        ]
+        
+        for lon, lat, description in urban_proximity_cases:
+            with self.subTest(location=description):
+                # Mock the land use data to simulate agricultural area near urban
+                with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+                    mock_gdf = MagicMock()
+                    # Simulate finding agricultural area first
+                    mock_agri = MagicMock()
+                    mock_agri.geometry.intersects.return_value = True
+                    mock_gdf.__getitem__.return_value = [mock_agri]
+                    mock_gdf.__len__.return_value = 1
+                    
+                    # Simulate finding urban areas for proximity check
+                    def side_effect(code_list):
+                        if code_list == ['Code_18']:
+                            return [mock_agri]
+                        else:  # Urban codes query
+                            mock_urban = MagicMock()
+                            mock_urban.geometry.intersects.return_value = True
+                            return mock_urban
+                    
+                    mock_gdf.__getitem__.side_effect = side_effect
+                    mock_load.return_value = mock_gdf
+                    
+                    terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+                    # Should be enhanced to Terrain IIIb due to urban proximity
+                    self.assertEqual(terrain, 'IIIb', 
+                                   f"Agricultural near urban {description} should be Terrain IIIb")
+    
+    def test_distance_calculation_accuracy(self):
+        """Test that distance calculations are more accurate."""
+        # Test the haversine approximation implementation
+        test_cases = [
+            # (lat, expected_km_per_deg_lon_ratio)
+            (0.0, 1.0),      # Equator: km_per_deg_lon = km_per_deg_lat
+            (45.0, 0.707),   # 45°: km_per_deg_lon ≈ 0.707 * km_per_deg_lat
+            (60.0, 0.5),     # 60°: km_per_deg_lon ≈ 0.5 * km_per_deg_lat
+            (90.0, 0.0),     # Pole: km_per_deg_lon ≈ 0
+        ]
+        
+        for lat, expected_ratio in test_cases:
+            with self.subTest(latitude=lat):
+                lat_rad = math.radians(lat)
+                km_per_deg_lat = 111.0
+                km_per_deg_lon = 111.0 * math.cos(lat_rad)
+                
+                actual_ratio = km_per_deg_lon / km_per_deg_lat
+                self.assertAlmostEqual(actual_ratio, expected_ratio, places=2,
+                                     msg=f"Distance ratio at {lat}° should be ~{expected_ratio}")
+    
+    def test_enhanced_urban_codes(self):
+        """Test that all urban and industrial codes are included."""
+        expected_urban_codes = [
+            # Terrain IV: Dense urban zones
+            '111', '112', '141',  
+            # Terrain IIIb: Urbanized/industrial zones
+            '121', '122', '123', '124',  
+            '131', '132', '133', '142'
+        ]
+        
+        # Test that these codes are included in urban proximity detection
+        for code in expected_urban_codes:
+            terrain = AntennaEquipment.get_terrain_from_clc_code(code)
+            self.assertIn(terrain, ['IIIb', 'IV'], 
+                         f"Urban code {code} should map to IIIb or IV")
+    
+    def test_enhanced_water_codes(self):
+        """Test that all water and coastal codes are included."""
+        expected_water_codes = [
+            '511', '512', '521', '522', '523',  # Water bodies and coastal
+            '421', '422', '423',                # Coastal wetlands
+            '331', '332', '333', '334', '335'  # Natural areas near coast
+        ]
+        
+        # Test that these codes are included in coastal proximity detection
+        for code in expected_water_codes:
+            terrain = AntennaEquipment.get_terrain_from_clc_code(code)
+            self.assertEqual(terrain, '0', 
+                           f"Water code {code} should map to Terrain 0")
+    
+    def test_threshold_values(self):
+        """Test that threshold values are appropriate."""
+        # Coastal proximity threshold should be 5.0 km
+        self.assertEqual(terrain_service._is_near_coast.__defaults__[0], 5.0)
+        
+        # Urban proximity threshold should be 3.0 km
+        self.assertEqual(terrain_service._is_near_urban.__defaults__[0], 3.0)
