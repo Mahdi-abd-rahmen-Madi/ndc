@@ -10,6 +10,7 @@ from django.core.cache import cache
 import geopandas as gpd
 from shapely.geometry import Point
 from .models import AntennaEquipment
+from .terrain_config_service import terrain_config_service
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ class TerrainClassificationService:
     def __init__(self):
         self.land_use_data = None
         self.land_use_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'OS_FRANCE.fgb')
+        self.wind_coeff_data = None
+        self.wind_coeff_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
         self.cache_timeout = 3600  # 1 hour cache
         self._spatial_index = None
         self._water_areas = None
@@ -46,24 +49,79 @@ class TerrainClassificationService:
     def _pre_filter_areas(self):
         """Pre-filter water and urban areas for performance optimization."""
         if self.land_use_data is not None:
-            # Water and coastal codes
-            water_codes = [
+            # Get performance settings from configuration
+            config = terrain_config_service.load_config()
+            performance_settings = config.get('performance_settings', {})
+            prefilter_categories = performance_settings.get('prefilter_categories', {})
+            
+            # Water and coastal codes from configuration
+            water_codes = prefilter_categories.get('water_codes', [
                 '511', '512', '521', '522', '523',  # Water bodies and coastal
                 '421', '422', '423',                # Coastal wetlands
                 '331', '332', '333', '334', '335'  # Natural areas near coast
-            ]
+            ])
             
-            # Urban and industrial codes
-            urban_codes = [
+            # Urban and industrial codes from configuration
+            urban_codes = prefilter_categories.get('urban_codes', [
                 '111', '112', '141',  # Dense urban zones
                 '121', '122', '123', '124',  # Urbanized/industrial zones
                 '131', '132', '133', '142'   # Industrial zones
-            ]
+            ])
             
             self._water_areas = self.land_use_data[self.land_use_data['Code_18'].isin(water_codes)]
             self._urban_areas = self.land_use_data[self.land_use_data['Code_18'].isin(urban_codes)]
             
             logger.info(f"Pre-filtered {len(self._water_areas)} water areas and {len(self._urban_areas)} urban areas")
+    
+    def _load_wind_coeff_data(self):
+        """Load wind coefficient data from GeoJSON file."""
+        if self.wind_coeff_data is None:
+            try:
+                self.wind_coeff_data = gpd.read_file(self.wind_coeff_file)
+                logger.info(f"Loaded {len(self.wind_coeff_data)} wind coefficient regions")
+            except Exception as e:
+                logger.error(f"Failed to load wind coefficient data: {e}")
+                raise
+        return self.wind_coeff_data
+    
+    def get_region_from_coordinates(self, longitude: float, latitude: float) -> Optional[int]:
+        """
+        Determine region number from coordinates using wind coefficient data.
+        
+        Args:
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate
+            
+        Returns:
+            Region number (1-4) or None if not found
+        """
+        try:
+            # Load wind coefficient data
+            gdf = self._load_wind_coeff_data()
+            
+            # Create point geometry
+            point = Point(longitude, latitude)
+            
+            # Find intersecting region
+            intersects = gdf[gdf.geometry.intersects(point)]
+            
+            if len(intersects) > 0:
+                # Get the V_B0 value from the first intersecting region
+                v_b0 = intersects.iloc[0]['V_B0']
+                
+                # Map V_B0 to region using the model's mapping
+                from .models import AntennaEquipment
+                region = AntennaEquipment.get_region_from_vb0(v_b0)
+                
+                logger.debug(f"Coordinates ({longitude}, {latitude}) -> V_B0: {v_b0} -> Region: {region}")
+                return region
+            else:
+                logger.warning(f"No wind coefficient region found at coordinates ({longitude}, {latitude})")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error determining region for coordinates ({longitude}, {latitude}): {e}")
+            return None
     
     def get_terrain_type_at_coordinates(self, longitude: float, latitude: float) -> Optional[str]:
         """
@@ -97,7 +155,7 @@ class TerrainClassificationService:
             if len(intersects) > 0:
                 # Get the first intersecting polygon's Code_18
                 clc_code = intersects.iloc[0]['Code_18']
-                terrain_type = AntennaEquipment.get_terrain_from_clc_code(clc_code)
+                terrain_type = terrain_config_service.get_terrain_type_from_clc_code(clc_code)
                 
                 # Apply enhanced classification rules
                 terrain_type = self._apply_enhanced_rules(terrain_type, longitude, latitude, gdf)
@@ -118,11 +176,7 @@ class TerrainClassificationService:
     
     def _apply_enhanced_rules(self, terrain_type: str, longitude: float, latitude: float, gdf) -> str:
         """
-        Apply enhanced classification rules with proper priority order:
-        1. Coastal classification (highest priority for exposed areas)
-        2. Dense urban areas
-        3. Transitional zones and bocage patterns
-        4. Proximity-based upgrades
+        Apply enhanced classification rules with proper priority order based on configuration.
         
         Args:
             terrain_type: Initial terrain type from CLC mapping
@@ -133,32 +187,83 @@ class TerrainClassificationService:
         Returns:
             Enhanced terrain type
         """
-        # Priority 1: Coastal classification - highest priority for exposed coastal terrain
-        if self._has_exposed_coastal_conditions(longitude, latitude, gdf):
+        # Get classification rules from configuration
+        rules = terrain_config_service.get_classification_rules()
+        
+        # Sort rules by priority and apply enabled rules
+        enabled_rules = [
+            (name, rule) for name, rule in rules.items() 
+            if rule.get('enabled', True)
+        ]
+        enabled_rules.sort(key=lambda x: x[1].get('priority', 999))
+        
+        for rule_name, rule in enabled_rules:
+            if self._apply_classification_rule(rule_name, rule, terrain_type, longitude, latitude, gdf):
+                # Rule was applied and modified terrain type
+                modified_terrain = self._get_rule_result(rule_name, terrain_type, longitude, latitude, gdf)
+                if modified_terrain != terrain_type:
+                    logger.debug(f"Rule {rule_name} applied: {terrain_type} -> {modified_terrain}")
+                    return modified_terrain
+        
+        return terrain_type
+    
+    def _apply_classification_rule(self, rule_name: str, rule: dict, terrain_type: str, 
+                                 longitude: float, latitude: float, gdf) -> bool:
+        """Check if a classification rule should be applied."""
+        try:
+            if rule_name == 'coastal_exposure':
+                return self._has_exposed_coastal_conditions(longitude, latitude, gdf)
+            
+            elif rule_name == 'dense_urban':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['II', 'IIIb'])
+                return terrain_type in applicable_terrain and self._is_dense_urban_area(longitude, latitude, gdf)
+            
+            elif rule_name == 'bocage_characteristics':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['IV', 'IIIb'])
+                return terrain_type in applicable_terrain and self._has_bocage_characteristics(longitude, latitude, gdf)
+            
+            elif rule_name == 'open_countryside':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['IIIa'])
+                return terrain_type in applicable_terrain and self._is_actually_open_countryside(longitude, latitude, gdf)
+            
+            elif rule_name == 'transitional_zone':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['II'])
+                return terrain_type in applicable_terrain and self._is_enhanced_transitional_zone(longitude, latitude, gdf)
+            
+            elif rule_name == 'proximity_urban':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['II'])
+                return terrain_type in applicable_terrain and self._is_near_urban(longitude, latitude, gdf)
+            
+            elif rule_name == 'proximity_forest':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['II'])
+                return terrain_type in applicable_terrain and self._is_near_forest(longitude, latitude, gdf)
+            
+            return False
+            
+        except Exception as e:
+            logger.debug(f"Error applying rule {rule_name}: {e}")
+            return False
+    
+    def _get_rule_result(self, rule_name: str, terrain_type: str, 
+                        longitude: float, latitude: float, gdf) -> str:
+        """Get the result terrain type for a classification rule."""
+        rules = terrain_config_service.get_classification_rules()
+        rule = rules.get(rule_name, {})
+        
+        if rule_name == 'coastal_exposure':
             return '0'
-        
-        # Priority 2: Dense urban areas - check before other rules
-        if terrain_type in ['II', 'IIIb'] and self._is_dense_urban_area(longitude, latitude, gdf):
+        elif rule_name == 'dense_urban':
             return 'IV'
-        
-        # Priority 3: Urban areas with bocage characteristics - downgrade to IIIa
-        if terrain_type in ['IV', 'IIIb'] and self._has_bocage_characteristics(longitude, latitude, gdf):
+        elif rule_name == 'bocage_characteristics':
             return 'IIIa'
-        
-        # Priority 4: Handle complex agriculture that should be open countryside
-        if terrain_type == 'IIIa' and self._is_actually_open_countryside(longitude, latitude, gdf):
+        elif rule_name == 'open_countryside':
             return 'II'
-        
-        # Priority 5: Transitional zones and bocage patterns
-        if terrain_type == 'II' and self._is_enhanced_transitional_zone(longitude, latitude, gdf):
+        elif rule_name == 'transitional_zone':
             return 'IIIa'
-        
-        # Priority 4: Proximity-based upgrades
-        if terrain_type == 'II' and self._is_near_urban(longitude, latitude, gdf):
-            return 'IIIb'
-        
-        if terrain_type == 'II' and self._is_near_forest(longitude, latitude, gdf):
-            return 'IIIa'
+        elif rule_name == 'proximity_urban':
+            return rule.get('conditions', {}).get('target_terrain', 'IIIb')
+        elif rule_name == 'proximity_forest':
+            return rule.get('conditions', {}).get('target_terrain', 'IIIa')
         
         return terrain_type
     
@@ -210,13 +315,16 @@ class TerrainClassificationService:
             if total_area == 0:
                 return {}
             
-            # Define land use categories
-            agri_codes = {'211', '212', '213', '231'}  # Pure agriculture
-            complex_agri = {'241', '242', '243', '244'}  # Complex cultivation
-            forest_codes = {'311', '312', '313', '321', '322', '323', '324'}
-            urban_codes = {'111', '112', '121', '122', '123', '124', '131', '132', '133', '142'}
-            true_coastal_codes = {'521', '522', '523', '423', '331'}  # True coastal water bodies
-            inland_water_codes = {'511', '512'}  # Inland water courses and bodies
+            # Get land use categories from configuration
+            influence = terrain_config_service.get_influence_percentages()
+            spatial_categories = influence.get('spatial_extent_categories', {})
+            
+            agri_codes = set(spatial_categories.get('agriculture', {}).get('codes', ['211', '212', '213', '231']))
+            complex_agri = set(spatial_categories.get('complex_agriculture', {}).get('codes', ['241', '242', '243', '244']))
+            forest_codes = set(spatial_categories.get('forest', {}).get('codes', ['311', '312', '313', '321', '322', '323', '324']))
+            urban_codes = set(spatial_categories.get('urban', {}).get('codes', ['111', '112', '121', '122', '123', '124', '131', '132', '133', '142']))
+            true_coastal_codes = set(spatial_categories.get('coastal', {}).get('codes', ['521', '522', '523', '423', '331']))
+            inland_water_codes = set(spatial_categories.get('inland_water', {}).get('codes', ['511', '512']))
             
             # Calculate spatial extent percentages by category
             extent_percentages = {}
@@ -299,7 +407,7 @@ class TerrainClassificationService:
             logger.debug(f"Error calculating spatial influence: {e}")
             return 0.0
     
-    def _is_near_coast(self, longitude: float, latitude: float, gdf, threshold_km: float = 5.0) -> bool:
+    def _is_near_coast(self, longitude: float, latitude: float, gdf, threshold_km: float = None) -> bool:
         """
         Check if coordinates are near coastal areas using optimized pre-filtered data.
         
@@ -317,6 +425,10 @@ class TerrainClassificationService:
             water_areas = self._water_areas
             if water_areas is None or len(water_areas) == 0:
                 return False
+            
+            # Get threshold from configuration if not provided
+            if threshold_km is None:
+                threshold_km = terrain_config_service.get_spatial_parameter('distance_thresholds_km', 'coastal_proximity', 5.0)
             
             # Create point geometry
             point = Point(longitude, latitude)

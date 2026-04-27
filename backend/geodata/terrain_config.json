@@ -1,0 +1,243 @@
+{
+  "clc_code_mappings": {
+    "terrain_0": {
+      "description": "Water/coastal areas (Mer, océan, lacs, côte exposée au vent)",
+      "codes": ["511", "512", "521", "522", "523", "423", "421", "422", "331", "332", "333", "334", "335"],
+      "code_descriptions": {
+        "511": "Water courses",
+        "512": "Water bodies",
+        "521": "Coastal lagoons",
+        "522": "Estuaries",
+        "523": "Sea and ocean",
+        "423": "Intertidal flats",
+        "421": "Salt marshes",
+        "422": "Salines",
+        "331": "Beaches, dunes, sands",
+        "332": "Bare rocks",
+        "333": "Sparsely vegetated areas",
+        "334": "Burnt areas",
+        "335": "Glaciers and perpetual snow"
+      }
+    },
+    "terrain_II": {
+      "description": "Open countryside (rase campagne) - Champs agricoles, prairie, quelques arbres ou bâtiments isolés",
+      "codes": ["211", "212", "213", "231"],
+      "code_descriptions": {
+        "211": "Non-irrigated arable land",
+        "212": "Permanently irrigated land",
+        "213": "Rice fields",
+        "231": "Pastures"
+      }
+    },
+    "terrain_IIIa": {
+      "description": "Campaign with obstacles (bocage, habitat dispersé) - Bocage, vignobles, haies, habitat dispersé",
+      "codes": ["221", "222", "223", "241", "242", "243", "244", "311", "312", "313", "321", "322", "323", "324", "411", "412"],
+      "code_descriptions": {
+        "221": "Vineyards",
+        "222": "Fruit trees and berry plantations",
+        "223": "Olive groves",
+        "241": "Annual crops associated with permanent crops",
+        "242": "Complex cultivation patterns",
+        "243": "Land principally occupied by agriculture with significant areas of natural vegetation",
+        "244": "Agro-forestry areas",
+        "311": "Broad-leaved forest",
+        "312": "Coniferous forest",
+        "313": "Mixed forest",
+        "321": "Natural grasslands",
+        "322": "Moors and heathland",
+        "323": "Sclerophyllous vegetation",
+        "324": "Transitional woodland-shrub",
+        "411": "Inland marshes",
+        "412": "Peat bogs"
+      }
+    },
+    "terrain_IIIb": {
+      "description": "Zone semi-urbaine / plus dense - Zones industrielles, zones agricoles denses, vergers, maisons rapprochées",
+      "codes": ["121", "122", "123", "124", "131", "132", "133", "142"],
+      "code_descriptions": {
+        "121": "Industrial or commercial units",
+        "122": "Road and rail networks and associated land",
+        "123": "Port areas",
+        "124": "Airports",
+        "131": "Mineral extraction sites",
+        "132": "Dump sites",
+        "133": "Construction sites",
+        "142": "Sport and leisure facilities"
+      }
+    },
+    "terrain_IV": {
+      "description": "Zone urbaine dense - Ville, immeubles, bâtiments hauts (>15m), densité importante",
+      "codes": ["111", "112", "141"],
+      "code_descriptions": {
+        "111": "Continuous urban fabric",
+        "112": "Discontinuous urban fabric",
+        "141": "Green urban areas"
+      }
+    }
+  },
+  "influence_percentages": {
+    "spatial_extent_categories": {
+      "agriculture": {
+        "codes": ["211", "212", "213", "231"],
+        "description": "Pure agriculture",
+        "default_weight": 1.0
+      },
+      "complex_agriculture": {
+        "codes": ["241", "242", "243", "244"],
+        "description": "Complex cultivation (bocage indicators)",
+        "default_weight": 1.2
+      },
+      "forest": {
+        "codes": ["311", "312", "313", "321", "322", "323", "324"],
+        "description": "Forest and natural vegetation",
+        "default_weight": 1.1
+      },
+      "urban": {
+        "codes": ["111", "112", "121", "122", "123", "124", "131", "132", "133", "142"],
+        "description": "Urban and industrial areas",
+        "default_weight": 1.5
+      },
+      "coastal": {
+        "codes": ["521", "522", "523", "423", "331"],
+        "description": "True coastal water bodies",
+        "default_weight": 2.0
+      },
+      "inland_water": {
+        "codes": ["511", "512"],
+        "description": "Inland water courses and bodies",
+        "default_weight": 1.3
+      }
+    }
+  },
+  "classification_rules": {
+    "coastal_exposure": {
+      "enabled": true,
+      "priority": 1,
+      "description": "Coastal classification - highest priority for exposed coastal terrain",
+      "conditions": {
+        "near_coast_distance_km": 2.0,
+        "requires_direct_exposure": true,
+        "excludes_dense_urban_cities": true
+      }
+    },
+    "dense_urban": {
+      "enabled": true,
+      "priority": 2,
+      "description": "Dense urban areas - check before other rules",
+      "conditions": {
+        "applicable_to_terrain": ["II", "IIIb"],
+        "dense_urban_threshold": 0.35,
+        "total_urban_threshold": 0.65,
+        "analysis_radius_km": 2.0
+      }
+    },
+    "bocage_characteristics": {
+      "enabled": true,
+      "priority": 3,
+      "description": "Urban areas with bocage characteristics - downgrade to IIIa",
+      "conditions": {
+        "applicable_to_terrain": ["IV", "IIIb"],
+        "agriculture_threshold": 25.0,
+        "complex_agriculture_threshold": 10.0,
+        "forest_threshold": 15.0,
+        "urban_dominance_threshold": 60.0,
+        "analysis_radius_km": 2.0
+      }
+    },
+    "open_countryside": {
+      "enabled": true,
+      "priority": 4,
+      "description": "Handle complex agriculture that should be open countryside",
+      "conditions": {
+        "applicable_to_terrain": ["IIIa"],
+        "total_agriculture_threshold": 60.0,
+        "urban_threshold": 5.0,
+        "forest_threshold": 30.0,
+        "complex_agriculture_threshold": 35.0,
+        "analysis_radius_km": 2.0
+      }
+    },
+    "transitional_zone": {
+      "enabled": true,
+      "priority": 5,
+      "description": "Transitional zones and bocage patterns",
+      "conditions": {
+        "applicable_to_terrain": ["II"],
+        "agriculture_dominance_threshold": 60.0,
+        "agriculture_high_threshold": 70.0,
+        "complex_agriculture_threshold": 10.0,
+        "urban_range_min": 40.0,
+        "urban_range_max": 60.0,
+        "mixed_pattern_threshold": 10.0,
+        "analysis_radius_km": 2.0
+      }
+    },
+    "proximity_urban": {
+      "enabled": true,
+      "priority": 6,
+      "description": "Proximity-based upgrades to urban",
+      "conditions": {
+        "applicable_to_terrain": ["II"],
+        "distance_threshold_km": 3.0,
+        "target_terrain": "IIIb"
+      }
+    },
+    "proximity_forest": {
+      "enabled": true,
+      "priority": 7,
+      "description": "Proximity-based upgrades to forest areas",
+      "conditions": {
+        "applicable_to_terrain": ["II"],
+        "distance_threshold_km": 2.0,
+        "target_terrain": "IIIa"
+      }
+    }
+  },
+  "spatial_analysis": {
+    "distance_thresholds_km": {
+      "coastal_proximity": 5.0,
+      "coastal_exposure": 2.0,
+      "urban_proximity": 3.0,
+      "forest_proximity": 2.0
+    },
+    "analysis_radii_km": {
+      "dispersed_habitat": 1.0,
+      "transitional_zone": 2.0,
+      "dense_urban": 2.0,
+      "dense_urban_coastal": 3.0,
+      "spatial_extent": 2.0
+    },
+    "density_thresholds": {
+      "dense_urban_fabric": 0.35,
+      "total_urban_area": 0.65,
+      "dense_urban_coastal": 0.4,
+      "urban_dominance": 0.6
+    },
+    "spatial_extent_thresholds": {
+      "coastal_water_presence": 5.0,
+      "agriculture_dominance": 60.0,
+      "agriculture_high": 70.0,
+      "urban_low": 10.0,
+      "urban_dominant": 60.0,
+      "complex_agriculture_significant": 10.0,
+      "forest_moderate": 15.0,
+      "forest_low": 30.0
+    }
+  },
+  "performance_settings": {
+    "cache_timeout_seconds": 3600,
+    "prefilter_categories": {
+      "water_codes": ["511", "512", "521", "522", "523", "421", "422", "423", "331", "332", "333", "334", "335"],
+      "urban_codes": ["111", "112", "141", "121", "122", "123", "124", "131", "132", "133", "142"]
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Terrain classification configuration for French land use data",
+    "last_updated": "2025-04-27",
+    "data_source": "OS_FRANCE.fgb (Corine Land Cover)",
+    "coordinate_system": "WGS84",
+    "terrain_types": ["0", "II", "IIIa", "IIIb", "IV"],
+    "classification_method": "Enhanced rules with spatial analysis"
+  }
+}

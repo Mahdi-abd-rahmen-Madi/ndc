@@ -3,6 +3,10 @@ from rest_framework import viewsets, filters, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
 from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation
 from api.permissions import IsAdminOrEngineerPermission, IsAdminOrResponsibleEngineerPermission
 from .serializers import (
@@ -11,6 +15,8 @@ from .serializers import (
 )
 from .services import terrain_service
 from .services_address import address_service
+from .services import TerrainClassificationService
+from .terrain_config_service import terrain_config_service
 
 
 class AntennaEquipmentViewSet(viewsets.ModelViewSet):
@@ -292,6 +298,229 @@ class TerrainClassificationViewSet(viewsets.ViewSet):
             )
 
 
+class TerrainConfigViewSet(viewsets.ViewSet):
+    """ViewSet for terrain configuration management"""
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def config(self, request):
+        """Get current terrain configuration"""
+        try:
+            config = terrain_config_service.load_config()
+            return Response(config)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get configuration summary"""
+        try:
+            summary = terrain_config_service.get_config_summary()
+            return Response(summary)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def clc_mappings(self, request):
+        """Get CLC code to terrain mappings"""
+        try:
+            mappings = terrain_config_service.get_clc_code_mappings()
+            return Response(mappings)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def classification_rules(self, request):
+        """Get classification rules"""
+        try:
+            rules = terrain_config_service.get_classification_rules()
+            return Response(rules)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def spatial_analysis(self, request):
+        """Get spatial analysis configuration"""
+        try:
+            spatial_config = terrain_config_service.get_spatial_analysis_config()
+            return Response(spatial_config)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def influence_percentages(self, request):
+        """Get influence percentages"""
+        try:
+            influence = terrain_config_service.get_influence_percentages()
+            return Response(influence)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminOrEngineerPermission])
+    def update_config(self, request):
+        """Update terrain configuration"""
+        try:
+            new_config = request.data
+            success = terrain_config_service.update_config(new_config)
+            
+            if success:
+                return Response({
+                    'message': 'Configuration updated successfully',
+                    'config': terrain_config_service.load_config()
+                })
+            else:
+                return Response(
+                    {'error': 'Failed to update configuration'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminOrEngineerPermission])
+    def reset(self, request):
+        """Reset configuration to defaults"""
+        try:
+            success = terrain_config_service.reset_to_defaults()
+            
+            if success:
+                return Response({
+                    'message': 'Configuration reset successfully',
+                    'config': terrain_config_service.load_config()
+                })
+            else:
+                return Response(
+                    {'error': 'Failed to reset configuration'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def export(self, request):
+        """Export configuration as JSON"""
+        try:
+            config_json = terrain_config_service.export_config()
+            return Response({
+                'config': config_json,
+                'filename': 'terrain_config.json'
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminOrEngineerPermission])
+    def import_config(self, request):
+        """Import configuration from JSON"""
+        try:
+            config_json = request.data.get('config', '')
+            if not config_json:
+                return Response(
+                    {'error': 'Configuration JSON is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            success = terrain_config_service.import_config(config_json)
+            
+            if success:
+                return Response({
+                    'message': 'Configuration imported successfully',
+                    'config': terrain_config_service.load_config()
+                })
+            else:
+                return Response(
+                    {'error': 'Failed to import configuration'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
+    def test_coordinates(self, request):
+        """Test coordinates with current configuration"""
+        try:
+            longitude = float(request.data.get('longitude'))
+            latitude = float(request.data.get('latitude'))
+            
+            from .services import TerrainClassificationService
+            terrain_service = TerrainClassificationService()
+            
+            # Get terrain type
+            terrain_type = terrain_service.get_terrain_type_at_coordinates(longitude, latitude)
+            
+            # Get region from coordinates
+            region = terrain_service.get_region_from_coordinates(longitude, latitude)
+            
+            # Get spatial extent
+            gdf = terrain_service._load_land_use_data()
+            spatial_extent = terrain_service._calculate_spatial_extent_percentages(longitude, latitude, gdf)
+            
+            # Get applicable rules
+            applicable_rules = []
+            rules = terrain_config_service.get_classification_rules()
+            
+            # Sort rules by priority and check which ones apply
+            enabled_rules = [
+                (name, rule) for name, rule in rules.items() 
+                if rule.get('enabled', True)
+            ]
+            enabled_rules.sort(key=lambda x: x[1].get('priority', 999))
+            
+            for rule_name, rule in enabled_rules:
+                if terrain_service._apply_classification_rule(rule_name, rule, terrain_type, longitude, latitude, gdf):
+                    applicable_rules.append({
+                        'name': rule_name,
+                        'priority': rule.get('priority', 999),
+                        'description': rule.get('description', '')
+                    })
+            
+            return Response({
+                'terrain_type': terrain_type,
+                'region': {
+                    'number': region,
+                    'name': f"Region {region}" if region else "Unknown"
+                },
+                'coordinates': {
+                    'longitude': longitude,
+                    'latitude': latitude
+                },
+                'spatial_extent': spatial_extent,
+                'applicable_rules': applicable_rules
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class TerrainLoadCalculationViewSet(viewsets.ModelViewSet):
     """ViewSet for TerrainLoadCalculation model"""
     permission_classes = [IsAdminOrEngineerPermission]
@@ -455,3 +684,243 @@ class GeocodingSearchViewSet(viewsets.ViewSet):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+def terrain_map_view(request):
+    """Render the terrain classification map page"""
+    return render(request, 'geodata/terrain_map.html')
+
+
+def region_map_view(request):
+    """Render the region visualization map page"""
+    return render(request, 'geodata/region_map.html')
+
+
+class RegionGeoJSONViewSet(viewsets.ViewSet):
+    """ViewSet for serving region boundaries as GeoJSON"""
+    permission_classes = [permissions.AllowAny]  # Allow public access for frontend
+    
+    @action(detail=False, methods=['get'])
+    def regions(self, request):
+        """Get all region boundaries as GeoJSON from actual wind coefficient data"""
+        try:
+            import json
+            from collections import defaultdict
+            from django.conf import settings
+            import os
+            
+            # Load the actual GeoJSON file
+            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
+            
+            with open(geojson_path, 'r') as f:
+                data = json.load(f)
+            
+            # Group features by V_B0 value (region)
+            regions = defaultdict(list)
+            region_mapping = {
+                22: 1,  # Region 1
+                24: 2,  # Region 2
+                26: 3,  # Region 3
+                28: 4   # Region 4
+            }
+            
+            region_descriptions = {
+                1: "Northern France (V_B0: 22)",
+                2: "Western France (V_B0: 24)", 
+                3: "Central France (V_B0: 26)",
+                4: "Eastern France (V_B0: 28)"
+            }
+            
+            # Group all geometries by their V_B0 value
+            for feature in data.get('features', []):
+                v_b0 = feature.get('properties', {}).get('V_B0')
+                if v_b0 and v_b0 in region_mapping:
+                    region_id = region_mapping[v_b0]
+                    # Add the feature to the appropriate region
+                    regions[region_id].append(feature.get('geometry'))
+            
+            # Create combined features for each region
+            combined_features = []
+            for region_id in [1, 2, 3, 4]:
+                if region_id in regions and regions[region_id]:
+                    # Combine all geometries for this region
+                    combined_feature = {
+                        "type": "Feature",
+                        "properties": {
+                            "region_id": region_id,
+                            "name": f"Region {region_id}",
+                            "description": region_descriptions[region_id],
+                            "v_b0_value": {v: k for k, v in region_mapping.items()}[region_id]
+                        },
+                        "geometry": {
+                            "type": "MultiPolygon",
+                            "coordinates": []
+                        }
+                    }
+                    
+                    # Collect all polygon coordinates
+                    all_polygons = []
+                    for geom in regions[region_id]:
+                        if geom.get('type') == 'MultiPolygon':
+                            all_polygons.extend(geom.get('coordinates', []))
+                        elif geom.get('type') == 'Polygon':
+                            all_polygons.append(geom.get('coordinates', []))
+                    
+                    combined_feature["geometry"]["coordinates"] = all_polygons
+                    combined_feature["properties"]["feature_count"] = len(all_polygons)
+                    combined_features.append(combined_feature)
+            
+            regions_geojson = {
+                "type": "FeatureCollection",
+                "features": combined_features
+            }
+            
+            return Response(regions_geojson)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def region(self, request):
+        """Get specific region boundary as GeoJSON from actual wind coefficient data"""
+        region_id = request.query_params.get('region_id')
+        
+        if not region_id:
+            return Response(
+                {'error': 'region_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            import json
+            from collections import defaultdict
+            from django.conf import settings
+            import os
+            
+            region_id = int(region_id)
+            if region_id not in [1, 2, 3, 4]:
+                return Response(
+                    {'error': 'Invalid region_id. Must be 1, 2, 3, or 4'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Load the actual GeoJSON file
+            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
+            
+            with open(geojson_path, 'r') as f:
+                data = json.load(f)
+            
+            # Group features by V_B0 value (region)
+            region_mapping = {
+                22: 1,  # Region 1
+                24: 2,  # Region 2
+                26: 3,  # Region 3
+                28: 4   # Region 4
+            }
+            
+            region_descriptions = {
+                1: "Northern France (V_B0: 22)",
+                2: "Western France (V_B0: 24)", 
+                3: "Central France (V_B0: 26)",
+                4: "Eastern France (V_B0: 28)"
+            }
+            
+            # Find the V_B0 value for this region
+            v_b0_value = {v: k for k, v in region_mapping.items()}[region_id]
+            
+            # Collect all geometries for this specific region
+            all_polygons = []
+            for feature in data.get('features', []):
+                v_b0 = feature.get('properties', {}).get('V_B0')
+                if v_b0 == v_b0_value:
+                    geom = feature.get('geometry')
+                    if geom.get('type') == 'MultiPolygon':
+                        all_polygons.extend(geom.get('coordinates', []))
+                    elif geom.get('type') == 'Polygon':
+                        all_polygons.append(geom.get('coordinates', []))
+            
+            # Create the region feature
+            region_feature = {
+                "type": "Feature",
+                "properties": {
+                    "region_id": region_id,
+                    "name": f"Region {region_id}",
+                    "description": region_descriptions[region_id],
+                    "v_b0_value": v_b0_value,
+                    "feature_count": len(all_polygons)
+                },
+                "geometry": {
+                    "type": "MultiPolygon",
+                    "coordinates": all_polygons
+                }
+            }
+            
+            return Response(region_feature)
+            
+        except ValueError:
+            return Response(
+                {'error': 'Invalid region_id format'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def terrain_classification_api(request):
+    """API endpoint for terrain classification at coordinates"""
+    try:
+        data = json.loads(request.body)
+        latitude = float(data.get('latitude'))
+        longitude = float(data.get('longitude'))
+        
+        if not latitude or not longitude:
+            return JsonResponse(
+                {'error': 'Latitude and longitude are required'},
+                status=400
+            )
+        
+        # Initialize terrain classification service
+        terrain_service = TerrainClassificationService()
+        
+        # Get terrain type at coordinates
+        terrain_type = terrain_service.get_terrain_type_at_coordinates(longitude, latitude)
+        
+        if terrain_type is None:
+            return JsonResponse({
+                'terrain_type': None,
+                'error': 'No terrain data found at these coordinates',
+                'latitude': latitude,
+                'longitude': longitude
+            })
+        
+        # Get spatial extent percentages
+        gdf = terrain_service._load_land_use_data()
+        spatial_extent = terrain_service._calculate_spatial_extent_percentages(
+            longitude, latitude, gdf
+        )
+        
+        return JsonResponse({
+            'terrain_type': terrain_type,
+            'spatial_extent': spatial_extent,
+            'latitude': latitude,
+            'longitude': longitude
+        })
+        
+    except ValueError as e:
+        return JsonResponse(
+            {'error': f'Invalid coordinates: {str(e)}'},
+            status=400
+        )
+    except Exception as e:
+        return JsonResponse(
+            {'error': f'Server error: {str(e)}'},
+            status=500
+        )
