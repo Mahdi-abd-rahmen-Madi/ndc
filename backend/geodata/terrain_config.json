@@ -131,6 +131,17 @@
         "analysis_radius_km": 2.0
       }
     },
+    "building_density_verification": {
+      "enabled": true,
+      "priority": 2.5,
+      "description": "Building density verification for ambiguous urban cases (30-60% CLC urban)",
+      "conditions": {
+        "applicable_to_terrain": ["IIIb"],
+        "clc_urban_range_min": 30.0,
+        "clc_urban_range_max": 60.0,
+        "analysis_radius_km": 2.0
+      }
+    },
     "bocage_characteristics": {
       "enabled": true,
       "priority": 3,
@@ -222,6 +233,48 @@
       "complex_agriculture_significant": 10.0,
       "forest_moderate": 15.0,
       "forest_low": 30.0
+    }
+  },
+  "building_density_analysis": {
+    "enabled": true,
+    "priority": 2.5,
+    "description": "Building density verification for ambiguous urban cases",
+    "conditions": {
+      "clc_urban_range_min": 30.0,
+      "clc_urban_range_max": 60.0,
+      "analysis_radius_km": 2.0
+    },
+    "thresholds": {
+      "dense_urban_coverage_min": 40.0,
+      "dense_urban_height_min": 15.0,
+      "semi_urban_coverage_min": 20.0,
+      "semi_urban_coverage_max": 40.0,
+      "rural_coverage_max": 20.0,
+      "density_score_threshold": 50.0
+    },
+    "decision_matrix": {
+      "low_coverage_low_height": {
+        "coverage_max": 20.0,
+        "height_max": 999.0,
+        "result": "IIIb"
+      },
+      "medium_coverage_low_height": {
+        "coverage_min": 20.0,
+        "coverage_max": 40.0,
+        "height_max": 15.0,
+        "result": "IIIb"
+      },
+      "medium_coverage_high_height": {
+        "coverage_min": 20.0,
+        "coverage_max": 40.0,
+        "height_min": 15.0,
+        "result": "IV"
+      },
+      "high_coverage_any_height": {
+        "coverage_min": 40.0,
+        "height_max": 999.0,
+        "result": "IV"
+      }
     }
   },
   "performance_settings": {

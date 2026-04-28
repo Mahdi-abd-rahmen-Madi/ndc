@@ -14,6 +14,7 @@ from shapely.geometry import Point, box
 from shapely.strtree import STRtree
 from .models import AntennaEquipment
 from .terrain_config_service import terrain_config_service
+from .vector_tile_parser import create_vector_tile_parser
 
 logger = logging.getLogger(__name__)
 
@@ -687,6 +688,12 @@ class TerrainClassificationService:
                     return 0.0
                 return self._score_dense_urban(longitude, latitude, gdf)
             
+            elif rule_name == 'building_density_verification':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['IIIb'])
+                if terrain_type not in applicable_terrain:
+                    return 0.0
+                return self._score_building_density_verification(longitude, latitude, gdf)
+            
             elif rule_name == 'bocage_characteristics':
                 applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['IV', 'IIIb'])
                 if terrain_type not in applicable_terrain:
@@ -789,6 +796,57 @@ class TerrainClassificationService:
         score += 50.0
         
         return min(score, 100.0)
+    
+    def _score_building_density_verification(self, longitude: float, latitude: float, gdf) -> float:
+        """Score building density verification for ambiguous urban cases."""
+        try:
+            # Get spatial extent to check if this is an ambiguous case
+            extent_pct = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, 2.0)
+            
+            if not extent_pct:
+                return 0.0
+            
+            urban_pct = extent_pct.get('urban', 0)
+            
+            # Check if this falls in the ambiguous range
+            config = terrain_config_service.load_config()
+            building_config = config.get('building_density_analysis', {})
+            conditions = building_config.get('conditions', {})
+            
+            min_urban = conditions.get('clc_urban_range_min', 30.0)
+            max_urban = conditions.get('clc_urban_range_max', 60.0)
+            
+            if not (min_urban <= urban_pct <= max_urban):
+                return 0.0  # Not an ambiguous case
+            
+            # Get building density metrics
+            building_metrics = bdtopo_service.calculate_building_density(longitude, latitude)
+            
+            if building_metrics.get('building_count', 0) == 0:
+                return 0.0  # No building data available
+            
+            # Score based on building density metrics
+            coverage = building_metrics.get('building_coverage_pct', 0.0)
+            avg_height = building_metrics.get('average_height', 0.0)
+            density_score = building_metrics.get('building_density_score', 0.0)
+            
+            # Base score from density score
+            score = min(density_score, 80.0)  # Max 80 points from density score
+            
+            # Bonus points for clear cases
+            if coverage > 40.0:  # High coverage
+                score += 10.0
+            elif coverage < 20.0:  # Low coverage
+                score += 10.0
+            
+            if avg_height > 15.0:  # High buildings
+                score += 10.0
+            
+            return min(score, 100.0)
+            
+        except Exception as e:
+            logger.debug(f"Error scoring building density verification: {e}")
+            return 0.0
     
     def _score_bocage_characteristics(self, longitude: float, latitude: float, gdf) -> float:
         """Score bocage characteristics using multi-scale analysis."""
@@ -994,6 +1052,16 @@ class TerrainClassificationService:
             return '0'
         elif rule_name == 'dense_urban':
             return 'IV'
+        elif rule_name == 'building_density_verification':
+            # Use building data to determine the appropriate terrain type
+            building_result = self._verify_dense_urban_with_buildings(longitude, latitude, 0.0)
+            if building_result is True:
+                return 'IV'
+            elif building_result is False:
+                return 'IIIb'
+            else:
+                # Fallback to current terrain type if building data unavailable
+                return terrain_type
         elif rule_name == 'bocage_characteristics':
             return 'IIIa'
         elif rule_name == 'open_countryside':
@@ -1021,6 +1089,14 @@ class TerrainClassificationService:
                 extent_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, 2.0)
                 urban_pct = extent_data.get('urban', 0)
                 return f"Dense urban area: {urban_pct:.1f}% urban coverage exceeds threshold"
+            
+            elif rule_name == 'building_density_verification':
+                extent_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, 2.0)
+                urban_pct = extent_data.get('urban', 0)
+                building_metrics = bdtopo_service.calculate_building_density(longitude, latitude)
+                coverage = building_metrics.get('building_coverage_pct', 0.0)
+                avg_height = building_metrics.get('average_height', 0.0)
+                return f"Building density verification: {urban_pct:.1f}% CLC urban, {coverage:.1f}% building coverage, {avg_height:.1f}m avg height"
             
             elif rule_name == 'bocage_characteristics':
                 extent_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, 2.0)
@@ -1717,7 +1793,8 @@ class TerrainClassificationService:
     def _is_dense_urban_area(self, longitude: float, latitude: float, gdf, radius_km: float = 2.0) -> bool:
         """
         Check if location is in a dense urban area and should be classified as Terrain IV.
-        This identifies cities and high-density urban zones using spatial extent analysis.
+        This identifies cities and high-density urban zones using spatial extent analysis
+        enhanced with building density verification for ambiguous cases.
         
         Args:
             longitude: Longitude coordinate
@@ -1743,6 +1820,17 @@ class TerrainClassificationService:
             # Get land use percentages
             urban_pct = extent_pct.get('urban', 0)
             agri_pct = extent_pct.get('agriculture', 0)
+            
+            # Check if this is an ambiguous case that needs building data verification
+            building_config = terrain_config_service.load_config().get('building_density_analysis', {})
+            if (building_config.get('enabled', True) and 
+                building_config.get('conditions', {}).get('clc_urban_range_min', 30.0) <= urban_pct <=
+                building_config.get('conditions', {}).get('clc_urban_range_max', 60.0)):
+                
+                # Use building data to resolve ambiguity
+                building_result = self._verify_dense_urban_with_buildings(longitude, latitude, urban_pct)
+                if building_result is not None:  # Building data provided definitive answer
+                    return building_result
             
             # Context-aware threshold: if there's significant agriculture, require higher urban density
             # This prevents discontinuous urban fabric in mixed areas from being classified as dense urban
@@ -1771,6 +1859,80 @@ class TerrainClassificationService:
             
         except Exception as e:
             logger.debug(f"Error checking dense urban area: {e}")
+            return False
+    
+    def _verify_dense_urban_with_buildings(self, longitude: float, latitude: float, clc_urban_pct: float) -> Optional[bool]:
+        """
+        Use building density data to verify dense urban classification for ambiguous cases.
+        
+        Args:
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate
+            clc_urban_pct: CLC urban percentage from spatial extent analysis
+            
+        Returns:
+            True if dense urban confirmed, False if semi-urban, None if building data unavailable
+        """
+        try:
+            # Get building density metrics
+            building_metrics = bdtopo_service.calculate_building_density(longitude, latitude)
+            
+            if building_metrics.get('building_count', 0) == 0:
+                # No building data available, return None to fall back to CLC analysis
+                logger.debug(f"No building data available for ({longitude}, {latitude})")
+                return None
+            
+            # Get decision matrix from configuration
+            config = terrain_config_service.load_config()
+            building_config = config.get('building_density_analysis', {})
+            decision_matrix = building_config.get('decision_matrix', {})
+            
+            coverage = building_metrics.get('building_coverage_pct', 0.0)
+            avg_height = building_metrics.get('average_height', 0.0)
+            
+            # Apply decision matrix
+            for case_name, criteria in decision_matrix.items():
+                if self._matches_building_criteria(coverage, avg_height, criteria):
+                    result = criteria.get('result')
+                    is_dense_urban = result == 'IV'
+                    
+                    logger.debug(f"Building density verification for ({longitude}, {latitude}): "
+                                f"Case '{case_name}' - Coverage: {coverage:.1f}%, Height: {avg_height:.1f}m -> {result}")
+                    
+                    return is_dense_urban
+            
+            # Default fallback: use density score threshold
+            density_score = building_metrics.get('building_density_score', 0.0)
+            score_threshold = building_config.get('thresholds', {}).get('density_score_threshold', 50.0)
+            
+            logger.debug(f"Building density fallback for ({longitude}, {latitude}): "
+                        f"Score: {density_score:.1f} vs Threshold: {score_threshold}")
+            
+            return density_score >= score_threshold
+            
+        except Exception as e:
+            logger.debug(f"Error in building density verification: {e}")
+            return None
+    
+    def _matches_building_criteria(self, coverage: float, height: float, criteria: dict) -> bool:
+        """Check if building metrics match the decision criteria."""
+        try:
+            # Check coverage constraints
+            if 'coverage_min' in criteria and coverage < criteria['coverage_min']:
+                return False
+            if 'coverage_max' in criteria and coverage > criteria['coverage_max']:
+                return False
+            
+            # Check height constraints
+            if 'height_min' in criteria and height < criteria['height_min']:
+                return False
+            if 'height_max' in criteria and height > criteria['height_max']:
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.debug(f"Error matching building criteria: {e}")
             return False
     
     def _has_exposed_coastal_conditions(self, longitude: float, latitude: float, gdf) -> bool:
@@ -2204,5 +2366,264 @@ class TerrainClassificationService:
             return {}
 
 
-# Global service instance
+class BDTOPOService:
+    """Service for analyzing building footprints using IGN BDTOPO vector tiles."""
+    
+    def __init__(self):
+        self.cache_timeout = 3600  # 1 hour cache
+        self._performance_metrics = {
+            'cache_hits': 0,
+            'cache_misses': 0,
+            'tile_requests': 0,
+            'building_analysis_time': []
+        }
+        # Initialize vector tile parser
+        self.parser = create_vector_tile_parser()
+    
+    def get_building_footprints(self, longitude: float, latitude: float, radius_km: float = 2.0) -> List[dict]:
+        """
+        Get building footprints within specified radius of coordinates.
+        
+        Args:
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate  
+            radius_km: Analysis radius in kilometers
+            
+        Returns:
+            List of building features with properties
+        """
+        try:
+            start_time = time.time()
+            
+            # Get tiles for the analysis area
+            tiles = self.parser.get_tiles_for_area(longitude, latitude, radius_km)
+            
+            all_buildings = []
+            for zoom, tile_x, tile_y in tiles:
+                cache_key = f"bdtopo_buildings_{zoom}_{tile_x}_{tile_y}"
+                
+                # Try cache first
+                cached_buildings = cache.get(cache_key)
+                if cached_buildings is not None:
+                    self._performance_metrics['cache_hits'] += 1
+                    all_buildings.extend(cached_buildings)
+                    continue
+                
+                self._performance_metrics['cache_misses'] += 1
+                self._performance_metrics['tile_requests'] += 1
+                
+                # Fetch and parse tile data
+                tile_data = self.parser.fetch_tile(zoom, tile_x, tile_y)
+                if tile_data:
+                    layers_features = self.parser.parse_vector_tile(tile_data)
+                    buildings = self.parser.extract_building_features(layers_features)
+                    
+                    if buildings:
+                        cache.set(cache_key, buildings, self.cache_timeout)
+                        all_buildings.extend(buildings)
+            
+            # Filter buildings by actual distance from center point
+            filtered_buildings = self._filter_buildings_by_distance(
+                all_buildings, longitude, latitude, radius_km
+            )
+            
+            analysis_time = time.time() - start_time
+            self._performance_metrics['building_analysis_time'].append(analysis_time)
+            
+            logger.debug(f"Found {len(filtered_buildings)} buildings within {radius_km}km of ({longitude}, {latitude}) in {analysis_time:.2f}s")
+            return filtered_buildings
+            
+        except Exception as e:
+            logger.error(f"Error getting building footprints: {e}")
+            return []
+    
+    def calculate_building_density(self, longitude: float, latitude: float, radius_km: float = 2.0) -> dict:
+        """
+        Calculate building density metrics for the specified area.
+        
+        Args:
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate
+            radius_km: Analysis radius in kilometers
+            
+        Returns:
+            Dictionary with building density metrics
+        """
+        try:
+            start_time = time.time()
+            
+            buildings = self.get_building_footprints(longitude, latitude, radius_km)
+            
+            if not buildings:
+                return {
+                    'building_count': 0,
+                    'building_coverage_pct': 0.0,
+                    'average_height': 0.0,
+                    'max_height': 0.0,
+                    'building_density_score': 0.0
+                }
+            
+            # Calculate total building area
+            total_building_area = 0.0
+            heights = []
+            
+            for building in buildings:
+                # Get building area from enhanced properties
+                area = building.get('properties', {}).get('area_sqm', 0.0)
+                total_building_area += area
+                
+                # Get height information from enhanced properties
+                height = building.get('properties', {}).get('height_m')
+                if height is not None and height > 0:
+                    heights.append(height)
+            
+            # Calculate analysis area (circle in square meters)
+            analysis_area_sqm = math.pi * (radius_km * 1000) ** 2
+            
+            # Calculate coverage percentage
+            building_coverage_pct = (total_building_area / analysis_area_sqm) * 100
+            
+            # Calculate height statistics
+            average_height = np.mean(heights) if heights else 0.0
+            max_height = max(heights) if heights else 0.0
+            
+            # Calculate density score (0-100)
+            # Combines coverage and height for urban density assessment
+            coverage_score = min(building_coverage_pct * 2, 50)  # Max 50 points from coverage
+            height_score = min(average_height / 15 * 50, 50)  # Max 50 points from height (15m = full points)
+            building_density_score = coverage_score + height_score
+            
+            result = {
+                'building_count': len(buildings),
+                'building_coverage_pct': building_coverage_pct,
+                'average_height': average_height,
+                'max_height': max_height,
+                'building_density_score': building_density_score,
+                'analysis_area_sqm': analysis_area_sqm,
+                'total_building_area_sqm': total_building_area
+            }
+            
+            self._performance_metrics['building_analysis_time'].append(time.time() - start_time)
+            
+            logger.debug(f"Building density metrics for ({longitude}, {latitude}): "
+                        f"{len(buildings)} buildings, {building_coverage_pct:.1f}% coverage, "
+                        f"avg height {average_height:.1f}m")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error calculating building density: {e}")
+            return {
+                'building_count': 0,
+                'building_coverage_pct': 0.0,
+                'average_height': 0.0,
+                'max_height': 0.0,
+                'building_density_score': 0.0
+            }
+    
+    def analyze_building_heights(self, building_features: List[dict]) -> dict:
+        """
+        Analyze height distribution of building features.
+        
+        Args:
+            building_features: List of building features
+            
+        Returns:
+            Dictionary with height analysis statistics
+        """
+        try:
+            heights = []
+            for building in building_features:
+                height = building.get('properties', {}).get('height_m')
+                if height is not None and height > 0:
+                    heights.append(height)
+            
+            if not heights:
+                return {
+                    'count': 0,
+                    'average': 0.0,
+                    'median': 0.0,
+                    'min': 0.0,
+                    'max': 0.0,
+                    'std_dev': 0.0
+                }
+            
+            return {
+                'count': len(heights),
+                'average': np.mean(heights),
+                'median': np.median(heights),
+                'min': min(heights),
+                'max': max(heights),
+                'std_dev': np.std(heights)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing building heights: {e}")
+            return {
+                'count': 0,
+                'average': 0.0,
+                'median': 0.0,
+                'min': 0.0,
+                'max': 0.0,
+                'std_dev': 0.0
+            }
+    
+    def get_urban_density_score(self, longitude: float, latitude: float, radius_km: float = 2.0) -> float:
+        """
+        Get overall urban density score based on building analysis.
+        
+        Args:
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate
+            radius_km: Analysis radius in kilometers
+            
+        Returns:
+            Urban density score (0-100)
+        """
+        try:
+            density_metrics = self.calculate_building_density(longitude, latitude, radius_km)
+            return density_metrics.get('building_density_score', 0.0)
+            
+        except Exception as e:
+            logger.error(f"Error getting urban density score: {e}")
+            return 0.0
+    
+    def _filter_buildings_by_distance(self, buildings: List[dict], longitude: float, 
+                                    latitude: float, radius_km: float) -> List[dict]:
+        """Filter buildings by actual distance from center point."""
+        filtered = []
+        
+        for building in buildings:
+            # Get building centroid coordinates from enhanced properties
+            properties = building.get('properties', {})
+            centroid_lon = properties.get('centroid_lon')
+            centroid_lat = properties.get('centroid_lat')
+            
+            if centroid_lon is not None and centroid_lat is not None:
+                distance = self._calculate_distance(
+                    longitude, latitude, centroid_lon, centroid_lat
+                )
+                if distance <= radius_km:
+                    filtered.append(building)
+        
+        return filtered
+    
+    def _calculate_distance(self, lon1: float, lat1: float, lon2: float, lat2: float) -> float:
+        """Calculate distance between two points in kilometers."""
+        R = 6371.0  # Earth radius in km
+        
+        lat1_rad = math.radians(lat1)
+        lat2_rad = math.radians(lat2)
+        delta_lat = math.radians(lat2 - lat1)
+        delta_lon = math.radians(lon2 - lon1)
+        
+        a = (math.sin(delta_lat / 2) ** 2 + 
+             math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        
+        return R * c
+
+
+# Global service instances
 terrain_service = TerrainClassificationService()
+bdtopo_service = BDTOPOService()
