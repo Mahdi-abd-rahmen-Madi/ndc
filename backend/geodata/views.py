@@ -3,10 +3,12 @@ from rest_framework import viewsets, filters, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import cache_page
 import json
+import requests
 from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation
 from api.permissions import IsAdminOrEngineerPermission, IsAdminOrResponsibleEngineerPermission
 from .serializers import (
@@ -1056,5 +1058,50 @@ def terrain_classification_fast_api(request):
     except Exception as e:
         return JsonResponse(
             {'error': f'Server error: {str(e)}'},
+            status=500
+        )
+
+
+@csrf_exempt
+@cache_page(60 * 60)  # Cache tiles for 1 hour
+def bdtopo_tile_proxy(request, z, x, y):
+    """
+    Proxy endpoint for BDTOPO vector tiles from IGN France.
+    This avoids CORS issues and allows proper tile serving to the frontend.
+    Uses IGN's public TMS service which doesn't require authentication.
+    """
+    try:
+        # Construct the IGN TMS URL (public service, no auth required)
+        ign_url = f'https://data.geopf.fr/tms/1.0.0/BDTOPO/{z}/{x}/{y}.pbf'
+        
+        # Fetch the tile from IGN
+        response = requests.get(ign_url, timeout=10)
+        
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Get the content type from the response
+            content_type = response.headers.get('Content-Type', 'application/x-protobuf')
+            
+            # Return the tile data with appropriate headers
+            return HttpResponse(
+                response.content,
+                content_type=content_type,
+                status=response.status_code
+            )
+        else:
+            # Return error response
+            return HttpResponse(
+                b'',
+                status=response.status_code
+            )
+            
+    except requests.exceptions.RequestException as e:
+        return HttpResponse(
+            f'Error fetching tile: {str(e)}',
+            status=502
+        )
+    except Exception as e:
+        return HttpResponse(
+            f'Server error: {str(e)}',
             status=500
         )

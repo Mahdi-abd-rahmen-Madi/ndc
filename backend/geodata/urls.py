@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AntennaEquipmentViewSet, AntennaSpecificationViewSet, TerrainLoadCalculationViewSet, 
     TerrainClassificationViewSet, GeocodingSearchViewSet, TerrainConfigViewSet, RegionGeoJSONViewSet,
-    terrain_map_view, terrain_classification_api, terrain_classification_fast_api, region_map_view
+    terrain_map_view, terrain_classification_api, terrain_classification_fast_api, region_map_view,
+    bdtopo_tile_proxy
 )
 
 router = DefaultRouter()
@@ -23,4 +24,5 @@ urlpatterns = [
     path('region-map/', region_map_view, name='region-map'),
     path('terrain-classify/', terrain_classification_api, name='terrain-classify'),
     path('terrain-classify-fast/', terrain_classification_fast_api, name='terrain-classify-fast'),
+    path('bdtopo-tiles/<int:z>/<int:x>/<int:y>/', bdtopo_tile_proxy, name='bdtopo-tile-proxy'),
 ]
