@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import type { RegionGeoJSON } from '../utils/types';
 
-const API_BASE_URL = 'http://localhost:8000/api/geodata/regions';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata/regions`;
 
 interface UseRegionBoundariesReturn {
   regions: RegionGeoJSON | null;

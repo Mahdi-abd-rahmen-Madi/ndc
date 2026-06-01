@@ -71,7 +71,7 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
   };
 
   return (
-    <div className="clc-legend-panel w-[300px] bg-white shadow-lg overflow-y-auto transition-transform z-[1001]">
+    <div className="clc-legend-panel w-[300px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform z-[1001]">
       <div className="clc-legend-content p-6">
         <div className="clc-legend-header flex justify-between items-center mb-4 pb-2 border-b-2 border-primary">
           <h2 className="clc-legend-title text-xl font-semibold text-gray-800">CLC Legend</h2>

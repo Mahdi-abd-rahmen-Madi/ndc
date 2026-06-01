@@ -26,7 +26,7 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
       status: 'completed' as const,
       details: `Detected ${classificationResult.detected_clc_codes.length} CLC codes`,
       result: {
-        type: 'success' as const,
+        type: 'success' as 'success' | 'failure' | 'info',
         text: 'Analysis complete',
       },
     },
@@ -37,7 +37,7 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
       status: 'completed' as const,
       details: `${classificationResult.applicable_rules.length} rules applied`,
       result: {
-        type: 'success' as const,
+        type: 'success' as 'success' | 'failure' | 'info',
         text: 'Rules evaluated',
       },
     },
@@ -48,7 +48,7 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
       status: 'completed' as const,
       details: `Classified as ${classificationResult.terrain_type}`,
       result: {
-        type: 'success' as const,
+        type: 'success' as 'success' | 'failure' | 'info',
         text: 'Classification complete',
       },
     },

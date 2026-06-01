@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import type { TerrainConfig } from '../utils/types';
 
-const API_BASE_URL = 'http://localhost:8000/api/geodata/terrain-config';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata/terrain-config`;
 
 interface UseTerrainConfigReturn {
   config: TerrainConfig | null;

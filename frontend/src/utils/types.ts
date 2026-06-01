@@ -130,6 +130,8 @@ export interface TerrainClassificationResponse {
     name: string;
     number: number;
   };
+  address?: GeocodingAddress; // Optional address from reverse geocoding
+  clc_polygons?: any;
 }
 
 export interface FastClassificationResponse {
@@ -137,6 +139,20 @@ export interface FastClassificationResponse {
   latitude: number;
   longitude: number;
 }
+
+export interface GeocodingAddress {
+  label: string;
+  name: string;
+  postcode: string;
+  city: string;
+  context: string;
+  type: string;
+  importance: number;
+  longitude: number;
+  latitude: number;
+  target_terrain: string | null;
+}
+
 
 // Region Types
 export interface RegionFeature {
@@ -193,6 +209,9 @@ export interface DecisionBranch {
 export interface TerrainMapProps {
   onMapClick: (lat: number, lng: number) => void;
   onMapLoad?: (map: maplibregl.Map) => void;
+  selectedCoordinates: { latitude: number; longitude: number } | null;
+  clcPolygons?: any;
+  analysisRadius?: number;
 }
 
 export interface CLCLegendProps {

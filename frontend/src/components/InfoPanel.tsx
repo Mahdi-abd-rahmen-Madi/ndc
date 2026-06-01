@@ -8,7 +8,7 @@ import { formatCoordinates, formatSpatialExtent } from '../utils/formatters';
 export default function InfoPanel({ classificationResult, loading, error, currentAnalysisRadius }: InfoPanelProps) {
   if (loading) {
     return (
-      <div className="info-panel w-[350px] bg-white shadow-lg overflow-y-auto transition-transform">
+      <div className="info-panel w-[350px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform">
         <div className="info-content p-8">
           <div className="loading flex flex-col items-center justify-center p-8">
             <Loader2 className="spinner w-10 h-10 animate-spin mb-4 text-primary" />
@@ -21,7 +21,7 @@ export default function InfoPanel({ classificationResult, loading, error, curren
 
   if (error) {
     return (
-      <div className="info-panel w-[350px] bg-white shadow-lg overflow-y-auto transition-transform">
+      <div className="info-panel w-[350px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform">
         <div className="info-content p-8">
           <div className="error bg-red-50 text-red-800 p-4 rounded mb-4 border border-red-200">
             <div className="flex items-center gap-2">
@@ -37,7 +37,7 @@ export default function InfoPanel({ classificationResult, loading, error, curren
 
   if (!classificationResult) {
     return (
-      <div className="info-panel w-[350px] bg-white shadow-lg overflow-y-auto transition-transform">
+      <div className="info-panel w-[350px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform">
         <div className="info-content p-8">
           <div className="welcome text-center text-gray-600 p-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Welcome</h2>
@@ -54,7 +54,7 @@ export default function InfoPanel({ classificationResult, loading, error, curren
   const formattedExtent = formatSpatialExtent(classificationResult.spatial_extent);
 
   return (
-    <div className="info-panel w-[350px] bg-white shadow-lg overflow-y-auto transition-transform">
+    <div className="info-panel w-[350px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform">
       <div className="info-content p-8">
         <div className="terrain-info block">
           <div

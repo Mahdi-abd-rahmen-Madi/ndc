@@ -7,7 +7,7 @@ export default function RegionControl({ visible, onToggle }: RegionControlProps)
   return (
     <button
       onClick={onToggle}
-      className={`fixed top-20 right-4 px-4 py-3 bg-gradient-to-r from-primary to-secondary text-white border-none rounded-lg cursor-pointer font-semibold shadow-lg transition-all hover:-translate-y-px hover:shadow-xl z-[1000] flex items-center gap-2 ${
+      className={`absolute top-[68px] right-[170px] px-4 py-2.5 bg-gradient-to-r from-primary to-secondary text-white border-none rounded-lg cursor-pointer font-semibold shadow-lg transition-all hover:-translate-y-px hover:shadow-xl z-[1000] flex items-center gap-2 ${
         visible ? 'ring-2 ring-white ring-offset-2' : ''
       }`}
     >

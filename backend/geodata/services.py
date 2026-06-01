@@ -31,6 +31,8 @@ class TerrainClassificationService:
         self.land_use_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'OS_FRANCE.fgb')
         self.wind_coeff_data = None
         self.wind_coeff_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
+        self.coastline_data = None
+        self.coastline_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline.geojson')
         self.cache_timeout = 3600  # 1 hour cache
         self._spatial_index = None
         self._water_areas = None
@@ -161,6 +163,73 @@ class TerrainClassificationService:
                 raise
         return self.wind_coeff_data
     
+    def _load_coastline_data(self):
+        """Load physical coastline data from GeoJSON file."""
+        if self.coastline_data is None:
+            try:
+                self.coastline_data = gpd.read_file(self.coastline_file)
+                logger.info(f"Loaded {len(self.coastline_data)} coastline features")
+                if self.coastline_data.crs is None:
+                    self.coastline_data.set_crs(epsg=4326, inplace=True)
+                else:
+                    self.coastline_data.to_crs(epsg=4326, inplace=True)
+                self.coastline_data.sindex
+            except Exception as e:
+                logger.error(f"Failed to load coastline data: {e}")
+                raise
+        return self.coastline_data
+
+    def _is_near_physical_coastline(self, longitude: float, latitude: float, threshold_km: float = 1.0) -> bool:
+        """
+        Check if coordinates are near the physical coastline using the reliable coastline dataset.
+        
+        Args:
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate
+            threshold_km: Distance threshold in kilometers (default 1.0)
+            
+        Returns:
+            True if near the physical coastline, False otherwise
+        """
+        try:
+            coastline = self._load_coastline_data()
+            if coastline is None or len(coastline) == 0:
+                return False
+                
+            point = Point(longitude, latitude)
+            
+            # Use proper distance calculation with haversine approximation
+            lat_rad = math.radians(latitude)
+            km_per_deg_lat = 111.0
+            threshold_deg_lat = threshold_km / km_per_deg_lat
+            
+            # Use spatial index to find candidate features
+            possible_matches_index = list(coastline.sindex.intersection(point.bounds))
+            possible_matches = coastline.iloc[possible_matches_index]
+            
+            if len(possible_matches) == 0:
+                # Fallback to checking closest features using a small buffer
+                search_area = point.buffer(threshold_deg_lat)
+                possible_matches = coastline[coastline.geometry.intersects(search_area)]
+                
+            if len(possible_matches) == 0:
+                return False
+                
+            # Calculate actual distance to nearest features
+            for _, feature in possible_matches.iterrows():
+                try:
+                    dist = point.distance(feature.geometry) * 111.0
+                    if dist <= threshold_km:
+                        return True
+                except:
+                    continue
+                    
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking proximity to physical coastline: {e}")
+            return False
+    
     def get_region_from_coordinates(self, longitude: float, latitude: float) -> Optional[int]:
         """
         Determine region number from coordinates using wind coefficient data.
@@ -264,6 +333,16 @@ class TerrainClassificationService:
                 logger.debug(f"Coordinates ({longitude}, {latitude}) -> CLC: {clc_code} -> Terrain: {terrain_type} (Confidence: {confidence_score:.2f})")
                 return terrain_type
             else:
+                # If there's no intersecting CLC polygon, check if it's within 1km of the physical coastline
+                # (e.g. on water or in unmapped coastal margins). If it is, classify as Terrain '0'
+                if self._is_near_physical_coastline(longitude, latitude, threshold_km=1.0):
+                    cache_timeout = self._get_adaptive_cache_timeout('0')
+                    cache.set(cache_key, '0', cache_timeout)
+                    cache.set(confidence_cache_key, 0.95, cache_timeout)
+                    self._performance_metrics['classification_time'].append(time.time() - start_time)
+                    logger.debug(f"Coordinates ({longitude}, {latitude}) -> Outside landmass but near physical coastline -> Terrain: 0")
+                    return '0'
+
                 logger.warning(f"No land use data found at coordinates ({longitude}, {latitude})")
                 cache.set(cache_key, None, self.cache_timeout)
                 cache.set(confidence_cache_key, 0.0, self.cache_timeout)
@@ -361,6 +440,29 @@ class TerrainClassificationService:
                     'rule_explanations': rule_explanations
                 }
             else:
+                # If there's no intersecting CLC polygon, check if it's within 1km of the physical coastline
+                if self._is_near_physical_coastline(longitude, latitude, threshold_km=1.0):
+                    rules = terrain_config_service.get_classification_rules()
+                    rule = rules.get('coastline_proximity_1km', {})
+                    applicable_rules = [{
+                        'name': 'coastline_proximity_1km',
+                        'priority': rule.get('priority', 1.5),
+                        'description': rule.get('description', ''),
+                        'score': 100.0
+                    }]
+                    rule_explanations = {
+                        'coastline_proximity_1km': "Coastline proximity: Within 1.0km of the physical coastline"
+                    }
+                    return {
+                        'base_terrain_type': '0',
+                        'terrain_type': '0',
+                        'confidence_score': 0.95,
+                        'detected_clc_codes': [],
+                        'primary_clc_code': None,
+                        'applicable_rules': applicable_rules,
+                        'rule_explanations': rule_explanations
+                    }
+
                 return {
                     'base_terrain_type': None,
                     'terrain_type': None,
@@ -700,7 +802,12 @@ class TerrainClassificationService:
                             longitude: float, latitude: float, gdf) -> float:
         """Calculate weighted score for a specific classification rule."""
         try:
-            if rule_name == 'coastal_exposure':
+            if rule_name == 'coastline_proximity_1km':
+                threshold = rule.get('conditions', {}).get('distance_threshold_km', 1.0)
+                is_near = self._is_near_physical_coastline(longitude, latitude, threshold_km=threshold)
+                return 100.0 if is_near else 0.0
+                
+            elif rule_name == 'coastal_exposure':
                 return self._score_coastal_exposure(longitude, latitude, gdf)
             
             elif rule_name == 'dense_urban':
@@ -1027,7 +1134,11 @@ class TerrainClassificationService:
                                  longitude: float, latitude: float, gdf) -> bool:
         """Check if a classification rule should be applied."""
         try:
-            if rule_name == 'coastal_exposure':
+            if rule_name == 'coastline_proximity_1km':
+                threshold = rule.get('conditions', {}).get('distance_threshold_km', 1.0)
+                return self._is_near_physical_coastline(longitude, latitude, threshold_km=threshold)
+
+            elif rule_name == 'coastal_exposure':
                 return self._has_exposed_coastal_conditions(longitude, latitude, gdf)
             
             elif rule_name == 'dense_urban':
@@ -1069,7 +1180,9 @@ class TerrainClassificationService:
         rules = terrain_config_service.get_classification_rules()
         rule = rules.get(rule_name, {})
         
-        if rule_name == 'coastal_exposure':
+        if rule_name == 'coastline_proximity_1km':
+            return '0'
+        elif rule_name == 'coastal_exposure':
             return '0'
         elif rule_name == 'dense_urban':
             return 'IV'
@@ -1100,7 +1213,11 @@ class TerrainClassificationService:
                                    longitude: float, latitude: float, gdf) -> str:
         """Generate human-readable explanation for why a rule was applied."""
         try:
-            if rule_name == 'coastal_exposure':
+            if rule_name == 'coastline_proximity_1km':
+                threshold = rule.get('conditions', {}).get('distance_threshold_km', 1.0)
+                return f"Coastline proximity: Within {threshold:.1f}km of the physical coastline"
+                
+            elif rule_name == 'coastal_exposure':
                 extent_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, 2.0)
                 coastal_pct = extent_data.get('coastal', 0)
                 urban_pct = extent_data.get('urban', 0)

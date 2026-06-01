@@ -470,6 +470,12 @@ class TerrainConfigViewSet(viewsets.ViewSet):
         try:
             longitude = float(request.data.get('longitude'))
             latitude = float(request.data.get('latitude'))
+            analysis_radius_km = request.data.get('analysis_radius_km')
+            
+            if analysis_radius_km is not None:
+                analysis_radius_km = float(analysis_radius_km)
+            else:
+                analysis_radius_km = 1.0
             
             from .services import TerrainClassificationService
             terrain_service = TerrainClassificationService.get_instance()
@@ -482,7 +488,26 @@ class TerrainConfigViewSet(viewsets.ViewSet):
             
             # Get spatial extent (using cached data if available)
             gdf = terrain_service._load_land_use_data()
-            spatial_extent = terrain_service._calculate_spatial_extent_percentages(longitude, latitude, gdf)
+            spatial_extent = terrain_service._calculate_spatial_extent_percentages(longitude, latitude, gdf, radius_km=analysis_radius_km)
+            
+            # Extract intersecting CLC polygons for visualization
+            from shapely.geometry import Point
+            import math
+            
+            point = Point(longitude, latitude)
+            lat_rad = math.radians(latitude)
+            km_per_deg_lat = 111.0
+            radius_deg_lat = analysis_radius_km / km_per_deg_lat
+            
+            search_area = point.buffer(radius_deg_lat)
+            intersects = gdf[gdf.geometry.intersects(search_area)]
+            
+            if len(intersects) > 0:
+                # Select only the relevant fields to keep payload small
+                simplified_gdf = intersects[['Code_18', 'geometry']].copy()
+                clc_geojson = json.loads(simplified_gdf.to_json())
+            else:
+                clc_geojson = {"type": "FeatureCollection", "features": []}
             
             # Clean spatial extent data to handle np.float64 and nan values
             cleaned_spatial_extent = {}
@@ -521,7 +546,8 @@ class TerrainConfigViewSet(viewsets.ViewSet):
                 },
                 'spatial_extent': cleaned_spatial_extent,
                 'applicable_rules': classification_details['applicable_rules'],
-                'rule_explanations': classification_details['rule_explanations']
+                'rule_explanations': classification_details['rule_explanations'],
+                'clc_polygons': clc_geojson
             })
         except Exception as e:
             return Response(
@@ -781,6 +807,46 @@ class GeocodingSearchViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'])
+    def reverse(self, request):
+        """Reverse geocode coordinates using IGN API"""
+        try:
+            longitude = float(request.query_params.get('longitude') or request.query_params.get('lon'))
+            latitude = float(request.query_params.get('latitude') or request.query_params.get('lat'))
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'Both longitude and latitude query parameters are required and must be valid floats'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            address = address_service.get_address_by_coordinates(longitude, latitude)
+            if address:
+                props = address.get('properties', {})
+                geometry = address.get('geometry', {})
+                coordinates = geometry.get('coordinates', [])
+                
+                formatted_addr = {
+                    'label': props.get('label', ''),
+                    'name': props.get('name', ''),
+                    'postcode': props.get('postcode', ''),
+                    'city': props.get('city', ''),
+                    'context': props.get('context', ''),
+                    'type': props.get('type', ''),
+                    'importance': props.get('importance', 0),
+                    'longitude': coordinates[0] if len(coordinates) == 2 else longitude,
+                    'latitude': coordinates[1] if len(coordinates) == 2 else latitude,
+                }
+                return Response(formatted_addr)
+            else:
+                return Response({'error': 'No address found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 
 def terrain_map_view(request):
     """Render the terrain classification map page"""
@@ -873,6 +939,58 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
             
             return Response(regions_geojson)
             
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def coastline(self, request):
+        """Get the physical coastline boundaries as GeoJSON"""
+        try:
+            import json
+            from django.conf import settings
+            import os
+            
+            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline.geojson')
+            
+            if not os.path.exists(geojson_path):
+                return Response(
+                    {'error': 'Coastline GeoJSON file not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            with open(geojson_path, 'r') as f:
+                data = json.load(f)
+                
+            return Response(data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def coastline_buffer(self, request):
+        """Get the 1km physical coastline buffer zone as GeoJSON"""
+        try:
+            import json
+            from django.conf import settings
+            import os
+            
+            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline_buffer_1km.geojson')
+            
+            if not os.path.exists(geojson_path):
+                return Response(
+                    {'error': 'Coastline buffer GeoJSON file not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+                
+            with open(geojson_path, 'r') as f:
+                data = json.load(f)
+                
+            return Response(data)
         except Exception as e:
             return Response(
                 {'error': str(e)},

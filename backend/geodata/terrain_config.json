@@ -110,6 +110,14 @@
     }
   },
   "classification_rules": {
+    "coastline_proximity_1km": {
+      "enabled": true,
+      "priority": 1.5,
+      "description": "Zones within 1km of the actual coastline (sea/ocean/estuaries/beaches)",
+      "conditions": {
+        "distance_threshold_km": 1.0
+      }
+    },
     "coastal_exposure": {
       "enabled": true,
       "priority": 1,

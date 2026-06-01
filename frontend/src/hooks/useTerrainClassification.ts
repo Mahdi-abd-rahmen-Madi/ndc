@@ -7,7 +7,7 @@ import type {
   TerrainConfig,
 } from '../utils/types';
 
-const API_BASE_URL = 'http://localhost:8000/api/geodata';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata`;
 
 interface UseTerrainClassificationReturn {
   classify: (
@@ -17,6 +17,7 @@ interface UseTerrainClassificationReturn {
     analysisRadius?: number
   ) => Promise<TerrainClassificationResponse | null>;
   classifyFast: (lat: number, lng: number) => Promise<FastClassificationResponse | null>;
+  reset: () => void;
   loading: boolean;
   error: string | null;
   result: TerrainClassificationResponse | null;
@@ -29,6 +30,15 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
   const [result, setResult] = useState<TerrainClassificationResponse | null>(null);
   const [fastResult, setFastResult] = useState<FastClassificationResponse | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const reset = useCallback(() => {
+    setResult(null);
+    setFastResult(null);
+    setError(null);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, []);
 
   const classify = useCallback(
     async (
@@ -144,9 +154,11 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
   return {
     classify,
     classifyFast,
+    reset,
     loading,
     error,
     result,
     fastResult,
   };
 }
+

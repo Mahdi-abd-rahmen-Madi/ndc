@@ -8,11 +8,13 @@ import InfoPanel from './components/InfoPanel';
 import ConfigTabs from './components/ConfigTabs';
 import BDTOPOControls from './components/BDTOPOControls';
 import RegionControl from './components/RegionControl';
+import AddressSearch from './components/AddressSearch';
 import { useTerrainClassification } from './hooks/useTerrainClassification';
 import { useTerrainConfig } from './hooks/useTerrainConfig';
 import { useRegionBoundaries } from './hooks/useRegionBoundaries';
 import { useBDTOPO } from './hooks/useBDTOPO';
-import type { TerrainConfig } from './utils/types';
+import { useGeocoding } from './hooks/useGeocoding';
+import type { GeocodingAddress } from './utils/types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('details');
@@ -20,8 +22,13 @@ export default function App() {
   const [showConfigPanel, setShowConfigPanel] = useState(false);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
 
+  const [regionsVisible, setRegionsVisible] = useState(false);
+  const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
+
   const {
     classify,
+    reset: resetClassification,
     loading: classificationLoading,
     error: classificationError,
     result: classificationResult,
@@ -51,7 +58,7 @@ export default function App() {
     updateLayerStyle,
   } = useBDTOPO();
 
-  const [regionsVisible, setRegionsVisible] = useState(false);
+  const { reverseGeocode } = useGeocoding();
 
   // Fetch initial data
   useEffect(() => {
@@ -64,16 +71,56 @@ export default function App() {
 
   const handleMapClick = useCallback(
     async (lat: number, lng: number) => {
+      // Instantly place/update the marker on map click
+      setSelectedCoords({ latitude: lat, longitude: lng });
+
       if (classificationTimeoutRef.current) {
         clearTimeout(classificationTimeoutRef.current);
       }
 
       classificationTimeoutRef.current = setTimeout(async () => {
-        await classify(lat, lng, config || undefined, currentAnalysisRadius);
+        classify(lat, lng, config || undefined, currentAnalysisRadius);
+        
+        try {
+          const address = await reverseGeocode(lat, lng);
+          setSelectedAddress(address);
+        } catch (e) {
+          console.error('Failed to reverse geocode clicked point:', e);
+        }
       }, 300);
     },
-    [classify, config, currentAnalysisRadius]
+    [classify, config, currentAnalysisRadius, reverseGeocode]
   );
+
+  const handleAddressSelect = useCallback(
+    async (address: GeocodingAddress) => {
+      setSelectedAddress(address);
+      setSelectedCoords({ latitude: address.latitude, longitude: address.longitude });
+
+      if (mapInstance) {
+        mapInstance.flyTo({
+          center: [address.longitude, address.latitude],
+          zoom: 14,
+          essential: true,
+        });
+      }
+
+      if (classificationTimeoutRef.current) {
+        clearTimeout(classificationTimeoutRef.current);
+      }
+
+      classificationTimeoutRef.current = setTimeout(async () => {
+        classify(address.latitude, address.longitude, config || undefined, currentAnalysisRadius);
+      }, 300);
+    },
+    [classify, config, currentAnalysisRadius, mapInstance]
+  );
+
+  const handleClearAddress = useCallback(() => {
+    setSelectedAddress(null);
+    setSelectedCoords(null);
+    resetClassification();
+  }, [resetClassification]);
 
   const handleMapLoad = useCallback((map: maplibregl.Map) => {
     setMapInstance(map);
@@ -123,15 +170,15 @@ export default function App() {
   }, [bdtopoConfig, bdtopoVisible, mapInstance, handleBDTOPOStyleChange]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
       {/* Header */}
-      <header className="header bg-gradient-to-r from-primary to-secondary text-white p-4 px-8 shadow-lg">
+      <header className="header bg-gradient-to-r from-primary to-secondary text-white p-4 px-8 shadow-lg flex-shrink-0">
         <h1 className="text-2xl font-semibold">Terrain Classification Map - France</h1>
         <p className="mt-1 opacity-90 text-sm">Click on the map to analyze terrain classification</p>
       </header>
 
       {/* Main Container */}
-      <div className="container flex h-[calc(100vh-120px)]">
+      <div className="flex-1 flex overflow-hidden w-full max-w-none">
         {/* CLC Legend Panel */}
         <CLCLegend
           detectedCodes={classificationResult?.detected_clc_codes || []}
@@ -140,7 +187,20 @@ export default function App() {
 
         {/* Map Container */}
         <div className="map-container flex-1 relative">
-          <TerrainMap onMapClick={handleMapClick} onMapLoad={handleMapLoad} />
+          <TerrainMap
+            onMapClick={handleMapClick}
+            onMapLoad={handleMapLoad}
+            selectedCoordinates={selectedCoords}
+            clcPolygons={classificationResult?.clc_polygons}
+            analysisRadius={currentAnalysisRadius}
+          />
+          
+          {/* Address Search */}
+          <AddressSearch
+            onAddressSelect={handleAddressSelect}
+            selectedAddress={selectedAddress}
+            onClearAddress={handleClearAddress}
+          />
           
           {/* BDTOPO Controls */}
           <BDTOPOControls

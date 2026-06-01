@@ -483,3 +483,43 @@ class EnhancedTerrainClassificationTest(TestCase):
         
         # Urban proximity threshold should be 3.0 km
         self.assertEqual(terrain_service._is_near_urban.__defaults__[0], 3.0)
+
+    def test_coastline_proximity_1km(self):
+        """Test the new coastline_proximity_1km rule using the physical coastline dataset."""
+        # Brest coast coordinates: longitude -4.500, latitude 48.380 (approx 0.3km distance)
+        is_near = terrain_service._is_near_physical_coastline(-4.500, 48.380, threshold_km=1.0)
+        self.assertTrue(is_near)
+        
+        # Brest inland coordinates: longitude -4.000, latitude 48.400 (approx 23km distance)
+        is_far = terrain_service._is_near_physical_coastline(-4.000, 48.400, threshold_km=1.0)
+        self.assertFalse(is_far)
+
+    def test_coastline_proximity_rule_application(self):
+        """Test that the coastline_proximity_1km rule is applied during classification."""
+        # Brest coast coordinates: longitude -4.500, latitude 48.380
+        details = terrain_service.get_terrain_classification_details(-4.500, 48.380)
+        
+        # Verify that our rule is in the applicable rules list
+        rule_names = [rule['name'] for rule in details.get('applicable_rules', [])]
+        self.assertIn('coastline_proximity_1km', rule_names)
+        self.assertEqual(details['terrain_type'], '0')
+
+    @patch.object(terrain_service, '_optimized_spatial_query')
+    def test_coastline_proximity_fallback_outside_landmass(self, mock_query):
+        """Test that points outside the CLC landmass but within 1km of the physical coastline are correctly classified as Terrain 0."""
+        import geopandas as gpd
+        mock_query.return_value = gpd.GeoDataFrame()
+        
+        # A point in the sea just off the coast of Brest
+        # It has no CLC polygon (due to mock), but is near the physical coastline
+        lon, lat = -4.505, 48.380
+        
+        # Verify get_terrain_type_at_coordinates returns '0'
+        terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+        self.assertEqual(terrain, '0')
+        
+        # Verify get_terrain_classification_details returns '0' and the coastline proximity rule
+        details = terrain_service.get_terrain_classification_details(lon, lat)
+        self.assertEqual(details['terrain_type'], '0')
+        rule_names = [rule['name'] for rule in details.get('applicable_rules', [])]
+        self.assertIn('coastline_proximity_1km', rule_names)
