@@ -132,6 +132,7 @@ export interface TerrainClassificationResponse {
   };
   address?: GeocodingAddress; // Optional address from reverse geocoding
   clc_polygons?: any;
+  transition_zones?: any;
 }
 
 export interface FastClassificationResponse {
@@ -211,6 +212,7 @@ export interface TerrainMapProps {
   onMapLoad?: (map: maplibregl.Map) => void;
   selectedCoordinates: { latitude: number; longitude: number } | null;
   clcPolygons?: any;
+  transitionZones?: any;
   analysisRadius?: number;
 }
 

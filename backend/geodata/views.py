@@ -509,6 +509,45 @@ class TerrainConfigViewSet(viewsets.ViewSet):
             else:
                 clc_geojson = {"type": "FeatureCollection", "features": []}
             
+            # Calculate transition zones (50m buffer of Terrain II/IIIa intersecting Terrain IV/IIIb)
+            transition_geojson = {"type": "FeatureCollection", "features": []}
+            if len(intersects) > 0:
+                try:
+                    # Project to EPSG:2154 for metric operations
+                    intersects_projected = intersects.to_crs(epsg=2154)
+                    
+                    # Get CLC mappings
+                    clc_mappings = terrain_config_service.get_clc_code_mappings()
+                    terrain_II_codes = clc_mappings.get('terrain_II', {}).get('codes', [])
+                    terrain_IIIa_codes = clc_mappings.get('terrain_IIIa', {}).get('codes', [])
+                    target_codes = list(terrain_II_codes) + list(terrain_IIIa_codes)
+                    
+                    terrain_IV_codes = clc_mappings.get('terrain_IV', {}).get('codes', [])
+                    terrain_IIIb_codes = clc_mappings.get('terrain_IIIb', {}).get('codes', [])
+                    urban_codes = list(terrain_IV_codes) + list(terrain_IIIb_codes)
+                    
+                    urban_polygons = intersects_projected[intersects_projected['Code_18'].isin(urban_codes)]
+                    target_polygons = intersects_projected[intersects_projected['Code_18'].isin(target_codes)]
+                    
+                    if len(urban_polygons) > 0 and len(target_polygons) > 0:
+                        # Buffer target polygons by 50m
+                        buffered_targets = target_polygons.geometry.buffer(50.0).unary_union
+                        # Intersect with urban polygons to find transition zones
+                        transition_zones = urban_polygons.geometry.intersection(buffered_targets)
+                        
+                        import geopandas as gpd
+                        transition_gdf = gpd.GeoDataFrame(geometry=transition_zones, crs="EPSG:2154").to_crs(epsg=4326)
+                        transition_gdf = transition_gdf[~transition_gdf.geometry.is_empty]
+                        
+                        if len(transition_gdf) > 0:
+                            # Keep only geometry and type for the payload
+                            transition_gdf['type'] = 'transition_zone'
+                            transition_geojson = json.loads(transition_gdf[['geometry', 'type']].to_json())
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error calculating transition zones for visualization: {e}")
+
             # Clean spatial extent data to handle np.float64 and nan values
             cleaned_spatial_extent = {}
             if spatial_extent:
@@ -547,7 +586,8 @@ class TerrainConfigViewSet(viewsets.ViewSet):
                 'spatial_extent': cleaned_spatial_extent,
                 'applicable_rules': classification_details['applicable_rules'],
                 'rule_explanations': classification_details['rule_explanations'],
-                'clc_polygons': clc_geojson
+                'clc_polygons': clc_geojson,
+                'transition_zones': transition_geojson
             })
         except Exception as e:
             return Response(
@@ -991,6 +1031,81 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
                 data = json.load(f)
                 
             return Response(data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+    @action(detail=False, methods=['get'], url_name='transition-zones', url_path='transition_zones')
+    def transition_zones(self, request):
+        """Get transition zones within a bounding box"""
+        try:
+            import json
+            bbox_str = request.query_params.get('bbox')
+            if not bbox_str:
+                return Response(
+                    {'error': 'bbox parameter is required (min_lon,min_lat,max_lon,max_lat)'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            coords = [float(x) for x in bbox_str.split(',')]
+            if len(coords) != 4:
+                return Response(
+                    {'error': 'bbox parameter must contain exactly 4 coordinates'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            min_lon, min_lat, max_lon, max_lat = coords
+            
+            from shapely.geometry import box
+            bbox_geom = box(min_lon, min_lat, max_lon, max_lat)
+            
+            from .services import TerrainClassificationService
+            terrain_service = TerrainClassificationService.get_instance()
+            
+            # Load land use data
+            gdf = terrain_service._load_land_use_data()
+            
+            # Find intersecting polygons within bbox
+            # Spatial index pre-filtering to keep it fast
+            possible_matches_index = gdf.sindex.query(bbox_geom, predicate="intersects")
+            intersects = gdf.iloc[possible_matches_index]
+            
+            transition_geojson = {"type": "FeatureCollection", "features": []}
+            if len(intersects) > 0:
+                # Project to EPSG:2154 for metric operations
+                intersects_projected = intersects.to_crs(epsg=2154)
+                
+                # Get CLC mappings
+                from .terrain_config_service import terrain_config_service
+                clc_mappings = terrain_config_service.get_clc_code_mappings()
+                terrain_II_codes = clc_mappings.get('terrain_II', {}).get('codes', [])
+                terrain_IIIa_codes = clc_mappings.get('terrain_IIIa', {}).get('codes', [])
+                target_codes = list(terrain_II_codes) + list(terrain_IIIa_codes)
+                
+                terrain_IV_codes = clc_mappings.get('terrain_IV', {}).get('codes', [])
+                terrain_IIIb_codes = clc_mappings.get('terrain_IIIb', {}).get('codes', [])
+                urban_codes = list(terrain_IV_codes) + list(terrain_IIIb_codes)
+                
+                urban_polygons = intersects_projected[intersects_projected['Code_18'].isin(urban_codes)]
+                target_polygons = intersects_projected[intersects_projected['Code_18'].isin(target_codes)]
+                
+                if len(urban_polygons) > 0 and len(target_polygons) > 0:
+                    # Buffer target polygons by 50m
+                    buffered_targets = target_polygons.geometry.buffer(50.0).unary_union
+                    # Intersect with urban polygons to find transition zones
+                    transition_zones = urban_polygons.geometry.intersection(buffered_targets)
+                    
+                    import geopandas as gpd
+                    transition_gdf = gpd.GeoDataFrame(geometry=transition_zones, crs="EPSG:2154").to_crs(epsg=4326)
+                    transition_gdf = transition_gdf[~transition_gdf.geometry.is_empty]
+                    
+                    if len(transition_gdf) > 0:
+                        transition_gdf['type'] = 'transition_zone'
+                        transition_geojson = json.loads(transition_gdf[['geometry', 'type']].to_json())
+            
+            return Response(transition_geojson)
         except Exception as e:
             return Response(
                 {'error': str(e)},

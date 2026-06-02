@@ -523,3 +523,174 @@ class EnhancedTerrainClassificationTest(TestCase):
         self.assertEqual(details['terrain_type'], '0')
         rule_names = [rule['name'] for rule in details.get('applicable_rules', [])]
         self.assertIn('coastline_proximity_1km', rule_names)
+
+    def test_industrial_zone_not_elevated(self):
+        """Test that coordinates classified as '121' (Industrial) are not elevated to Terrain IV."""
+        from django.core.cache import cache
+        cache.clear()
+        lon, lat = 2.5, 48.5
+        with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+            import geopandas as gpd
+            from shapely.geometry import Polygon
+            
+            # Create a small polygon around our coordinate
+            poly = Polygon([(2.4, 48.4), (2.6, 48.4), (2.6, 48.6), (2.4, 48.6)])
+            gdf = gpd.GeoDataFrame({
+                'Code_18': ['121'],
+                'geometry': [poly]
+            }, crs="EPSG:4326")
+            
+            mock_load.return_value = gdf
+            
+            # Also need to mock building density so it doesn't trigger elevation
+            with patch('geodata.services.bdtopo_service.calculate_building_density') as mock_bd:
+                mock_bd.return_value = {'building_count': 0}
+                
+                # Classify the point
+                terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+                
+                # Should be IIIb, not IV
+                self.assertEqual(terrain, 'IIIb')
+
+    def test_sport_and_leisure_zone_not_elevated(self):
+        """Test that coordinates classified as '142' (Sport and leisure facilities) are not elevated to Terrain IV."""
+        from django.core.cache import cache
+        cache.clear()
+        lon, lat = 2.5, 48.5
+        with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+            import geopandas as gpd
+            from shapely.geometry import Polygon
+            
+            # Create a small polygon around our coordinate
+            poly = Polygon([(2.4, 48.4), (2.6, 48.4), (2.6, 48.6), (2.4, 48.6)])
+            gdf = gpd.GeoDataFrame({
+                'Code_18': ['142'],
+                'geometry': [poly]
+            }, crs="EPSG:4326")
+            
+            mock_load.return_value = gdf
+            
+            # Also need to mock building density so it doesn't trigger elevation
+            with patch('geodata.services.bdtopo_service.calculate_building_density') as mock_bd:
+                mock_bd.return_value = {'building_count': 0}
+                
+                # Classify the point
+                terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+                
+                # Should be IIIb, not IV
+                self.assertEqual(terrain, 'IIIb')
+
+    def test_transition_penetration_override(self):
+        """Test that points classified as Terrain IV but within 50m of Terrain II or IIIa are downgraded to IIIa."""
+        from django.core.cache import cache
+        cache.clear()
+        
+        # Case 1: Within 50m (distance ~44m) -> downgraded to IIIa
+        lon1, lat1 = 2.5, 48.5
+        with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+            import geopandas as gpd
+            from shapely.geometry import Polygon
+            
+            poly_urban = Polygon([(2.495, 48.495), (2.505, 48.495), (2.505, 48.505), (2.495, 48.505)])
+            poly_rural_close = Polygon([(2.5004, 48.495), (2.515, 48.495), (2.515, 48.505), (2.5004, 48.505)])
+            
+            gdf = gpd.GeoDataFrame({
+                'Code_18': ['111', '211'],
+                'geometry': [poly_urban, poly_rural_close]
+            }, crs="EPSG:4326")
+            
+            mock_load.return_value = gdf
+            
+            terrain = terrain_service.get_terrain_type_at_coordinates(lon1, lat1)
+            self.assertEqual(terrain, 'IIIa')
+
+        cache.clear()
+        # Case 2: Outside 50m (distance ~88m) -> remains Terrain IV
+        lon2, lat2 = 2.500001, 48.500001
+        with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+            import geopandas as gpd
+            from shapely.geometry import Polygon
+            
+            poly_urban = Polygon([(2.495, 48.495), (2.505, 48.495), (2.505, 48.505), (2.495, 48.505)])
+            poly_rural_far = Polygon([(2.5008, 48.495), (2.515, 48.495), (2.515, 48.505), (2.5008, 48.505)])
+            
+            gdf = gpd.GeoDataFrame({
+                'Code_18': ['111', '211'],
+                'geometry': [poly_urban, poly_rural_far]
+            }, crs="EPSG:4326")
+            
+            mock_load.return_value = gdf
+            
+            terrain = terrain_service.get_terrain_type_at_coordinates(lon2, lat2)
+            self.assertEqual(terrain, 'IV')
+
+    def test_base_terrain_preservation(self):
+        """Test that points with base Terrain II or IIIa are preserved and not elevated to IV."""
+        from django.core.cache import cache
+        cache.clear()
+        
+        lon, lat = 2.5, 48.5
+        with patch.object(terrain_service, '_load_land_use_data') as mock_load:
+            import geopandas as gpd
+            from shapely.geometry import Polygon
+            
+            # Point is inside a Terrain II polygon (code 211)
+            poly_rural = Polygon([(2.49, 48.49), (2.51, 48.49), (2.51, 48.51), (2.49, 48.51)])
+            
+            gdf = gpd.GeoDataFrame({
+                'Code_18': ['211'],
+                'geometry': [poly_rural]
+            }, crs="EPSG:4326")
+            
+            mock_load.return_value = gdf
+            
+            # Mock rules scoring so it normally elevates to IV
+            with patch.object(terrain_service, '_calculate_weighted_rule_scores') as mock_scores:
+                rule_config = {
+                    'enabled': True,
+                    'priority': 2,
+                    'description': 'Test Rule'
+                }
+                mock_scores.return_value = [('dense_urban', rule_config, 100.0)]
+                
+                # Classify point
+                terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+                
+                # Should stay as base terrain II, not be elevated to IV
+                self.assertEqual(terrain, 'II')
+
+
+from rest_framework.test import APITestCase
+from unittest.mock import patch
+
+class RegionGeoJSONViewSetTest(APITestCase):
+    def test_transition_zones_endpoint(self):
+        """Test the transition_zones view action returns valid GeoJSON."""
+        from django.urls import reverse
+        from geodata.services import TerrainClassificationService
+        import geopandas as gpd
+        from shapely.geometry import Polygon
+        
+        terrain_service = TerrainClassificationService.get_instance()
+        
+        # Mock land use data
+        poly_urban = Polygon([(2.495, 48.495), (2.505, 48.495), (2.505, 48.505), (2.495, 48.505)])
+        poly_rural = Polygon([(2.5002, 48.495), (2.515, 48.495), (2.515, 48.505), (2.5002, 48.505)])
+        
+        gdf = gpd.GeoDataFrame({
+            'Code_18': ['111', '211'],
+            'geometry': [poly_urban, poly_rural]
+        }, crs="EPSG:4326")
+        
+        url = reverse('geodata:regions-transition-zones')
+        
+        with patch.object(terrain_service, '_load_land_use_data', return_value=gdf):
+            response = self.client.get(url, {'bbox': '2.49,48.49,2.51,48.51'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data['type'], 'FeatureCollection')
+            self.assertTrue(len(response.data['features']) > 0)
+            self.assertEqual(response.data['features'][0]['properties']['type'], 'transition_zone')
+
+
+
+

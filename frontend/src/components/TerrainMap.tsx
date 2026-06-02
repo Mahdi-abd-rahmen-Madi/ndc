@@ -1,6 +1,6 @@
 // TerrainMap component with MapLibre GL
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { TerrainMapProps } from '../utils/types';
@@ -182,12 +182,80 @@ function ensureMapLayers(map: maplibregl.Map) {
       },
     });
   }
+
+  // 5. Transition Zones Source & Layer
+  if (!map.getSource('transition-zones')) {
+    map.addSource('transition-zones', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+
+    map.addLayer({
+      id: 'transition-zones-fill',
+      type: 'fill',
+      source: 'transition-zones',
+      paint: {
+        'fill-color': '#f97316', // Orange-500
+        'fill-opacity': 0.35,
+      },
+      layout: {
+        visibility: 'none',
+      },
+    });
+
+    map.addLayer({
+      id: 'transition-zones-outline',
+      type: 'line',
+      source: 'transition-zones',
+      paint: {
+        'line-color': '#ea580c', // Orange-600
+        'line-width': 2,
+        'line-dasharray': [2, 2],
+        'line-opacity': 0.9,
+      },
+      layout: {
+        visibility: 'none',
+      },
+    });
+
+    // Hover popup for transition zones
+    const transitionPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      className: 'transition-map-popup',
+    });
+
+    map.on('mousemove', 'transition-zones-fill', (e) => {
+      if (!e.features || e.features.length === 0) return;
+      map.getCanvas().style.cursor = 'pointer';
+
+      const coordinates = e.lngLat;
+      transitionPopup
+        .setLngLat(coordinates)
+        .setHTML(`
+          <div class="p-2.5 max-w-[240px] font-sans bg-white rounded shadow-md border-l-4 border-orange-500">
+            <strong class="text-sm text-orange-600 block mb-1">Transition Zone (50m)</strong>
+            <div class="text-xs text-gray-700 leading-normal">
+              Terrain IV (dense urban fabric) downgraded to <strong>Terrain IIIa</strong> due to proximity to rural/agricultural zones.
+            </div>
+          </div>
+        `)
+        .addTo(map);
+    });
+
+    map.on('mouseleave', 'transition-zones-fill', () => {
+      map.getCanvas().style.cursor = '';
+      transitionPopup.remove();
+    });
+  }
 }
 
 function updateMapLayers(
   map: maplibregl.Map,
   coords: { latitude: number; longitude: number } | null,
   clcPolygons: any,
+  transitionZones: any,
+  viewportTransitionZones: any,
   analysisRadius: number
 ) {
   // Update CLC Polygons Source
@@ -219,6 +287,40 @@ function updateMapLayers(
     }
   }
 
+  // Update Transition Zones Source
+  const transitionSource = map.getSource('transition-zones') as maplibregl.GeoJSONSource | undefined;
+  if (transitionSource) {
+    const hasClickedZones = transitionZones && transitionZones.features && transitionZones.features.length > 0;
+    const hasViewportZones = viewportTransitionZones && viewportTransitionZones.features && viewportTransitionZones.features.length > 0;
+    
+    if (hasClickedZones || hasViewportZones) {
+      // Combine features and deduplicate by geometry string representation
+      const seen = new Set<string>();
+      const uniqueFeatures: any[] = [];
+      const addFeature = (f: any) => {
+        const key = JSON.stringify(f.geometry);
+        if (!seen.has(key)) {
+          seen.add(key);
+          uniqueFeatures.push(f);
+        }
+      };
+      
+      if (hasClickedZones) transitionZones.features.forEach(addFeature);
+      if (hasViewportZones) viewportTransitionZones.features.forEach(addFeature);
+
+      transitionSource.setData({
+        type: 'FeatureCollection',
+        features: uniqueFeatures
+      });
+      map.setLayoutProperty('transition-zones-fill', 'visibility', 'visible');
+      map.setLayoutProperty('transition-zones-outline', 'visibility', 'visible');
+    } else {
+      transitionSource.setData({ type: 'FeatureCollection', features: [] });
+      map.setLayoutProperty('transition-zones-fill', 'visibility', 'none');
+      map.setLayoutProperty('transition-zones-outline', 'visibility', 'none');
+    }
+  }
+
   // Update Search Radius Source
   const radiusSource = map.getSource('search-radius') as maplibregl.GeoJSONSource | undefined;
   if (radiusSource) {
@@ -241,6 +343,7 @@ export default function TerrainMap({
   onMapLoad,
   selectedCoordinates,
   clcPolygons,
+  transitionZones,
   analysisRadius = 0.5
 }: TerrainMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -248,6 +351,33 @@ export default function TerrainMap({
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const [coastlineGeoJSON, setCoastlineGeoJSON] = useState<any>(null);
   const [coastlineBufferGeoJSON, setCoastlineBufferGeoJSON] = useState<any>(null);
+  const [viewportTransitionZones, setViewportTransitionZones] = useState<any>(null);
+
+  const fetchViewportTransitionZones = useCallback(async (map: maplibregl.Map) => {
+    const zoom = map.getZoom();
+    if (zoom < 11) {
+      setViewportTransitionZones(null);
+      return;
+    }
+
+    const bounds = map.getBounds();
+    const minLon = bounds.getWest();
+    const minLat = bounds.getSouth();
+    const maxLon = bounds.getEast();
+    const maxLat = bounds.getNorth();
+    const bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
+
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    try {
+      const response = await fetch(`${baseUrl}/api/geodata/regions/transition_zones/?bbox=${bbox}`);
+      if (response.ok) {
+        const data = await response.json();
+        setViewportTransitionZones(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch viewport transition zones:', err);
+    }
+  }, []);
 
   useEffect(() => {
     const fetchCoastlineData = async () => {
@@ -274,6 +404,29 @@ export default function TerrainMap({
     };
     fetchCoastlineData();
   }, []);
+
+  // Listen to map moveend/load events to fetch transition zones
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const handleMove = () => {
+      fetchViewportTransitionZones(map);
+    };
+
+    map.on('moveend', handleMove);
+    
+    // Fetch immediately if already loaded
+    if (map.isStyleLoaded()) {
+      handleMove();
+    } else {
+      map.once('load', handleMove);
+    }
+
+    return () => {
+      map.off('moveend', handleMove);
+    };
+  }, [fetchViewportTransitionZones]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -349,7 +502,7 @@ export default function TerrainMap({
 
     const applyUpdates = () => {
       ensureMapLayers(map);
-      updateMapLayers(map, selectedCoordinates, clcPolygons, analysisRadius);
+      updateMapLayers(map, selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius);
 
       // Update coastline source with fetched data
       const coastlineSource = map.getSource('france-coastline') as maplibregl.GeoJSONSource | undefined;
@@ -369,7 +522,7 @@ export default function TerrainMap({
     } else {
       map.once('load', applyUpdates);
     }
-  }, [selectedCoordinates, clcPolygons, analysisRadius, coastlineGeoJSON, coastlineBufferGeoJSON]);
+  }, [selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius, coastlineGeoJSON, coastlineBufferGeoJSON]);
 
   // Manage marker reactively based on selectedCoordinates prop
   useEffect(() => {

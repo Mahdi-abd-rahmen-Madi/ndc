@@ -192,6 +192,7 @@ export default function App() {
             onMapLoad={handleMapLoad}
             selectedCoordinates={selectedCoords}
             clcPolygons={classificationResult?.clc_polygons}
+            transitionZones={classificationResult?.transition_zones}
             analysisRadius={currentAnalysisRadius}
           />
           

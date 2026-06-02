@@ -416,8 +416,50 @@ class TerrainClassificationService:
                 applicable_rules = []
                 rule_explanations = {}
                 
-                # Only the highest scoring rule should be applied
+                # Determine if transition override was applied (final terrain type is IIIa but it was otherwise IV)
+                initial_terrain = base_terrain_type
                 if scored_rules:
+                    rule_name, rule, score = scored_rules[0]
+                    initial_terrain = self._get_rule_result(rule_name, base_terrain_type, longitude, latitude, gdf)
+                
+                is_revert_override_applied = (initial_terrain == 'IV' and final_terrain_type in ['II', 'IIIa'] and base_terrain_type == final_terrain_type)
+                is_transition_override_applied = (initial_terrain == 'IV' and final_terrain_type == 'IIIa' and base_terrain_type != 'IIIa')
+                
+                if is_revert_override_applied:
+                    applicable_rules.append({
+                        'name': 'terrain_base_preservation',
+                        'priority': 1.0,
+                        'description': f'Preserve base terrain: Points inside base Terrain {base_terrain_type} polygons stay as Terrain {base_terrain_type} and are not elevated to Terrain IV',
+                        'score': 100.0
+                    })
+                    rule_explanations['terrain_base_preservation'] = (
+                        f"Base preservation override applied: Location belongs to base Terrain {base_terrain_type} (CLC {clc_code}) and is preserved."
+                    )
+                elif is_transition_override_applied:
+                    # Calculate actual distance to nearest II/IIIa polygon for the explanation
+                    clc_mappings = terrain_config_service.get_clc_code_mappings()
+                    terrain_II_codes = clc_mappings.get('terrain_II', {}).get('codes', [])
+                    terrain_IIIa_codes = clc_mappings.get('terrain_IIIa', {}).get('codes', [])
+                    target_codes = list(terrain_II_codes) + list(terrain_IIIa_codes)
+                    matching_polygons = gdf[gdf['Code_18'].isin(target_codes)]
+                    
+                    min_dist_km = 0.0
+                    if len(matching_polygons) > 0:
+                        point = Point(longitude, latitude)
+                        min_dist_deg = matching_polygons.geometry.distance(point).min()
+                        min_dist_km = min_dist_deg * 111.0
+                        
+                    applicable_rules.append({
+                        'name': 'terrain_transition_penetration',
+                        'priority': 1.0,  # Highest priority override
+                        'description': 'Transition penetration override: Rural/agricultural terrains (II or IIIa) penetrate into Terrain IV up to 50m, converting it to Terrain IIIa',
+                        'score': 100.0
+                    })
+                    rule_explanations['terrain_transition_penetration'] = (
+                        f"Transition override applied: classified as IIIa because the location is within 50m "
+                        f"({min_dist_km * 1000.0:.1f}m) of a Terrain II/IIIa boundary, penetrating Terrain IV."
+                    )
+                elif scored_rules:
                     rule_name, rule, score = scored_rules[0]
                     applicable_rules.append({
                         'name': rule_name,
@@ -584,6 +626,9 @@ class TerrainClassificationService:
         base_confidence = self._calculate_base_confidence(terrain_type, longitude, latitude, gdf)
         
         # Apply the highest scoring rule and adjust confidence
+        final_terrain = terrain_type
+        final_confidence = base_confidence
+
         if scored_rules:
             rule_name, rule, score = scored_rules[0]
             modified_terrain = self._get_rule_result(rule_name, terrain_type, longitude, latitude, gdf)
@@ -592,12 +637,36 @@ class TerrainClassificationService:
                 # Rule was applied - adjust confidence based on rule score
                 rule_confidence = min(score / 100.0, 1.0)  # Normalize score to 0-1
                 final_confidence = (base_confidence + rule_confidence) / 2.0
-                
+                final_terrain = modified_terrain
                 logger.debug(f"Rule {rule_name} applied with score {score:.2f}: {terrain_type} -> {modified_terrain} (Confidence: {final_confidence:.2f})")
-                return modified_terrain, final_confidence
         
-        # No rule applied - return base classification with base confidence
-        return terrain_type, base_confidence
+        # Apply transition penetration override
+        # If the point's base terrain is Terrain II or Terrain IIIa, it must stay as its base terrain
+        # and not be upgraded to Terrain IV.
+        if final_terrain == 'IV' and terrain_type in ['II', 'IIIa']:
+            final_terrain = terrain_type
+            logger.debug(f"Transition override: point has base terrain {terrain_type}, preserved and reverted from IV")
+        
+        # Apply transition penetration override for Terrain IV near Terrain II/IIIa boundaries (up to 50m / 0.05km)
+        elif final_terrain == 'IV':
+            # Check proximity to base Terrain II or base Terrain IIIa polygons
+            clc_mappings = terrain_config_service.get_clc_code_mappings()
+            terrain_II_codes = clc_mappings.get('terrain_II', {}).get('codes', [])
+            terrain_IIIa_codes = clc_mappings.get('terrain_IIIa', {}).get('codes', [])
+            target_codes = list(terrain_II_codes) + list(terrain_IIIa_codes)
+            
+            matching_polygons = gdf[gdf['Code_18'].isin(target_codes)]
+            if len(matching_polygons) > 0:
+                point = Point(longitude, latitude)
+                min_dist_deg = matching_polygons.geometry.distance(point).min()
+                min_dist_km = min_dist_deg * 111.0
+                
+                if min_dist_km <= 0.05:  # Within 50 meters
+                    final_terrain = 'IIIa'
+                    final_confidence = max(final_confidence, 0.8)  # Set high confidence for direct physical override
+                    logger.debug(f"Transition penetration override applied: Terrain IV downgraded to IIIa (Distance to II/IIIa: {min_dist_km:.3f} km)")
+        
+        return final_terrain, final_confidence
     
     def _calculate_base_confidence(self, terrain_type: str, longitude: float, latitude: float, gdf) -> float:
         """Calculate base confidence score from CLC mapping and spatial data quality."""
@@ -1985,6 +2054,15 @@ class TerrainClassificationService:
             True if dense urban area, False otherwise
         """
         try:
+            # Check if the coordinates themselves fall within an Industrial or commercial units polygon (Code 121)
+            # Industrial zones should remain Terrain IIIb and not be elevated to Terrain IV.
+            point = Point(longitude, latitude)
+            intersects = self._optimized_spatial_query(point, gdf)
+            if len(intersects) > 0:
+                primary_clc = intersects.iloc[0]['Code_18']
+                if primary_clc in ['121', '142']:
+                    return False
+
             # Get spatial extent percentages using the existing method
             extent_pct = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, radius_km)
             
