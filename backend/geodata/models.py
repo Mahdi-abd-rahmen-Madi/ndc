@@ -158,6 +158,7 @@ class TerrainDocumentation(models.Model):
     terrain_type = models.CharField(max_length=10, choices=TERRAIN_TYPES, verbose_name=_("Terrain Type"))
     document_urls = models.TextField(help_text=_("Comma-separated URLs for terrain calculation documents"), verbose_name=_("Document URLs"))
     document_types = models.JSONField(default=list, blank=True, help_text=_("List of document file extensions (e.g., ['.docx', '.rtd'])"), verbose_name=_("Document Types"))
+    local_document_urls = models.TextField(blank=True, default='', help_text=_("Comma-separated local paths/URLs for the downloaded documents"), verbose_name=_("Local Document URLs"))
     upload_date = models.DateTimeField(auto_now_add=True, verbose_name=_("Upload Date"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))

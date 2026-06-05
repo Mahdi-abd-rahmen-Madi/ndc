@@ -166,3 +166,7 @@ X_FRAME_OPTIONS = 'ALLOWALL'
 SECURE_BROWSER_XSS_FILTER = False
 SECURE_CONTENT_TYPE_NOSNIFF = False
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Media files configuration for local downloads
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

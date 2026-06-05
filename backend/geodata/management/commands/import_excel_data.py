@@ -35,7 +35,12 @@ class Command(BaseCommand):
                     if pd.isna(row['Name']):
                         continue
                         
-                    # Create or update AntennaEquipment
+                    item_id_col = 'Item ID (auto generated)'
+                    if item_id_col in row and pd.notna(row[item_id_col]):
+                        item_id_val = str(int(row[item_id_col]))
+                    else:
+                        item_id_val = str(row['Name']).strip().replace(' ', '_').lower()
+
                     equipment_data = {
                         'name': str(row['Name']).strip(),
                         'sub_elements': str(row['Sous-éléments']) if pd.notna(row['Sous-éléments']) else '',
@@ -45,7 +50,7 @@ class Command(BaseCommand):
                         'building_height': float(row['Hauteur BATIMENT (m)']) if pd.notna(row['Hauteur BATIMENT (m)']) else None,
                         'mast_height': float(row['Hauteur MAT (m)']) if pd.notna(row['Hauteur MAT (m)']) else None,
                         'comments': str(row['Commentaire']).strip() if pd.notna(row['Commentaire']) else '',
-                        'item_id': str(int(row['Item ID (auto generated)'])) if pd.notna(row['Item ID (auto generated)']) else '',
+                        'item_id': item_id_val,
                     }
                     
                     if not dry_run:

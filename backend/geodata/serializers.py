@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation
+from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, TerrainDocumentation
 
 
 class ResponsibleUserSerializer(serializers.ModelSerializer):
@@ -19,12 +19,21 @@ class AntennaSpecificationSerializer(serializers.ModelSerializer):
         ]
 
 
+class TerrainDocumentationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TerrainDocumentation
+        fields = ['id', 'equipment', 'terrain_type', 'document_urls', 'local_document_urls', 'document_types', 'upload_date']
+
+
 class TerrainLoadCalculationSerializer(serializers.ModelSerializer):
+    documentation = TerrainDocumentationSerializer(read_only=True)
+
     class Meta:
         model = TerrainLoadCalculation
         fields = [
             'id', 'equipment', 'terrain_type', 'section_material',
-            'load_calculations', 'created_at', 'updated_at'
+            'material_specification', 'load_calculations', 'documentation',
+            'created_at', 'updated_at'
         ]
 
 

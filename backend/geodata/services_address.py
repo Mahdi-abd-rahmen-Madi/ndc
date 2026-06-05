@@ -5,6 +5,7 @@ import requests
 import random
 import json
 import time
+import hashlib
 from typing import List, Dict, Optional, Tuple
 from django.core.cache import cache
 from django.conf import settings
@@ -58,9 +59,11 @@ class AddressGenerationService:
             "Dijon", "Angers", "Saint-Nazaire", "Nîmes", "Clermont-Ferrand",
             "Le Mans", "Aix-en-Provence", "Brest", "Limoges", "Tours",
             "Amiens", "Metz", "Besançon", "Orléans", "Mulhouse",
-            "Rouen", "Boulogne-Billancourt", "Caen", "Nîmes", "Dijon",
-            "Perpignan", "Argenteuil", "Roubaix", "Tourcoing", "Nanterre",
-            "Avignon", "Créteil", "Dunkerque", "Poitiers", "Courbevoie"
+            "Rouen", "Boulogne-Billancourt", "Caen", "Perpignan", "Argenteuil",
+            "Roubaix", "Tourcoing", "Nanterre", "Avignon", "Créteil",
+            "Dunkerque", "Poitiers", "Courbevoie", "Nancy", "Versailles",
+            "Saint-Denis", "Montreuil", "Colombes", "Asnières-sur-Seine",
+            "Rueil-Malmaison", "Antibes"
         ]
     
     def search_addresses(self, query: str, limit: int = 5) -> List[Dict]:
@@ -74,7 +77,9 @@ class AddressGenerationService:
         Returns:
             List of address features with coordinates
         """
-        cache_key = f"geocode_{query}_{limit}"
+        # Use MD5 hash of query to create a safe cache key without spaces or special characters
+        query_hash = hashlib.md5(query.encode('utf-8')).hexdigest()
+        cache_key = f"geocode_{query_hash}_{limit}"
         cached_result = cache.get(cache_key)
         
         if cached_result:

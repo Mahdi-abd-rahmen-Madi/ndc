@@ -47,7 +47,9 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         """
         Custom permissions for different actions.
         """
-        if self.action in ['update', 'partial_update', 'destroy']:
+        if self.action == 'public_lookup':
+            self.permission_classes = [permissions.AllowAny]
+        elif self.action in ['update', 'partial_update', 'destroy']:
             # For update/delete, check if user is responsible for this specific equipment
             self.permission_classes = [IsAdminOrResponsibleEngineerPermission]
         else:
@@ -120,6 +122,90 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def public_lookup(self, request):
+        """
+        Public lookup for antenna equipment based on coordinates (address geocoding) and height.
+        """
+        latitude = request.query_params.get('latitude')
+        longitude = request.query_params.get('longitude')
+        mast_height = request.query_params.get('mast_height')
+        building_height = request.query_params.get('building_height')
+
+        if not latitude or not longitude:
+            return Response(
+                {'error': 'Both latitude and longitude parameters are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            lat = float(latitude)
+            lon = float(longitude)
+        except ValueError:
+            return Response(
+                {'error': 'Invalid coordinate format'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 1. Determine terrain type at coordinates
+        terrain_type = None
+        try:
+            # Import dynamically to prevent circular imports if any
+            from .services import TerrainClassificationService
+            ts = TerrainClassificationService.get_instance()
+            terrain_type = ts.get_terrain_type_at_coordinates(lon, lat)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error classifying terrain for public lookup: {e}")
+
+        # 2. Determine region at coordinates
+        region_number = None
+        try:
+            from .services import TerrainClassificationService
+            ts = TerrainClassificationService.get_instance()
+            region_number = ts.get_region_from_coordinates(lon, lat)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting region for public lookup: {e}")
+
+        # Query AntennaEquipment
+        queryset = AntennaEquipment.objects.all()
+
+        if region_number:
+            queryset = queryset.filter(region=region_number)
+        
+        if mast_height:
+            try:
+                queryset = queryset.filter(mast_height=float(mast_height))
+            except ValueError:
+                pass
+
+        if building_height:
+            try:
+                queryset = queryset.filter(building_height=float(building_height))
+            except ValueError:
+                pass
+
+        montage = request.query_params.get('montage')
+        if montage:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(name__iexact=f"Montage {montage}") |
+                Q(name__istartswith=f"Montage {montage}.")
+            )
+
+        # Serialize results
+        serializer = AntennaEquipmentSerializer(queryset, many=True)
+
+        return Response({
+            'detected_terrain_type': terrain_type,
+            'detected_region': region_number,
+            'equipment': serializer.data
+        })
+
 
 
 class AntennaSpecificationViewSet(viewsets.ModelViewSet):
