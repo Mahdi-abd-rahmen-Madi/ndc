@@ -659,6 +659,77 @@ class EnhancedTerrainClassificationTest(TestCase):
                 # Should stay as base terrain II, not be elevated to IV
                 self.assertEqual(terrain, 'II')
 
+    def test_forest_gaps_in_urban(self):
+        """Test that continuous urban fabric (CLC 111) is demoted to IIIa in forest gaps (no buildings nearby)."""
+        from django.core.cache import cache
+        from geodata.models import BuildingBlock
+        from django.contrib.gis.geos import MultiPolygon, Polygon, Point as GISPoint
+        
+        cache.clear()
+        
+        # Coordinates for the test point
+        lon, lat = 2.500, 48.500
+        
+        # 1. Create a mock CLC 111 (continuous urban fabric) polygon containing the test point
+        import geopandas as gpd
+        from shapely.geometry import Polygon as ShapelyPolygon
+        
+        poly_urban = ShapelyPolygon([(2.49, 48.49), (2.51, 48.49), (2.51, 48.51), (2.49, 48.51)])
+        gdf = gpd.GeoDataFrame({
+            'Code_18': ['111'],
+            'geometry': [poly_urban]
+        }, crs="EPSG:4326")
+        
+        with patch.object(terrain_service, '_load_land_use_data', return_value=gdf):
+            # Clean up any existing building blocks in the database for test isolation
+            BuildingBlock.objects.all().delete()
+            
+            # --- Case 1: No building data exists in the database ---
+            # It should remain Terrain IV because building data is unavailable to verify
+            terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+            self.assertEqual(terrain, 'IV')
+            
+            # --- Case 2: Building exists very close (10m away) ---
+            # Create a building block at approx 10 meters distance
+            # 1 degree latitude ~ 111000 meters, so 0.00009 degrees ~ 10 meters
+            geom_close = MultiPolygon(Polygon(((2.50009, 48.500), (2.50019, 48.500), (2.50019, 48.5001), (2.50009, 48.5001), (2.50009, 48.500))))
+            BuildingBlock.objects.create(
+                commune_insee='75001',
+                geometry=geom_close,
+                department_code='75',
+                building_count=1
+            )
+            
+            cache.clear()
+            terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+            # Should remain Terrain IV because a building block is close
+            self.assertEqual(terrain, 'IV')
+            
+            # --- Case 3: Nearest building is far (80m away) ---
+            # Delete the close building block and create one far away (80 meters, ~0.00072 degrees)
+            BuildingBlock.objects.all().delete()
+            geom_far = MultiPolygon(Polygon(((2.50072, 48.500), (2.50082, 48.500), (2.50082, 48.5001), (2.50072, 48.5001), (2.50072, 48.500))))
+            BuildingBlock.objects.create(
+                commune_insee='75001',
+                geometry=geom_far,
+                department_code='75',
+                building_count=1
+            )
+            
+            cache.clear()
+            terrain = terrain_service.get_terrain_type_at_coordinates(lon, lat)
+            # Should be demoted to Terrain IIIa because nearest building block is > 50m
+            self.assertEqual(terrain, 'IIIa')
+            
+            # Verify the rule was listed in classification details
+            details = terrain_service.get_terrain_classification_details(lon, lat)
+            rule_names = [rule['name'] for rule in details.get('applicable_rules', [])]
+            self.assertIn('forest_gaps_in_urban', rule_names)
+            self.assertEqual(details['terrain_type'], 'IIIa')
+
+
+
+
 
 from rest_framework.test import APITestCase
 from unittest.mock import patch

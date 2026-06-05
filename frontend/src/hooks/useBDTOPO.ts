@@ -73,6 +73,8 @@ export function useBDTOPO(): UseBDTOPOReturn {
       // Define building layers from BDTOPO (French layer names)
       const buildingLayers = ['batiment', 'construction_surfacique', 'construction_lineaire'];
 
+      const beforeId = map.getLayer('waterway-label') ? 'waterway-label' : undefined;
+
       // Add building layers
       buildingLayers.forEach((layerName) => {
         const buildingLayerId = `${layerId}-${layerName}`;
@@ -101,7 +103,7 @@ export function useBDTOPO(): UseBDTOPOReturn {
                 'fill-outline-color': '#CC5555',
               },
             },
-            'waterway-label'
+            beforeId
           );
 
           // Add outline layer
@@ -117,7 +119,7 @@ export function useBDTOPO(): UseBDTOPOReturn {
                 'line-opacity': config.opacity * 0.5,
               },
             },
-            'waterway-label'
+            beforeId
           );
         }
       });

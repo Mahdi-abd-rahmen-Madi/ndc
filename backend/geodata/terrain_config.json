@@ -118,6 +118,18 @@
         "distance_threshold_km": 1.0
       }
     },
+    "forest_gaps_in_urban": {
+      "enabled": true,
+      "priority": 1.8,
+      "description": "Identify forest gaps/parks inside of urban type IV zones with CLC 111 and demote to IIIa",
+      "conditions": {
+        "applicable_to_terrain": ["IV"],
+        "clc_codes": ["111"],
+        "max_buildings_nearby": 0,
+        "search_radius_m": 50.0,
+        "target_terrain": "IIIa"
+      }
+    },
     "coastal_exposure": {
       "enabled": true,
       "priority": 1,

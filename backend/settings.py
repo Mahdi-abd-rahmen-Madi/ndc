@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.gis',
     'rest_framework',
     'corsheaders',
     'django_filters',
@@ -89,6 +90,7 @@ DATABASE_URL = config('DATABASE_URL', default='sqlite:///db.sqlite3')
 DATABASES = {
     'default': dj_database_url.parse(DATABASE_URL)
 }
+DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 
 # Alternative manual configuration (uncomment if you prefer this approach)
 # DATABASES = {

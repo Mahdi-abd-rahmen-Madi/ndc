@@ -55,7 +55,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--output-dir',
             type=str,
-            default='/mnt/d/DC/cadastre',
+            default='/home/mahdi/CascadeProjects/ndc/backend/data/cadastre',
             help='Directory to store processed FlatGeobuf files'
         )
         parser.add_argument(

@@ -871,7 +871,13 @@ class TerrainClassificationService:
                             longitude: float, latitude: float, gdf) -> float:
         """Calculate weighted score for a specific classification rule."""
         try:
-            if rule_name == 'coastline_proximity_1km':
+            if rule_name == 'forest_gaps_in_urban':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['IV'])
+                if terrain_type not in applicable_terrain:
+                    return 0.0
+                return self._score_forest_gaps_in_urban(longitude, latitude, gdf)
+            
+            elif rule_name == 'coastline_proximity_1km':
                 threshold = rule.get('conditions', {}).get('distance_threshold_km', 1.0)
                 is_near = self._is_near_physical_coastline(longitude, latitude, threshold_km=threshold)
                 return 100.0 if is_near else 0.0
@@ -1203,7 +1209,13 @@ class TerrainClassificationService:
                                  longitude: float, latitude: float, gdf) -> bool:
         """Check if a classification rule should be applied."""
         try:
-            if rule_name == 'coastline_proximity_1km':
+            if rule_name == 'forest_gaps_in_urban':
+                applicable_terrain = rule.get('conditions', {}).get('applicable_to_terrain', ['IV'])
+                if terrain_type not in applicable_terrain:
+                    return False
+                return self._score_forest_gaps_in_urban(longitude, latitude, gdf) > 0.0
+            
+            elif rule_name == 'coastline_proximity_1km':
                 threshold = rule.get('conditions', {}).get('distance_threshold_km', 1.0)
                 return self._is_near_physical_coastline(longitude, latitude, threshold_km=threshold)
 
@@ -1249,7 +1261,9 @@ class TerrainClassificationService:
         rules = terrain_config_service.get_classification_rules()
         rule = rules.get(rule_name, {})
         
-        if rule_name == 'coastline_proximity_1km':
+        if rule_name == 'forest_gaps_in_urban':
+            return rule.get('conditions', {}).get('target_terrain', 'IIIa')
+        elif rule_name == 'coastline_proximity_1km':
             return '0'
         elif rule_name == 'coastal_exposure':
             return '0'
@@ -1282,7 +1296,20 @@ class TerrainClassificationService:
                                    longitude: float, latitude: float, gdf) -> str:
         """Generate human-readable explanation for why a rule was applied."""
         try:
-            if rule_name == 'coastline_proximity_1km':
+            if rule_name == 'forest_gaps_in_urban':
+                from django.contrib.gis.geos import Point as GISPoint
+                from django.contrib.gis.db.models.functions import Distance
+                from django.contrib.gis.measure import D
+                from geodata.models import BuildingBlock
+                p = GISPoint(longitude, latitude, srid=4326)
+                # Optimize by limiting nearest building block query to 5km to use spatial index
+                nearest = BuildingBlock.objects.filter(geometry__distance_lte=(p, D(m=5000))).annotate(
+                    distance=Distance('geometry', p)
+                ).order_by('distance').first()
+                distance_m = nearest.distance.m if nearest else 0.0
+                return f"Forest gap in urban zone: Point is in CLC 111 (continuous urban fabric) but nearest building is {distance_m:.1f}m away (demoted to IIIa)"
+            
+            elif rule_name == 'coastline_proximity_1km':
                 threshold = rule.get('conditions', {}).get('distance_threshold_km', 1.0)
                 return f"Coastline proximity: Within {threshold:.1f}km of the physical coastline"
                 
@@ -2171,6 +2198,59 @@ class TerrainClassificationService:
             logger.debug(f"Error in building density verification: {e}")
             return None
     
+    def _score_forest_gaps_in_urban(self, longitude: float, latitude: float, gdf) -> float:
+        """
+        Score forest gaps inside of the urban type IV zones (CLC 111).
+        If the nearest building is more than the threshold distance (e.g., 50m),
+        and building data is imported for this area, return 100.0 to demote to IIIa.
+        """
+        try:
+            # Check if this coordinate falls in CLC 111 (Continuous urban fabric)
+            # Find intersecting polygon to get the CLC code
+            point = Point(longitude, latitude)
+            intersects = self._optimized_spatial_query(point, gdf)
+            if len(intersects) == 0:
+                return 0.0
+            
+            clc_code = intersects.iloc[0]['Code_18']
+            if clc_code != '111':
+                return 0.0  # Only apply to CLC 111
+            
+            # Check if building block data exists within 5km of this point
+            from geodata.models import BuildingBlock
+            from django.contrib.gis.measure import D
+            from django.contrib.gis.geos import Point as GISPoint
+            
+            p = GISPoint(longitude, latitude, srid=4326)
+            if not BuildingBlock.objects.filter(geometry__distance_lte=(p, D(m=5000))).exists():
+                return 0.0  # No building block data imported for this region
+            
+            # Load configuration for threshold distance
+            config = terrain_config_service.load_config()
+            rule_config = config.get('classification_rules', {}).get('forest_gaps_in_urban', {})
+            conditions = rule_config.get('conditions', {})
+            threshold_m = conditions.get('search_radius_m', 50.0)
+            
+            # Check if any building block exists within search_radius_m using index-only query (extremely fast)
+            has_nearby_building = BuildingBlock.objects.filter(geometry__distance_lte=(p, D(m=threshold_m))).exists()
+            
+            if not has_nearby_building:
+                # Find distance to the nearest building block (restricted to 5km to use spatial index)
+                from django.contrib.gis.db.models.functions import Distance
+                nearest = BuildingBlock.objects.filter(geometry__distance_lte=(p, D(m=5000))).annotate(
+                    distance=Distance('geometry', p)
+                ).order_by('distance').first()
+                
+                distance_m = nearest.distance.m if nearest else 5000.0
+                logger.debug(f"Forest gap detected in urban zone CLC 111 at ({longitude}, {latitude}). Nearest building: {distance_m:.1f}m > {threshold_m}m")
+                return 100.0  # Apply the rule with full score
+            
+            return 0.0
+            
+        except Exception as e:
+            logger.error(f"Error checking forest gaps in urban zone: {e}")
+            return 0.0
+
     def _matches_building_criteria(self, coverage: float, height: float, criteria: dict) -> bool:
         """Check if building metrics match the decision criteria."""
         try:

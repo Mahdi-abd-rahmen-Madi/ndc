@@ -60,10 +60,21 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
         map.removeSource(sourceId);
       }
       
+      // Ensure features have integer IDs for maplibre feature state
+      const regionsWithIds = {
+        ...regions,
+        features: regions.features.map(f => ({
+          ...f,
+          id: f.properties.region_id
+        }))
+      };
+
       map.addSource(sourceId, {
         type: 'geojson',
-        data: regions,
+        data: regionsWithIds as any,
       });
+
+      const beforeId = map.getLayer('waterway-label') ? 'waterway-label' : undefined;
 
       // Add fill layer
       if (!map.getLayer(layerId)) {
@@ -73,11 +84,25 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
             type: 'fill',
             source: sourceId,
             paint: {
-              'fill-color': '#667eea',
-              'fill-opacity': 0.1,
+              // Color code the 4 wind regions beautifully
+              'fill-color': [
+                'match',
+                ['get', 'region_id'],
+                1, '#3b82f6', // Region 1: Beautiful Blue
+                2, '#6366f1', // Region 2: Premium Indigo
+                3, '#f59e0b', // Region 3: Vibrant Amber
+                4, '#ec4899', // Region 4: Rose Pink
+                '#667eea'     // Default: Slate Blue
+              ],
+              'fill-opacity': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                0.3,  // Opacity when hovered
+                0.1   // Default opacity
+              ]
             },
           },
-          'waterway-label' // Add before water labels
+          beforeId
         );
 
         // Add border layer
@@ -87,13 +112,79 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
             type: 'line',
             source: sourceId,
             paint: {
-              'line-color': '#667eea',
+              'line-color': [
+                'match',
+                ['get', 'region_id'],
+                1, '#1d4ed8',
+                2, '#4338ca',
+                3, '#b45309',
+                4, '#be185d',
+                '#4f46e5'
+              ],
               'line-width': 2,
-              'line-opacity': 0.5,
+              'line-opacity': 0.6,
             },
           },
-          'waterway-label'
+          beforeId
         );
+
+        // Create interactive hover popup for the regions
+        const popup = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          className: 'region-map-popup',
+        });
+
+        let hoveredFeatureId: number | undefined = undefined;
+
+        map.on('mousemove', layerId, (e) => {
+          if (!e.features || e.features.length === 0) return;
+          map.getCanvas().style.cursor = 'pointer';
+
+          const coordinates = e.lngLat;
+          const properties = e.features[0].properties;
+          const regionId = properties.region_id;
+          const name = properties.name;
+          const description = properties.description;
+          const v_b0 = properties.v_b0_value;
+
+          // Update hover state
+          if (hoveredFeatureId !== undefined) {
+            map.setFeatureState(
+              { source: sourceId, id: hoveredFeatureId },
+              { hover: false }
+            );
+          }
+          hoveredFeatureId = regionId;
+          map.setFeatureState(
+            { source: sourceId, id: hoveredFeatureId },
+            { hover: true }
+          );
+
+          popup
+            .setLngLat(coordinates)
+            .setHTML(`
+              <div class="p-2.5 max-w-[240px] font-sans bg-white rounded shadow-md border-l-4 border-indigo-500">
+                <strong class="text-sm text-indigo-600 block mb-1">${name}</strong>
+                <div class="text-xs text-gray-700 leading-normal mb-1.5">${description}</div>
+                <div class="text-xs font-semibold text-gray-600">Wind Speed (V_b0): <span class="text-indigo-600 font-bold">${v_b0} m/s</span></div>
+              </div>
+            `)
+            .addTo(map);
+        });
+
+        map.on('mouseleave', layerId, () => {
+          map.getCanvas().style.cursor = '';
+          popup.remove();
+
+          if (hoveredFeatureId !== undefined) {
+            map.setFeatureState(
+              { source: sourceId, id: hoveredFeatureId },
+              { hover: false }
+            );
+            hoveredFeatureId = undefined;
+          }
+        });
       }
     },
     [regions]
@@ -125,3 +216,4 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
     removeRegionsFromMap,
   };
 }
+

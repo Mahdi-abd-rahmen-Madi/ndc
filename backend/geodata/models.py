@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.gis.db import models as gis_models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
 
@@ -204,3 +205,64 @@ class TerrainLoadCalculation(models.Model):
 
     def __str__(self):
         return f"{self.equipment.name} - {self.terrain_type}"
+
+
+class Building(gis_models.Model):
+    """Represents building footprints imported from Etalab French cadastre"""
+    id = gis_models.CharField(max_length=50, primary_key=True)
+    commune_insee = gis_models.CharField(max_length=5, db_index=True)
+    building_type = gis_models.CharField(max_length=2)
+    geometry = gis_models.MultiPolygonField(srid=4326)
+    centroid = gis_models.PointField(srid=4326, null=True, blank=True)
+    department_code = gis_models.CharField(max_length=3, db_index=True)
+    data_source = gis_models.CharField(max_length=20, default='etalab_cadastre')
+    last_import = gis_models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Building")
+        verbose_name_plural = _("Buildings")
+        indexes = [
+            gis_models.Index(fields=['department_code', 'commune_insee']),
+        ]
+
+    def __str__(self):
+        return f"Building {self.id} ({self.commune_insee})"
+
+
+class BuildingBlock(gis_models.Model):
+    """Represents merged/aggregated building footprints (agglomerations)"""
+    id = gis_models.AutoField(primary_key=True)
+    department_code = gis_models.CharField(max_length=3, db_index=True)
+    commune_insee = gis_models.CharField(max_length=5, db_index=True)
+    geometry = gis_models.MultiPolygonField(srid=4326)
+    building_count = gis_models.IntegerField(default=1)
+    last_update = gis_models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Building Block")
+        verbose_name_plural = _("Building Blocks")
+        indexes = [
+            gis_models.Index(fields=['department_code', 'commune_insee']),
+        ]
+
+    def __str__(self):
+        return f"BuildingBlock {self.id} ({self.commune_insee}) - {self.building_count} bldgs"
+
+
+class CadastreUpdateStatus(gis_models.Model):
+    """Tracks update status for cadastre departments"""
+    department_code = gis_models.CharField(max_length=3)
+    data_type = gis_models.CharField(max_length=20)  # e.g., 'buildings'
+    last_update = gis_models.DateTimeField()
+    record_count = gis_models.IntegerField(default=0)
+    status = gis_models.CharField(max_length=20)  # e.g., 'SUCCESS', 'FAILED'
+    data_version = gis_models.CharField(max_length=20)  # e.g., date of data
+
+    class Meta:
+        verbose_name = _("Cadastre Update Status")
+        verbose_name_plural = _("Cadastre Update Statuses")
+        unique_together = ('department_code', 'data_type')
+
+    def __str__(self):
+        return f"{self.department_code} - {self.data_type}: {self.status}"
+
