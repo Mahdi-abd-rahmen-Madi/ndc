@@ -11,8 +11,8 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
   if (!classificationResult) {
     return (
       <div className="text-center text-gray-500 p-8">
-        <p>No classification result available</p>
-        <p className="text-sm mt-2">Click on the map to analyze terrain</p>
+        <p>Aucun résultat de classification disponible</p>
+        <p className="text-sm mt-2">Cliquez sur la carte pour analyser le terrain</p>
       </div>
     );
   }
@@ -21,35 +21,35 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
   const processSteps = [
     {
       number: 1,
-      title: 'Spatial Analysis',
-      description: 'Analyze spatial composition within analysis radius',
+      title: 'Analyse spatiale',
+      description: 'Analyse de la composition spatiale dans le rayon d\'analyse',
       status: 'completed' as const,
-      details: `Detected ${classificationResult.detected_clc_codes.length} CLC codes`,
+      details: `${classificationResult.detected_clc_codes.length} codes CLC détectés`,
       result: {
         type: 'success' as 'success' | 'failure' | 'info',
-        text: 'Analysis complete',
+        text: 'Analyse terminée',
       },
     },
     {
       number: 2,
-      title: 'Rule Evaluation',
-      description: 'Evaluate classification rules based on spatial data',
+      title: 'Évaluation des règles',
+      description: 'Évaluation des règles de classification basées sur les données spatiales',
       status: 'completed' as const,
-      details: `${classificationResult.applicable_rules.length} rules applied`,
+      details: `${classificationResult.applicable_rules.length} règles appliquées`,
       result: {
         type: 'success' as 'success' | 'failure' | 'info',
-        text: 'Rules evaluated',
+        text: 'Règles évaluées',
       },
     },
     {
       number: 3,
-      title: 'Terrain Classification',
-      description: 'Determine final terrain type based on rule priorities',
+      title: 'Classification du terrain',
+      description: 'Détermination du type de terrain final basé sur les priorités des règles',
       status: 'completed' as const,
-      details: `Classified as ${classificationResult.terrain_type}`,
+      details: `Classé comme ${classificationResult.terrain_type}`,
       result: {
         type: 'success' as 'success' | 'failure' | 'info',
-        text: 'Classification complete',
+        text: 'Classification terminée',
       },
     },
   ];
@@ -58,13 +58,13 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
   const decisionBranches = classificationResult.applicable_rules.map(rule => ({
     condition: rule.name,
     result: true,
-    explanation: `Rule with priority ${rule.priority} was applied`,
+    explanation: `La règle avec la priorité ${rule.priority} a été appliquée`,
   }));
 
   return (
     <div className="config-section block">
       <div className="config-header mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Classification Process</h2>
+        <h2 className="text-2xl font-semibold text-gray-800">Processus de classification</h2>
       </div>
 
       <div className="process-flow flex flex-col gap-4">
@@ -127,7 +127,7 @@ export default function ProcessTab({ classificationResult }: ProcessTabProps) {
 
       {decisionBranches.length > 0 && (
         <div className="decision-tree mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="decision-tree-title font-semibold text-gray-800 mb-3">Decision Tree</div>
+          <div className="decision-tree-title font-semibold text-gray-800 mb-3">Arbre de décision</div>
           {decisionBranches.map((branch, index) => (
             <div
               key={index}

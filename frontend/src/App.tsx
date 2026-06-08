@@ -179,12 +179,12 @@ export default function App() {
       <header className="header bg-gradient-to-r from-primary to-secondary text-white p-4 px-8 shadow-lg flex-shrink-0 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold">
-            {userMode === 'public' ? 'Antenna Design Catalogue' : 'Terrain Classification Map - France'}
+            {userMode === 'public' ? "Catalogue de Conception d'Antennes" : 'Carte de Classification du Terrain - France'}
           </h1>
           <p className="mt-1 opacity-90 text-sm">
             {userMode === 'public' 
-              ? 'Find required mast profiles and technical calculation documents' 
-              : 'Click on the map to analyze terrain classification (Genie Civil Department)'}
+              ? 'Trouvez les profils de mât requis et les documents de calcul technique' 
+              : 'Cliquez sur la carte pour analyser la classification du terrain (Département Génie Civil)'}
           </p>
         </div>
         
@@ -194,7 +194,7 @@ export default function App() {
             onClick={() => setUserMode(prev => prev === 'public' ? 'engineer' : 'public')}
             className="px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/30 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm"
           >
-            {userMode === 'public' ? 'Switch to Genie Civil Mode' : 'Switch to Public Catalogue'}
+            {userMode === 'public' ? 'Passer au Mode Génie Civil' : 'Passer au Catalogue Public'}
           </button>
         </div>
       </header>

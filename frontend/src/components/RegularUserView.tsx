@@ -296,20 +296,19 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
         <div>
           <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs tracking-wider uppercase">
             <Sparkles className="w-4 h-4" />
-            Antenna Design Catalogue
+            Catalogue de Conception d'Antennes
           </div>
-          <h2 className="text-2xl font-bold mt-1 text-white">Public Design Lookup</h2>
+          <h2 className="text-2xl font-bold mt-1 text-white">Recherche de Conception Publique</h2>
           <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-            Determine the required mast structural profile and download calculation models for your site. Search by address and specify the desired mast height.
+            Déterminez le profil de structure de mât requis et téléchargez les modèles de calcul pour votre site. Recherchez par adresse et spécifiez la hauteur de mât souhaitée.
           </p>
         </div>
 
         {/* Form Controls */}
         <div className="space-y-4">
-          
-          {/* Address Search Field */}
+             {/* Address Search Field */}
           <div className="flex flex-col space-y-1.5" ref={searchContainerRef}>
-            <label className="text-xs font-semibold text-slate-300">1. Select Location</label>
+            <label className="text-xs font-semibold text-slate-300">1. Sélectionner l'emplacement</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <Search className="w-4 h-4" />
@@ -319,7 +318,7 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                 value={searchQuery}
                 onChange={handleInputChange}
                 onFocus={() => setIsSearchOpen(true)}
-                placeholder="Enter address in France..."
+                placeholder="Entrez une adresse en France..."
                 className="w-full pl-9 pr-8 py-2.5 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
               {searchLoading && (
@@ -357,7 +356,7 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                     </button>
                   ))
                 ) : (
-                  <div className="p-4 text-center text-xs text-slate-500">No addresses found</div>
+                  <div className="p-4 text-center text-xs text-slate-500">Aucune adresse trouvée</div>
                 )}
               </div>
             )}
@@ -365,7 +364,7 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
 
           {/* Height Selection */}
           <div className="flex flex-col space-y-2">
-            <label className="text-xs font-semibold text-slate-300">2. Select Mast Height</label>
+            <label className="text-xs font-semibold text-slate-300">2. Sélectionner la hauteur du mât</label>
             <div className="grid grid-cols-2 gap-2">
               {[3, 4].map((h) => (
                 <button
@@ -378,7 +377,7 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                   }`}
                   type="button"
                 >
-                  {h}m Mast
+                  Mât de {h}m
                 </button>
               ))}
             </div>
@@ -386,29 +385,29 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
 
           {/* Building Height Selection */}
           <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">3. Select Building Height</label>
+            <label className="text-xs font-semibold text-slate-300">3. Sélectionner la hauteur du bâtiment</label>
             <select
               value={selectedBuildingHeight}
               onChange={(e) => setSelectedBuildingHeight(Number(e.target.value))}
               className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             >
-              <option value={15}>15m Building</option>
-              <option value={10}>10m Building (Not in catalogue)</option>
-              <option value={12}>12m Building (Not in catalogue)</option>
-              <option value={18}>18m Building (Not in catalogue)</option>
-              <option value={20}>20m Building (Not in catalogue)</option>
+              <option value={15}>Bâtiment de 15m</option>
+              <option value={10}>Bâtiment de 10m (Hors catalogue)</option>
+              <option value={12}>Bâtiment de 12m (Hors catalogue)</option>
+              <option value={18}>Bâtiment de 18m (Hors catalogue)</option>
+              <option value={20}>Bâtiment de 20m (Hors catalogue)</option>
             </select>
           </div>
 
           {/* Montage Selection */}
           <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">4. Select Montage Type</label>
+            <label className="text-xs font-semibold text-slate-300">4. Sélectionner le type de montage</label>
             <select
               value={selectedMontage}
               onChange={(e) => setSelectedMontage(e.target.value)}
               className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             >
-              <option value="">-- Choose Montage Type --</option>
+              <option value="">-- Choisir le type de montage --</option>
               {MONTAGES.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.dimensions} | {m.weight})
@@ -427,8 +426,8 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
             analysisRadius={0.5}
           />
           <div className="absolute bottom-2 left-2 right-2 bg-slate-950/80 backdrop-blur-sm border border-slate-800/80 rounded-md p-1.5 px-2.5 text-[10px] text-slate-400 pointer-events-none flex items-center justify-between">
-            <span>Interactive Map Preview</span>
-            <span className="flex items-center gap-1"><Compass className="w-3 h-3 animate-pulse text-indigo-400" /> Click to select point</span>
+            <span>Aperçu de la carte interactive</span>
+            <span className="flex items-center gap-1"><Compass className="w-3 h-3 animate-pulse text-indigo-400" /> Cliquez pour sélectionner un point</span>
           </div>
         </div>
       </div>
@@ -442,9 +441,9 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
             <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 mb-4">
               <Compass className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white">No Location Selected</h3>
+            <h3 className="text-lg font-bold text-white">Aucun emplacement sélectionné</h3>
             <p className="text-sm text-slate-400 mt-2 max-w-sm">
-              Use the address bar on the left or click anywhere on the map to determine local terrain rules and fetch catalogue data.
+              Utilisez la barre d'adresse à gauche ou cliquez n'importe où sur la carte pour déterminer les règles de terrain locales et récupérer les données du catalogue.
             </p>
           </div>
         )}
@@ -454,9 +453,9 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
             <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 mb-4">
               <Layers className="w-8 h-8 text-indigo-400" />
             </div>
-            <h3 className="text-lg font-bold text-white">Select Montage Type</h3>
+            <h3 className="text-lg font-bold text-white">Sélectionner le type de montage</h3>
             <p className="text-sm text-slate-400 mt-2 max-w-sm">
-              Please choose a Montage Type from the left dropdown menu to retrieve the specific design specifications and Monday.com documents.
+              Veuillez choisir un type de montage dans le menu déroulant à gauche pour récupérer les spécifications de conception spécifiques et les documents Monday.com.
             </p>
           </div>
         )}
@@ -464,15 +463,15 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
         {selectedCoords && selectedMontage && loading && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
             <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
-            <h3 className="text-base font-semibold text-white">Matching catalogue files...</h3>
-            <p className="text-xs text-slate-400 mt-1">Classifying terrain and retrieving structural analysis</p>
+            <h3 className="text-base font-semibold text-white">Correspondance des fichiers du catalogue...</h3>
+            <p className="text-xs text-slate-400 mt-1">Classification du terrain et récupération de l'analyse structurelle</p>
           </div>
         )}
 
         {selectedCoords && selectedMontage && error && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-rose-400">
             <AlertCircle className="w-10 h-10 mb-3" />
-            <h3 className="text-base font-bold">Catalogue Error</h3>
+            <h3 className="text-base font-bold">Erreur de catalogue</h3>
             <p className="text-xs text-slate-400 mt-1">{error}</p>
           </div>
         )}
@@ -484,10 +483,10 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
             {/* Header: Location & Classified Metadata */}
             <div className="bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400">Classified Location Details</span>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400">Détails de l'emplacement classé</span>
                 <h3 className="text-lg font-bold text-white mt-1 flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
-                  {selectedAddress?.name || 'Selected Coordinate'}
+                  {selectedAddress?.name || 'Coordonnées sélectionnées'}
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   {selectedAddress?.postcode} {selectedAddress?.city} {selectedAddress?.context && `• ${selectedAddress.context}`}
@@ -497,14 +496,14 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
               {/* Geographic Constraints badges */}
               <div className="flex items-center gap-3">
                 <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-center">
-                  <div className="text-[10px] uppercase font-semibold text-slate-500">Wind Region</div>
+                  <div className="text-[10px] uppercase font-semibold text-slate-500">Région de vent</div>
                   <div className="text-sm font-bold text-white mt-0.5">
-                    Region {lookupResult.detected_region || 'N/A'}
+                    Région {lookupResult.detected_region || 'N/A'}
                   </div>
                 </div>
 
                 <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-center">
-                  <div className="text-[10px] uppercase font-semibold text-slate-500">Terrain Category</div>
+                  <div className="text-[10px] uppercase font-semibold text-slate-500">Catégorie de terrain</div>
                   <div className="text-sm font-bold text-emerald-400 mt-0.5 flex items-center justify-center gap-1">
                     <Layers className="w-3.5 h-3.5 text-emerald-500" />
                     Terrain {lookupResult.detected_terrain_type || 'IIIa'}
@@ -517,9 +516,9 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
             {lookupResult.equipment.length === 0 ? (
               <div className="p-8 border border-slate-800 bg-slate-950/40 rounded-2xl text-center text-slate-400">
                 <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-white">No Exact Catalog Match</h4>
+                <h4 className="font-semibold text-white">Aucune correspondance exacte dans le catalogue</h4>
                 <p className="text-xs mt-1">
-                  No registered catalogue matches your selected mast height ({selectedHeight}m) and region ({lookupResult.detected_region || 'N/A'}).
+                  Aucun catalogue enregistré ne correspond à la hauteur de mât sélectionnée ({selectedHeight}m) et à la région ({lookupResult.detected_region || 'N/A'}).
                 </p>
               </div>
             ) : (
@@ -535,11 +534,11 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                       {/* Ribbon / Top header bar */}
                       <div className="bg-gradient-to-r from-indigo-950 to-indigo-900 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-900/60 gap-2">
                         <div>
-                          <div className="text-[10px] font-bold text-indigo-300 tracking-wider uppercase">matched design catalogue entry</div>
+                          <div className="text-[10px] font-bold text-indigo-300 tracking-wider uppercase">Entrée correspondante du catalogue de conception</div>
                           <h4 className="text-xl font-extrabold text-white mt-0.5">{eq.name}</h4>
                         </div>
                         <span className="self-start sm:self-auto bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs px-3 py-1 rounded-full font-semibold">
-                          ID: {eq.item_id || eq.id}
+                          ID : {eq.item_id || eq.id}
                         </span>
                       </div>
 
@@ -553,10 +552,10 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
                             <Shield className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
                             <div>
-                              <div className="text-xs text-slate-400 uppercase font-semibold">Required Mast Profile</div>
+                              <div className="text-xs text-slate-400 uppercase font-semibold">Profil de mât requis</div>
                               <div className="text-lg font-bold text-emerald-400 mt-0.5">{material}</div>
                               <p className="text-[10px] text-slate-500 mt-0.5">
-                                Verified structural section calculated under Eurocode constraints for Terrain Category {terrain}.
+                                Section structurelle vérifiée calculée sous les contraintes de l'Eurocode pour la catégorie de terrain {terrain}.
                               </p>
                             </div>
                           </div>
@@ -565,29 +564,29 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                           <div className="space-y-3">
                             <h5 className="text-xs uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
                               <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                              Antenna Load Specifications
+                              Spécifications de charge d'antenne
                             </h5>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* 4G specifications */}
                               {eq.specifications?.filter((s: any) => s.antenna_type === '4G').map((s: any) => (
                                 <div key={s.id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                                  <div className="text-xs font-bold text-indigo-400 uppercase">4G Antenna Model</div>
+                                  <div className="text-xs font-bold text-indigo-400 uppercase">Modèle d'antenne 4G</div>
                                   <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2.5 text-xs">
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Height</div>
+                                      <div className="text-slate-500 text-[10px]">Hauteur</div>
                                       <div className="font-semibold text-slate-200">{s.height_mm} mm</div>
                                     </div>
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Width</div>
+                                      <div className="text-slate-500 text-[10px]">Largeur</div>
                                       <div className="font-semibold text-slate-200">{s.width_mm} mm</div>
                                     </div>
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Thickness</div>
+                                      <div className="text-slate-500 text-[10px]">Épaisseur</div>
                                       <div className="font-semibold text-slate-200">{s.thickness_mm} mm</div>
                                     </div>
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Weight</div>
+                                      <div className="text-slate-500 text-[10px]">Poids</div>
                                       <div className="font-semibold text-emerald-400">{s.weight_dan} daN</div>
                                     </div>
                                   </div>
@@ -597,22 +596,22 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                               {/* 5G specifications */}
                               {eq.specifications?.filter((s: any) => s.antenna_type === '5G').map((s: any) => (
                                 <div key={s.id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                                  <div className="text-xs font-bold text-indigo-400 uppercase">5G Antenna Model</div>
+                                  <div className="text-xs font-bold text-indigo-400 uppercase">Modèle d'antenne 5G</div>
                                   <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2.5 text-xs">
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Height</div>
+                                      <div className="text-slate-500 text-[10px]">Hauteur</div>
                                       <div className="font-semibold text-slate-200">{s.height_mm} mm</div>
                                     </div>
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Width</div>
+                                      <div className="text-slate-500 text-[10px]">Largeur</div>
                                       <div className="font-semibold text-slate-200">{s.width_mm} mm</div>
                                     </div>
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Thickness</div>
+                                      <div className="text-slate-500 text-[10px]">Épaisseur</div>
                                       <div className="font-semibold text-slate-200">{s.thickness_mm} mm</div>
                                     </div>
                                     <div>
-                                      <div className="text-slate-500 text-[10px]">Weight</div>
+                                      <div className="text-slate-500 text-[10px]">Poids</div>
                                       <div className="font-semibold text-emerald-400">{s.weight_dan} daN</div>
                                     </div>
                                   </div>
@@ -624,16 +623,16 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                           {/* Extra info: Responsible person & comments */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-slate-800/80">
                             <div>
-                              <div className="text-slate-500">Design Owner</div>
-                              <div className="font-medium text-slate-300 mt-0.5">{eq.responsible_person || 'Engineering Dept'}</div>
+                              <div className="text-slate-500">Propriétaire de la conception</div>
+                              <div className="font-medium text-slate-300 mt-0.5">{eq.responsible_person || 'Dépt Ingénierie'}</div>
                             </div>
                             <div>
-                              <div className="text-slate-500">Sub-Elements</div>
-                              <div className="font-medium text-slate-300 mt-0.5">{eq.sub_elements || 'Standard Mount'}</div>
+                              <div className="text-slate-500">Sous-éléments</div>
+                              <div className="font-medium text-slate-300 mt-0.5">{eq.sub_elements || 'Montage Standard'}</div>
                             </div>
                             {eq.comments && (
                               <div className="col-span-2">
-                                <div className="text-slate-500">Remarks / Notes</div>
+                                <div className="text-slate-500">Remarques / Notes</div>
                                 <p className="text-slate-400 mt-0.5 leading-relaxed">{eq.comments}</p>
                               </div>
                             )}
@@ -645,12 +644,12 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                           <div className="space-y-4">
                             <h5 className="text-xs uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
                               <Download className="w-3.5 h-3.5 text-indigo-400" />
-                              Technical Calculations File
+                              Fichier de calculs techniques
                             </h5>
                             
                             {docList.length === 0 ? (
                               <div className="text-center py-8 text-slate-500 text-xs">
-                                No calculations document available for this configuration.
+                                Aucun document de calcul disponible pour cette configuration.
                               </div>
                             ) : (
                               <div className="space-y-2.5">
@@ -681,11 +680,11 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                                           <div className="text-[10px] text-slate-500 mt-0.5">
                                             {isLocal ? (
                                               <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
-                                                ✅ Served Locally
+                                                ✅ Servi localement
                                               </span>
                                             ) : (
                                               <span className="text-amber-500 flex items-center gap-0.5">
-                                                🔒 Monday.com Login Required
+                                                🔒 Connexion Monday.com requise
                                               </span>
                                             )}
                                           </div>
@@ -702,7 +701,7 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                           {/* Quick validation badge */}
                           <div className="mt-6 border-t border-slate-800/80 pt-4 flex items-center gap-2 text-emerald-400 text-xs font-medium">
                             <CheckCircle2 className="w-4 h-4 shrink-0" />
-                            <span>Ready for procurement submission</span>
+                            <span>Prêt pour soumission aux achats</span>
                           </div>
                         </div>
 

@@ -15,7 +15,7 @@ export const TERRAIN_TYPES: Record<TerrainType, TerrainTypeInfo> = {
   '0': {
     type: '0',
     name: 'Terrain 0',
-    description: 'Open countryside with minimal urban development, suitable for standard wind turbine installations',
+    description: 'Campagne ouverte avec un développement urbain minimal, adaptée aux installations de mâts standards',
     icon: '🌾',
     color: '#0077be',
     gradient: 'linear-gradient(135deg, #0077be, #005a8b)',
@@ -23,7 +23,7 @@ export const TERRAIN_TYPES: Record<TerrainType, TerrainTypeInfo> = {
   'II': {
     type: 'II',
     name: 'Terrain II',
-    description: 'Rural areas with some development, moderate wind conditions',
+    description: 'Zones rurales avec un certain développement, conditions de vent modérées',
     icon: '🏞️',
     color: '#28a745',
     gradient: 'linear-gradient(135deg, #28a745, #1e7e34)',
@@ -31,7 +31,7 @@ export const TERRAIN_TYPES: Record<TerrainType, TerrainTypeInfo> = {
   'IIIa': {
     type: 'IIIa',
     name: 'Terrain IIIa',
-    description: 'Transitional zones with mixed urban and rural characteristics',
+    description: 'Zones de transition avec des caractéristiques mixtes urbaines et rurales',
     icon: '🏘️',
     color: '#ffc107',
     gradient: 'linear-gradient(135deg, #ffc107, #d39e00)',
@@ -39,7 +39,7 @@ export const TERRAIN_TYPES: Record<TerrainType, TerrainTypeInfo> = {
   'IIIb': {
     type: 'IIIb',
     name: 'Terrain IIIb',
-    description: 'Areas with significant urban influence, complex terrain',
+    description: 'Zones avec une influence urbaine significative, terrain complexe',
     icon: '🏙️',
     color: '#fd7e14',
     gradient: 'linear-gradient(135deg, #fd7e14, #dc6502)',
@@ -47,7 +47,7 @@ export const TERRAIN_TYPES: Record<TerrainType, TerrainTypeInfo> = {
   'IV': {
     type: 'IV',
     name: 'Terrain IV',
-    description: 'Dense urban environments with complex wind patterns, requires special consideration',
+    description: 'Environnements urbains denses avec des configurations de vent complexes, nécessite une attention particulière',
     icon: '🌆',
     color: '#dc3545',
     gradient: 'linear-gradient(135deg, #dc3545, #a71d2a)',

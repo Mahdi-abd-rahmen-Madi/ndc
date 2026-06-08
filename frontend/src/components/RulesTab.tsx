@@ -12,8 +12,8 @@ export default function RulesTab({ classificationResult, config }: RulesTabProps
   if (!classificationResult) {
     return (
       <div className="text-center text-gray-500 p-8">
-        <p>No classification result available</p>
-        <p className="text-sm mt-2">Click on the map to analyze terrain</p>
+        <p>Aucun résultat de classification disponible</p>
+        <p className="text-sm mt-2">Cliquez sur la carte pour analyser le terrain</p>
       </div>
     );
   }
@@ -21,7 +21,7 @@ export default function RulesTab({ classificationResult, config }: RulesTabProps
   if (!config) {
     return (
       <div className="text-center text-gray-500 p-8">
-        <p>Loading configuration...</p>
+        <p>Chargement de la configuration...</p>
       </div>
     );
   }
@@ -32,12 +32,12 @@ export default function RulesTab({ classificationResult, config }: RulesTabProps
   return (
     <div className="config-section block">
       <div className="config-header mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Classification Rules</h2>
+        <h2 className="text-2xl font-semibold text-gray-800">Règles de classification</h2>
       </div>
 
       <div className="config-group mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b-2 border-primary pb-2">
-          All Rules
+          Toutes les règles
         </h3>
 
         {Object.entries(rules).map(([ruleKey, rule]) => {
@@ -66,14 +66,14 @@ export default function RulesTab({ classificationResult, config }: RulesTabProps
                         : 'bg-red-100 text-red-800'
                     }`}
                   >
-                    {isApplied ? 'Applied' : 'Not Applied'}
+                    {isApplied ? 'Appliquée' : 'Non appliquée'}
                   </div>
                 </div>
                 <div className="rule-description text-sm text-gray-600 mb-2">{rule.description}</div>
                 
                 {rule.enabled && (
                   <div className="rule-conditions text-xs text-gray-500 mt-2 leading-relaxed">
-                    <div className="font-medium mb-1">Conditions:</div>
+                    <div className="font-medium mb-1">Conditions :</div>
                     {Object.entries(rule.conditions).map(([key, value]) => (
                       <div key={key} className="rule-condition-item flex justify-between items-center py-0.5 border-b border-gray-100 last:border-0">
                         <span className="rule-condition-label font-medium text-gray-600">

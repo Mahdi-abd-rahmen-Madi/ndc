@@ -12,7 +12,7 @@ export default function RegionControl({ visible, onToggle }: RegionControlProps)
       }`}
     >
       <Map className="w-5 h-5" />
-      <span>Regions</span>
+      <span>Régions</span>
     </button>
   );
 }

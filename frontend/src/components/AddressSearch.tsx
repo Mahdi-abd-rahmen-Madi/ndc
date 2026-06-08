@@ -94,7 +94,7 @@ export default function AddressSearch({
           value={query}
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
-          placeholder="Search address in France..."
+          placeholder="Rechercher une adresse en France..."
           className="w-full py-3 px-3 text-sm text-gray-800 placeholder-gray-400 bg-transparent border-none rounded-lg focus:outline-none"
         />
 
@@ -139,7 +139,7 @@ export default function AddressSearch({
               ))}
             </ul>
           ) : (
-            <div className="p-4 text-center text-sm text-gray-500">No results found</div>
+            <div className="p-4 text-center text-sm text-gray-500">Aucun résultat trouvé</div>
           )}
         </div>
       )}

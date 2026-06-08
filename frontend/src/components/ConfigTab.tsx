@@ -32,21 +32,21 @@ export default function ConfigTab({ config }: ConfigTabProps) {
     try {
       const success = await importConfig(importText);
       if (!success) {
-        setImportError('Failed to import configuration');
+        setImportError('Échec de l\'importation de la configuration');
       } else {
         setImportText('');
-        alert('Configuration imported successfully');
+        alert('Configuration importée avec succès');
       }
     } catch (err) {
-      setImportError('Invalid JSON format');
+      setImportError('Format JSON invalide');
     }
   };
 
   const handleReset = async () => {
-    if (confirm('Are you sure you want to reset the configuration to defaults?')) {
+    if (confirm('Êtes-vous sûr de vouloir réinitialiser la configuration aux valeurs par défaut ?')) {
       const success = await resetConfig();
       if (success) {
-        alert('Configuration reset successfully');
+        alert('Configuration réinitialisée avec succès');
       }
     }
   };
@@ -55,7 +55,7 @@ export default function ConfigTab({ config }: ConfigTabProps) {
     if (config) {
       const success = await saveConfig(config);
       if (success) {
-        alert('Configuration saved successfully');
+        alert('Configuration enregistrée avec succès');
       }
     }
   };
@@ -63,7 +63,7 @@ export default function ConfigTab({ config }: ConfigTabProps) {
   if (!config) {
     return (
       <div className="text-center text-gray-500 p-8">
-        <p>Loading configuration...</p>
+        <p>Chargement de la configuration...</p>
       </div>
     );
   }
@@ -71,23 +71,23 @@ export default function ConfigTab({ config }: ConfigTabProps) {
   return (
     <div className="config-section block">
       <div className="config-header mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Configuration Management</h2>
+        <h2 className="text-2xl font-semibold text-gray-800">Gestion de la configuration</h2>
       </div>
 
       <div className="config-summary bg-blue-50 border border-blue-300 rounded-lg p-4 mb-6">
-        <h3 className="font-semibold text-gray-800 mb-3">Configuration Summary</h3>
+        <h3 className="font-semibold text-gray-800 mb-3">Résumé de la configuration</h3>
         <div className="summary-grid grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-4 mt-2">
           <div className="summary-item text-center">
             <div className="summary-value text-3xl font-bold text-blue-600">
               {Object.keys(config.clc_code_mappings).length}
             </div>
-            <div className="summary-label text-sm text-gray-600">Terrain Types</div>
+            <div className="summary-label text-sm text-gray-600">Types de terrain</div>
           </div>
           <div className="summary-item text-center">
             <div className="summary-value text-3xl font-bold text-blue-600">
               {Object.keys(config.classification_rules).length}
             </div>
-            <div className="summary-label text-sm text-gray-600">Rules</div>
+            <div className="summary-label text-sm text-gray-600">Règles</div>
           </div>
           <div className="summary-item text-center">
             <div className="summary-value text-3xl font-bold text-blue-600">
@@ -100,14 +100,14 @@ export default function ConfigTab({ config }: ConfigTabProps) {
 
       <div className="config-group mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b-2 border-primary pb-2">
-          Metadata
+          Métadonnées
         </h3>
         <div className="config-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
           <span className="config-label font-medium text-gray-600 flex-1">Version</span>
           <span className="config-value font-bold text-gray-800">{config.metadata.version}</span>
         </div>
         <div className="config-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
-          <span className="config-label font-medium text-gray-600 flex-1">Last Updated</span>
+          <span className="config-label font-medium text-gray-600 flex-1">Dernière mise à jour</span>
           <span className="config-value font-bold text-gray-800">
             {new Date(config.metadata.last_updated).toLocaleString()}
           </span>
@@ -116,12 +116,12 @@ export default function ConfigTab({ config }: ConfigTabProps) {
 
       <div className="config-group mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 border-b-2 border-primary pb-2">
-          Import Configuration
+          Importer la configuration
         </h3>
         <textarea
           value={importText}
           onChange={(e) => setImportText(e.target.value)}
-          placeholder="Paste configuration JSON here..."
+          placeholder="Collez le JSON de configuration ici..."
           className="w-full p-3 border border-gray-300 rounded text-sm font-mono h-40"
         />
         {importError && (
@@ -133,7 +133,7 @@ export default function ConfigTab({ config }: ConfigTabProps) {
           className="mt-3 px-4 py-2 bg-primary text-white rounded font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Upload className="w-4 h-4" />
-          Import Configuration
+          Importer la configuration
         </button>
       </div>
 
@@ -144,7 +144,7 @@ export default function ConfigTab({ config }: ConfigTabProps) {
           className="config-btn primary px-4 py-2 border-none rounded cursor-pointer font-medium transition-all bg-primary text-white hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Save className="w-4 h-4" />
-          Save
+          Enregistrer
         </button>
         <button
           onClick={handleExport}
@@ -152,7 +152,7 @@ export default function ConfigTab({ config }: ConfigTabProps) {
           className="config-btn success px-4 py-2 border-none rounded cursor-pointer font-medium transition-all bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <Download className="w-4 h-4" />
-          Export
+          Exporter
         </button>
         <button
           onClick={handleReset}
@@ -160,7 +160,7 @@ export default function ConfigTab({ config }: ConfigTabProps) {
           className="config-btn danger px-4 py-2 border-none rounded cursor-pointer font-medium transition-all bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
           <RotateCcw className="w-4 h-4" />
-          Reset
+          Réinitialiser
         </button>
       </div>
     </div>

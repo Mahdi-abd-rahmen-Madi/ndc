@@ -12,7 +12,7 @@ export default function InfoPanel({ classificationResult, loading, error, curren
         <div className="info-content p-8">
           <div className="loading flex flex-col items-center justify-center p-8">
             <Loader2 className="spinner w-10 h-10 animate-spin mb-4 text-primary" />
-            <p className="text-gray-600">Analyzing terrain...</p>
+            <p className="text-gray-600">Analyse du terrain en cours...</p>
           </div>
         </div>
       </div>
@@ -26,7 +26,7 @@ export default function InfoPanel({ classificationResult, loading, error, curren
           <div className="error bg-red-50 text-red-800 p-4 rounded mb-4 border border-red-200">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5" />
-              <span className="font-semibold">Error</span>
+              <span className="font-semibold">Erreur</span>
             </div>
             <p className="mt-2">{error}</p>
           </div>
@@ -40,9 +40,9 @@ export default function InfoPanel({ classificationResult, loading, error, curren
       <div className="info-panel w-[350px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform">
         <div className="info-content p-8">
           <div className="welcome text-center text-gray-600 p-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Welcome</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Bienvenue</h2>
             <p className="text-sm">
-              Click anywhere on the map to analyze the terrain classification at that location.
+              Cliquez n'importe où sur la carte pour analyser la classification du terrain à cet endroit.
             </p>
           </div>
         </div>
@@ -65,55 +65,55 @@ export default function InfoPanel({ classificationResult, loading, error, curren
           </div>
 
           <div className="coordinates bg-gray-50 p-4 rounded mb-6 font-mono text-sm">
-            <div className="text-gray-600 mb-1">Coordinates</div>
+            <div className="text-gray-600 mb-1">Coordonnées</div>
             <div className="font-semibold text-gray-800">
               {formatCoordinates(classificationResult.coordinates)}
             </div>
           </div>
 
           <div className="spatial-extent mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Spatial Extent</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Étendue spatiale</h3>
             <div className="extent-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
               <span className="extent-label font-medium text-gray-600">Agriculture</span>
               <span className="extent-value font-bold text-gray-800">{formattedExtent.agriculture}</span>
             </div>
             <div className="extent-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
-              <span className="extent-label font-medium text-gray-600">Complex Agriculture</span>
+              <span className="extent-label font-medium text-gray-600">Agriculture complexe</span>
               <span className="extent-value font-bold text-gray-800">{formattedExtent.complex_agriculture}</span>
             </div>
             <div className="extent-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
-              <span className="extent-label font-medium text-gray-600">Forest</span>
+              <span className="extent-label font-medium text-gray-600">Forêt</span>
               <span className="extent-value font-bold text-gray-800">{formattedExtent.forest}</span>
             </div>
             <div className="extent-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
-              <span className="extent-label font-medium text-gray-600">Urban</span>
+              <span className="extent-label font-medium text-gray-600">Urbain</span>
               <span className="extent-value font-bold text-gray-800">{formattedExtent.urban}</span>
             </div>
             <div className="extent-item flex justify-between items-center p-3 mb-2 bg-gray-50 rounded-l-4 border-l-4 border-primary">
-              <span className="extent-label font-medium text-gray-600">Coastal</span>
+              <span className="extent-label font-medium text-gray-600">Côtier</span>
               <span className="extent-value font-bold text-gray-800">{formattedExtent.coastal}</span>
             </div>
           </div>
 
           {classificationResult.region && (
             <div className="mt-6 p-4 bg-blue-50 rounded border border-blue-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Region</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Région</h3>
               <div className="text-sm text-gray-600">
                 <div className="mb-1">
-                  <span className="font-medium">Name:</span> {classificationResult.region.name}
+                  <span className="font-medium">Nom :</span> {classificationResult.region.name}
                 </div>
                 <div>
-                  <span className="font-medium">Number:</span> {classificationResult.region.number}
+                  <span className="font-medium">Numéro :</span> {classificationResult.region.number}
                 </div>
               </div>
             </div>
           )}
 
           <div className="mt-6 p-4 bg-gray-50 rounded">
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Analysis Settings</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Paramètres d'analyse</h3>
             <div className="text-sm text-gray-600">
               <div>
-                <span className="font-medium">Analysis Radius:</span> {currentAnalysisRadius} km
+                <span className="font-medium">Rayon d'analyse :</span> {currentAnalysisRadius} km
               </div>
             </div>
           </div>

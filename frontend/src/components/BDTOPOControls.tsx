@@ -36,7 +36,7 @@ export default function BDTOPOControls({
                 onChange={(e) => onDensityToggle(e.target.checked)}
                 className="m-0"
               />
-              <span>Show Density</span>
+              <span>Afficher la densité</span>
             </label>
           </div>
 
@@ -48,13 +48,13 @@ export default function BDTOPOControls({
                 onChange={(e) => onHeightColoringToggle(e.target.checked)}
                 className="m-0"
               />
-              <span>Color by Height</span>
+              <span>Colorier par hauteur</span>
             </label>
           </div>
 
           <div className="bdtopo-option mb-2 flex items-center justify-between text-sm">
             <label className="flex items-center gap-2 flex-1">
-              <span>Opacity</span>
+              <span>Opacité</span>
             </label>
             <input
               type="range"

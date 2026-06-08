@@ -88,7 +88,7 @@ function ensureMapLayers(map: maplibregl.Map) {
           <div class="p-2 max-w-[240px] font-sans">
             <div class="flex items-center gap-2 mb-1.5">
               <span class="w-3.5 h-3.5 rounded border border-gray-300 flex-shrink-0" style="background-color: ${color}"></span>
-              <strong class="text-sm text-gray-800">CLC Code ${code}</strong>
+              <strong class="text-sm text-gray-800">Code CLC ${code}</strong>
             </div>
             <div class="text-xs text-gray-600 leading-normal">${description}</div>
           </div>
@@ -234,9 +234,9 @@ function ensureMapLayers(map: maplibregl.Map) {
         .setLngLat(coordinates)
         .setHTML(`
           <div class="p-2.5 max-w-[240px] font-sans bg-white rounded shadow-md border-l-4 border-orange-500">
-            <strong class="text-sm text-orange-600 block mb-1">Transition Zone (50m)</strong>
+            <strong class="text-sm text-orange-600 block mb-1">Zone de transition (50m)</strong>
             <div class="text-xs text-gray-700 leading-normal">
-              Terrain IV (dense urban fabric) downgraded to <strong>Terrain IIIa</strong> due to proximity to rural/agricultural zones.
+              Terrain IV (tissu urbain dense) déclassé en <strong>Terrain IIIa</strong> en raison de la proximité de zones rurales/agricoles.
             </div>
           </div>
         `)

@@ -74,13 +74,13 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
     <div className="clc-legend-panel w-[300px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform z-[1001]">
       <div className="clc-legend-content p-6">
         <div className="clc-legend-header flex justify-between items-center mb-4 pb-2 border-b-2 border-primary">
-          <h2 className="clc-legend-title text-xl font-semibold text-gray-800">CLC Legend</h2>
+          <h2 className="clc-legend-title text-xl font-semibold text-gray-800">Légende CLC</h2>
         </div>
 
         <div className="clc-search-box relative mb-4">
           <input
             type="text"
-            placeholder="Search CLC codes..."
+            placeholder="Rechercher des codes CLC..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full p-2 border border-gray-300 rounded text-sm pl-9"
@@ -116,7 +116,7 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
                   </div>
                   {isExpanded && (
                     <div className="clc-codes-container pl-4 mt-2">
-                      {renderCLCCodes(terrainType)}
+                       {renderCLCCodes(terrainType)}
                     </div>
                   )}
                 </div>
@@ -127,7 +127,7 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
 
         {filteredCLCCodes && filteredCLCCodes.length > 0 && (
           <div className="mt-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Search Results</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Résultats de recherche</h3>
             {filteredCLCCodes.map((item) => (
               <div
                 key={item.code}
@@ -155,7 +155,7 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
 
         {filteredCLCCodes && filteredCLCCodes.length === 0 && (
           <div className="mt-4 text-center text-gray-500 text-sm">
-            No CLC codes found matching "{searchQuery}"
+            Aucun code CLC trouvé correspondant à "{searchQuery}"
           </div>
         )}
       </div>

@@ -16,10 +16,10 @@ export default function ConfigTabs({
   onRadiusChange,
 }: ConfigTabsProps) {
   const tabs = [
-    { id: 'details', label: 'Details' },
-    { id: 'rules', label: 'Rules' },
-    { id: 'process', label: 'Process' },
-    { id: 'testing', label: 'Testing' },
+    { id: 'details', label: 'Détails' },
+    { id: 'rules', label: 'Règles' },
+    { id: 'process', label: 'Processus' },
+    { id: 'testing', label: 'Tests' },
     { id: 'config', label: 'Config' },
   ];
 
