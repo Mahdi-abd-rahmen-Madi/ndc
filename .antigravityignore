@@ -1,0 +1,36 @@
+# .antigravityignore
+# Patterns to exclude from Antigravity token usage scans
+# Similar to .gitignore but for Antigravity AI processing
+
+# Dependency directories
+node_modules/
+# Build and distribution outputs
+build/
+dist/
+# IDE settings
+.vscode/
+.idea/
+# Environment files
+.env
+.env.*
+# Log files
+*.log
+# Temporary files
+*.tmp
+*.temp
+# Data and media assets
+data/
+media/
+# Binary and OS files
+.DS_Store
+Thumbs.db
+# Cache directories
+.cache/
+coverage/
+
+
+**/node_modules/
+**/.venv/
+**/env/
+**/dist/
+**/*.local.db

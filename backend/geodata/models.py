@@ -91,6 +91,7 @@ class AntennaEquipment(models.Model):
     mast_height = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name=_("Mast Height (m)"))
     comments = models.TextField(blank=True, verbose_name=_("Comments"))
     item_id = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name=_("Item ID"))
+    is_deleted = models.BooleanField(default=False, verbose_name=_("Is Deleted"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
@@ -98,6 +99,107 @@ class AntennaEquipment(models.Model):
         verbose_name = _("Antenna Equipment")
         verbose_name_plural = _("Antenna Equipment")
         ordering = ['name']
+
+    def create_snapshot(self):
+        """Creates a complete JSON-serializable snapshot of this equipment configuration"""
+        specs = []
+        for s in self.specifications.all():
+            specs.append({
+                'antenna_type': s.antenna_type,
+                'height_mm': float(s.height_mm),
+                'width_mm': float(s.width_mm),
+                'thickness_mm': float(s.thickness_mm),
+                'weight_dan': float(s.weight_dan),
+            })
+        
+        calcs = []
+        for c in self.terrain_calculations.all():
+            doc_urls = c.documentation.document_urls if c.documentation else ""
+            local_urls = c.documentation.local_document_urls if c.documentation else ""
+            doc_types = c.documentation.document_types if c.documentation else []
+            calcs.append({
+                'terrain_type': c.terrain_type,
+                'section_material': c.section_material,
+                'material_specification': c.material_specification,
+                'load_calculations': c.load_calculations,
+                'documentation': {
+                    'document_urls': doc_urls,
+                    'local_document_urls': local_urls,
+                    'document_types': doc_types,
+                }
+            })
+
+        return {
+            'name': self.name,
+            'sub_elements': self.sub_elements,
+            'responsible_person': self.responsible_person,
+            'status': self.status,
+            'date': str(self.date) if self.date else None,
+            'region': self.region,
+            'building_height': float(self.building_height) if self.building_height else None,
+            'mast_height': float(self.mast_height) if self.mast_height else None,
+            'comments': self.comments,
+            'item_id': self.item_id,
+            'specifications': specs,
+            'calculations': calcs,
+        }
+
+    def restore_snapshot(self, snapshot):
+        """Restores this equipment, its specifications, and calculations to a previous snapshot state"""
+        from django.db import transaction
+        
+        with transaction.atomic():
+            self.name = snapshot['name']
+            self.sub_elements = snapshot['sub_elements']
+            self.responsible_person = snapshot['responsible_person']
+            self.status = snapshot['status']
+            self.date = snapshot['date']
+            self.region = snapshot['region']
+            self.building_height = snapshot['building_height']
+            self.mast_height = snapshot['mast_height']
+            self.comments = snapshot['comments']
+            self.item_id = snapshot['item_id']
+            self.is_deleted = False
+            self.save()
+
+            # Restore specifications
+            self.specifications.all().delete()
+            for s in snapshot.get('specifications', []):
+                AntennaSpecification.objects.create(
+                    equipment=self,
+                    antenna_type=s['antenna_type'],
+                    height_mm=s['height_mm'],
+                    width_mm=s['width_mm'],
+                    thickness_mm=s['thickness_mm'],
+                    weight_dan=s['weight_dan'],
+                )
+
+            # Restore calculations and documentations
+            for c in self.terrain_calculations.all():
+                if c.documentation:
+                    c.documentation.delete()
+                c.delete()
+
+            for c in snapshot.get('calculations', []):
+                doc_data = c.get('documentation', {})
+                doc = None
+                if doc_data:
+                    doc = TerrainDocumentation.objects.create(
+                        equipment=self,
+                        terrain_type=c['terrain_type'],
+                        document_urls=doc_data.get('document_urls', ''),
+                        local_document_urls=doc_data.get('local_document_urls', ''),
+                        document_types=doc_data.get('document_types', []),
+                    )
+                
+                TerrainLoadCalculation.objects.create(
+                    equipment=self,
+                    terrain_type=c['terrain_type'],
+                    section_material=c['section_material'],
+                    material_specification=c['material_specification'],
+                    load_calculations=c['load_calculations'],
+                    documentation=doc,
+                )
 
     @classmethod
     def get_region_from_vb0(cls, vb0_value):
@@ -114,6 +216,15 @@ class AntennaEquipment(models.Model):
         """Get all terrain mappings for reference"""
         return cls.CLC_CODE_TO_TERRAIN.copy()
     
+    def save(self, *args, **kwargs):
+        if self.responsible_person:
+            cleaned = self.responsible_person.strip()
+            if cleaned.lower() in ['dhouha abbassi', 'da', 'dhouha', 'abbassi']:
+                self.responsible_person = 'DA'
+            else:
+                self.responsible_person = cleaned
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -256,8 +367,8 @@ class CadastreUpdateStatus(gis_models.Model):
     data_type = gis_models.CharField(max_length=20)  # e.g., 'buildings'
     last_update = gis_models.DateTimeField()
     record_count = gis_models.IntegerField(default=0)
-    status = gis_models.CharField(max_length=20)  # e.g., 'SUCCESS', 'FAILED'
-    data_version = gis_models.CharField(max_length=20)  # e.g., date of data
+    status = models.CharField(max_length=20)  # e.g., 'SUCCESS', 'FAILED'
+    data_version = models.CharField(max_length=20)  # e.g., date of data
 
     class Meta:
         verbose_name = _("Cadastre Update Status")
@@ -267,3 +378,19 @@ class CadastreUpdateStatus(gis_models.Model):
     def __str__(self):
         return f"{self.department_code} - {self.data_type}: {self.status}"
 
+
+class AntennaEquipmentHistory(models.Model):
+    """Represents version control history snapshots for antenna equipment"""
+    equipment = models.ForeignKey(AntennaEquipment, on_delete=models.CASCADE, related_name='history', verbose_name=_("Equipment"))
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='equipment_history', verbose_name=_("User"))
+    action = models.CharField(max_length=50, verbose_name=_("Action"))  # 'CREATE', 'UPDATE', 'DELETE', 'RESTORE'
+    changed_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Changed At"))
+    snapshot = models.JSONField(verbose_name=_("Snapshot"))
+
+    class Meta:
+        verbose_name = _("Antenna Equipment History")
+        verbose_name_plural = _("Antenna Equipment Histories")
+        ordering = ['-changed_at']
+
+    def __str__(self):
+        return f"{self.equipment.name} - {self.action} at {self.changed_at}"

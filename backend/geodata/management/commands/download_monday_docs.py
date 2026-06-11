@@ -73,7 +73,8 @@ class Command(BaseCommand):
 
             # Output folder structure: media/catalogue/{equipment_item_id}/{terrain_type}/
             safe_item_id = (equipment.item_id or str(equipment.id)).replace(' ', '_').lower()
-            dest_folder = os.path.join(catalogue_dir, safe_item_id, terrain_type)
+            height_folder = str(equipment.building_height) if equipment.building_height else 'unknown'
+            dest_folder = os.path.join(catalogue_dir, 'terrain', safe_item_id, terrain_type, str(equipment.region), height_folder)
             os.makedirs(dest_folder, exist_ok=True)
 
             for url in urls:
@@ -91,7 +92,7 @@ class Command(BaseCommand):
                 
                 # Settle output filepath
                 local_filepath = os.path.join(dest_folder, filename)
-                local_url = f"{settings.MEDIA_URL}catalogue/{safe_item_id}/{terrain_type}/{filename}"
+                local_url = f"{settings.MEDIA_URL}catalogue/terrain/{safe_item_id}/{terrain_type}/{str(equipment.region)}/{height_folder}/{filename}"
 
                 # Download if doesn't exist or overwrite is set
                 if not os.path.exists(local_filepath) or options['overwrite']:

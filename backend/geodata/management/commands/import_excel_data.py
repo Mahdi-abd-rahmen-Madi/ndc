@@ -36,10 +36,15 @@ class Command(BaseCommand):
                         continue
                         
                     item_id_col = 'Item ID (auto generated)'
+                    region_val = str(int(row['REGION'])) if pd.notna(row['REGION']) else ''
                     if item_id_col in row and pd.notna(row[item_id_col]):
                         item_id_val = str(int(row[item_id_col]))
                     else:
-                        item_id_val = str(row['Name']).strip().replace(' ', '_').lower()
+                        base_name = str(row['Name']).strip().replace(' ', '_').lower()
+                        if region_val:
+                            item_id_val = f"{base_name}_r{region_val}"
+                        else:
+                            item_id_val = base_name
 
                     equipment_data = {
                         'name': str(row['Name']).strip(),

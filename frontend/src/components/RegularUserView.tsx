@@ -7,6 +7,7 @@ import maplibregl from 'maplibre-gl';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
+  initialMontage?: string | null;
 }
 
 const MONTAGES = [
@@ -68,15 +69,101 @@ const MONTAGES = [
   }
 ];
 
-export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
+const MONTAGES_SPECS = [
+  {
+    id: 'A1',
+    name: 'Montage A1',
+    ant4g: { height: 2100, width: 470, thickness: 210, weight: 45 },
+    ant5g: { height: 1010, width: 500, thickness: 250, weight: 50 }
+  },
+  {
+    id: 'A2',
+    name: 'Montage A2',
+    ant4g: { height: 2800, width: 500, thickness: 250, weight: 60 },
+    ant5g: { height: 1010, width: 500, thickness: 240, weight: 50 }
+  },
+  {
+    id: 'A3',
+    name: 'Montage A3',
+    ant4g: { height: 2100, width: 500, thickness: 250, weight: 50 },
+    ant5g: { height: 1000, width: 500, thickness: 240, weight: 50 }
+  },
+  {
+    id: 'A4',
+    name: 'Montage A4',
+    ant4g: { height: 1509, width: 469, thickness: 206, weight: 34 },
+    ant5g: { height: 730, width: 395, thickness: 180, weight: 28 }
+  },
+  {
+    id: 'A5',
+    name: 'Montage A5',
+    ant4g: { height: 2800, width: 540, thickness: 240, weight: 110 },
+    ant5g: { height: 1000, width: 500, thickness: 240, weight: 50 }
+  },
+  {
+    id: 'A6',
+    name: 'Montage A6',
+    ant4g: { height: 2688, width: 369, thickness: 166, weight: 33.5 },
+    ant5g: { height: 750, width: 450, thickness: 240, weight: 45 }
+  },
+  {
+    id: 'A7',
+    name: 'Montage A7',
+    ant4g: { height: 2249, width: 469, thickness: 206, weight: 45 },
+    ant5g: { height: 730, width: 395, thickness: 180, weight: 28.5 }
+  },
+  {
+    id: 'A8',
+    name: 'Montage A8',
+    ant4g: { height: 2769, width: 469, thickness: 206, weight: 51 },
+    ant5g: { height: 750, width: 430, thickness: 240, weight: 45 }
+  }
+];
+
+export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularUserViewProps) {
   const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedHeight, setSelectedHeight] = useState<number>(3); // Default to 3m
   const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number>(15); // Default to 15m
-  const [selectedMontage, setSelectedMontage] = useState<string>(''); // Default to unselected
+  const [selectedMontage, setSelectedMontage] = useState<string>(initialMontage || ''); // Default to unselected or initialMontage
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
+  // Sync initialMontage from parent
+  useEffect(() => {
+    if (initialMontage && initialMontage !== 'custom') {
+      setSelectedMontage(initialMontage);
+      const spec = MONTAGES_SPECS.find(m => m.id === initialMontage);
+      if (spec) {
+        setAnt4gModel(initialMontage);
+        setAnt4gHeight(spec.ant4g.height);
+        setAnt4gWidth(spec.ant4g.width);
+        setAnt4gThickness(spec.ant4g.thickness);
+        setAnt4gWeight(spec.ant4g.weight);
+
+        setAnt5gModel(initialMontage);
+        setAnt5gHeight(spec.ant5g.height);
+        setAnt5gWidth(spec.ant5g.width);
+        setAnt5gThickness(spec.ant5g.thickness);
+        setAnt5gWeight(spec.ant5g.weight);
+      }
+    }
+  }, [initialMontage]);
+
+  // 4G Antenna Specifications
+  const [ant4gModel, setAnt4gModel] = useState<string>('A1');
+  const [ant4gHeight, setAnt4gHeight] = useState<number>(2100);
+  const [ant4gWidth, setAnt4gWidth] = useState<number>(470);
+  const [ant4gThickness, setAnt4gThickness] = useState<number>(210);
+  const [ant4gWeight, setAnt4gWeight] = useState<number>(45);
+
+  // 5G Antenna Specifications
+  const [ant5gModel, setAnt5gModel] = useState<string>('A1');
+  const [ant5gHeight, setAnt5gHeight] = useState<number>(1010);
+  const [ant5gWidth, setAnt5gWidth] = useState<number>(500);
+  const [ant5gThickness, setAnt5gThickness] = useState<number>(250);
+  const [ant5gWeight, setAnt5gWeight] = useState<number>(50);
+
   // Catalogue Results State
   const [lookupResult, setLookupResult] = useState<{
     detected_terrain_type: string | null;
@@ -104,18 +191,55 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Precalculated building heights range
+  const precalculatedHeights = [10, 15, 20, 25, 30, 35, 40, 45];
+  
+  const getClosestPrecalculatedHeight = (height: number): number => {
+    const val = Number(height);
+    if (isNaN(val) || val <= 0) return 15; // default fallback
+    return precalculatedHeights.reduce((prev, curr) => 
+      Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
+    );
+  };
+
+  const recommendedBuildingHeight = getClosestPrecalculatedHeight(selectedBuildingHeight);
+  const isPrecalculatedBuildingHeight = precalculatedHeights.includes(selectedBuildingHeight);
+
+  // Antenna specs matching
+  const current4g = { height: ant4gHeight, width: ant4gWidth, thickness: ant4gThickness, weight: ant4gWeight };
+  const current5g = { height: ant5gHeight, width: ant5gWidth, thickness: ant5gThickness, weight: ant5gWeight };
+
+  const matchingMontage = MONTAGES_SPECS.find(m => 
+    m.ant4g.height === current4g.height &&
+    m.ant4g.width === current4g.width &&
+    m.ant4g.thickness === current4g.thickness &&
+    m.ant4g.weight === current4g.weight &&
+    m.ant5g.height === current5g.height &&
+    m.ant5g.width === current5g.width &&
+    m.ant5g.thickness === current5g.thickness &&
+    m.ant5g.weight === current5g.weight
+  );
+
+  const matching4gMontage = MONTAGES_SPECS.find(m => 
+    m.ant4g.height === current4g.height &&
+    m.ant4g.width === current4g.width &&
+    m.ant4g.thickness === current4g.thickness &&
+    m.ant4g.weight === current4g.weight
+  );
+
+  const hitPredefinedMontage = !!matchingMontage;
+  const queryMontage = matchingMontage ? matchingMontage.id : (matching4gMontage ? matching4gMontage.id : '');
+
   // Fetch catalogue data from backend
   const fetchCatalogueData = useCallback(async (lat: number, lng: number, height: number, buildingHeight: number, montage: string) => {
-    if (!montage) {
-      setLookupResult(null);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(
-        `${apiBaseUrl}/api/geodata/antenna-equipment/public_lookup/?latitude=${lat}&longitude=${lng}&mast_height=${height}&building_height=${buildingHeight}&montage=${montage}`
-      );
+      let url = `${apiBaseUrl}/api/geodata/antenna-equipment/public_lookup/?latitude=${lat}&longitude=${lng}&mast_height=${height}&building_height=${buildingHeight}`;
+      if (montage) {
+        url += `&montage=${montage}`;
+      }
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to retrieve catalogue data: status ${response.status}`);
       }
@@ -132,11 +256,11 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
   // Re-trigger catalog lookup when height, building height or montage changes (if address selected)
   useEffect(() => {
     if (selectedCoords) {
-      fetchCatalogueData(selectedCoords.latitude, selectedCoords.longitude, selectedHeight, selectedBuildingHeight, selectedMontage);
+      fetchCatalogueData(selectedCoords.latitude, selectedCoords.longitude, selectedHeight, recommendedBuildingHeight, queryMontage);
     } else {
       setLookupResult(null);
     }
-  }, [selectedHeight, selectedBuildingHeight, selectedCoords, selectedMontage, fetchCatalogueData]);
+  }, [selectedHeight, recommendedBuildingHeight, selectedCoords, queryMontage, fetchCatalogueData]);
 
   // Handle address selection from dropdown
   const handleSelectSuggestion = (address: GeocodingAddress) => {
@@ -153,8 +277,6 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
         essential: true,
       });
     }
-    
-    fetchCatalogueData(address.latitude, address.longitude, selectedHeight, selectedBuildingHeight, selectedMontage);
   };
 
   // Handle map click
@@ -204,9 +326,7 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
     } catch (e) {
       console.error('Failed to reverse geocode clicked point:', e);
     }
-
-    fetchCatalogueData(lat, lng, selectedHeight, selectedBuildingHeight, selectedMontage);
-  }, [fetchCatalogueData, selectedHeight, selectedBuildingHeight, selectedMontage]);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -385,18 +505,17 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
 
           {/* Building Height Selection */}
           <div className="flex flex-col space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">3. Sélectionner la hauteur du bâtiment</label>
-            <select
-              value={selectedBuildingHeight}
-              onChange={(e) => setSelectedBuildingHeight(Number(e.target.value))}
-              className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-            >
-              <option value={15}>Bâtiment de 15m</option>
-              <option value={10}>Bâtiment de 10m (Hors catalogue)</option>
-              <option value={12}>Bâtiment de 12m (Hors catalogue)</option>
-              <option value={18}>Bâtiment de 18m (Hors catalogue)</option>
-              <option value={20}>Bâtiment de 20m (Hors catalogue)</option>
-            </select>
+            <label className="text-xs font-semibold text-slate-300">3. Saisir la hauteur du bâtiment (m)</label>
+            <input
+              type="number"
+              value={selectedBuildingHeight || ''}
+              onChange={(e) => setSelectedBuildingHeight(e.target.value === '' ? 0 : Number(e.target.value))}
+              placeholder="Ex: 15"
+              className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              min={1}
+              max={100}
+              step={0.5}
+            />
           </div>
 
           {/* Montage Selection */}
@@ -404,17 +523,233 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
             <label className="text-xs font-semibold text-slate-300">4. Sélectionner le type de montage</label>
             <select
               value={selectedMontage}
-              onChange={(e) => setSelectedMontage(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedMontage(val);
+                if (val && val !== 'custom') {
+                  const spec = MONTAGES_SPECS.find(m => m.id === val);
+                  if (spec) {
+                    setAnt4gModel(val);
+                    setAnt4gHeight(spec.ant4g.height);
+                    setAnt4gWidth(spec.ant4g.width);
+                    setAnt4gThickness(spec.ant4g.thickness);
+                    setAnt4gWeight(spec.ant4g.weight);
+
+                    setAnt5gModel(val);
+                    setAnt5gHeight(spec.ant5g.height);
+                    setAnt5gWidth(spec.ant5g.width);
+                    setAnt5gThickness(spec.ant5g.thickness);
+                    setAnt5gWeight(spec.ant5g.weight);
+                  }
+                }
+              }}
               className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             >
               <option value="">-- Choisir le type de montage --</option>
               {MONTAGES.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name} ({m.dimensions} | {m.weight})
+                  {m.name} ({m.abbreviation})
                 </option>
               ))}
+              <option value="custom">⚙️ Configuration sur-mesure (Personnalisée)</option>
             </select>
           </div>
+
+          {/* Antenna Configuration Panels */}
+          {selectedMontage && (
+            <div className="space-y-4 pt-2 border-t border-slate-800/80">
+              <div className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center justify-between">
+                <span>Configuration des Antennes</span>
+                {selectedMontage === 'custom' && (
+                  <span className="text-[10px] text-amber-400 bg-amber-400/15 px-2.5 py-0.5 rounded-full border border-amber-500/20 font-semibold animate-pulse">
+                    Personnalisée
+                  </span>
+                )}
+              </div>
+
+              {/* 4G Antenna Configuration Card */}
+              <div className="bg-slate-900/40 border border-slate-800/60 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-800/50 pb-2">
+                  <span className="text-xs font-semibold text-slate-200">Antenne 4G</span>
+                  {selectedMontage !== 'custom' ? (
+                    <button
+                      onClick={() => setSelectedMontage('custom')}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium"
+                      type="button"
+                    >
+                      Personnaliser
+                    </button>
+                  ) : null}
+                </div>
+                
+                <div className="space-y-2.5">
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-[10px] font-medium text-slate-500">Modèle type</span>
+                    <select
+                      value={ant4gModel}
+                      disabled={selectedMontage !== 'custom'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAnt4gModel(val);
+                        if (val !== 'custom') {
+                          const spec = MONTAGES_SPECS.find(m => m.id === val);
+                          if (spec) {
+                            setAnt4gHeight(spec.ant4g.height);
+                            setAnt4gWidth(spec.ant4g.width);
+                            setAnt4gThickness(spec.ant4g.thickness);
+                            setAnt4gWeight(spec.ant4g.weight);
+                          }
+                        }
+                      }}
+                      className="w-full py-1.5 px-2.5 text-xs bg-slate-950 border border-slate-800 rounded-md text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {MONTAGES_SPECS.map(m => (
+                        <option key={m.id} value={m.id}>Standard {m.name} ({m.ant4g.height}x{m.ant4g.width}x{m.ant4g.thickness} mm)</option>
+                      ))}
+                      <option value="custom">-- Dimensions personnalisées --</option>
+                    </select>
+                  </div>
+
+                  {/* 4G Custom Dimensions inputs */}
+                  {(selectedMontage === 'custom' || ant4gModel === 'custom') && (
+                    <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-800/30">
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Hauteur (mm)</label>
+                        <input
+                          type="number"
+                          value={ant4gHeight || ''}
+                          disabled={ant4gModel !== 'custom'}
+                          onChange={(e) => setAnt4gHeight(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Largeur (mm)</label>
+                        <input
+                          type="number"
+                          value={ant4gWidth || ''}
+                          disabled={ant4gModel !== 'custom'}
+                          onChange={(e) => setAnt4gWidth(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Épaisseur (mm)</label>
+                        <input
+                          type="number"
+                          value={ant4gThickness || ''}
+                          disabled={ant4gModel !== 'custom'}
+                          onChange={(e) => setAnt4gThickness(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Poids (daN)</label>
+                        <input
+                          type="number"
+                          value={ant4gWeight || ''}
+                          disabled={ant4gModel !== 'custom'}
+                          onChange={(e) => setAnt4gWeight(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 5G Antenna Configuration Card */}
+              <div className="bg-slate-900/40 border border-slate-800/60 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-800/50 pb-2">
+                  <span className="text-xs font-semibold text-slate-200">Antenne 5G</span>
+                  {selectedMontage !== 'custom' ? (
+                    <button
+                      onClick={() => setSelectedMontage('custom')}
+                      className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium"
+                      type="button"
+                    >
+                      Personnaliser
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="flex flex-col space-y-1">
+                    <span className="text-[10px] font-medium text-slate-500">Modèle type</span>
+                    <select
+                      value={ant5gModel}
+                      disabled={selectedMontage !== 'custom'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAnt5gModel(val);
+                        if (val !== 'custom') {
+                          const spec = MONTAGES_SPECS.find(m => m.id === val);
+                          if (spec) {
+                            setAnt5gHeight(spec.ant5g.height);
+                            setAnt5gWidth(spec.ant5g.width);
+                            setAnt5gThickness(spec.ant5g.thickness);
+                            setAnt5gWeight(spec.ant5g.weight);
+                          }
+                        }
+                      }}
+                      className="w-full py-1.5 px-2.5 text-xs bg-slate-950 border border-slate-800 rounded-md text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {MONTAGES_SPECS.map(m => (
+                        <option key={m.id} value={m.id}>Standard {m.name} ({m.ant5g.height}x{m.ant5g.width}x{m.ant5g.thickness} mm)</option>
+                      ))}
+                      <option value="custom">-- Dimensions personnalisées --</option>
+                    </select>
+                  </div>
+
+                  {/* 5G Custom Dimensions inputs */}
+                  {(selectedMontage === 'custom' || ant5gModel === 'custom') && (
+                    <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-800/30">
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Hauteur (mm)</label>
+                        <input
+                          type="number"
+                          value={ant5gHeight || ''}
+                          disabled={ant5gModel !== 'custom'}
+                          onChange={(e) => setAnt5gHeight(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Largeur (mm)</label>
+                        <input
+                          type="number"
+                          value={ant5gWidth || ''}
+                          disabled={ant5gModel !== 'custom'}
+                          onChange={(e) => setAnt5gWidth(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Épaisseur (mm)</label>
+                        <input
+                          type="number"
+                          value={ant5gThickness || ''}
+                          disabled={ant5gModel !== 'custom'}
+                          onChange={(e) => setAnt5gThickness(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-slate-500">Poids (daN)</label>
+                        <input
+                          type="number"
+                          value={ant5gWeight || ''}
+                          disabled={ant5gModel !== 'custom'}
+                          onChange={(e) => setAnt5gWeight(Number(e.target.value))}
+                          className="w-full py-1.5 px-2 bg-slate-950 border border-slate-850 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Small Interactive Map Container */}
@@ -512,13 +847,30 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
               </div>
             </div>
 
+            {/* Building Height Recommendation Warning */}
+            {!isPrecalculatedBuildingHeight && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3 text-amber-400">
+                <AlertCircle className="w-5 h-5 mt-0.5 shrink-0 animate-bounce" />
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider">Hauteur de bâtiment recommandée</div>
+                  <p className="text-xs mt-1 leading-relaxed text-slate-300">
+                    La hauteur de bâtiment saisie (<strong>{selectedBuildingHeight}m</strong>) ne fait pas partie du catalogue de calcul standard. 
+                    Nous recommandons d'utiliser l'étude de structure précalculée pour <strong>{recommendedBuildingHeight}m</strong>.
+                    Les résultats ci-dessous correspondent à cette recommandation.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Main Catalogue Search Result */}
-            {lookupResult.equipment.length === 0 ? (
+            {(!queryMontage || lookupResult.equipment.length === 0) ? (
               <div className="p-8 border border-slate-800 bg-slate-950/40 rounded-2xl text-center text-slate-400">
                 <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
                 <h4 className="font-semibold text-white">Aucune correspondance exacte dans le catalogue</h4>
                 <p className="text-xs mt-1">
-                  Aucun catalogue enregistré ne correspond à la hauteur de mât sélectionnée ({selectedHeight}m) et à la région ({lookupResult.detected_region || 'N/A'}).
+                  {!queryMontage 
+                    ? "Les dimensions de l'antenne 4G saisie ne correspondent à aucun profil type standard du catalogue. Le profil de mât requis ne peut pas être déterminé automatiquement."
+                    : `Aucun catalogue enregistré ne correspond à la hauteur de mât sélectionnée (${selectedHeight}m), à la hauteur de bâtiment recommandée (${recommendedBuildingHeight}m) et à la région (${lookupResult.detected_region || 'N/A'}).`}
                 </p>
               </div>
             ) : (
@@ -569,54 +921,56 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* 4G specifications */}
-                              {eq.specifications?.filter((s: any) => s.antenna_type === '4G').map((s: any) => (
-                                <div key={s.id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                                  <div className="text-xs font-bold text-indigo-400 uppercase">Modèle d'antenne 4G</div>
-                                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2.5 text-xs">
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Hauteur</div>
-                                      <div className="font-semibold text-slate-200">{s.height_mm} mm</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Largeur</div>
-                                      <div className="font-semibold text-slate-200">{s.width_mm} mm</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Épaisseur</div>
-                                      <div className="font-semibold text-slate-200">{s.thickness_mm} mm</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Poids</div>
-                                      <div className="font-semibold text-emerald-400">{s.weight_dan} daN</div>
-                                    </div>
+                              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                                <div className="text-xs font-bold text-indigo-400 uppercase flex justify-between items-center">
+                                  <span>Modèle d'antenne 4G</span>
+                                  {ant4gModel === 'custom' && <span className="text-[10px] text-amber-400 bg-amber-400/15 px-2 py-0.5 rounded-full border border-amber-500/20">Sur-mesure</span>}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2.5 text-xs">
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Hauteur</div>
+                                    <div className="font-semibold text-slate-200">{ant4gHeight} mm</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Largeur</div>
+                                    <div className="font-semibold text-slate-200">{ant4gWidth} mm</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Épaisseur</div>
+                                    <div className="font-semibold text-slate-200">{ant4gThickness} mm</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Poids</div>
+                                    <div className="font-semibold text-emerald-400">{ant4gWeight} daN</div>
                                   </div>
                                 </div>
-                              ))}
+                              </div>
 
                               {/* 5G specifications */}
-                              {eq.specifications?.filter((s: any) => s.antenna_type === '5G').map((s: any) => (
-                                <div key={s.id} className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
-                                  <div className="text-xs font-bold text-indigo-400 uppercase">Modèle d'antenne 5G</div>
-                                  <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2.5 text-xs">
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Hauteur</div>
-                                      <div className="font-semibold text-slate-200">{s.height_mm} mm</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Largeur</div>
-                                      <div className="font-semibold text-slate-200">{s.width_mm} mm</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Épaisseur</div>
-                                      <div className="font-semibold text-slate-200">{s.thickness_mm} mm</div>
-                                    </div>
-                                    <div>
-                                      <div className="text-slate-500 text-[10px]">Poids</div>
-                                      <div className="font-semibold text-emerald-400">{s.weight_dan} daN</div>
-                                    </div>
+                              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
+                                <div className="text-xs font-bold text-indigo-400 uppercase flex justify-between items-center">
+                                  <span>Modèle d'antenne 5G</span>
+                                  {ant5gModel === 'custom' && <span className="text-[10px] text-amber-400 bg-amber-400/15 px-2 py-0.5 rounded-full border border-amber-500/20">Sur-mesure</span>}
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 mt-2.5 text-xs">
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Hauteur</div>
+                                    <div className="font-semibold text-slate-200">{ant5gHeight} mm</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Largeur</div>
+                                    <div className="font-semibold text-slate-200">{ant5gWidth} mm</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Épaisseur</div>
+                                    <div className="font-semibold text-slate-200">{ant5gThickness} mm</div>
+                                  </div>
+                                  <div>
+                                    <div className="text-slate-500 text-[10px]">Poids</div>
+                                    <div className="font-semibold text-emerald-400">{ant5gWeight} daN</div>
                                   </div>
                                 </div>
-                              ))}
+                              </div>
                             </div>
                           </div>
 
@@ -647,7 +1001,16 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                               Fichier de calculs techniques
                             </h5>
                             
-                            {docList.length === 0 ? (
+                            {!hitPredefinedMontage ? (
+                              <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center space-y-2">
+                                <AlertCircle className="w-8 h-8 text-amber-500 animate-pulse" />
+                                <div className="text-xs font-bold text-slate-300">Fichier de calcul non disponible</div>
+                                <p className="text-[10px] text-slate-400 leading-relaxed">
+                                  Les fichiers de calcul technique (.docx) sont pré-établis uniquement pour les montages standard (A1 à A8).
+                                  Consultez le bureau d'études Génie Civil pour obtenir les notes de calcul de cette configuration personnalisée.
+                                </p>
+                              </div>
+                            ) : docList.length === 0 ? (
                               <div className="text-center py-8 text-slate-500 text-xs">
                                 Aucun document de calcul disponible pour cette configuration.
                               </div>
@@ -701,7 +1064,9 @@ export default function RegularUserView({ apiBaseUrl }: RegularUserViewProps) {
                           {/* Quick validation badge */}
                           <div className="mt-6 border-t border-slate-800/80 pt-4 flex items-center gap-2 text-emerald-400 text-xs font-medium">
                             <CheckCircle2 className="w-4 h-4 shrink-0" />
-                            <span>Prêt pour soumission aux achats</span>
+                            <span>
+                              {hitPredefinedMontage ? "Prêt pour soumission aux achats" : "Profil structurel validé"}
+                            </span>
                           </div>
                         </div>
 

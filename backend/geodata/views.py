@@ -2,18 +2,22 @@ from django.shortcuts import render
 from rest_framework import viewsets, filters, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
+from django.conf import settings
 import json
+import os
 import requests
-from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation
+from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, AntennaEquipmentHistory
 from api.permissions import IsAdminOrEngineerPermission, IsAdminOrResponsibleEngineerPermission
 from .serializers import (
     AntennaEquipmentSerializer, AntennaEquipmentListSerializer,
-    AntennaSpecificationSerializer, TerrainLoadCalculationSerializer
+    AntennaSpecificationSerializer, TerrainLoadCalculationSerializer,
+    AntennaEquipmentHistorySerializer
 )
 from .services import terrain_service
 from .services_address import address_service
@@ -35,39 +39,89 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         """
         Filter queryset based on user role and responsibility.
         Admins see all equipment, engineers see only equipment they're responsible for.
+        Supports ?include_deleted=true to include soft-deleted items (trash bin view).
+        Public list access returns all non‑deleted equipment.
         """
         user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return AntennaEquipment.objects.all()
-        
-        # Engineers see only equipment they're responsible for
-        return AntennaEquipment.objects.filter(responsible_user=user)
+        include_deleted = self.request.query_params.get('include_deleted', 'false').lower() == 'true'
+        only_deleted = self.request.query_params.get('only_deleted', 'false').lower() == 'true'
+
+        # Public read‑only list – no user filtering
+        if self.action == 'list' and not user.is_authenticated:
+            qs = AntennaEquipment.objects.all()
+        elif user.is_staff or user.is_superuser:
+            qs = AntennaEquipment.objects.all()
+        else:
+            qs = AntennaEquipment.objects.filter(responsible_user=user)
+
+        if only_deleted:
+            return qs.filter(is_deleted=True)
+        elif not include_deleted:
+            return qs.filter(is_deleted=False)
+        return qs
 
     def get_permissions(self):
         """
         Custom permissions for different actions.
         """
-        if self.action == 'public_lookup':
+        if self.action in ['list', 'public_lookup']:
+            # Public read‑only access for catalogue list and public lookup
             self.permission_classes = [permissions.AllowAny]
         elif self.action in ['update', 'partial_update', 'destroy']:
             # For update/delete, check if user is responsible for this specific equipment
             self.permission_classes = [IsAdminOrResponsibleEngineerPermission]
         else:
-            # For list/retrieve/create, allow admins and engineers
+            # For retrieve/create and other actions, require admin or engineer
             self.permission_classes = [IsAdminOrEngineerPermission]
-        
+
         return super().get_permissions()
 
     def perform_create(self, serializer):
         """
         When engineers create equipment, automatically assign them as responsible.
+        Also creates the first history snapshot.
         """
         # If user is an engineer, assign them as responsible user
         if hasattr(self.request.user, 'engineer_profile'):
-            serializer.save(responsible_user=self.request.user)
+            instance = serializer.save(responsible_user=self.request.user)
         else:
             # Admins can specify responsible user or leave it null
-            serializer.save()
+            instance = serializer.save()
+        
+        # Record creation history
+        AntennaEquipmentHistory.objects.create(
+            equipment=instance,
+            user=self.request.user,
+            action='CREATE',
+            snapshot=instance.create_snapshot(),
+        )
+
+    def perform_update(self, serializer):
+        """
+        Snapshot the current state before applying updates.
+        """
+        instance = serializer.instance
+        # Create snapshot of the state before update
+        AntennaEquipmentHistory.objects.create(
+            equipment=instance,
+            user=self.request.user,
+            action='UPDATE',
+            snapshot=instance.create_snapshot(),
+        )
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        """
+        Override destroy to do soft-delete instead of hard-delete.
+        """
+        AntennaEquipmentHistory.objects.create(
+            equipment=instance,
+            user=self.request.user,
+            action='DELETE',
+            snapshot=instance.create_snapshot(),
+        )
+        instance.is_deleted = True
+        instance.save()
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -123,6 +177,227 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    # --- Version History & Rollback Endpoints ---
+
+    @action(detail=True, methods=['get'])
+    def history(self, request, pk=None):
+        """Get the full version history for this equipment"""
+        equipment = self.get_object()
+        history = equipment.history.all().order_by('-changed_at')
+        serializer = AntennaEquipmentHistorySerializer(history, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='restore/(?P<history_id>[0-9]+)')
+    def restore_version(self, request, pk=None, history_id=None):
+        """Restore equipment to a specific version from history"""
+        equipment = self.get_object()
+        try:
+            history_entry = AntennaEquipmentHistory.objects.get(
+                id=history_id, equipment=equipment
+            )
+        except AntennaEquipmentHistory.DoesNotExist:
+            return Response(
+                {'error': 'Version introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Record current state before restoring
+        AntennaEquipmentHistory.objects.create(
+            equipment=equipment,
+            user=request.user,
+            action='RESTORE',
+            snapshot=equipment.create_snapshot(),
+        )
+
+        equipment.restore_snapshot(history_entry.snapshot)
+        serializer = AntennaEquipmentSerializer(equipment)
+        return Response(serializer.data)
+
+    # --- Soft Delete / Trash Endpoints ---
+
+    @action(detail=True, methods=['post'])
+    def soft_delete(self, request, pk=None):
+        """Soft-delete equipment (move to trash)"""
+        equipment = self.get_object()
+        if equipment.is_deleted:
+            return Response(
+                {'error': 'Cet équipement est déjà supprimé'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        AntennaEquipmentHistory.objects.create(
+            equipment=equipment,
+            user=request.user,
+            action='DELETE',
+            snapshot=equipment.create_snapshot(),
+        )
+        equipment.is_deleted = True
+        equipment.save()
+        return Response({'status': 'Déplacé vers la corbeille'})
+
+    @action(detail=True, methods=['post'])
+    def undelete(self, request, pk=None):
+        """Restore a soft-deleted equipment from trash"""
+        equipment = self.get_object()
+        if not equipment.is_deleted:
+            return Response(
+                {'error': "Cet équipement n'est pas supprimé"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        AntennaEquipmentHistory.objects.create(
+            equipment=equipment,
+            user=request.user,
+            action='RESTORE',
+            snapshot=equipment.create_snapshot(),
+        )
+        equipment.is_deleted = False
+        equipment.save()
+        return Response({'status': 'Restauré depuis la corbeille'})
+
+    @action(detail=True, methods=['delete'])
+    def permanent_delete(self, request, pk=None):
+        """Permanently delete equipment (admin only)"""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response(
+                {'error': 'Seuls les administrateurs peuvent supprimer définitivement'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        equipment = self.get_object()
+        equipment.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # --- File Management Endpoints ---
+
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_file(self, request, pk=None):
+        """Upload a document file for this equipment's montage folder"""
+        equipment = self.get_object()
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response(
+                {'error': 'Aucun fichier fourni'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Determine the montage folder name from equipment name
+        montage_name = equipment.name.lower().replace(' ', '_')
+        catalogue_dir = os.path.join(settings.MEDIA_ROOT, 'catalogue', montage_name)
+        os.makedirs(catalogue_dir, exist_ok=True)
+
+        file_path = os.path.join(catalogue_dir, file_obj.name)
+        with open(file_path, 'wb+') as dest:
+            for chunk in file_obj.chunks():
+                dest.write(chunk)
+
+        # Record snapshot after file upload
+        AntennaEquipmentHistory.objects.create(
+            equipment=equipment,
+            user=request.user,
+            action='UPDATE',
+            snapshot=equipment.create_snapshot(),
+        )
+
+        return Response({
+            'status': 'Fichier téléversé',
+            'filename': file_obj.name,
+            'path': f'/media/catalogue/{montage_name}/{file_obj.name}',
+        })
+
+    @action(detail=True, methods=['get'])
+    def list_files(self, request, pk=None):
+        """List all document files in this equipment's catalogue folder and terrain folders"""
+        equipment = self.get_object()
+        montage_name = equipment.name.lower().replace(' ', '_')
+        safe_item_id = (equipment.item_id or str(equipment.id)).replace(' ', '_').lower()
+        
+        manual_dir = os.path.join(settings.MEDIA_ROOT, 'catalogue', montage_name)
+        terrain_dir = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', safe_item_id)
+
+        files = []
+        
+        # 1. Scan manual uploads directory recursively
+        if os.path.isdir(manual_dir):
+            for root, _, filenames in os.walk(manual_dir):
+                for entry in filenames:
+                    entry_path = os.path.join(root, entry)
+                    if os.path.isfile(entry_path):
+                        rel_path = os.path.relpath(entry_path, settings.MEDIA_ROOT)
+                        files.append({
+                            'name': entry,
+                            'size': os.path.getsize(entry_path),
+                            'url': f'/media/{rel_path}',
+                            'source': 'Manual',
+                            'category': 'uploaded',
+                            'rel_path': os.path.relpath(entry_path, manual_dir)
+                        })
+
+        # 2. Scan terrain documents directory recursively
+        if os.path.isdir(terrain_dir):
+            for root, _, filenames in os.walk(terrain_dir):
+                for entry in filenames:
+                    entry_path = os.path.join(root, entry)
+                    if os.path.isfile(entry_path):
+                        rel_path = os.path.relpath(entry_path, settings.MEDIA_ROOT)
+                        # Extract terrain_type, region, height from the relative path structure:
+                        # terrain/{safe_item_id}/{terrain_type}/{region}/{height_folder}/{filename}
+                        rel_parts = os.path.relpath(root, terrain_dir).split(os.sep)
+                        terrain_type = rel_parts[0] if len(rel_parts) > 0 else 'Inconnu'
+                        region = rel_parts[1] if len(rel_parts) > 1 else 'Inconnu'
+                        height = rel_parts[2] if len(rel_parts) > 2 else 'Inconnu'
+                        
+                        files.append({
+                            'name': entry,
+                            'size': os.path.getsize(entry_path),
+                            'url': f'/media/{rel_path}',
+                            'source': 'Monday / Terrain',
+                            'category': 'terrain',
+                            'terrain_type': terrain_type,
+                            'region': region,
+                            'height': height,
+                            'rel_path': os.path.join('terrain', os.path.relpath(entry_path, terrain_dir))
+                        })
+
+        return Response(files)
+
+    @action(detail=True, methods=['delete'], url_path='delete_file/(?P<filename>.+)')
+    def delete_file(self, request, pk=None, filename=None):
+        """Delete a specific file from the equipment's catalogue or terrain folder"""
+        equipment = self.get_object()
+        montage_name = equipment.name.lower().replace(' ', '_')
+        safe_item_id = (equipment.item_id or str(equipment.id)).replace(' ', '_').lower()
+
+        # Build paths
+        manual_dir = os.path.abspath(os.path.join(settings.MEDIA_ROOT, 'catalogue', montage_name))
+        terrain_dir = os.path.abspath(os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', safe_item_id))
+
+        # Check if filename is trying to access files in terrain or manual
+        if filename.startswith('terrain/'):
+            # It's a terrain file deletion
+            sub_path = filename[len('terrain/'):]
+            target_path = os.path.abspath(os.path.join(terrain_dir, sub_path))
+            allowed_dir = terrain_dir
+        else:
+            # It's a manual upload deletion
+            target_path = os.path.abspath(os.path.join(manual_dir, filename))
+            allowed_dir = manual_dir
+
+        # Security check to prevent directory traversal
+        if not target_path.startswith(allowed_dir) or not os.path.isfile(target_path):
+            return Response(
+                {'error': 'Fichier introuvable ou accès refusé'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        os.remove(target_path)
+
+        AntennaEquipmentHistory.objects.create(
+            equipment=equipment,
+            user=request.user,
+            action='UPDATE',
+            snapshot=equipment.create_snapshot(),
+        )
+
+        return Response({'status': 'Fichier supprimé'})
+
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def public_lookup(self, request):
         """
@@ -171,8 +446,8 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             logger = logging.getLogger(__name__)
             logger.error(f"Error getting region for public lookup: {e}")
 
-        # Query AntennaEquipment
-        queryset = AntennaEquipment.objects.all()
+        # Query AntennaEquipment — exclude soft-deleted
+        queryset = AntennaEquipment.objects.filter(is_deleted=False)
 
         if region_number:
             queryset = queryset.filter(region=region_number)
