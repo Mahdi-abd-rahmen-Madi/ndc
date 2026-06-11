@@ -3,7 +3,7 @@ import {
   Database, Trash2, History, Plus, Edit3, Upload, Download,
   RotateCcw, Eye, X, Loader2, AlertTriangle, Check, FileText,
   ChevronDown, ChevronRight, Search, RefreshCw, Archive, Undo2,
-  Trash, File
+  Trash, File, Inbox, Clock, CheckCircle2, MessageSquare
 } from 'lucide-react';
 
 const API_BASE = `${import.meta.env.VITE_API_URL || ''}/api/geodata/antenna-equipment`;
@@ -73,12 +73,30 @@ interface CatalogueFile {
   rel_path: string;
 }
 
+interface HeightRequest {
+  id: number;
+  requester_name: string;
+  requester_email: string;
+  requested_building_height: number;
+  mast_height: number;
+  montage_type: string;
+  terrain_type: string;
+  region: number | null;
+  address: string;
+  description: string;
+  status: string;
+  status_display: string;
+  admin_notes: string;
+  created_at: string;
+}
+
 // --- Main Component ---
 
 export default function CatalogueManagement() {
-  const [activeTab, setActiveTab] = useState<'list' | 'trash' | 'history'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'trash' | 'history' | 'requests'>('list');
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [trashItems, setTrashItems] = useState<Equipment[]>([]);
+  const [requests, setRequests] = useState<HeightRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -155,11 +173,29 @@ export default function CatalogueManagement() {
     }
   }, []);
 
+  const fetchRequests = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Use the root geodata path
+      const reqUrl = API_BASE.replace('/antenna-equipment', '/height-requests/');
+      const res = await fetch(reqUrl, { credentials: 'include' });
+      if (!res.ok) throw new Error('Erreur de chargement des demandes');
+      const data = await res.json();
+      setRequests(data.results || data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Load initial data based on tab
   useEffect(() => {
     if (activeTab === 'list') fetchEquipment();
     else if (activeTab === 'trash') fetchTrash();
-  }, [activeTab, fetchEquipment, fetchTrash]);
+    else if (activeTab === 'requests') fetchRequests();
+  }, [activeTab, fetchEquipment, fetchTrash, fetchRequests]);
 
   // --- Actions ---
 
@@ -281,6 +317,23 @@ export default function CatalogueManagement() {
       setShowCreateForm(false);
       setEditingEquipment(null);
       fetchEquipment();
+    } catch (e: any) {
+      showToast(e.message, 'error');
+    }
+  };
+
+  const handleUpdateRequestStatus = async (reqId: number, status: string, adminNotes: string) => {
+    try {
+      const reqUrl = API_BASE.replace('/antenna-equipment', `/height-requests/${reqId}/update_status/`);
+      const res = await fetch(reqUrl, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, admin_notes: adminNotes }),
+      });
+      if (!res.ok) throw new Error('Erreur lors de la mise à jour');
+      showToast('Statut mis à jour et notification envoyée', 'success');
+      fetchRequests();
     } catch (e: any) {
       showToast(e.message, 'error');
     }
@@ -947,6 +1000,7 @@ export default function CatalogueManagement() {
         <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
           {([
             ['list', 'Équipements', Database],
+            ['requests', 'Demandes', Inbox],
             ['trash', 'Corbeille', Trash2],
           ] as const).map(([key, label, Icon]) => (
             <button key={key} onClick={() => setActiveTab(key)}
@@ -954,6 +1008,9 @@ export default function CatalogueManagement() {
               <Icon size={15} />{label}
               {key === 'trash' && trashItems.length > 0 && (
                 <span className="ml-1 px-1.5 py-0.5 bg-red-100 text-red-600 text-[10px] rounded-full font-bold">{trashItems.length}</span>
+              )}
+              {key === 'requests' && requests.filter(r => r.status === 'pending').length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-600 text-[10px] rounded-full font-bold">{requests.filter(r => r.status === 'pending').length}</span>
               )}
             </button>
           ))}
@@ -969,7 +1026,11 @@ export default function CatalogueManagement() {
                 className="pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition w-64" />
             </div>
           )}
-          <button onClick={() => activeTab === 'list' ? fetchEquipment() : fetchTrash()}
+          <button onClick={() => {
+            if (activeTab === 'list') fetchEquipment();
+            else if (activeTab === 'trash') fetchTrash();
+            else if (activeTab === 'requests') fetchRequests();
+          }}
             className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-500"><RefreshCw size={16} /></button>
           {activeTab === 'list' && (
             <button onClick={() => setShowCreateForm(true)}
@@ -1082,6 +1143,89 @@ export default function CatalogueManagement() {
                       className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition"><Edit3 size={15} /></button>
                     <button onClick={() => handleSoftDelete(eq)} title="Supprimer"
                       className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 transition"><Trash2 size={15} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : activeTab === 'requests' ? (
+          /* Requests List */
+          requests.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <Inbox size={48} className="mx-auto mb-3 opacity-40" />
+              <p className="text-lg font-medium">Aucune demande reçue</p>
+              <p className="text-sm mt-1">Les demandes de hauteur personnalisée apparaîtront ici</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              <div className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1.5fr] gap-4 px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <span>Demandeur</span>
+                <span>Config</span>
+                <span>Statut</span>
+                <span>Date</span>
+                <span>Actions & Notes</span>
+              </div>
+              {requests.map(req => (
+                <div key={req.id} className="bg-white border border-gray-100 hover:border-primary/20 rounded-xl p-4 transition shadow-sm">
+                  <div className="grid grid-cols-[1fr_1fr_1fr_1.5fr_1.5fr] gap-4 items-start">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{req.requester_name}</p>
+                      <p className="text-xs text-gray-500">{req.requester_email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">H: {req.requested_building_height}m</p>
+                      <p className="text-xs text-gray-500">{req.montage_type} • Terrain {req.terrain_type}</p>
+                    </div>
+                    <div>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        req.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                        req.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        req.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {req.status === 'pending' && <Clock size={12} className="mr-1" />}
+                        {req.status === 'completed' && <CheckCircle2 size={12} className="mr-1" />}
+                        {req.status_display}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatDate(req.created_at)}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <select
+                        value={req.status}
+                        onChange={(e) => handleUpdateRequestStatus(req.id, e.target.value, req.admin_notes)}
+                        className="text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary bg-gray-50"
+                      >
+                        <option value="pending">En attente</option>
+                        <option value="processing">En cours</option>
+                        <option value="completed">Terminé</option>
+                        <option value="rejected">Rejeté</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-gray-100 grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-[10px] font-bold uppercase text-gray-400 mb-1 flex items-center gap-1">
+                        <MessageSquare size={10} /> Message du demandeur
+                      </p>
+                      <p className="text-xs text-gray-700">{req.description || <span className="italic opacity-50">Aucun message</span>}</p>
+                    </div>
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3 relative group">
+                      <p className="text-[10px] font-bold uppercase text-blue-400 mb-1">Notes Génie Civil (interne)</p>
+                      <textarea
+                        defaultValue={req.admin_notes}
+                        onBlur={(e) => {
+                          if (e.target.value !== req.admin_notes) {
+                            handleUpdateRequestStatus(req.id, req.status, e.target.value);
+                          }
+                        }}
+                        className="w-full bg-transparent text-xs text-gray-700 resize-none outline-none"
+                        rows={2}
+                        placeholder="Ajouter une note..."
+                      />
+                    </div>
                   </div>
                 </div>
               ))}

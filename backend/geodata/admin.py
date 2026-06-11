@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, TerrainDocumentation
+from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, TerrainDocumentation, HeightCalculationRequest, Notification
 from api.permissions import IsAdminOrResponsibleEngineerPermission
 
 
@@ -145,3 +145,39 @@ class TerrainDocumentationAdmin(admin.ModelAdmin):
     def document_count(self, obj):
         return len(obj.get_document_list())
     document_count.short_description = 'Number of Documents'
+
+
+@admin.register(HeightCalculationRequest)
+class HeightCalculationRequestAdmin(admin.ModelAdmin):
+    list_display = ['id', 'requester_name', 'requested_building_height', 'montage_type', 'status', 'created_at']
+    list_filter = ['status', 'montage_type', 'region', 'created_at']
+    search_fields = ['requester_name', 'requester_email', 'address', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Informations Demandeur', {
+            'fields': ('requester_name', 'requester_email', 'requester_phone', 'requester_user')
+        }),
+        ('Détails Techniques', {
+            'fields': ('requested_building_height', 'mast_height', 'montage_type', 'terrain_type', 'region')
+        }),
+        ('Localisation', {
+            'fields': ('latitude', 'longitude', 'address')
+        }),
+        ('Gestion', {
+            'fields': ('status', 'assigned_to', 'admin_notes', 'completed_equipment', 'description')
+        }),
+        ('Horodatage', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'recipient_email', 'title', 'notification_type', 'is_read', 'created_at']
+    list_filter = ['is_read', 'notification_type', 'created_at']
+    search_fields = ['recipient_email', 'title', 'message']
+    readonly_fields = ['created_at']
+

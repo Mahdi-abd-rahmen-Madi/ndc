@@ -394,3 +394,103 @@ class AntennaEquipmentHistory(models.Model):
 
     def __str__(self):
         return f"{self.equipment.name} - {self.action} at {self.changed_at}"
+
+
+class HeightCalculationRequest(models.Model):
+    """Demande de calcul pour une hauteur de bâtiment non-existante dans le catalogue"""
+    STATUS_CHOICES = [
+        ('pending', 'En attente'),
+        ('in_progress', 'En cours'),
+        ('completed', 'Terminée'),
+        ('rejected', 'Rejetée'),
+    ]
+
+    # Requester information
+    requester_name = models.CharField(max_length=255, verbose_name=_("Nom du demandeur"))
+    requester_email = models.EmailField(verbose_name=_("Email du demandeur"))
+    requester_phone = models.CharField(max_length=30, blank=True, default='', verbose_name=_("Téléphone"))
+    requester_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='height_requests', verbose_name=_("Utilisateur demandeur")
+    )
+
+    # Technical details (pre-filled from the lookup context)
+    requested_building_height = models.DecimalField(
+        max_digits=8, decimal_places=2, verbose_name=_("Hauteur bâtiment demandée (m)")
+    )
+    mast_height = models.DecimalField(
+        max_digits=8, decimal_places=2, verbose_name=_("Hauteur du mât (m)")
+    )
+    montage_type = models.CharField(max_length=50, verbose_name=_("Type de montage"))
+    terrain_type = models.CharField(max_length=10, blank=True, default='', verbose_name=_("Type de terrain"))
+    region = models.IntegerField(null=True, blank=True, verbose_name=_("Région"))
+    latitude = models.DecimalField(
+        max_digits=10, decimal_places=7, null=True, blank=True, verbose_name=_("Latitude")
+    )
+    longitude = models.DecimalField(
+        max_digits=10, decimal_places=7, null=True, blank=True, verbose_name=_("Longitude")
+    )
+    address = models.TextField(blank=True, default='', verbose_name=_("Adresse"))
+    description = models.TextField(blank=True, default='', verbose_name=_("Description / justification"))
+
+    # Status tracking
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name=_("Statut")
+    )
+    assigned_to = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='assigned_height_requests', verbose_name=_("Assigné à")
+    )
+    admin_notes = models.TextField(blank=True, default='', verbose_name=_("Notes internes"))
+    completed_equipment = models.ForeignKey(
+        AntennaEquipment, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='fulfilled_requests', verbose_name=_("Équipement créé")
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Mis à jour le"))
+
+    class Meta:
+        verbose_name = _("Demande de calcul de hauteur")
+        verbose_name_plural = _("Demandes de calcul de hauteur")
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Demande #{self.pk} — {self.requested_building_height}m ({self.get_status_display()})"
+
+
+class Notification(models.Model):
+    """Notification en temps réel pour les utilisateurs"""
+    NOTIFICATION_TYPES = [
+        ('request_received', 'Demande reçue'),
+        ('request_in_progress', 'Demande en cours'),
+        ('request_completed', 'Demande terminée'),
+        ('request_rejected', 'Demande rejetée'),
+        ('info', 'Information'),
+    ]
+
+    recipient_email = models.EmailField(verbose_name=_("Email du destinataire"))
+    recipient_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='notifications', verbose_name=_("Utilisateur destinataire")
+    )
+    title = models.CharField(max_length=255, verbose_name=_("Titre"))
+    message = models.TextField(verbose_name=_("Message"))
+    link = models.CharField(max_length=500, blank=True, default='', verbose_name=_("Lien"))
+    is_read = models.BooleanField(default=False, verbose_name=_("Lu"))
+    notification_type = models.CharField(
+        max_length=30, choices=NOTIFICATION_TYPES, default='info', verbose_name=_("Type")
+    )
+    related_request = models.ForeignKey(
+        HeightCalculationRequest, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='notifications', verbose_name=_("Demande associée")
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
+
+    class Meta:
+        verbose_name = _("Notification")
+        verbose_name_plural = _("Notifications")
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title} → {self.recipient_email}"

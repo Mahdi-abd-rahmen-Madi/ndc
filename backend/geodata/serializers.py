@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, TerrainDocumentation, AntennaEquipmentHistory
+from .models import (
+    AntennaEquipment, AntennaSpecification, TerrainLoadCalculation,
+    TerrainDocumentation, AntennaEquipmentHistory,
+    HeightCalculationRequest, Notification
+)
 
 
 class ResponsibleUserSerializer(serializers.ModelSerializer):
@@ -204,3 +208,63 @@ class AntennaEquipmentHistorySerializer(serializers.ModelSerializer):
         if obj.user:
             return obj.user.get_full_name() or obj.user.username
         return 'Système'
+
+
+class HeightCalculationRequestSerializer(serializers.ModelSerializer):
+    """Serializer for creating height calculation requests (public)"""
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = HeightCalculationRequest
+        fields = [
+            'id', 'requester_name', 'requester_email', 'requester_phone',
+            'requested_building_height', 'mast_height', 'montage_type',
+            'terrain_type', 'region', 'latitude', 'longitude', 'address',
+            'description', 'status', 'status_display', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'status', 'status_display', 'created_at', 'updated_at']
+
+
+class HeightCalculationRequestAdminSerializer(serializers.ModelSerializer):
+    """Serializer for admin/engineer management of requests"""
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    assigned_to_display = serializers.SerializerMethodField()
+    requester_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HeightCalculationRequest
+        fields = [
+            'id', 'requester_name', 'requester_email', 'requester_phone', 'requester_user',
+            'requested_building_height', 'mast_height', 'montage_type',
+            'terrain_type', 'region', 'latitude', 'longitude', 'address',
+            'description', 'status', 'status_display', 'assigned_to', 'assigned_to_display',
+            'admin_notes', 'completed_equipment', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'requester_name', 'requester_email', 'requester_phone',
+                            'requester_user', 'requested_building_height', 'mast_height',
+                            'montage_type', 'terrain_type', 'region', 'latitude', 'longitude',
+                            'address', 'description', 'created_at', 'updated_at']
+
+    def get_assigned_to_display(self, obj):
+        if obj.assigned_to:
+            return obj.assigned_to.get_full_name() or obj.assigned_to.username
+        return None
+
+    def get_requester_display(self, obj):
+        return f"{obj.requester_name} ({obj.requester_email})"
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for user notifications"""
+    type_display = serializers.CharField(source='get_notification_type_display', read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'title', 'message', 'link', 'is_read',
+            'notification_type', 'type_display', 'related_request',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'title', 'message', 'link', 'notification_type',
+                            'type_display', 'related_request', 'created_at']
+

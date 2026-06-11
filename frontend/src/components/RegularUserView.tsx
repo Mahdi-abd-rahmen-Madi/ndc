@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, X, Loader2, Download, Compass, Layers, CheckCircle2, Shield, Sparkles, AlertCircle } from 'lucide-react';
+import { Search, MapPin, X, Loader2, Download, Compass, Layers, CheckCircle2, Shield, Sparkles, AlertCircle, Bell, Send } from 'lucide-react';
 import { useGeocoding } from '../hooks/useGeocoding';
 import TerrainMap from './TerrainMap';
 import type { GeocodingAddress } from '../utils/types';
@@ -176,9 +176,128 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
   const [suggestions, setSuggestions] = useState<GeocodingAddress[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { search, loading: searchLoading } = useGeocoding();
-  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
+
+  // Height Request & Notifications State
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestFormData, setRequestFormData] = useState({ name: '', email: '', phone: '', description: '' });
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [requestSuccess, setRequestSuccess] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  // WebSocket Connection for Notifications
+  useEffect(() => {
+    // We only connect if we have an email (e.g. from a submitted request)
+    const storedEmail = localStorage.getItem('ndc_user_email');
+    if (!storedEmail) return;
+
+    const connectWs = () => {
+      // Use wss:// or ws:// depending on protocol
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // In dev, assuming the backend runs on localhost:8000 if not using vite proxy directly
+      // Use the apiBaseUrl and strip http(s)
+      const wsBase = apiBaseUrl ? apiBaseUrl.replace(/^http(s)?:\/\//, protocol + '//') : `${protocol}//${window.location.host}`;
+      const wsUrl = `${wsBase}/ws/notifications/${encodeURIComponent(storedEmail)}/`;
+      
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'notification') {
+            setNotifications(prev => [data.notification, ...prev]);
+          }
+        } catch (e) {
+          console.error('Error parsing WS message:', e);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting in 5s...');
+        setTimeout(connectWs, 5000);
+      };
+      
+      wsRef.current = ws;
+    };
+    
+    connectWs();
+    
+    // Fetch initial notifications
+    fetch(`${apiBaseUrl}/api/geodata/notifications/?email=${encodeURIComponent(storedEmail)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setNotifications(data);
+        }
+      })
+      .catch(console.error);
+      
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [apiBaseUrl, requestSuccess]); // Re-run when requestSuccess changes to connect after first submit
+
+  const handleMarkAsRead = async (notifId: number) => {
+    try {
+      await fetch(`${apiBaseUrl}/api/geodata/notifications/${notifId}/mark_read/`, { method: 'POST' });
+      setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, is_read: true } : n));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingRequest(true);
+    try {
+      // Save email to local storage for future visits
+      localStorage.setItem('ndc_user_email', requestFormData.email);
+      
+      const payload = {
+        requester_name: requestFormData.name,
+        requester_email: requestFormData.email,
+        requester_phone: requestFormData.phone,
+        description: requestFormData.description,
+        requested_building_height: selectedBuildingHeight,
+        mast_height: selectedHeight,
+        montage_type: selectedMontage,
+        terrain_type: lookupResult?.detected_terrain_type || '',
+        region: lookupResult?.detected_region || null,
+        latitude: selectedCoords?.latitude,
+        longitude: selectedCoords?.longitude,
+        address: selectedAddress?.name || ''
+      };
+      
+      const response = await fetch(`${apiBaseUrl}/api/geodata/height-requests/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) throw new Error('Failed to submit request');
+      
+      setRequestSuccess(true);
+      setTimeout(() => {
+        setShowRequestForm(false);
+        setRequestSuccess(false);
+      }, 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Une erreur est survenue lors de la soumission de la demande.');
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
 
   // Close search suggestions when clicking outside
   useEffect(() => {
@@ -412,11 +531,69 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
       {/* Left Pane - Search, Info & Map */}
       <div className="w-full md:w-5/12 xl:w-4/12 flex flex-col border-r border-slate-800 bg-slate-950 p-6 overflow-y-auto space-y-6">
         
-        {/* Title & Introduction */}
+        {/* Title & Introduction & Notifications */}
         <div>
-          <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs tracking-wider uppercase">
-            <Sparkles className="w-4 h-4" />
-            Catalogue de Conception d'Antennes
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs tracking-wider uppercase">
+              <Sparkles className="w-4 h-4" />
+              Catalogue de Conception d'Antennes
+            </div>
+            
+            {/* Notification Bell */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                className="p-1.5 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 transition-colors relative"
+              >
+                <Bell className="w-4 h-4 text-slate-300" />
+                {notifications.filter(n => !n.is_read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-rose-500 text-[8px] font-bold text-white items-center justify-center">
+                      {notifications.filter(n => !n.is_read).length}
+                    </span>
+                  </span>
+                )}
+              </button>
+              
+              {/* Notifications Dropdown */}
+              {showNotifDropdown && (
+                <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-[2000] overflow-hidden">
+                  <div className="p-3 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-slate-200">Notifications</h4>
+                    {notifications.filter(n => !n.is_read).length > 0 && (
+                      <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full font-medium">
+                        {notifications.filter(n => !n.is_read).length} non lues
+                      </span>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-800">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-500">
+                        Aucune notification
+                      </div>
+                    ) : (
+                      notifications.map(notif => (
+                        <div 
+                          key={notif.id} 
+                          onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
+                          className={`p-3 text-xs transition-colors cursor-pointer ${notif.is_read ? 'opacity-60 bg-transparent' : 'bg-indigo-500/5 hover:bg-indigo-500/10'}`}
+                        >
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <span className="font-bold text-slate-200">{notif.title}</span>
+                            {!notif.is_read && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1"></span>}
+                          </div>
+                          <p className="text-slate-400 leading-relaxed">{notif.message}</p>
+                          <div className="text-[10px] text-slate-500 mt-2">
+                            {new Date(notif.created_at).toLocaleString('fr-FR')}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <h2 className="text-2xl font-bold mt-1 text-white">Recherche de Conception Publique</h2>
           <p className="text-xs text-slate-400 mt-2 leading-relaxed">
@@ -548,7 +725,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
               <option value="">-- Choisir le type de montage --</option>
               {MONTAGES.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name} ({m.abbreviation})
+                  {m.name}
                 </option>
               ))}
               <option value="custom">⚙️ Configuration sur-mesure (Personnalisée)</option>
@@ -1001,14 +1178,20 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                               Fichier de calculs techniques
                             </h5>
                             
-                            {!hitPredefinedMontage ? (
-                              <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 flex flex-col items-center text-center space-y-2">
-                                <AlertCircle className="w-8 h-8 text-amber-500 animate-pulse" />
-                                <div className="text-xs font-bold text-slate-300">Fichier de calcul non disponible</div>
-                                <p className="text-[10px] text-slate-400 leading-relaxed">
-                                  Les fichiers de calcul technique (.docx) sont pré-établis uniquement pour les montages standard (A1 à A8).
-                                  Consultez le bureau d'études Génie Civil pour obtenir les notes de calcul de cette configuration personnalisée.
+                            {!isPrecalculatedBuildingHeight ? (
+                              <div className="bg-slate-950/80 border border-indigo-500/30 rounded-xl p-5 flex flex-col items-center text-center shadow-[0_0_15px_rgba(99,102,241,0.1)]">
+                                <AlertCircle className="w-8 h-8 text-indigo-400 mb-3" />
+                                <div className="text-sm font-bold text-white mb-1">Hauteur personnalisée ({selectedBuildingHeight}m)</div>
+                                <p className="text-[11px] text-slate-400 leading-relaxed mb-4 max-w-[200px] mx-auto">
+                                  Le fichier de calcul technique pour cette hauteur exacte n'existe pas encore dans le catalogue standard.
                                 </p>
+                                <button 
+                                  onClick={() => setShowRequestForm(true)}
+                                  className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 group"
+                                >
+                                  Créer une demande pour cette hauteur
+                                  <Send className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                                </button>
                               </div>
                             ) : docList.length === 0 ? (
                               <div className="text-center py-8 text-slate-500 text-xs">
@@ -1078,12 +1261,124 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
 
               </div>
             )}
-            
           </div>
         )}
-
       </div>
-      
+
+      {/* Height Request Form Modal */}
+      {showRequestForm && (
+        <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center sticky top-0 z-10">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Send className="w-5 h-5 text-indigo-400" />
+                Demande de Calcul Technique
+              </h3>
+              <button 
+                onClick={() => setShowRequestForm(false)}
+                className="text-slate-500 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              {requestSuccess ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mb-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                  </div>
+                  <h4 className="text-xl font-bold text-white">Demande Envoyée !</h4>
+                  <p className="text-sm text-slate-400">
+                    Votre demande a été transmise au département Génie Civil. 
+                    Vous recevrez une notification lorsque les calculs seront disponibles.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleRequestSubmit} className="space-y-6">
+                  {/* Summary of what is being requested */}
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 mb-2 text-sm">
+                    <p className="text-indigo-300 font-medium mb-2 text-xs uppercase tracking-wider">Configuration technique :</p>
+                    <ul className="grid grid-cols-2 gap-2 text-slate-300 text-xs">
+                      <li>• Bâtiment : <span className="font-bold text-white">{selectedBuildingHeight}m</span></li>
+                      <li>• Mât : <span className="font-bold text-white">{selectedHeight}m</span></li>
+                      <li>• Montage : <span className="font-bold text-white">{selectedMontage}</span></li>
+                      <li>• Terrain : <span className="font-bold text-white">{lookupResult?.detected_terrain_type || 'N/A'}</span></li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Nom complet <span className="text-rose-500">*</span></label>
+                      <input 
+                        required
+                        type="text" 
+                        value={requestFormData.name}
+                        onChange={e => setRequestFormData({...requestFormData, name: e.target.value})}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                        placeholder="Jean Dupont"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Adresse Email <span className="text-rose-500">*</span></label>
+                      <input 
+                        required
+                        type="email" 
+                        value={requestFormData.email}
+                        onChange={e => setRequestFormData({...requestFormData, email: e.target.value})}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                        placeholder="jean.dupont@entreprise.com"
+                      />
+                      <p className="text-[10px] text-slate-500 mt-1">Nécessaire pour recevoir les notifications sur cette demande.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Téléphone (Optionnel)</label>
+                      <input 
+                        type="tel" 
+                        value={requestFormData.phone}
+                        onChange={e => setRequestFormData({...requestFormData, phone: e.target.value})}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                        placeholder="+33 6 12 34 56 78"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Description / Justification</label>
+                      <textarea 
+                        rows={3}
+                        value={requestFormData.description}
+                        onChange={e => setRequestFormData({...requestFormData, description: e.target.value})}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none custom-scrollbar"
+                        placeholder="Précisez le contexte de cette demande de hauteur spécifique..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 sticky bottom-0 bg-slate-900 pb-2">
+                    <button 
+                      type="button"
+                      onClick={() => setShowRequestForm(false)}
+                      className="px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button 
+                      type="submit"
+                      disabled={isSubmittingRequest}
+                      className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmittingRequest ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Envoi...</>
+                      ) : (
+                        <><Send className="w-4 h-4" /> Soumettre</>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
