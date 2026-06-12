@@ -4,6 +4,8 @@ import { useGeocoding } from '../hooks/useGeocoding';
 import TerrainMap from './TerrainMap';
 import type { GeocodingAddress } from '../utils/types';
 import maplibregl from 'maplibre-gl';
+import DocViewer, { DocViewerRenderers } from '@cyntler/react-doc-viewer';
+import '@cyntler/react-doc-viewer/dist/index.css';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
@@ -187,6 +189,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<{url: string, filename: string, isConverting?: boolean, originalUrl?: string} | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   // WebSocket Connection for Notifications
@@ -371,6 +374,29 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
       setLoading(false);
     }
   }, [apiBaseUrl]);
+
+  // Convert DOCX to PDF for preview
+  useEffect(() => {
+    if (previewDoc && !previewDoc.isConverting && !previewDoc.url.toLowerCase().endsWith('.pdf') && (previewDoc.filename.toLowerCase().endsWith('.docx') || previewDoc.filename.toLowerCase().endsWith('.doc'))) {
+      let isMounted = true;
+      setPreviewDoc(prev => prev ? { ...prev, isConverting: true, originalUrl: prev.url } : null);
+      
+      fetch(`/api/geodata/preview-document/?url=${encodeURIComponent(previewDoc.url)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (isMounted && data.preview_url) {
+            setPreviewDoc(prev => prev ? { ...prev, url: data.preview_url, isConverting: false } : null);
+          } else if (isMounted) {
+            setPreviewDoc(prev => prev ? { ...prev, isConverting: false } : null);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setPreviewDoc(prev => prev ? { ...prev, isConverting: false } : null);
+        });
+        
+      return () => { isMounted = false; };
+    }
+  }, [previewDoc?.url, previewDoc?.filename]);
 
   // Re-trigger catalog lookup when height, building height or montage changes (if address selected)
   useEffect(() => {
@@ -660,21 +686,32 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
           </div>
 
           {/* Height Selection */}
-          <div className="flex flex-col space-y-2">
-            <label className="text-xs font-semibold text-slate-300">2. Sélectionner la hauteur du mât</label>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col space-y-1.5">
+            <label className="text-xs font-semibold text-slate-300">2. Sélectionner la hauteur du mât (m)</label>
+            <input
+              type="number"
+              value={selectedHeight || ''}
+              onChange={(e) => setSelectedHeight(e.target.value === '' ? 0 : Number(e.target.value))}
+              placeholder="Ex: 3 ou 4"
+              className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              min={1}
+              max={50}
+              step={0.5}
+            />
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <span>Recommandé :</span>
               {[3, 4].map((h) => (
                 <button
                   key={h}
                   onClick={() => setSelectedHeight(h)}
-                  className={`py-2 px-3 text-sm font-semibold rounded-lg border transition-all ${
+                  className={`px-2 py-0.5 rounded text-[11px] border transition-all ${
                     selectedHeight === h
-                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/20'
+                      ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300 font-semibold'
                       : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
                   }`}
                   type="button"
                 >
-                  Mât de {h}m
+                  {h}m
                 </button>
               ))}
             </div>
@@ -937,9 +974,9 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
             selectedCoordinates={selectedCoords}
             analysisRadius={0.5}
           />
-          <div className="absolute bottom-2 left-2 right-2 bg-slate-950/80 backdrop-blur-sm border border-slate-800/80 rounded-md p-1.5 px-2.5 text-[10px] text-slate-400 pointer-events-none flex items-center justify-between">
-            <span>Aperçu de la carte interactive</span>
-            <span className="flex items-center gap-1"><Compass className="w-3 h-3 animate-pulse text-indigo-400" /> Cliquez pour sélectionner un point</span>
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-sm border border-slate-800/80 rounded-full py-1.5 px-3 text-[10px] text-slate-300 pointer-events-none flex items-center gap-1.5 whitespace-nowrap shadow-lg z-10">
+            <Compass className="w-3.5 h-3.5 animate-pulse text-indigo-400" />
+            <span>Cliquez pour sélectionner un point</span>
           </div>
         </div>
       </div>
@@ -1204,12 +1241,10 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                                   const isLocal = !!doc.localUrl;
                                   
                                   return (
-                                    <a
+                                    <button
                                       key={dIdx}
-                                      href={downloadUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="w-full flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500 hover:bg-slate-900 group transition-all"
+                                      onClick={() => setPreviewDoc({ url: downloadUrl, filename: doc.filename })}
+                                      className="w-full flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500 hover:bg-slate-900 group transition-all text-left"
                                     >
                                       <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
@@ -1237,7 +1272,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                                         </div>
                                       </div>
                                       <Download className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-                                    </a>
+                                    </button>
                                   );
                                 })}
                               </div>
@@ -1374,6 +1409,69 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                     </button>
                   </div>
                 </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex justify-between items-center z-10">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 line-clamp-1">
+                <Sparkles className="w-5 h-5 text-indigo-400" />
+                Aperçu : {previewDoc.filename}
+              </h3>
+              <div className="flex items-center gap-3">
+                <a
+                  href={previewDoc.originalUrl || previewDoc.url}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  Télécharger
+                </a>
+                <button 
+                  onClick={() => setPreviewDoc(null)}
+                  className="text-slate-500 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 bg-slate-950/50 p-2 overflow-hidden flex items-center justify-center">
+              {previewDoc.isConverting ? (
+                <div className="flex flex-col items-center justify-center text-slate-400">
+                  <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
+                  <p className="text-sm font-semibold">Génération de l'aperçu PDF...</p>
+                  <p className="text-xs mt-1">Cela peut prendre quelques secondes.</p>
+                </div>
+              ) : previewDoc.filename.toLowerCase().endsWith('.pdf') || previewDoc.url.toLowerCase().endsWith('.pdf') || previewDoc.filename.toLowerCase().endsWith('.docx') || previewDoc.filename.toLowerCase().endsWith('.doc') ? (
+                <div className="w-full h-full rounded-xl overflow-hidden bg-white">
+                  <DocViewer 
+                    documents={[{ uri: previewDoc.url, fileType: previewDoc.filename.split('.').pop() }]}
+                    pluginRenderers={DocViewerRenderers}
+                    config={{
+                      header: {
+                        disableHeader: true,
+                        disableFileName: true,
+                        retainURLParams: false
+                      }
+                    }}
+                    className="w-full h-full"
+                  />
+                </div>
+              ) : (
+                <iframe 
+                  src={previewDoc.url} 
+                  className="w-full h-full rounded-xl bg-white border-0 shadow-inner"
+                  title={`Aperçu de ${previewDoc.filename}`}
+                />
               )}
             </div>
           </div>

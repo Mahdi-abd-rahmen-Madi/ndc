@@ -1,11 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    AntennaEquipmentViewSet, AntennaSpecificationViewSet, TerrainLoadCalculationViewSet, 
-    TerrainClassificationViewSet, GeocodingSearchViewSet, TerrainConfigViewSet, RegionGeoJSONViewSet,
-    HeightCalculationRequestViewSet, NotificationViewSet,
-    terrain_map_view, terrain_classification_api, terrain_classification_fast_api, region_map_view,
-    bdtopo_tile_proxy
+    AntennaEquipmentViewSet, AntennaSpecificationViewSet, TerrainLoadCalculationViewSet,
+    TerrainClassificationViewSet, GeocodingSearchViewSet, TerrainConfigViewSet,
+    RegionGeoJSONViewSet, HeightCalculationRequestViewSet, NotificationViewSet,
+    terrain_map_view, terrain_classification_api, terrain_classification_fast_api,
+    region_map_view, bdtopo_tile_proxy, preview_document_api
 )
 
 router = DefaultRouter()
@@ -28,4 +28,5 @@ urlpatterns = [
     path('terrain-classify/', terrain_classification_api, name='terrain-classify'),
     path('terrain-classify-fast/', terrain_classification_fast_api, name='terrain-classify-fast'),
     path('bdtopo-tiles/<int:z>/<int:x>/<int:y>/', bdtopo_tile_proxy, name='bdtopo-tile-proxy'),
+    path('preview-document/', preview_document_api, name='preview-document'),
 ]

@@ -1891,3 +1891,27 @@ class NotificationViewSet(viewsets.ModelViewSet):
         count = Notification.objects.filter(recipient_email=email, is_read=False).count()
         return Response({'count': count})
 
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .utils_preview import get_pdf_preview_path
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def preview_document_api(request):
+    url = request.GET.get('url')
+    if not url:
+        return Response({'error': 'No URL provided'}, status=400)
+    
+    # We expect url to be like /media/catalogue/...
+    if not url.startswith(settings.MEDIA_URL):
+        return Response({'error': 'Invalid URL'}, status=400)
+        
+    relative_path = url[len(settings.MEDIA_URL):]
+    pdf_relative = get_pdf_preview_path(relative_path)
+    
+    if not pdf_relative:
+        return Response({'error': 'File not found or conversion failed'}, status=404)
+        
+    return Response({'preview_url': f"{settings.MEDIA_URL}{pdf_relative}"})
