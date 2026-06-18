@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
+import { AlertCircle } from 'lucide-react';
 import TerrainMap from './components/TerrainMap';
 import CLCLegend from './components/CLCLegend';
 import InfoPanel from './components/InfoPanel';
@@ -29,9 +30,11 @@ export default function App() {
   const [regionsVisible, setRegionsVisible] = useState(false);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
-  
+
   const [showMontageModal, setShowMontageModal] = useState(true);
   const [selectedCivilMontage, setSelectedCivilMontage] = useState<string | null>(null);
+  const [selectedSiteType, setSelectedSiteType] = useState<'nouveau' | 'existant' | null>(null);
+  const [selectedFoundationType, setSelectedFoundationType] = useState<'metallique' | 'beton' | 'encastre' | null>(null);
 
   const {
     classify,
@@ -87,7 +90,7 @@ export default function App() {
 
       classificationTimeoutRef.current = setTimeout(async () => {
         classify(lat, lng, config || undefined, currentAnalysisRadius);
-        
+
         try {
           const address = await reverseGeocode(lat, lng);
           setSelectedAddress(address);
@@ -184,17 +187,17 @@ export default function App() {
       <header className="header bg-gradient-to-r from-primary to-secondary text-white p-4 px-8 shadow-lg flex-shrink-0 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold">
-            {userMode === 'public' 
-              ? "Catalogue de Conception d'Antennes" 
-              : `Carte de Classification du Terrain - France (${selectedCivilMontage || 'Montage 1'})`}
+            {userMode === 'public'
+              ? "Catalogue de Conception d'Antennes"
+              : `Carte de Classification du Terrain - France (${selectedCivilMontage || 'Cas 1'})`}
           </h1>
           <p className="mt-1 opacity-90 text-sm">
-            {userMode === 'public' 
-              ? 'Trouvez les profils de mât requis et les documents de calcul technique' 
+            {userMode === 'public'
+              ? 'Trouvez les profils de mât requis et les documents de calcul technique'
               : 'Cliquez sur la carte pour analyser la classification du terrain (Département Génie Civil)'}
           </p>
         </div>
-        
+
         {/* Toggle Mode & Sub-tabs */}
         <div className="flex items-center gap-2">
           {userMode === 'engineer' && (
@@ -241,7 +244,12 @@ export default function App() {
       {/* Main Container */}
       <div className="flex-1 flex overflow-hidden w-full max-w-none">
         {userMode === 'public' ? (
-          <RegularUserView apiBaseUrl={apiBaseUrl} initialMontage={selectedCivilMontage} />
+          <RegularUserView
+            apiBaseUrl={apiBaseUrl}
+            initialMontage={selectedCivilMontage}
+            initialSiteType={selectedSiteType}
+            initialFoundationType={selectedFoundationType}
+          />
         ) : engineerSubTab === 'catalogue' ? (
           <CatalogueManagement />
         ) : (
@@ -262,14 +270,14 @@ export default function App() {
                 transitionZones={classificationResult?.transition_zones}
                 analysisRadius={currentAnalysisRadius}
               />
-              
+
               {/* Address Search */}
               <AddressSearch
                 onAddressSelect={handleAddressSelect}
                 selectedAddress={selectedAddress}
                 onClearAddress={handleClearAddress}
               />
-              
+
               {/* BDTOPO Controls */}
               <BDTOPOControls
                 visible={bdtopoVisible}
@@ -321,12 +329,12 @@ export default function App() {
         )}
       </div>
 
-      {/* Montage Selection Modal */}
+      {/* Cas Selection Modal */}
       {showMontageModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] flex items-center justify-center animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 border border-gray-100 transform transition-all duration-300 scale-100">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Sélectionner un Montage</h3>
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full mx-4 border border-gray-100 transform transition-all duration-300 scale-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-2xl font-bold text-slate-800">Sélectionner un Cas de Montage</h3>
               <button
                 onClick={() => setShowMontageModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-2xl font-bold transition-colors"
@@ -334,87 +342,266 @@ export default function App() {
                 ×
               </button>
             </div>
-            
+
             <p className="text-slate-500 text-sm mb-6">
-              Veuillez sélectionner l'un des 4 montages pour accéder aux outils de conception du Catalogue.
+              Veuillez sélectionner l'un des cas ci-dessous pour accéder aux outils de conception du Catalogue. Chaque cas correspond à une configuration de structure différente.
             </p>
 
-            <div className="space-y-3 mb-6">
-              {/* Montage 1 - Active */}
-              <button
-                onClick={() => {
-                  setSelectedCivilMontage('A1');
-                  setShowMontageModal(false);
-                }}
-                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-primary bg-primary/5 hover:bg-primary/10 transition-all duration-200 text-left group cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold group-hover:scale-110 transition-transform">
-                    M1
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-800">Montage 1</h4>
-                    <p className="text-xs text-primary/80 font-medium">Montage en cours d'exploitation</p>
-                  </div>
-                </div>
-                <span className="text-primary text-sm font-semibold flex items-center gap-1">
-                  Sélectionner <span className="group-hover:translate-x-1 transition-transform">→</span>
-                </span>
-              </button>
+            {/* Prompts section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 border-b border-slate-100 pb-6">
+              {/* Site Type Prompt */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">1. Type de site</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      setSelectedSiteType('nouveau');
+                      // Reset foundation if incompatible
+                      if (selectedFoundationType !== 'metallique' && selectedFoundationType !== null) {
+                        setSelectedFoundationType(null);
+                      }
+                    }}
+                    className={`p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-1 cursor-pointer ${selectedSiteType === 'nouveau'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-slate-800">Site Nouveau</span>
+                      <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-md">Disponible</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">Nouvelle implantation</span>
+                  </button>
 
-              {/* Montage 2 - Inactive */}
-              <div className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/50 opacity-60 text-left select-none cursor-not-allowed">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
-                    M2
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-500">Montage 2</h4>
-                    <p className="text-xs text-slate-400">Non disponible / En cours de développement</p>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedSiteType('existant');
+                      setSelectedFoundationType(null);
+                    }}
+                    className={`p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-1 cursor-pointer ${selectedSiteType === 'existant'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-slate-800">Site Existant</span>
+                      <span className="text-[9px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md">Indisponible</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500">Structure existante</span>
+                  </button>
                 </div>
-                <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                  Indisponible
-                </span>
               </div>
 
-              {/* Montage 3 - Inactive */}
-              <div className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/50 opacity-60 text-left select-none cursor-not-allowed">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
-                    M3
+              {/* Foundation Type Prompt */}
+              <div className={`flex flex-col gap-2 transition-all duration-300 ${!selectedSiteType ? 'opacity-40 pointer-events-none' : ''}`}>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  2. Type d'ancrage {!selectedSiteType && <span className="text-[10px] text-slate-400 font-normal normal-case">(Sélectionnez le type de site d'abord)</span>}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    disabled={selectedSiteType !== 'nouveau'}
+                    onClick={() => setSelectedFoundationType('metallique')}
+                    className={`p-2 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedFoundationType === 'metallique'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                  >
+                    <span className="font-semibold text-xs text-slate-800">Plot métallique</span>
+                    <span className="text-[9px] text-slate-500">Disponible</span>
+                  </button>
+
+                  <button
+                    disabled={selectedSiteType !== 'nouveau'}
+                    onClick={() => setSelectedFoundationType('beton')}
+                    className={`p-2 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedFoundationType === 'beton'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                  >
+                    <span className="font-semibold text-xs text-slate-800">Plot Béton</span>
+                    <span className="text-[9px] text-slate-400">Indisponible</span>
+                  </button>
+
+                  <button
+                    disabled={selectedSiteType !== 'nouveau'}
+                    onClick={() => setSelectedFoundationType('encastre')}
+                    className={`p-2 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedFoundationType === 'encastre'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                  >
+                    <span className="font-semibold text-xs text-slate-800">Encastré</span>
+                    <span className="text-[9px] text-slate-400">Indisponible</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Incompatibility message */}
+            {selectedSiteType && selectedFoundationType && (selectedSiteType !== 'nouveau' || selectedFoundationType !== 'metallique') && (
+              <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-800">Configuration non disponible</h4>
+                  <p className="text-xs text-amber-600 mt-0.5">
+                    La configuration sélectionnée (Site {selectedSiteType === 'existant' ? 'Existant' : 'Nouveau'} / {selectedFoundationType === 'beton' ? 'Plot Béton' : selectedFoundationType === 'encastre' ? 'Encastré' : 'Plot métallique'}) n'est pas encore disponible dans le Catalogue.
+                  </p>
+                  <p className="text-xs text-amber-700 font-semibold mt-1">
+                    Veuillez sélectionner "Site Nouveau" et "Plot métallique" pour activer le Cas 1.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+              {/* Cas 1 - Active */}
+              {selectedSiteType === 'nouveau' && selectedFoundationType === 'metallique' ? (
+                <button
+                  onClick={() => {
+                    setSelectedCivilMontage('A1');
+                    setShowMontageModal(false);
+                  }}
+                  className="flex flex-col rounded-2xl border-2 border-primary bg-primary/5 hover:bg-primary/10 hover:shadow-lg transition-all duration-300 text-left group cursor-pointer overflow-hidden animate-pulse"
+                >
+                  <div className="relative w-full bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                    <img
+                      src="/cas1.png"
+                      alt="Structure Cas 1"
+                      className="max-h-[200px] w-auto object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
+                    />
+                    <div className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                      C1
+                    </div>
+                    <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                      Disponible
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-500">Montage 3</h4>
-                    <p className="text-xs text-slate-400">Non disponible / En cours de développement</p>
+                  <div className="p-4 flex flex-col gap-2">
+                    <h4 className="text-lg font-bold text-slate-800">Cas 1</h4>
+                    <p className="text-xs text-slate-500 leading-relaxed">Mât + Plot | Ant. 4G intégrée + 5G sur bras</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-primary/70 font-medium bg-primary/10 px-2.5 py-1 rounded-full">En cours d'exploitation</span>
+                      <span className="text-primary text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Sélectionner <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/50 text-left select-none cursor-not-allowed overflow-hidden opacity-60">
+                  <div className="relative w-full bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                    <img
+                      src="/cas1.png"
+                      alt="Structure Cas 1"
+                      className="max-h-[200px] w-auto object-contain grayscale opacity-50 drop-shadow-sm"
+                    />
+                    <div className="absolute top-3 left-3 bg-slate-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                      C1
+                    </div>
+                    <div className="absolute top-3 right-3 bg-slate-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      Indisponible
+                    </div>
+                  </div>
+                  <div className="p-4 flex flex-col gap-2">
+                    <h4 className="text-lg font-bold text-slate-500">Cas 1</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">Mât + Plot | Ant. 4G intégrée + 5G sur bras</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-slate-400 font-medium bg-slate-200 px-2.5 py-1 rounded-full">
+                        {!selectedSiteType || !selectedFoundationType
+                          ? "Sélectionnez le type de site et de fondation"
+                          : "Non disponible pour cette configuration"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                  Indisponible
-                </span>
+              )}
+
+              {/* Cas 2 - Inactive */}
+              <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/50 text-left select-none cursor-not-allowed overflow-hidden opacity-70">
+                <div className="relative w-full bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                  <img
+                    src="/cas2.png"
+                    alt="Structure Cas 2"
+                    className="max-h-[200px] w-auto object-contain grayscale opacity-60 drop-shadow-sm"
+                  />
+                  <div className="absolute top-3 left-3 bg-slate-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                    C2
+                  </div>
+                  <div className="absolute top-3 right-3 bg-slate-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    Indisponible
+                  </div>
+                </div>
+                <div className="p-4 flex flex-col gap-2">
+                  <h4 className="text-lg font-bold text-slate-500">Cas 2</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">Mât + Plot | Ant. 4G/5G – bras séparés</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[11px] text-slate-400 font-medium bg-slate-200 px-2.5 py-1 rounded-full">En cours de développement</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Montage 4 - Inactive */}
-              <div className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/50 opacity-60 text-left select-none cursor-not-allowed">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 font-bold">
-                    M4
+              {/* Cas 3 - Inactive */}
+              <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/50 text-left select-none cursor-not-allowed overflow-hidden opacity-70">
+                <div className="relative w-full bg-gradient-to-b from-slate-100 to-slate-150 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                  <div className="flex flex-col items-center gap-3 opacity-40">
+                    <svg width="64" height="120" viewBox="0 0 64 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="28" y="10" width="8" height="100" rx="4" fill="#94a3b8" />
+                      <rect x="10" y="25" width="44" height="4" rx="2" fill="#94a3b8" />
+                      <rect x="10" y="45" width="44" height="4" rx="2" fill="#94a3b8" />
+                      <rect x="22" y="105" width="20" height="10" rx="3" fill="#94a3b8" />
+                    </svg>
+                    <span className="text-xs text-slate-400 font-medium">Aperçu bientôt disponible</span>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-500">Montage 4</h4>
-                    <p className="text-xs text-slate-400">Non disponible / En cours de développement</p>
+                  <div className="absolute top-3 left-3 bg-slate-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                    C3
+                  </div>
+                  <div className="absolute top-3 right-3 bg-slate-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    Indisponible
                   </div>
                 </div>
-                <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-                  Indisponible
-                </span>
+                <div className="p-4 flex flex-col gap-2">
+                  <h4 className="text-lg font-bold text-slate-500">Cas 3</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">Configuration de structure alternative — Détails à venir.</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[11px] text-slate-400 font-medium bg-slate-200 px-2.5 py-1 rounded-full">En cours de développement</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cas 4 - Inactive */}
+              <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/50 text-left select-none cursor-not-allowed overflow-hidden opacity-70">
+                <div className="relative w-full bg-gradient-to-b from-slate-100 to-slate-150 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                  <div className="flex flex-col items-center gap-3 opacity-40">
+                    <svg width="64" height="120" viewBox="0 0 64 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="28" y="10" width="8" height="100" rx="4" fill="#94a3b8" />
+                      <rect x="10" y="25" width="44" height="4" rx="2" fill="#94a3b8" />
+                      <rect x="10" y="45" width="44" height="4" rx="2" fill="#94a3b8" />
+                      <rect x="22" y="105" width="20" height="10" rx="3" fill="#94a3b8" />
+                    </svg>
+                    <span className="text-xs text-slate-400 font-medium">Aperçu bientôt disponible</span>
+                  </div>
+                  <div className="absolute top-3 left-3 bg-slate-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                    C4
+                  </div>
+                  <div className="absolute top-3 right-3 bg-slate-400 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    Indisponible
+                  </div>
+                </div>
+                <div className="p-4 flex flex-col gap-2">
+                  <h4 className="text-lg font-bold text-slate-500">Cas 4</h4>
+                  <p className="text-xs text-slate-400 leading-relaxed">Configuration de structure alternative — Détails à venir.</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[11px] text-slate-400 font-medium bg-slate-200 px-2.5 py-1 rounded-full">En cours de développement</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className="flex justify-end">
               <button
                 onClick={() => setShowMontageModal(false)}
-                className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100 rounded-lg text-sm font-semibold transition cursor-pointer"
+                className="px-5 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100 rounded-lg text-sm font-semibold transition cursor-pointer"
               >
                 Annuler
               </button>

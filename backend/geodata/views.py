@@ -1900,6 +1900,7 @@ from .utils_preview import get_pdf_preview_path
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def preview_document_api(request):
+    import urllib.parse
     url = request.GET.get('url')
     if not url:
         return Response({'error': 'No URL provided'}, status=400)
@@ -1909,9 +1910,12 @@ def preview_document_api(request):
         return Response({'error': 'Invalid URL'}, status=400)
         
     relative_path = url[len(settings.MEDIA_URL):]
+    # Decode URL-encoded characters (spaces, accents, etc.)
+    relative_path = urllib.parse.unquote(relative_path)
     pdf_relative = get_pdf_preview_path(relative_path)
     
     if not pdf_relative:
         return Response({'error': 'File not found or conversion failed'}, status=404)
         
     return Response({'preview_url': f"{settings.MEDIA_URL}{pdf_relative}"})
+

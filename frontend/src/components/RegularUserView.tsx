@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, X, Loader2, Download, Compass, Layers, CheckCircle2, Shield, Sparkles, AlertCircle, Bell, Send } from 'lucide-react';
+import { Search, MapPin, X, Loader2, Download, Compass, Layers, CheckCircle2, Shield, Sparkles, AlertCircle, Bell, Send, Map as MapIcon } from 'lucide-react';
 import { useGeocoding } from '../hooks/useGeocoding';
 import TerrainMap from './TerrainMap';
 import type { GeocodingAddress } from '../utils/types';
 import maplibregl from 'maplibre-gl';
-import DocViewer, { DocViewerRenderers } from '@cyntler/react-doc-viewer';
-import '@cyntler/react-doc-viewer/dist/index.css';
+import jsPDF from 'jspdf';
+
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
   initialMontage?: string | null;
+  initialSiteType?: 'nouveau' | 'existant' | null;
+  initialFoundationType?: 'metallique' | 'beton' | 'encastre' | null;
 }
 
 const MONTAGES = [
@@ -74,62 +76,73 @@ const MONTAGES = [
 const MONTAGES_SPECS = [
   {
     id: 'A1',
-    name: 'Montage A1',
+    name: 'Antenne A1',
     ant4g: { height: 2100, width: 470, thickness: 210, weight: 45 },
     ant5g: { height: 1010, width: 500, thickness: 250, weight: 50 }
   },
   {
     id: 'A2',
-    name: 'Montage A2',
+    name: 'Antenne A2',
     ant4g: { height: 2800, width: 500, thickness: 250, weight: 60 },
     ant5g: { height: 1010, width: 500, thickness: 240, weight: 50 }
   },
   {
     id: 'A3',
-    name: 'Montage A3',
+    name: 'Antenne A3',
     ant4g: { height: 2100, width: 500, thickness: 250, weight: 50 },
     ant5g: { height: 1000, width: 500, thickness: 240, weight: 50 }
   },
   {
     id: 'A4',
-    name: 'Montage A4',
+    name: 'Antenne A4',
     ant4g: { height: 1509, width: 469, thickness: 206, weight: 34 },
     ant5g: { height: 730, width: 395, thickness: 180, weight: 28 }
   },
   {
     id: 'A5',
-    name: 'Montage A5',
+    name: 'Antenne A5',
     ant4g: { height: 2800, width: 540, thickness: 240, weight: 110 },
     ant5g: { height: 1000, width: 500, thickness: 240, weight: 50 }
   },
   {
     id: 'A6',
-    name: 'Montage A6',
+    name: 'Antenne A6',
     ant4g: { height: 2688, width: 369, thickness: 166, weight: 33.5 },
     ant5g: { height: 750, width: 450, thickness: 240, weight: 45 }
   },
   {
     id: 'A7',
-    name: 'Montage A7',
+    name: 'Antenne A7',
     ant4g: { height: 2249, width: 469, thickness: 206, weight: 45 },
     ant5g: { height: 730, width: 395, thickness: 180, weight: 28.5 }
   },
   {
     id: 'A8',
-    name: 'Montage A8',
+    name: 'Antenne A8',
     ant4g: { height: 2769, width: 469, thickness: 206, weight: 51 },
     ant5g: { height: 750, width: 430, thickness: 240, weight: 45 }
   }
 ];
 
-export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularUserViewProps) {
+export default function RegularUserView({
+  apiBaseUrl,
+  initialMontage,
+  initialSiteType,
+  initialFoundationType
+}: RegularUserViewProps) {
   const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedHeight, setSelectedHeight] = useState<number>(3); // Default to 3m
   const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number>(15); // Default to 15m
   const [selectedMontage, setSelectedMontage] = useState<string>(initialMontage || ''); // Default to unselected or initialMontage
   const [loading, setLoading] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
+  const [fhWeight, setFhWeight] = useState<number>(30); // Default to 30kg
+  const [showMap, setShowMap] = useState<boolean>(false); // Hidden map, toggled via Ctrl+M
+  const miniMapContainerRef = useRef<HTMLDivElement>(null);
+  const miniMapRef = useRef<maplibregl.Map | null>(null);
 
   // Sync initialMontage from parent
   useEffect(() => {
@@ -189,7 +202,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
   const [requestSuccess, setRequestSuccess] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-  const [previewDoc, setPreviewDoc] = useState<{url: string, filename: string, isConverting?: boolean, originalUrl?: string} | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{ url: string, filename: string, isConverting?: boolean, conversionFailed?: boolean, originalUrl?: string } | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   // WebSocket Connection for Notifications
@@ -205,13 +218,13 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
       // Use the apiBaseUrl and strip http(s)
       const wsBase = apiBaseUrl ? apiBaseUrl.replace(/^http(s)?:\/\//, protocol + '//') : `${protocol}//${window.location.host}`;
       const wsUrl = `${wsBase}/ws/notifications/${encodeURIComponent(storedEmail)}/`;
-      
+
       const ws = new WebSocket(wsUrl);
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected');
       };
-      
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -222,17 +235,17 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
           console.error('Error parsing WS message:', e);
         }
       };
-      
+
       ws.onclose = () => {
         console.log('WebSocket disconnected, reconnecting in 5s...');
         setTimeout(connectWs, 5000);
       };
-      
+
       wsRef.current = ws;
     };
-    
+
     connectWs();
-    
+
     // Fetch initial notifications
     fetch(`${apiBaseUrl}/api/geodata/notifications/?email=${encodeURIComponent(storedEmail)}`)
       .then(res => res.json())
@@ -242,7 +255,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
         }
       })
       .catch(console.error);
-      
+
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
@@ -265,12 +278,27 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
     try {
       // Save email to local storage for future visits
       localStorage.setItem('ndc_user_email', requestFormData.email);
-      
+
+      let fullDescription = requestFormData.description;
+      const configDetails = [];
+      if (initialSiteType) {
+        configDetails.push(`Type de site : ${initialSiteType === 'nouveau' ? 'Nouveau' : 'Existant'}`);
+      }
+      if (initialFoundationType) {
+        configDetails.push(`Type d'ancrage : ${initialFoundationType === 'metallique' ? 'Plot métallique' : initialFoundationType === 'beton' ? 'Plot Béton' : 'Encastré'}`);
+      }
+      if (hasFhEquipment) {
+        configDetails.push(`Équipement FH sélectionné : Oui, Poids: ${fhWeight} kg`);
+      }
+      if (configDetails.length > 0) {
+        fullDescription += `\n\n[Configuration de conception] :\n- ${configDetails.join('\n- ')}`;
+      }
+
       const payload = {
         requester_name: requestFormData.name,
         requester_email: requestFormData.email,
         requester_phone: requestFormData.phone,
-        description: requestFormData.description,
+        description: fullDescription,
         requested_building_height: selectedBuildingHeight,
         mast_height: selectedHeight,
         montage_type: selectedMontage,
@@ -280,15 +308,15 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
         longitude: selectedCoords?.longitude,
         address: selectedAddress?.name || ''
       };
-      
+
       const response = await fetch(`${apiBaseUrl}/api/geodata/height-requests/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       if (!response.ok) throw new Error('Failed to submit request');
-      
+
       setRequestSuccess(true);
       setTimeout(() => {
         setShowRequestForm(false);
@@ -313,13 +341,94 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Ctrl+M keyboard shortcut to toggle the full interactive map
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        setShowMap(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Mini-map initialization & update for inline location preview
+  useEffect(() => {
+    if (!miniMapContainerRef.current || !selectedCoords || showMap) {
+      // Cleanup if conditions not met
+      if (miniMapRef.current) {
+        miniMapRef.current.remove();
+        miniMapRef.current = null;
+      }
+      return;
+    }
+
+    if (!miniMapRef.current) {
+      const miniMap = new maplibregl.Map({
+        container: miniMapContainerRef.current,
+        attributionControl: false,
+        preserveDrawingBuffer: true,
+        interactive: false,
+        style: {
+          version: 8,
+          sources: {
+            'google-satellite': {
+              type: 'raster',
+              tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
+              tileSize: 256,
+            },
+          },
+          layers: [
+            {
+              id: 'google-satellite',
+              type: 'raster',
+              source: 'google-satellite',
+              minzoom: 0,
+              maxzoom: 22,
+            },
+          ],
+        },
+        center: [selectedCoords.longitude, selectedCoords.latitude],
+        zoom: 15,
+      });
+
+      miniMap.on('load', () => {
+        // Add a marker dot at center
+        const el = document.createElement('div');
+        el.style.cssText = 'width:12px;height:12px;background:radial-gradient(circle,#f43f5e 40%,transparent 70%);border:2px solid white;border-radius:50%;box-shadow:0 0 6px rgba(244,63,94,0.6);';
+        new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([selectedCoords.longitude, selectedCoords.latitude])
+          .addTo(miniMap);
+      });
+
+      miniMapRef.current = miniMap;
+    } else {
+      miniMapRef.current.setCenter([selectedCoords.longitude, selectedCoords.latitude]);
+    }
+
+    return () => {
+      // Don't destroy on every coords change — only when unmounting or conditions change
+    };
+  }, [selectedCoords, showMap]);
+
+  // Cleanup mini-map on full unmount
+  useEffect(() => {
+    return () => {
+      if (miniMapRef.current) {
+        miniMapRef.current.remove();
+        miniMapRef.current = null;
+      }
+    };
+  }, []);
+
   // Precalculated building heights range
   const precalculatedHeights = [10, 15, 20, 25, 30, 35, 40, 45];
-  
+
   const getClosestPrecalculatedHeight = (height: number): number => {
     const val = Number(height);
     if (isNaN(val) || val <= 0) return 15; // default fallback
-    return precalculatedHeights.reduce((prev, curr) => 
+    return precalculatedHeights.reduce((prev, curr) =>
       Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev
     );
   };
@@ -331,7 +440,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
   const current4g = { height: ant4gHeight, width: ant4gWidth, thickness: ant4gThickness, weight: ant4gWeight };
   const current5g = { height: ant5gHeight, width: ant5gWidth, thickness: ant5gThickness, weight: ant5gWeight };
 
-  const matchingMontage = MONTAGES_SPECS.find(m => 
+  const matchingMontage = MONTAGES_SPECS.find(m =>
     m.ant4g.height === current4g.height &&
     m.ant4g.width === current4g.width &&
     m.ant4g.thickness === current4g.thickness &&
@@ -342,7 +451,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
     m.ant5g.weight === current5g.weight
   );
 
-  const matching4gMontage = MONTAGES_SPECS.find(m => 
+  const matching4gMontage = MONTAGES_SPECS.find(m =>
     m.ant4g.height === current4g.height &&
     m.ant4g.width === current4g.width &&
     m.ant4g.thickness === current4g.thickness &&
@@ -377,26 +486,324 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
 
   // Convert DOCX to PDF for preview
   useEffect(() => {
-    if (previewDoc && !previewDoc.isConverting && !previewDoc.url.toLowerCase().endsWith('.pdf') && (previewDoc.filename.toLowerCase().endsWith('.docx') || previewDoc.filename.toLowerCase().endsWith('.doc'))) {
+    if (previewDoc && !previewDoc.conversionFailed && !previewDoc.url.toLowerCase().endsWith('.pdf') && (previewDoc.filename.toLowerCase().endsWith('.docx') || previewDoc.filename.toLowerCase().endsWith('.doc'))) {
+      // Guard to prevent multiple simultaneous requests for the same URL
+      if (previewDoc.originalUrl === previewDoc.url) {
+        return;
+      }
+
       let isMounted = true;
       setPreviewDoc(prev => prev ? { ...prev, isConverting: true, originalUrl: prev.url } : null);
-      
-      fetch(`/api/geodata/preview-document/?url=${encodeURIComponent(previewDoc.url)}`)
-        .then(res => res.json())
+
+      fetch(`${apiBaseUrl}/api/geodata/preview-document/?url=${encodeURIComponent(previewDoc.url)}`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
         .then(data => {
           if (isMounted && data.preview_url) {
-            setPreviewDoc(prev => prev ? { ...prev, url: data.preview_url, isConverting: false } : null);
+            setPreviewDoc(prev => prev ? { ...prev, url: data.preview_url, isConverting: false, conversionFailed: false } : null);
           } else if (isMounted) {
-            setPreviewDoc(prev => prev ? { ...prev, isConverting: false } : null);
+            setPreviewDoc(prev => prev ? { ...prev, isConverting: false, conversionFailed: true } : null);
           }
         })
         .catch(() => {
-          if (isMounted) setPreviewDoc(prev => prev ? { ...prev, isConverting: false } : null);
+          if (isMounted) setPreviewDoc(prev => prev ? { ...prev, isConverting: false, conversionFailed: true } : null);
         });
-        
+
       return () => { isMounted = false; };
     }
-  }, [previewDoc?.url, previewDoc?.filename]);
+  }, [previewDoc?.url, previewDoc?.filename, apiBaseUrl]);
+
+  // Handle PDF summary generation and download
+  const handleDownloadPdf = async () => {
+    if (!lookupResult) return;
+    setPdfGenerating(true);
+    try {
+      // 1. Capture a high-resolution satellite map screenshot in the background
+      let mapImgData: string | null = null;
+      if (selectedCoords) {
+        mapImgData = await new Promise<string | null>((resolve) => {
+          const container = document.createElement('div');
+          container.style.position = 'fixed';
+          container.style.left = '-9999px';
+          container.style.top = '0';
+          container.style.width = '800px';
+          container.style.height = '420px';
+          document.body.appendChild(container);
+
+          try {
+            const map = new maplibregl.Map({
+              container: container,
+              attributionControl: false,
+              preserveDrawingBuffer: true,
+              interactive: false,
+              style: {
+                version: 8,
+                sources: {
+                  'google-satellite': {
+                    type: 'raster',
+                    tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
+                    tileSize: 256,
+                  },
+                },
+                layers: [
+                  {
+                    id: 'google-satellite',
+                    type: 'raster',
+                    source: 'google-satellite',
+                    minzoom: 0,
+                    maxzoom: 22,
+                  },
+                ],
+              },
+              center: [selectedCoords.longitude, selectedCoords.latitude],
+              zoom: 18,
+            });
+
+            map.once('load', () => {
+              // Add a highly visible red pin marker pointing exactly at the coordinate
+              const el = document.createElement('div');
+              el.style.cssText = 'width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.4));';
+              el.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="#f43f5e" stroke="#ffffff" stroke-width="1.5">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              `;
+              new maplibregl.Marker({ element: el, anchor: 'bottom' })
+                .setLngLat([selectedCoords.longitude, selectedCoords.latitude])
+                .addTo(map);
+            });
+
+            map.once('idle', () => {
+              const canvas = container.querySelector('canvas');
+              const dataUrl = canvas ? canvas.toDataURL('image/png') : null;
+              map.remove();
+              document.body.removeChild(container);
+              resolve(dataUrl);
+            });
+
+            // Timeout fallback
+            setTimeout(() => {
+              const canvas = container.querySelector('canvas');
+              const dataUrl = canvas ? canvas.toDataURL('image/png') : null;
+              try { map.remove(); } catch(e){}
+              try { document.body.removeChild(container); } catch(e){}
+              resolve(dataUrl);
+            }, 3500);
+
+          } catch (e) {
+            console.error('Failed to render high-res map screenshot:', e);
+            try { document.body.removeChild(container); } catch(_){}
+            resolve(null);
+          }
+        });
+      }
+
+      // 2. Generate A4 PDF using jsPDF (Single Page Layout)
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Colors
+      const primaryColor = [15, 23, 42]; // Slate-900
+      const accentColor = [79, 70, 229]; // Indigo-600
+      const successColor = [16, 185, 129]; // Emerald-500
+      const textColor = [51, 65, 85]; // Slate-700
+      const lightBgColor = [248, 250, 252]; // Slate-50
+
+      // Header Banner (Reduced height to 20mm)
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 20, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text("RAPPORT DE SYNTHÈSE DE PROJET", 15, 12);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Généré le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, 15, 17);
+      
+      // Right header flag (Reduced height to 20mm)
+      doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.rect(185, 0, 25, 20, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text("NDC", 192, 12);
+      
+      let y = 26;
+
+      // 1. Location & Map Section (Combined in a single box)
+      doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
+      doc.setDrawColor(226, 232, 240); // Slate-200
+      doc.rect(15, y, 180, 52, 'FD');
+
+      // Left Column: Text Info
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.text("1. Localisation & Environnement", 20, y + 6);
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text("Adresse :", 20, y + 13);
+      doc.setFont('helvetica', 'normal');
+      doc.text(selectedAddress?.name || 'Coordonnées sélectionnées', 36, y + 13);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text("Ville :", 20, y + 19);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${selectedAddress?.postcode || ''} ${selectedAddress?.city || ''} ${selectedAddress?.context ? `• ${selectedAddress.context}` : ''}`, 30, y + 19);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text("Coordonnées :", 20, y + 25);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Lat : ${selectedCoords?.latitude.toFixed(6)}, Lng : ${selectedCoords?.longitude.toFixed(6)}`, 42, y + 25);
+
+      // Environment badges layout inside left column
+      doc.setFont('helvetica', 'bold');
+      doc.text("Vent :", 20, y + 34);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Région ${lookupResult.detected_region || 'N/A'}`, 30, y + 34);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text("Terrain :", 20, y + 40);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(successColor[0], successColor[1], successColor[2]);
+      doc.text(`Terrain ${lookupResult.detected_terrain_type || 'IIIb'}`, 33, y + 40);
+
+      // Right Column: Map Screenshot
+      if (mapImgData) {
+        doc.addImage(mapImgData, 'PNG', 105, y + 4, 86, 44);
+
+        // Draw pin using vector graphics in jsPDF at the exact center of the map image
+        const pinCenterX = 105 + (86 / 2);
+        const pinBottomY = y + 4 + (44 / 2);
+        const pinHeight = 7;
+        const pinBubbleRadius = 2.2;
+        const bubbleCenterY = pinBottomY - pinHeight + pinBubbleRadius;
+
+        doc.setFillColor(244, 63, 94); // #f43f5e
+        doc.setDrawColor(255, 255, 255); // White outline
+        doc.setLineWidth(0.4);
+
+        doc.circle(pinCenterX, bubbleCenterY, pinBubbleRadius, 'FD');
+        doc.triangle(
+          pinCenterX - 1.4, bubbleCenterY + 0.8,
+          pinCenterX + 1.4, bubbleCenterY + 0.8,
+          pinCenterX, pinBottomY,
+          'FD'
+        );
+
+        doc.setFillColor(255, 255, 255);
+        doc.circle(pinCenterX, bubbleCenterY, 0.8, 'F');
+      } else {
+        doc.setDrawColor(203, 213, 225); // Slate-300
+        doc.rect(105, y + 4, 86, 44);
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(8);
+        doc.text("Aperçu cartographique indisponible", 125, y + 26);
+      }
+
+      y += 58;
+
+      // 2. Technical results (Without "Entrée correspondante du catalogue")
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.text("2. Caractéristiques Techniques du Catalogue", 15, y);
+      y += 5;
+
+      const eq = lookupResult.equipment && lookupResult.equipment[0];
+      const montageId = eq ? (eq.item_id || eq.id) : `montage_${selectedMontage.toLowerCase()}`;
+      const { material } = eq ? (getTerrainDetails(eq) as any) : { material: '139x4mm' };
+
+      doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(15, y, 180, 26, 'FD');
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text("Profil de mât requis :", 20, y + 6);
+      doc.setTextColor(successColor[0], successColor[1], successColor[2]);
+      doc.text(material, 52, y + 6);
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Équipement FH requis :", 20, y + 12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(hasFhEquipment ? `Faisceau Hertzien (${fhWeight} kg)` : "Aucun", 55, y + 12);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text("Justification :", 20, y + 18);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      const justificationText = eq?.comments || "Section structurelle vérifiée calculée sous les contraintes de l'Eurocode pour la catégorie de terrain sélectionnée.";
+      const splitComments = doc.splitTextToSize(justificationText, 148);
+      doc.text(splitComments, 40, y + 18);
+
+      y += 32;
+
+      // 3. Antenna Specifications
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.text("3. Spécifications de Charge d'Antennes", 15, y);
+      y += 5;
+
+      // 4G Specs Card
+      doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
+      doc.rect(15, y, 87, 30, 'FD');
+      doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text("Modèle d'antenne 4G", 20, y + 5);
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Hauteur : ${ant4gHeight} mm`, 20, y + 11);
+      doc.text(`Largeur : ${ant4gWidth} mm`, 20, y + 16);
+      doc.text(`Épaisseur : ${ant4gThickness} mm`, 20, y + 21);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Poids : ${ant4gWeight} daN`, 20, y + 26);
+
+      // 5G Specs Card
+      doc.setFillColor(lightBgColor[0], lightBgColor[1], lightBgColor[2]);
+      doc.rect(108, y, 87, 30, 'FD');
+      doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text("Modèle d'antenne 5G", 113, y + 5);
+
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Hauteur : ${ant5gHeight} mm`, 113, y + 11);
+      doc.text(`Largeur : ${ant5gWidth} mm`, 113, y + 16);
+      doc.text(`Épaisseur : ${ant5gThickness} mm`, 113, y + 21);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Poids : ${ant5gWeight} daN`, 113, y + 26);
+
+      // Footer
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text("Document généré automatiquement - Projet NDC", 105, 287, { align: 'center' });
+
+      doc.save(`ndc_synthese_${montageId}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      alert('Une erreur est survenue lors de la génération du PDF.');
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
 
   // Re-trigger catalog lookup when height, building height or montage changes (if address selected)
   useEffect(() => {
@@ -427,7 +834,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
   // Handle map click
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     setSelectedCoords({ latitude: lat, longitude: lng });
-    
+
     // Reverse geocode to get address details
     try {
       const response = await fetch(
@@ -500,6 +907,8 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
     setSelectedCoords(null);
     setLookupResult(null);
     setIsSearchOpen(false);
+    setHasFhEquipment(false);
+    setFhWeight(30);
   };
 
   const handleMapLoad = useCallback((map: maplibregl.Map) => {
@@ -509,19 +918,19 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
   // Get the document list and section material for the classified terrain category
   const getTerrainDetails = (eq: any) => {
     const terrain = lookupResult?.detected_terrain_type || 'IIIa'; // Default to IIIa if not detected
-    
+
     // Find matching calculation for detected terrain
     const calc = eq.terrain_calculations?.find((c: any) => c.terrain_type === terrain);
     const material = calc?.material_specification || calc?.section_material || 'N/A';
-    
+
     // Extract document URLs
     let docList: { url: string; localUrl?: string; filename: string; ext: string }[] = [];
-    
+
     // Parse original Monday.com URLs
-    const mondayUrls = calc?.documentation?.document_urls 
+    const mondayUrls = calc?.documentation?.document_urls
       ? calc.documentation.document_urls.split(',').map((u: string) => u.trim())
       : [];
-      
+
     // Parse local URLs
     const localUrls = calc?.documentation?.local_document_urls
       ? calc.documentation.local_document_urls.split(',').map((u: string) => u.trim())
@@ -535,28 +944,28 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
           const filename = parts[parts.length - 1] || 'Document';
           const decodedFilename = decodeURIComponent(filename);
           const ext = decodedFilename.split('.').pop()?.toUpperCase() || 'DOC';
-          
+
           // Find corresponding local URL if it exists
           const localUrl = localUrls.find((lu: string) => decodeURIComponent(lu).endsWith(decodedFilename));
-          
-          return { 
-            url, 
+
+          return {
+            url,
             localUrl,
-            filename: decodedFilename, 
-            ext 
+            filename: decodedFilename,
+            ext
           };
         });
     }
-    
+
     return { material, docList, terrain };
   };
 
   return (
     <div className="flex-1 flex flex-col md:flex-row overflow-hidden w-full h-full bg-slate-900 text-slate-100">
-      
+
       {/* Left Pane - Search, Info & Map */}
       <div className="w-full md:w-5/12 xl:w-4/12 flex flex-col border-r border-slate-800 bg-slate-950 p-6 overflow-y-auto space-y-6">
-        
+
         {/* Title & Introduction & Notifications */}
         <div>
           <div className="flex items-center justify-between">
@@ -564,10 +973,10 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
               <Sparkles className="w-4 h-4" />
               Catalogue de Conception d'Antennes
             </div>
-            
+
             {/* Notification Bell */}
             <div className="relative">
-              <button 
+              <button
                 onClick={() => setShowNotifDropdown(!showNotifDropdown)}
                 className="p-1.5 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 transition-colors relative"
               >
@@ -581,7 +990,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                   </span>
                 )}
               </button>
-              
+
               {/* Notifications Dropdown */}
               {showNotifDropdown && (
                 <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-[2000] overflow-hidden">
@@ -600,8 +1009,8 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                       </div>
                     ) : (
                       notifications.map(notif => (
-                        <div 
-                          key={notif.id} 
+                        <div
+                          key={notif.id}
                           onClick={() => !notif.is_read && handleMarkAsRead(notif.id)}
                           className={`p-3 text-xs transition-colors cursor-pointer ${notif.is_read ? 'opacity-60 bg-transparent' : 'bg-indigo-500/5 hover:bg-indigo-500/10'}`}
                         >
@@ -625,11 +1034,28 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
           <p className="text-xs text-slate-400 mt-2 leading-relaxed">
             Déterminez le profil de structure de mât requis et téléchargez les modèles de calcul pour votre site. Recherchez par adresse et spécifiez la hauteur de mât souhaitée.
           </p>
+
+          {/* Configuration Summary Badge */}
+          {(initialSiteType || initialFoundationType) && (
+            <div className="mt-4 p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between text-xs animate-fade-in">
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Configuration</span>
+                <div className="flex flex-wrap items-center gap-1.5 text-slate-300">
+                  <span>Site: <strong className="text-indigo-400">{initialSiteType === 'nouveau' ? 'Nouveau' : 'Existant'}</strong></span>
+                  <span className="text-slate-700">•</span>
+                  <span>Fondation: <strong className="text-indigo-400">{initialFoundationType === 'metallique' ? 'Plot métallique' : initialFoundationType === 'beton' ? 'Plot Béton' : 'Encastré'}</strong></span>
+                </div>
+              </div>
+              <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full shrink-0">
+                {initialMontage ? `Cas 1 Active` : 'Non configuré'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Form Controls */}
         <div className="space-y-4">
-             {/* Address Search Field */}
+          {/* Address Search Field */}
           <div className="flex flex-col space-y-1.5" ref={searchContainerRef}>
             <label className="text-xs font-semibold text-slate-300">1. Sélectionner l'emplacement</label>
             <div className="relative">
@@ -704,11 +1130,10 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                 <button
                   key={h}
                   onClick={() => setSelectedHeight(h)}
-                  className={`px-2 py-0.5 rounded text-[11px] border transition-all ${
-                    selectedHeight === h
-                      ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300 font-semibold'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
-                  }`}
+                  className={`px-2 py-0.5 rounded text-[11px] border transition-all ${selectedHeight === h
+                    ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300 font-semibold'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
+                    }`}
                   type="button"
                 >
                   {h}m
@@ -795,7 +1220,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                     </button>
                   ) : null}
                 </div>
-                
+
                 <div className="space-y-2.5">
                   <div className="flex flex-col space-y-1">
                     <span className="text-[10px] font-medium text-slate-500">Modèle type</span>
@@ -964,26 +1389,66 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
               </div>
             </div>
           )}
-        </div>
 
-        {/* Small Interactive Map Container */}
-        <div className="flex-1 min-h-[220px] rounded-xl border border-slate-800 overflow-hidden relative bg-slate-900">
-          <TerrainMap
-            onMapClick={handleMapClick}
-            onMapLoad={handleMapLoad}
-            selectedCoordinates={selectedCoords}
-            analysisRadius={0.5}
-          />
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-sm border border-slate-800/80 rounded-full py-1.5 px-3 text-[10px] text-slate-300 pointer-events-none flex items-center gap-1.5 whitespace-nowrap shadow-lg z-10">
-            <Compass className="w-3.5 h-3.5 animate-pulse text-indigo-400" />
-            <span>Cliquez pour sélectionner un point</span>
+          {/* FH Equipment Selection */}
+          <div className="flex flex-col space-y-2.5 pt-4 border-t border-slate-800/80">
+            <div className="flex items-center justify-between">
+              <label htmlFor="fh-checkbox" className="text-xs font-semibold text-slate-350 cursor-pointer flex items-center gap-1.5">
+                <Compass className="w-3.5 h-3.5 text-indigo-400" />
+                <span>5. Ajouter un équipement FH (Optionnel)</span>
+              </label>
+              <input
+                id="fh-checkbox"
+                type="checkbox"
+                checked={hasFhEquipment}
+                onChange={(e) => setHasFhEquipment(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-800 text-indigo-650 focus:ring-indigo-500 focus:ring-offset-slate-950 bg-slate-900 focus:ring-2 cursor-pointer"
+              />
+            </div>
+
+            {hasFhEquipment && (
+              <div className="flex flex-col space-y-1.5 animate-fadeIn">
+                <span className="text-[10px] text-slate-500 font-medium">Sélectionner le poids du Faisceau Hertzien</span>
+                <select
+                  value={fhWeight}
+                  onChange={(e) => setFhWeight(Number(e.target.value))}
+                  className="w-full py-2 px-3 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                >
+                  {[30, 35, 40, 45, 50, 55, 60, 65, 70].map((w) => (
+                    <option key={w} value={w}>
+                      {w} kg
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Full Interactive Map Container — hidden by default, toggle via Ctrl+M */}
+        {showMap && (
+          <div className="flex-1 min-h-[220px] rounded-xl border border-slate-800 overflow-hidden relative bg-slate-900 animate-fadeIn">
+            <TerrainMap
+              onMapClick={handleMapClick}
+              onMapLoad={handleMapLoad}
+              selectedCoordinates={selectedCoords}
+              analysisRadius={0.5}
+            />
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-sm border border-slate-800/80 rounded-full py-1.5 px-3 text-[10px] text-slate-300 pointer-events-none flex items-center gap-1.5 whitespace-nowrap shadow-lg z-10">
+              <Compass className="w-3.5 h-3.5 animate-pulse text-indigo-400" />
+              <span>Cliquez pour sélectionner un point</span>
+            </div>
+            <div className="absolute top-2 right-2 bg-slate-950/90 backdrop-blur-sm border border-indigo-500/30 rounded-lg py-1 px-2 text-[9px] text-indigo-300 font-semibold z-10 flex items-center gap-1">
+              <MapIcon className="w-3 h-3" />
+              Ctrl+M pour masquer
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right Pane - Results Catalogue Dashboard */}
       <div className="flex-1 flex flex-col overflow-y-auto p-6 lg:p-8 space-y-6">
-        
+
         {/* Loading / Empty States */}
         {!selectedCoords && (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-950/20">
@@ -992,7 +1457,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
             </div>
             <h3 className="text-lg font-bold text-white">Aucun emplacement sélectionné</h3>
             <p className="text-sm text-slate-400 mt-2 max-w-sm">
-              Utilisez la barre d'adresse à gauche ou cliquez n'importe où sur la carte pour déterminer les règles de terrain locales et récupérer les données du catalogue.
+              Utilisez la barre de recherche d'adresse à gauche pour déterminer les règles de terrain locales et récupérer les données du catalogue.
             </p>
           </div>
         )}
@@ -1028,33 +1493,66 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
         {/* Dashboard Content */}
         {selectedCoords && selectedMontage && !loading && !error && lookupResult && (
           <div className="space-y-6">
-            
+
             {/* Header: Location & Classified Metadata */}
             <div className="bg-gradient-to-r from-slate-950 to-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400">Détails de l'emplacement classé</span>
-                <h3 className="text-lg font-bold text-white mt-1 flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
-                  {selectedAddress?.name || 'Coordonnées sélectionnées'}
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  {selectedAddress?.postcode} {selectedAddress?.city} {selectedAddress?.context && `• ${selectedAddress.context}`}
-                </p>
+              <div className="flex items-start gap-4">
+                {/* Mini Map Preview — shown when the full map is hidden */}
+                {!showMap && selectedCoords && (
+                  <div
+                    ref={miniMapContainerRef}
+                    className="w-[72px] h-[72px] rounded-xl border-2 border-slate-700 overflow-hidden shrink-0 shadow-lg relative"
+                    title={`${selectedCoords.latitude.toFixed(5)}, ${selectedCoords.longitude.toFixed(5)}`}
+                    style={{ cursor: 'default' }}
+                  >
+                    {/* Gradient overlay for polish */}
+                    <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/10 pointer-events-none z-10" />
+                  </div>
+                )}
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-400">Détails de l'emplacement classé</span>
+                  <h3 className="text-lg font-bold text-white mt-1 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                    {selectedAddress?.name || 'Coordonnées sélectionnées'}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {selectedAddress?.postcode} {selectedAddress?.city} {selectedAddress?.context && `• ${selectedAddress.context}`}
+                  </p>
+                </div>
               </div>
 
               {/* Geographic Constraints badges */}
               <div className="flex items-center gap-3">
-                <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-center">
-                  <div className="text-[10px] uppercase font-semibold text-slate-500">Région de vent</div>
-                  <div className="text-sm font-bold text-white mt-0.5">
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={pdfGenerating}
+                  type="button"
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:opacity-70 text-white border border-indigo-500/30 px-4 py-2.5 rounded-xl text-center flex items-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/25 transition-all text-xs font-semibold h-11"
+                >
+                  {pdfGenerating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Génération...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Télécharger Fiche PDF</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-center min-w-[100px] h-11 flex flex-col justify-center">
+                  <div className="text-[9px] uppercase font-semibold text-slate-550 leading-none">Région de vent</div>
+                  <div className="text-xs font-bold text-white mt-1 leading-none">
                     Région {lookupResult.detected_region || 'N/A'}
                   </div>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-center">
-                  <div className="text-[10px] uppercase font-semibold text-slate-500">Catégorie de terrain</div>
-                  <div className="text-sm font-bold text-emerald-400 mt-0.5 flex items-center justify-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-center min-w-[120px] h-11 flex flex-col justify-center">
+                  <div className="text-[9px] uppercase font-semibold text-slate-550 leading-none">Catégorie de terrain</div>
+                  <div className="text-xs font-bold text-emerald-400 mt-1 flex items-center justify-center gap-1 leading-none">
+                    <Layers className="w-3 h-3 text-emerald-500" />
                     Terrain {lookupResult.detected_terrain_type || 'IIIa'}
                   </div>
                 </div>
@@ -1068,7 +1566,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                 <div>
                   <div className="text-xs font-bold uppercase tracking-wider">Hauteur de bâtiment recommandée</div>
                   <p className="text-xs mt-1 leading-relaxed text-slate-300">
-                    La hauteur de bâtiment saisie (<strong>{selectedBuildingHeight}m</strong>) ne fait pas partie du catalogue de calcul standard. 
+                    La hauteur de bâtiment saisie (<strong>{selectedBuildingHeight}m</strong>) ne fait pas partie du catalogue de calcul standard.
                     Nous recommandons d'utiliser l'étude de structure précalculée pour <strong>{recommendedBuildingHeight}m</strong>.
                     Les résultats ci-dessous correspondent à cette recommandation.
                   </p>
@@ -1082,21 +1580,21 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                 <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
                 <h4 className="font-semibold text-white">Aucune correspondance exacte dans le catalogue</h4>
                 <p className="text-xs mt-1">
-                  {!queryMontage 
+                  {!queryMontage
                     ? "Les dimensions de l'antenne 4G saisie ne correspondent à aucun profil type standard du catalogue. Le profil de mât requis ne peut pas être déterminé automatiquement."
                     : `Aucun catalogue enregistré ne correspond à la hauteur de mât sélectionnée (${selectedHeight}m), à la hauteur de bâtiment recommandée (${recommendedBuildingHeight}m) et à la région (${lookupResult.detected_region || 'N/A'}).`}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                
+
                 {/* Loop matching models (usually there's one exact match per height/region) */}
                 {lookupResult.equipment.map((eq: any) => {
                   const { material, docList, terrain } = getTerrainDetails(eq);
-                  
+
                   return (
                     <div key={eq.id} className="col-span-1 xl:col-span-2 bg-slate-950/60 border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-                      
+
                       {/* Ribbon / Top header bar */}
                       <div className="bg-gradient-to-r from-indigo-950 to-indigo-900 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-900/60 gap-2">
                         <div>
@@ -1110,10 +1608,10 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
 
                       {/* Details & calculations Grid */}
                       <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-800 flex-1">
-                        
+
                         {/* Column 1: Technical & Structural Specs */}
                         <div className="lg:col-span-7 p-6 space-y-6">
-                          
+
                           {/* Structural Profile Alert / Callout */}
                           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start gap-3">
                             <Shield className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
@@ -1126,13 +1624,27 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                             </div>
                           </div>
 
+                          {/* FH Equipment Callout */}
+                          {hasFhEquipment && (
+                            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 flex items-start gap-3">
+                              <Compass className="w-5 h-5 text-indigo-400 mt-0.5 shrink-0" />
+                              <div>
+                                <div className="text-xs text-slate-400 uppercase font-semibold">Équipement FH requis</div>
+                                <div className="text-lg font-bold text-indigo-400 mt-0.5">Faisceau Hertzien ({fhWeight} kg)</div>
+                                <p className="text-[10px] text-slate-500 mt-0.5">
+                                  Équipement supplémentaire pris en compte dans le calcul de charge technique de la structure.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
                           {/* 4G & 5G Antenna Specs */}
                           <div className="space-y-3">
                             <h5 className="text-xs uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
                               <Layers className="w-3.5 h-3.5 text-indigo-400" />
                               Spécifications de charge d'antenne
                             </h5>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {/* 4G specifications */}
                               <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3.5">
@@ -1214,15 +1726,20 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                               <Download className="w-3.5 h-3.5 text-indigo-400" />
                               Fichier de calculs techniques
                             </h5>
-                            
+
                             {!isPrecalculatedBuildingHeight ? (
                               <div className="bg-slate-950/80 border border-indigo-500/30 rounded-xl p-5 flex flex-col items-center text-center shadow-[0_0_15px_rgba(99,102,241,0.1)]">
                                 <AlertCircle className="w-8 h-8 text-indigo-400 mb-3" />
                                 <div className="text-sm font-bold text-white mb-1">Hauteur personnalisée ({selectedBuildingHeight}m)</div>
                                 <p className="text-[11px] text-slate-400 leading-relaxed mb-4 max-w-[200px] mx-auto">
                                   Le fichier de calcul technique pour cette hauteur exacte n'existe pas encore dans le catalogue standard.
+                                  {hasFhEquipment && (
+                                    <span className="block mt-1.5 font-semibold text-indigo-300">
+                                      (Inclut un équipement FH de {fhWeight}kg)
+                                    </span>
+                                  )}
                                 </p>
-                                <button 
+                                <button
                                   onClick={() => setShowRequestForm(true)}
                                   className="w-full py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 group"
                                 >
@@ -1230,51 +1747,85 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                                   <Send className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                                 </button>
                               </div>
-                            ) : docList.length === 0 ? (
-                              <div className="text-center py-8 text-slate-500 text-xs">
-                                Aucun document de calcul disponible pour cette configuration.
-                              </div>
                             ) : (
                               <div className="space-y-2.5">
-                                {docList.map((doc, dIdx) => {
-                                  const downloadUrl = doc.localUrl ? doc.localUrl : doc.url;
-                                  const isLocal = !!doc.localUrl;
-                                  
-                                  return (
-                                    <button
-                                      key={dIdx}
-                                      onClick={() => setPreviewDoc({ url: downloadUrl, filename: doc.filename })}
-                                      className="w-full flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500 hover:bg-slate-900 group transition-all text-left"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${
-                                          doc.ext === 'RTD' 
-                                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20' 
-                                            : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20'
-                                        }`}>
-                                          {doc.ext}
-                                        </div>
-                                        <div className="text-left">
-                                          <div className="text-xs font-bold text-slate-300 group-hover:text-indigo-400 transition-colors line-clamp-1 max-w-[150px] sm:max-w-none">
-                                            {doc.filename}
+                                {docList.length === 0 && !hasFhEquipment ? (
+                                  <div className="text-center py-8 text-slate-500 text-xs">
+                                    Aucun document de calcul disponible pour cette configuration.
+                                  </div>
+                                ) : (
+                                  <>
+                                    {docList.map((doc, dIdx) => {
+                                      const downloadUrl = doc.localUrl ? doc.localUrl : doc.url;
+                                      const isLocal = !!doc.localUrl;
+
+                                      return (
+                                        <button
+                                          key={dIdx}
+                                          onClick={() => {
+                                            const isDoc = doc.filename.toLowerCase().endsWith('.docx') || doc.filename.toLowerCase().endsWith('.doc');
+                                            setPreviewDoc({
+                                              url: downloadUrl,
+                                              filename: doc.filename,
+                                              isConverting: isDoc
+                                            });
+                                          }}
+                                          className="w-full flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl hover:border-indigo-500 hover:bg-slate-900 group transition-all text-left"
+                                        >
+                                          <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${doc.ext === 'RTD'
+                                              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/20'
+                                              : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/20'
+                                              }`}>
+                                              {doc.ext}
+                                            </div>
+                                            <div className="text-left">
+                                              <div className="text-xs font-bold text-slate-300 group-hover:text-indigo-400 transition-colors line-clamp-1 max-w-[150px] sm:max-w-none">
+                                                {doc.filename}
+                                              </div>
+                                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                                {isLocal ? (
+                                                  <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
+                                                    Note de Calcul
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-amber-500 flex items-center gap-0.5">
+                                                    🔒 Connexion Monday.com requise
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
                                           </div>
-                                          <div className="text-[10px] text-slate-500 mt-0.5">
-                                            {isLocal ? (
-                                              <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
-                                                ✅ Servi localement
-                                              </span>
-                                            ) : (
-                                              <span className="text-amber-500 flex items-center gap-0.5">
-                                                🔒 Connexion Monday.com requise
-                                              </span>
-                                            )}
+                                          <Download className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+                                        </button>
+                                      );
+                                    })}
+
+                                    {hasFhEquipment && (
+                                      <button
+                                        onClick={() => alert("Fiche de calcul technique FH (Faisceau Hertzien) non disponible actuellement (Placeholder).")}
+                                        className="w-full flex items-center justify-between p-3 bg-slate-950/50 border border-slate-800 border-dashed rounded-xl hover:border-indigo-500/50 hover:bg-slate-900/50 group transition-all text-left relative overflow-hidden"
+                                        type="button"
+                                      >
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold bg-indigo-950 text-indigo-400 border border-indigo-900/30">
+                                            PDF
+                                          </div>
+                                          <div className="text-left">
+                                            <div className="text-xs font-bold text-slate-300 group-hover:text-indigo-400 transition-colors line-clamp-1">
+                                              Calcul FH
+                                            </div>
+                                            <div className="text-[10px] text-indigo-400 mt-0.5 flex items-center gap-1">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                              Fiche Technique
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                      <Download className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-                                    </button>
-                                  );
-                                })}
+                                        <Download className="w-4 h-4 text-slate-600 cursor-not-allowed group-hover:text-slate-400 transition-colors" />
+                                      </button>
+                                    )}
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
@@ -1309,14 +1860,14 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                 <Send className="w-5 h-5 text-indigo-400" />
                 Demande de Calcul Technique
               </h3>
-              <button 
+              <button
                 onClick={() => setShowRequestForm(false)}
                 className="text-slate-500 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto custom-scrollbar">
               {requestSuccess ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
@@ -1325,7 +1876,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                   </div>
                   <h4 className="text-xl font-bold text-white">Demande Envoyée !</h4>
                   <p className="text-sm text-slate-400">
-                    Votre demande a été transmise au département Génie Civil. 
+                    Votre demande a été transmise au département Génie Civil.
                     Vous recevrez une notification lorsque les calculs seront disponibles.
                   </p>
                 </div>
@@ -1339,28 +1890,31 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                       <li>• Mât : <span className="font-bold text-white">{selectedHeight}m</span></li>
                       <li>• Montage : <span className="font-bold text-white">{selectedMontage}</span></li>
                       <li>• Terrain : <span className="font-bold text-white">{lookupResult?.detected_terrain_type || 'N/A'}</span></li>
+                      {hasFhEquipment && (
+                        <li className="col-span-2">• Équipement FH : <span className="font-bold text-white">Oui ({fhWeight}kg)</span></li>
+                      )}
                     </ul>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Nom complet <span className="text-rose-500">*</span></label>
-                      <input 
+                      <input
                         required
-                        type="text" 
+                        type="text"
                         value={requestFormData.name}
-                        onChange={e => setRequestFormData({...requestFormData, name: e.target.value})}
+                        onChange={e => setRequestFormData({ ...requestFormData, name: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                         placeholder="Jean Dupont"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Adresse Email <span className="text-rose-500">*</span></label>
-                      <input 
+                      <input
                         required
-                        type="email" 
+                        type="email"
                         value={requestFormData.email}
-                        onChange={e => setRequestFormData({...requestFormData, email: e.target.value})}
+                        onChange={e => setRequestFormData({ ...requestFormData, email: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                         placeholder="jean.dupont@entreprise.com"
                       />
@@ -1368,20 +1922,20 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Téléphone (Optionnel)</label>
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
                         value={requestFormData.phone}
-                        onChange={e => setRequestFormData({...requestFormData, phone: e.target.value})}
+                        onChange={e => setRequestFormData({ ...requestFormData, phone: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                         placeholder="+33 6 12 34 56 78"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Description / Justification</label>
-                      <textarea 
+                      <textarea
                         rows={3}
                         value={requestFormData.description}
-                        onChange={e => setRequestFormData({...requestFormData, description: e.target.value})}
+                        onChange={e => setRequestFormData({ ...requestFormData, description: e.target.value })}
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none custom-scrollbar"
                         placeholder="Précisez le contexte de cette demande de hauteur spécifique..."
                       />
@@ -1389,14 +1943,14 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                   </div>
 
                   <div className="pt-4 border-t border-slate-800 flex justify-end gap-3 sticky bottom-0 bg-slate-900 pb-2">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowRequestForm(false)}
                       className="px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                     >
                       Annuler
                     </button>
-                    <button 
+                    <button
                       type="submit"
                       disabled={isSubmittingRequest}
                       className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1435,7 +1989,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                   <Download className="w-4 h-4" />
                   Télécharger
                 </a>
-                <button 
+                <button
                   onClick={() => setPreviewDoc(null)}
                   className="text-slate-500 hover:text-white transition-colors"
                 >
@@ -1443,7 +1997,7 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 bg-slate-950/50 p-2 overflow-hidden flex items-center justify-center">
               {previewDoc.isConverting ? (
                 <div className="flex flex-col items-center justify-center text-slate-400">
@@ -1451,24 +2005,27 @@ export default function RegularUserView({ apiBaseUrl, initialMontage }: RegularU
                   <p className="text-sm font-semibold">Génération de l'aperçu PDF...</p>
                   <p className="text-xs mt-1">Cela peut prendre quelques secondes.</p>
                 </div>
-              ) : previewDoc.filename.toLowerCase().endsWith('.pdf') || previewDoc.url.toLowerCase().endsWith('.pdf') || previewDoc.filename.toLowerCase().endsWith('.docx') || previewDoc.filename.toLowerCase().endsWith('.doc') ? (
-                <div className="w-full h-full rounded-xl overflow-hidden bg-white">
-                  <DocViewer 
-                    documents={[{ uri: previewDoc.url, fileType: previewDoc.filename.split('.').pop() }]}
-                    pluginRenderers={DocViewerRenderers}
-                    config={{
-                      header: {
-                        disableHeader: true,
-                        disableFileName: true,
-                        retainURLParams: false
-                      }
-                    }}
-                    className="w-full h-full"
-                  />
+              ) : previewDoc.conversionFailed ? (
+                <div className="flex flex-col items-center justify-center text-slate-400 gap-4">
+                  <AlertCircle className="w-12 h-12 text-amber-400" />
+                  <p className="text-sm font-semibold text-slate-200">Aperçu non disponible</p>
+                  <p className="text-xs text-slate-400 text-center max-w-sm">
+                    La conversion du document a échoué. Vous pouvez toujours télécharger le fichier original.
+                  </p>
+                  <a
+                    href={previewDoc.originalUrl || previewDoc.url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-indigo-500/20 transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Télécharger le fichier original
+                  </a>
                 </div>
               ) : (
-                <iframe 
-                  src={previewDoc.url} 
+                <iframe
+                  src={previewDoc.url}
                   className="w-full h-full rounded-xl bg-white border-0 shadow-inner"
                   title={`Aperçu de ${previewDoc.filename}`}
                 />

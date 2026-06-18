@@ -448,6 +448,7 @@ export default function TerrainMap({
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       attributionControl: false,
+      preserveDrawingBuffer: true,
       style: {
         version: 8,
         sources: {
