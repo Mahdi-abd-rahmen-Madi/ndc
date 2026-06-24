@@ -144,6 +144,17 @@ export default function RegularUserView({
   const miniMapContainerRef = useRef<HTMLDivElement>(null);
   const miniMapRef = useRef<maplibregl.Map | null>(null);
 
+  // Additional Fields
+  const [dalleThickness, setDalleThickness] = useState<number>(0.5);
+  const [plotHeight, setPlotHeight] = useState<number>(0.5);
+
+  // Custom Form Fields when no correspondence
+  const [matPrincipal, setMatPrincipal] = useState<string>('');
+  const [plotMetallique, setPlotMetallique] = useState<string>('');
+  const [brasDeDeport, setBrasDeDeport] = useState<string>('');
+  const [matSecondaire, setMatSecondaire] = useState<string>('');
+  const [calculating, setCalculating] = useState(false);
+
   // Sync initialMontage from parent
   useEffect(() => {
     if (initialMontage && initialMontage !== 'custom') {
@@ -282,7 +293,7 @@ export default function RegularUserView({
       let fullDescription = requestFormData.description;
       const configDetails = [];
       if (initialSiteType) {
-        configDetails.push(`Type de site : ${initialSiteType === 'nouveau' ? 'Nouveau' : 'Existant'}`);
+        configDetails.push(`Type de site : ${initialSiteType === 'nouveau' ? 'Neuf' : 'Existant'}`);
       }
       if (initialFoundationType) {
         configDetails.push(`Type d'ancrage : ${initialFoundationType === 'metallique' ? 'Plot métallique' : initialFoundationType === 'beton' ? 'Plot Béton' : 'Encastré'}`);
@@ -587,14 +598,14 @@ export default function RegularUserView({
             setTimeout(() => {
               const canvas = container.querySelector('canvas');
               const dataUrl = canvas ? canvas.toDataURL('image/png') : null;
-              try { map.remove(); } catch(e){}
-              try { document.body.removeChild(container); } catch(e){}
+              try { map.remove(); } catch (e) { }
+              try { document.body.removeChild(container); } catch (e) { }
               resolve(dataUrl);
             }, 3500);
 
           } catch (e) {
             console.error('Failed to render high-res map screenshot:', e);
-            try { document.body.removeChild(container); } catch(_){}
+            try { document.body.removeChild(container); } catch (_) { }
             resolve(null);
           }
         });
@@ -617,16 +628,16 @@ export default function RegularUserView({
       // Header Banner (Reduced height to 20mm)
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(0, 0, 210, 20, 'F');
-      
+
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.text("RAPPORT DE SYNTHÈSE DE PROJET", 15, 12);
-      
+
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.text(`Généré le : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, 15, 17);
-      
+
       // Right header flag (Reduced height to 20mm)
       doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
       doc.rect(185, 0, 25, 20, 'F');
@@ -634,7 +645,7 @@ export default function RegularUserView({
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.text("NDC", 192, 12);
-      
+
       let y = 26;
 
       // 1. Location & Map Section (Combined in a single box)
@@ -654,7 +665,7 @@ export default function RegularUserView({
       doc.text("Adresse :", 20, y + 13);
       doc.setFont('helvetica', 'normal');
       doc.text(selectedAddress?.name || 'Coordonnées sélectionnées', 36, y + 13);
-      
+
       doc.setFont('helvetica', 'bold');
       doc.text("Ville :", 20, y + 19);
       doc.setFont('helvetica', 'normal');
@@ -1041,9 +1052,9 @@ export default function RegularUserView({
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Configuration</span>
                 <div className="flex flex-wrap items-center gap-1.5 text-slate-300">
-                  <span>Site: <strong className="text-indigo-400">{initialSiteType === 'nouveau' ? 'Nouveau' : 'Existant'}</strong></span>
+                  <span>Site: <strong className="text-indigo-400">{initialSiteType === 'nouveau' ? 'Neuf' : 'Existant'}</strong></span>
                   <span className="text-slate-700">•</span>
-                  <span>Fondation: <strong className="text-indigo-400">{initialFoundationType === 'metallique' ? 'Plot métallique' : initialFoundationType === 'beton' ? 'Plot Béton' : 'Encastré'}</strong></span>
+                  <span>Ancrage: <strong className="text-indigo-400">{initialFoundationType === 'metallique' ? 'Plot métallique' : initialFoundationType === 'beton' ? 'Plot Béton' : 'Encastré'}</strong></span>
                 </div>
               </div>
               <span className="text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded-full shrink-0">
@@ -1155,6 +1166,34 @@ export default function RegularUserView({
               max={100}
               step={0.5}
             />
+          </div>
+
+          {/* Additional parameters */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">Épaisseur de la dalle (m)</label>
+              <input
+                type="number"
+                value={dalleThickness || ''}
+                onChange={(e) => setDalleThickness(e.target.value === '' ? 0 : Number(e.target.value))}
+                placeholder="Ex: 0.5"
+                className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                min={0}
+                step={0.1}
+              />
+            </div>
+            <div className="flex flex-col space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300">Hauteur du plot (m)</label>
+              <input
+                type="number"
+                value={plotHeight || ''}
+                onChange={(e) => setPlotHeight(e.target.value === '' ? 0 : Number(e.target.value))}
+                placeholder="Ex: 0.5"
+                className="w-full py-2.5 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                min={0}
+                step={0.1}
+              />
+            </div>
           </div>
 
           {/* Montage Selection */}
@@ -1414,7 +1453,7 @@ export default function RegularUserView({
                   onChange={(e) => setFhWeight(Number(e.target.value))}
                   className="w-full py-2 px-3 text-xs bg-slate-900 border border-slate-800 rounded-lg text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 >
-                  {[30, 35, 40, 45, 50, 55, 60, 65, 70].map((w) => (
+                  {[20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70].map((w) => (
                     <option key={w} value={w}>
                       {w} kg
                     </option>
@@ -1525,7 +1564,7 @@ export default function RegularUserView({
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleDownloadPdf}
-                  disabled={pdfGenerating}
+                  disabled={pdfGenerating || !queryMontage || lookupResult.equipment.length === 0}
                   type="button"
                   className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:opacity-70 text-white border border-indigo-500/30 px-4 py-2.5 rounded-xl text-center flex items-center gap-2 cursor-pointer shadow-lg shadow-indigo-600/25 transition-all text-xs font-semibold h-11"
                 >
@@ -1576,14 +1615,96 @@ export default function RegularUserView({
 
             {/* Main Catalogue Search Result */}
             {(!queryMontage || lookupResult.equipment.length === 0) ? (
-              <div className="p-8 border border-slate-800 bg-slate-950/40 rounded-2xl text-center text-slate-400">
-                <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-white">Aucune correspondance exacte dans le catalogue</h4>
-                <p className="text-xs mt-1">
-                  {!queryMontage
-                    ? "Les dimensions de l'antenne 4G saisie ne correspondent à aucun profil type standard du catalogue. Le profil de mât requis ne peut pas être déterminé automatiquement."
-                    : `Aucun catalogue enregistré ne correspond à la hauteur de mât sélectionnée (${selectedHeight}m), à la hauteur de bâtiment recommandée (${recommendedBuildingHeight}m) et à la région (${lookupResult.detected_region || 'N/A'}).`}
-                </p>
+              <div className="p-8 border border-slate-800 bg-slate-950/40 rounded-2xl text-left text-slate-400 flex flex-col space-y-4">
+                <div className="text-center">
+                  <h4 className="font-semibold text-white text-lg">Section recommendée</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât principal</label>
+                    <input
+                      type="text"
+                      value={matPrincipal}
+                      onChange={(e) => setMatPrincipal(e.target.value)}
+                      placeholder="Ex: Mât standard..."
+                      className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Plot métallique</label>
+                    <input
+                      type="text"
+                      value={plotMetallique}
+                      onChange={(e) => setPlotMetallique(e.target.value)}
+                      placeholder="Ex: Plot type B..."
+                      className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bras de déport</label>
+                    <input
+                      type="text"
+                      value={brasDeDeport}
+                      onChange={(e) => setBrasDeDeport(e.target.value)}
+                      placeholder="Ex: Bras standard..."
+                      className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât secondaire</label>
+                    <input
+                      type="text"
+                      value={matSecondaire}
+                      onChange={(e) => setMatSecondaire(e.target.value)}
+                      placeholder="Ex: Mât auxiliaire..."
+                      className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-center mt-4 pt-4 border-t border-slate-800">
+                  <button
+                    disabled={calculating}
+                    onClick={async () => {
+                      setCalculating(true);
+                      try {
+                        const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            matPrincipal,
+                            plotMetallique,
+                            brasDeDeport,
+                            matSecondaire,
+                            dalleThickness,
+                            plotHeight,
+                            selectedHeight,
+                            selectedBuildingHeight,
+                            region: lookupResult.detected_region,
+                            terrain: lookupResult.detected_terrain_type,
+                            montage: selectedMontage,
+                            ant4g: { model: ant4gModel, height: ant4gHeight, width: ant4gWidth, thickness: ant4gThickness, weight: ant4gWeight },
+                            ant5g: { model: ant5gModel, height: ant5gHeight, width: ant5gWidth, thickness: ant5gThickness, weight: ant5gWeight },
+                            fh: hasFhEquipment ? { weight: fhWeight } : null
+                          })
+                        });
+                        if (res.ok) {
+                          alert('Calcul lancé avec succès (APS API)');
+                        } else {
+                          alert('Erreur lors du lancement du calcul');
+                        }
+                      } catch (err) {
+                        alert('Erreur réseau');
+                      } finally {
+                        setCalculating(false);
+                      }
+                    }}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg transition-all"
+                  >
+                    {calculating ? 'Lancement en cours...' : 'Lancer le calcul'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

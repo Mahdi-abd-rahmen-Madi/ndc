@@ -4,8 +4,10 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'user-profiles', views.UserProfileViewSet)
+router.register(r'calculations', views.CalculationJobViewSet, basename='calculations')
 
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
     path('api/', include(router.urls)),
+    path('api/aps/token/', views.APSTokenView.as_view(), name='aps-token'),
 ]

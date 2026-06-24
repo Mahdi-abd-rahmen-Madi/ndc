@@ -1,6 +1,7 @@
 // App.tsx - Main application component
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
 import { AlertCircle } from 'lucide-react';
 import TerrainMap from './components/TerrainMap';
@@ -20,7 +21,17 @@ import type { GeocodingAddress } from './utils/types';
 import RegularUserView from './components/RegularUserView';
 
 export default function App() {
-  const [userMode, setUserMode] = useState<'engineer' | 'public'>('public');
+  return (
+    <Routes>
+      <Route path="/" element={<MainApp key="public" initialMode="public" />} />
+      <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
+  const [userMode] = useState<'engineer' | 'public'>(initialMode);
   const [engineerSubTab, setEngineerSubTab] = useState<'map' | 'catalogue'>('map');
   const [activeTab, setActiveTab] = useState('details');
   const [currentAnalysisRadius, setCurrentAnalysisRadius] = useState(0.5);
@@ -224,20 +235,14 @@ export default function App() {
               Configuration
             </button>
           )}
-          <button
-            onClick={() => {
-              if (userMode === 'public') {
-                setUserMode('engineer');
-              } else {
-                setUserMode('public');
-                setShowMontageModal(true);
-                setSelectedCivilMontage(null);
-              }
-            }}
-            className="px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/30 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm"
-          >
-            {userMode === 'public' ? 'Passer au Mode Génie Civil' : 'Passer au Catalogue Public'}
-          </button>
+          {userMode === 'public' ? null : (
+            <Link
+              to="/"
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/30 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm"
+            >
+              Passer au Catalogue Public
+            </Link>
+          )}
         </div>
       </header>
 
@@ -334,7 +339,7 @@ export default function App() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] flex items-center justify-center animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full mx-4 border border-gray-100 transform transition-all duration-300 scale-100 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-2xl font-bold text-slate-800">Sélectionner un Cas de Montage</h3>
+              <h3 className="text-2xl font-bold text-slate-800">Sélectionner le type de Structure :</h3>
               <button
                 onClick={() => setShowMontageModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-2xl font-bold transition-colors"
@@ -362,12 +367,12 @@ export default function App() {
                       }
                     }}
                     className={`p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-1 cursor-pointer ${selectedSiteType === 'nouveau'
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-xs text-slate-800">Site Nouveau</span>
+                      <span className="font-semibold text-xs text-slate-800">Site Neuf</span>
                       <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-md">Disponible</span>
                     </div>
                     <span className="text-[10px] text-slate-500">Nouvelle implantation</span>
@@ -379,8 +384,8 @@ export default function App() {
                       setSelectedFoundationType(null);
                     }}
                     className={`p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-1 cursor-pointer ${selectedSiteType === 'existant'
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     <div className="flex items-center justify-between">
@@ -402,8 +407,8 @@ export default function App() {
                     disabled={selectedSiteType !== 'nouveau'}
                     onClick={() => setSelectedFoundationType('metallique')}
                     className={`p-2 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedFoundationType === 'metallique'
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     <span className="font-semibold text-xs text-slate-800">Plot métallique</span>
@@ -414,25 +419,15 @@ export default function App() {
                     disabled={selectedSiteType !== 'nouveau'}
                     onClick={() => setSelectedFoundationType('beton')}
                     className={`p-2 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedFoundationType === 'beton'
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                   >
                     <span className="font-semibold text-xs text-slate-800">Plot Béton</span>
                     <span className="text-[9px] text-slate-400">Indisponible</span>
                   </button>
 
-                  <button
-                    disabled={selectedSiteType !== 'nouveau'}
-                    onClick={() => setSelectedFoundationType('encastre')}
-                    className={`p-2 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${selectedFoundationType === 'encastre'
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
-                  >
-                    <span className="font-semibold text-xs text-slate-800">Encastré</span>
-                    <span className="text-[9px] text-slate-400">Indisponible</span>
-                  </button>
+                  {/* Encastré removed */}
                 </div>
               </div>
             </div>
@@ -444,10 +439,10 @@ export default function App() {
                 <div>
                   <h4 className="text-sm font-semibold text-amber-800">Configuration non disponible</h4>
                   <p className="text-xs text-amber-600 mt-0.5">
-                    La configuration sélectionnée (Site {selectedSiteType === 'existant' ? 'Existant' : 'Nouveau'} / {selectedFoundationType === 'beton' ? 'Plot Béton' : selectedFoundationType === 'encastre' ? 'Encastré' : 'Plot métallique'}) n'est pas encore disponible dans le Catalogue.
+                    La configuration sélectionnée (Site {selectedSiteType === 'existant' ? 'Existant' : 'Neuf'} / {selectedFoundationType === 'beton' ? 'Plot Béton' : selectedFoundationType === 'encastre' ? 'Encastré' : 'Plot métallique'}) n'est pas encore disponible dans le Catalogue.
                   </p>
                   <p className="text-xs text-amber-700 font-semibold mt-1">
-                    Veuillez sélectionner "Site Nouveau" et "Plot métallique" pour activer le Cas 1.
+                    Veuillez sélectionner "Site Neuf" et "Plot métallique" pour activer le Cas 1.
                   </p>
                 </div>
               </div>
@@ -543,16 +538,12 @@ export default function App() {
 
               {/* Cas 3 - Inactive */}
               <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/50 text-left select-none cursor-not-allowed overflow-hidden opacity-70">
-                <div className="relative w-full bg-gradient-to-b from-slate-100 to-slate-150 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
-                  <div className="flex flex-col items-center gap-3 opacity-40">
-                    <svg width="64" height="120" viewBox="0 0 64 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="28" y="10" width="8" height="100" rx="4" fill="#94a3b8" />
-                      <rect x="10" y="25" width="44" height="4" rx="2" fill="#94a3b8" />
-                      <rect x="10" y="45" width="44" height="4" rx="2" fill="#94a3b8" />
-                      <rect x="22" y="105" width="20" height="10" rx="3" fill="#94a3b8" />
-                    </svg>
-                    <span className="text-xs text-slate-400 font-medium">Aperçu bientôt disponible</span>
-                  </div>
+                <div className="relative w-full bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                  <img
+                    src="/cas3.png"
+                    alt="Structure Cas 3"
+                    className="max-h-[200px] w-auto object-contain grayscale opacity-60 drop-shadow-sm"
+                  />
                   <div className="absolute top-3 left-3 bg-slate-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
                     C3
                   </div>
@@ -562,7 +553,7 @@ export default function App() {
                 </div>
                 <div className="p-4 flex flex-col gap-2">
                   <h4 className="text-lg font-bold text-slate-500">Cas 3</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">Configuration de structure alternative — Détails à venir.</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">Cas 3 – Mât + Plot | Ant. 4G/5G – mât commun</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[11px] text-slate-400 font-medium bg-slate-200 px-2.5 py-1 rounded-full">En cours de développement</span>
                   </div>
@@ -571,16 +562,12 @@ export default function App() {
 
               {/* Cas 4 - Inactive */}
               <div className="flex flex-col rounded-2xl border border-slate-200 bg-slate-50/50 text-left select-none cursor-not-allowed overflow-hidden opacity-70">
-                <div className="relative w-full bg-gradient-to-b from-slate-100 to-slate-150 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
-                  <div className="flex flex-col items-center gap-3 opacity-40">
-                    <svg width="64" height="120" viewBox="0 0 64 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="28" y="10" width="8" height="100" rx="4" fill="#94a3b8" />
-                      <rect x="10" y="25" width="44" height="4" rx="2" fill="#94a3b8" />
-                      <rect x="10" y="45" width="44" height="4" rx="2" fill="#94a3b8" />
-                      <rect x="22" y="105" width="20" height="10" rx="3" fill="#94a3b8" />
-                    </svg>
-                    <span className="text-xs text-slate-400 font-medium">Aperçu bientôt disponible</span>
-                  </div>
+                <div className="relative w-full bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" style={{ minHeight: '220px' }}>
+                  <img
+                    src="/cas4.png"
+                    alt="Structure Cas 4"
+                    className="max-h-[200px] w-auto object-contain grayscale opacity-60 drop-shadow-sm"
+                  />
                   <div className="absolute top-3 left-3 bg-slate-400 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
                     C4
                   </div>
@@ -590,7 +577,7 @@ export default function App() {
                 </div>
                 <div className="p-4 flex flex-col gap-2">
                   <h4 className="text-lg font-bold text-slate-500">Cas 4</h4>
-                  <p className="text-xs text-slate-400 leading-relaxed">Configuration de structure alternative — Détails à venir.</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">Cas 4 – Mât + Plot | Antenne multitechno</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-[11px] text-slate-400 font-medium bg-slate-200 px-2.5 py-1 rounded-full">En cours de développement</span>
                   </div>

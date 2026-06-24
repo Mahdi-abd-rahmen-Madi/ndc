@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, Role, EngineerProfile
+from .models import UserProfile, Role, EngineerProfile, CalculationJob
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -36,3 +36,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+class CalculationJobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CalculationJob
+        fields = ['id', 'user', 'input_hash', 'input_data', 'status', 'result_data', 'error_message', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'input_hash', 'status', 'result_data', 'error_message', 'created_at', 'updated_at']
