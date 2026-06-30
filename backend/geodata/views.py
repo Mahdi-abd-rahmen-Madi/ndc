@@ -12,7 +12,7 @@ from django.conf import settings
 import json
 import os
 import requests
-from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, AntennaEquipmentHistory, HeightCalculationRequest, Notification
+from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, AntennaEquipmentHistory, HeightCalculationRequest, Notification, CatalogueConfig
 from api.permissions import IsAdminOrEngineerPermission, IsAdminOrResponsibleEngineerPermission
 from .serializers import (
     AntennaEquipmentSerializer, AntennaEquipmentListSerializer,
@@ -66,7 +66,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         """
         Custom permissions for different actions.
         """
-        if self.action in ['list', 'public_lookup']:
+        if self.action in ['list', 'public_lookup', 'catalogue_config']:
             # Public read‑only access for catalogue list and public lookup
             self.permission_classes = [permissions.AllowAny]
         elif self.action in ['update', 'partial_update', 'destroy']:
@@ -399,6 +399,79 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         )
 
         return Response({'status': 'Fichier supprimé'})
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    def catalogue_config(self, request):
+        """
+        Get the singleton catalogue configuration containing precalculated building heights,
+        recommended mast heights, FH weight options, and standard montage definitions.
+        """
+        config = CatalogueConfig.get_solo()
+        
+        # Ensure standard_montages is populated even if DB had an empty list previously
+        if not config.standard_montages:
+            defaults = {
+                'precalculated_building_heights': [10, 15, 20, 25, 30, 35, 40, 45],
+                'recommended_mast_heights': [3, 4],
+                'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+                'standard_montages': [
+                    {
+                        "id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b",
+                        "ant4g": {"height": 2100, "width": 470, "thickness": 210, "weight": 45},
+                        "ant5g": {"height": 1010, "width": 500, "thickness": 250, "weight": 50}
+                    },
+                    {
+                        "id": "A2", "name": "Montage A2", "abbreviation": "A2a / A2b",
+                        "ant4g": {"height": 2800, "width": 500, "thickness": 250, "weight": 60},
+                        "ant5g": {"height": 1010, "width": 500, "thickness": 240, "weight": 50}
+                    },
+                    {
+                        "id": "A3", "name": "Montage A3", "abbreviation": "A3a / A3b",
+                        "ant4g": {"height": 2100, "width": 500, "thickness": 250, "weight": 50},
+                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                    },
+                    {
+                        "id": "A4", "name": "Montage A4", "abbreviation": "A4a / A4b",
+                        "ant4g": {"height": 1509, "width": 469, "thickness": 206, "weight": 34},
+                        "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28}
+                    },
+                    {
+                        "id": "A5", "name": "Montage A5", "abbreviation": "A5a / A5b",
+                        "ant4g": {"height": 2800, "width": 540, "thickness": 240, "weight": 110},
+                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                    },
+                    {
+                        "id": "A6", "name": "Montage A6", "abbreviation": "A6a / A6b",
+                        "ant4g": {"height": 2688, "width": 369, "thickness": 166, "weight": 33.5},
+                        "ant5g": {"height": 750, "width": 450, "thickness": 240, "weight": 45}
+                    },
+                    {
+                        "id": "A7", "name": "Montage A7", "abbreviation": "A7a / A7b",
+                        "ant4g": {"height": 2249, "width": 469, "thickness": 206, "weight": 45},
+                        "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28.5}
+                    },
+                    {
+                        "id": "A8", "name": "Montage A8", "abbreviation": "A8a / A8b",
+                        "ant4g": {"height": 2769, "width": 469, "thickness": 206, "weight": 51},
+                        "ant5g": {"height": 750, "width": 430, "thickness": 240, "weight": 45}
+                    },
+                ],
+            }
+            config.standard_montages = defaults['standard_montages']
+            if not config.precalculated_building_heights:
+                config.precalculated_building_heights = defaults['precalculated_building_heights']
+            if not config.fh_weight_options:
+                config.fh_weight_options = defaults['fh_weight_options']
+            if not config.recommended_mast_heights:
+                config.recommended_mast_heights = defaults['recommended_mast_heights']
+            config.save()
+
+        return Response({
+            'precalculated_building_heights': config.precalculated_building_heights,
+            'recommended_mast_heights': config.recommended_mast_heights,
+            'fh_weight_options': config.fh_weight_options,
+            'standard_montages': config.standard_montages,
+        })
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
     def public_lookup(self, request):
@@ -1918,4 +1991,63 @@ def preview_document_api(request):
         return Response({'error': 'File not found or conversion failed'}, status=404)
         
     return Response({'preview_url': f"{settings.MEDIA_URL}{pdf_relative}"})
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_matching_catalogue_pdf(request):
+    """
+    Find the matching catalogue PDF based on user criteria.
+    Expected query params:
+    - montage: montage name (e.g., 'A1')
+    - terrain_type: terrain type (e.g., '0', 'II', 'IIIa')
+    - region: region number (e.g., '1', '2', '3', '4')
+    - height: mast height in meters (e.g., '15')
+    """
+    import os
+    import glob
+    
+    montage = request.GET.get('montage')
+    terrain_type = request.GET.get('terrain_type')
+    region = request.GET.get('region')
+    height = request.GET.get('height')
+    
+    if not all([montage, terrain_type, region, height]):
+        return Response({'error': 'Missing required parameters: montage, terrain_type, region, height'}, status=400)
+    
+    # Build the expected directory structure
+    # catalogue/terrain/montage_{montage}/{terrain_type}/{region}/
+    montage_dir = f"montage_{montage.lower()}"
+    base_path = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', montage_dir, terrain_type, region)
+    
+    if not os.path.isdir(base_path):
+        return Response({'error': 'No matching catalogue directory found', 'base_path': base_path}, status=404)
+    
+    # Look for PDF files matching the height
+    # Pattern: H.{height}m.*.pdf or similar
+    height_patterns = [
+        f"H.{height}m.*.pdf",
+        f"H.{height}.*.pdf",
+        f"*{height}*.pdf",
+    ]
+    
+    matching_files = []
+    for pattern in height_patterns:
+        files = glob.glob(os.path.join(base_path, pattern))
+        matching_files.extend(files)
+    
+    if not matching_files:
+        return Response({'error': 'No matching PDF found for criteria', 'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}}, status=404)
+    
+    # Return the first match
+    matched_file = matching_files[0]
+    relative_path = os.path.relpath(matched_file, settings.MEDIA_ROOT)
+    file_url = f"/media/{relative_path}"
+    filename = os.path.basename(matched_file)
+    
+    return Response({
+        'url': file_url,
+        'filename': filename,
+        'relative_path': relative_path,
+        'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}
+    })
 

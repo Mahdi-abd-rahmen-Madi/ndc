@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, TerrainDocumentation, HeightCalculationRequest, Notification
+from .models import AntennaEquipment, AntennaSpecification, TerrainLoadCalculation, TerrainDocumentation, HeightCalculationRequest, Notification, CatalogueConfig
 from api.permissions import IsAdminOrResponsibleEngineerPermission
 
 
@@ -181,3 +181,16 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ['recipient_email', 'title', 'message']
     readonly_fields = ['created_at']
 
+
+@admin.register(CatalogueConfig)
+class CatalogueConfigAdmin(admin.ModelAdmin):
+    """Admin for the singleton catalogue configuration."""
+    list_display = ['__str__', 'updated_at']
+    readonly_fields = ['updated_at']
+
+    def has_add_permission(self, request):
+        # Only allow one instance
+        return not CatalogueConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

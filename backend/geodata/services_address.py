@@ -221,7 +221,9 @@ class AddressGenerationService:
                 'limit': 1
             }
             
-            response = requests.get(f"{self.geocoding_url}/reverse", params=params, timeout=10)
+            # The base url is ending in /search, so we replace it with /reverse
+            reverse_url = self.geocoding_url.replace('/search', '/reverse')
+            response = requests.get(reverse_url, params=params, timeout=10)
             response.raise_for_status()
             
             data = response.json()

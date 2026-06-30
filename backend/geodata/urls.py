@@ -5,7 +5,7 @@ from .views import (
     TerrainClassificationViewSet, GeocodingSearchViewSet, TerrainConfigViewSet,
     RegionGeoJSONViewSet, HeightCalculationRequestViewSet, NotificationViewSet,
     terrain_map_view, terrain_classification_api, terrain_classification_fast_api,
-    region_map_view, bdtopo_tile_proxy, preview_document_api
+    region_map_view, bdtopo_tile_proxy, preview_document_api, get_matching_catalogue_pdf
 )
 
 router = DefaultRouter()
@@ -29,4 +29,5 @@ urlpatterns = [
     path('terrain-classify-fast/', terrain_classification_fast_api, name='terrain-classify-fast'),
     path('bdtopo-tiles/<int:z>/<int:x>/<int:y>/', bdtopo_tile_proxy, name='bdtopo-tile-proxy'),
     path('preview-document/', preview_document_api, name='preview-document'),
+    path('matching-catalogue-pdf/', get_matching_catalogue_pdf, name='matching-catalogue-pdf'),
 ]

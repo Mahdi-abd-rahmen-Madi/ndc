@@ -494,3 +494,105 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.notification_type}] {self.title} → {self.recipient_email}"
+
+
+class CatalogueConfig(models.Model):
+    """
+    Singleton configuration for the public catalogue.
+    Stores precalculated building heights, recommended mast heights,
+    FH weight options, and standard montage definitions so the frontend
+    fetches them from the API instead of hardcoding them.
+    """
+    precalculated_building_heights = models.JSONField(
+        default=list,
+        help_text=_("List of building heights (m) that have pre-computed structural studies, e.g. [10, 15, 20, 25, 30, 35, 40, 45]"),
+        verbose_name=_("Precalculated Building Heights")
+    )
+    recommended_mast_heights = models.JSONField(
+        default=list,
+        help_text=_("Recommended mast heights (m) shown as quick-select buttons, e.g. [3, 4]"),
+        verbose_name=_("Recommended Mast Heights")
+    )
+    fh_weight_options = models.JSONField(
+        default=list,
+        help_text=_("FH equipment weight options (kg) for the dropdown, e.g. [20, 25, 30, ...]"),
+        verbose_name=_("FH Weight Options")
+    )
+    standard_montages = models.JSONField(
+        default=list,
+        help_text=_(
+            "Standard montage definitions. Each entry: "
+            '{"id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b", '
+            '"ant4g": {"height": 2100, "width": 470, "thickness": 210, "weight": 45}, '
+            '"ant5g": {"height": 1010, "width": 500, "thickness": 250, "weight": 50}}'
+        ),
+        verbose_name=_("Standard Montages")
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    class Meta:
+        verbose_name = _("Catalogue Configuration")
+        verbose_name_plural = _("Catalogue Configuration")
+
+    def __str__(self):
+        return "Catalogue Configuration"
+
+    def save(self, *args, **kwargs):
+        # Enforce singleton: always use pk=1
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        """Return the singleton config, creating with defaults if it doesn't exist."""
+        obj, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'precalculated_building_heights': [10, 15, 20, 25, 30, 35, 40, 45],
+                'recommended_mast_heights': [3, 4],
+                'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+                'standard_montages': [
+                    {
+                        "id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b",
+                        "ant4g": {"height": 2100, "width": 470, "thickness": 210, "weight": 45},
+                        "ant5g": {"height": 1010, "width": 500, "thickness": 250, "weight": 50}
+                    },
+                    {
+                        "id": "A2", "name": "Montage A2", "abbreviation": "A2a / A2b",
+                        "ant4g": {"height": 2800, "width": 500, "thickness": 250, "weight": 60},
+                        "ant5g": {"height": 1010, "width": 500, "thickness": 240, "weight": 50}
+                    },
+                    {
+                        "id": "A3", "name": "Montage A3", "abbreviation": "A3a / A3b",
+                        "ant4g": {"height": 2100, "width": 500, "thickness": 250, "weight": 50},
+                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                    },
+                    {
+                        "id": "A4", "name": "Montage A4", "abbreviation": "A4a / A4b",
+                        "ant4g": {"height": 1509, "width": 469, "thickness": 206, "weight": 34},
+                        "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28}
+                    },
+                    {
+                        "id": "A5", "name": "Montage A5", "abbreviation": "A5a / A5b",
+                        "ant4g": {"height": 2800, "width": 540, "thickness": 240, "weight": 110},
+                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                    },
+                    {
+                        "id": "A6", "name": "Montage A6", "abbreviation": "A6a / A6b",
+                        "ant4g": {"height": 2688, "width": 369, "thickness": 166, "weight": 33.5},
+                        "ant5g": {"height": 750, "width": 450, "thickness": 240, "weight": 45}
+                    },
+                    {
+                        "id": "A7", "name": "Montage A7", "abbreviation": "A7a / A7b",
+                        "ant4g": {"height": 2249, "width": 469, "thickness": 206, "weight": 45},
+                        "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28.5}
+                    },
+                    {
+                        "id": "A8", "name": "Montage A8", "abbreviation": "A8a / A8b",
+                        "ant4g": {"height": 2769, "width": 469, "thickness": 206, "weight": 51},
+                        "ant5g": {"height": 750, "width": 430, "thickness": 240, "weight": 45}
+                    },
+                ],
+            }
+        )
+        return obj

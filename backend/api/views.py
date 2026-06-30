@@ -9,7 +9,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 import hashlib
 import json
 from .models import UserProfile, CalculationJob
-from .serializers import UserProfileSerializer, CalculationJobSerializer
+from .serializers import UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer
 from .aps_service import get_aps_token
 
 
@@ -89,10 +89,18 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         return CalculationJob.objects.all()
 
     def create(self, request, *args, **kwargs):
-        input_data = request.data
+        payload_serializer = CalculationPayloadSerializer(data=request.data)
+        if not payload_serializer.is_valid():
+            return Response(
+                {"error": "Invalid payload schema", "details": payload_serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        input_data = payload_serializer.validated_data
         
         # Hash the input data to identify identical calculation requests
         # Sort keys to ensure consistent hashing
+
         data_string = json.dumps(input_data, sort_keys=True)
         input_hash = hashlib.sha256(data_string.encode('utf-8')).hexdigest()
 
