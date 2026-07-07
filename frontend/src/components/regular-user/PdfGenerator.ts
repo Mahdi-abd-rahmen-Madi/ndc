@@ -7,9 +7,24 @@ export const getTerrainDetails = (eq: any): TerrainDetails => {
   const terrainCalc = eq.terrain_calculations?.find(
     (tc: any) => tc.terrain_type === terrainTypeKey
   );
+  
+  let materialDisplay = terrainCalc?.material_specification || eq.sub_elements || 'Montage Standard';
+  
+  if (terrainCalc) {
+    const parts = [];
+    if (terrainCalc.material_specification) parts.push(`Mat Principal: ${terrainCalc.material_specification}`);
+    if (terrainCalc.plot_metallique) parts.push(`Plot Métallique: ${terrainCalc.plot_metallique}`);
+    if (terrainCalc.bras_de_deport) parts.push(`Bras de déport: ${terrainCalc.bras_de_deport}`);
+    if (terrainCalc.mat_secondaire) parts.push(`Mat Secondaire: ${terrainCalc.mat_secondaire}`);
+    
+    if (parts.length > 0) {
+      materialDisplay = parts.join('\n');
+    }
+  }
+
   return {
     terrain: terrainTypeKey,
-    material: terrainCalc?.material_specification || eq.sub_elements || 'Montage Standard',
+    material: materialDisplay,
     docList: terrainCalc?.documentation ? (
       (terrainCalc.document_urls || terrainCalc.documentation.document_urls || '')
         .split(',')
@@ -198,7 +213,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.text('Antenne 4G', 25, yPos + 8);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(`Modèle: ${ant4gModel === 'custom' ? 'Sur-mesure' : 'Standard'}`, 25, yPos + 16);
+    doc.text(`Modèle: ${ant4gModel === 'custom' ? 'Sur-mesure' : (ant4gModel || 'Standard')}`, 25, yPos + 16);
     doc.text(`Dimensions: ${ant4gHeight}x${ant4gWidth}x${ant4gThickness} mm`, 25, yPos + 24);
     doc.text(`Poids unitaire: ${ant4gWeight} daN`, 25, yPos + 32);
 
@@ -211,7 +226,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.text('Antenne 5G', 115, yPos + 8);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(`Modèle: ${ant5gModel === 'custom' ? 'Sur-mesure' : 'Standard'}`, 115, yPos + 16);
+    doc.text(`Modèle: ${ant5gModel === 'custom' ? 'Sur-mesure' : (ant5gModel || 'Standard')}`, 115, yPos + 16);
     doc.text(`Dimensions: ${ant5gHeight}x${ant5gWidth}x${ant5gThickness} mm`, 115, yPos + 24);
     doc.text(`Poids unitaire: ${ant5gWeight} daN`, 115, yPos + 32);
     yPos += 55;

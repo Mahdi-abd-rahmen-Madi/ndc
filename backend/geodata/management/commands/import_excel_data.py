@@ -12,10 +12,14 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('file_path', type=str, help='Path to the Excel file')
         parser.add_argument('--dry-run', action='store_true', help='Run without saving data')
+        parser.add_argument('--clear', action='store_true', help='Delete all existing AntennaEquipment records before import')
+        parser.add_argument('--filter-name', type=str, help='Filter rows where Name contains this string (e.g. A10)')
 
     def handle(self, *args, **options):
         file_path = options['file_path']
         dry_run = options['dry_run']
+        clear_db = options['clear']
+        filter_name = options.get('filter_name')
         
         if not os.path.exists(file_path):
             self.stdout.write(self.style.ERROR(f'File not found: {file_path}'))
@@ -26,10 +30,18 @@ class Command(BaseCommand):
             df = pd.read_excel(file_path, header=2)
             self.stdout.write(f'Loaded {len(df)} rows from {file_path}')
             
+            if filter_name:
+                df = df[df.iloc[:, 0].astype(str).str.contains(filter_name, na=False, case=False)]
+                self.stdout.write(f'Filtered to {len(df)} rows containing "{filter_name}" in Name')
+
             if dry_run:
                 self.stdout.write(self.style.WARNING('DRY RUN - No data will be saved'))
             
             with transaction.atomic():
+                if clear_db and not dry_run:
+                    deleted_count, _ = AntennaEquipment.objects.all().delete()
+                    self.stdout.write(self.style.WARNING(f'Cleared {deleted_count} existing AntennaEquipment records.'))
+                
                 imported_count = 0
                 for index, row in df.iterrows():
                     if pd.isna(row['Name']):
@@ -51,10 +63,12 @@ class Command(BaseCommand):
                         'sub_elements': str(row['Sous-éléments']) if pd.notna(row['Sous-éléments']) else '',
                         'responsible_person': str(row['Personne']).strip() if pd.notna(row['Personne']) else '',
                         'status': str(row['Statut']) if pd.notna(row['Statut']) else '',
-                        'region': str(int(row['REGION'])) if pd.notna(row['REGION']) else '',
+                        'region': int(row['REGION']) if pd.notna(row['REGION']) and str(row['REGION']).strip() else None,
                         'building_height': float(row['Hauteur BATIMENT (m)']) if pd.notna(row['Hauteur BATIMENT (m)']) else None,
                         'mast_height': float(row['Hauteur MAT (m)']) if pd.notna(row['Hauteur MAT (m)']) else None,
-                        'comments': str(row['Commentaire']).strip() if pd.notna(row['Commentaire']) else '',
+                        'reference_4g': str(row['Référence 4G']).strip() if 'Référence 4G' in row and pd.notna(row['Référence 4G']) else None,
+                        'reference_5g': str(row['Référence 5G']).strip() if 'Référence 5G' in row and pd.notna(row['Référence 5G']) else None,
+                        'comments': str(row['Commentaire']).strip() if 'Commentaire' in row and pd.notna(row['Commentaire']) else '',
                         'item_id': item_id_val,
                     }
                     
@@ -101,21 +115,58 @@ class Command(BaseCommand):
                             )
                     
                     # Create terrain documentation and load calculations
+                    
+                    TERRAIN_COLS = {
+                        '0': {
+                            'doc': 'Terrain 0',
+                            'material_specification': 'Section Mat Terrain 0',
+                            'plot_metallique': 'Section Plot Métalliquue',
+                            'bras_de_deport': 'Section Bras de déport',
+                            'mat_secondaire': 'Section mat antenne 5G'
+                        },
+                        'II': {
+                            'doc': 'Terrain II',
+                            'material_specification': 'Section Mat Terrain II',
+                            'plot_metallique': 'Section Plot métallique',
+                            'bras_de_deport': 'Section Bras de déport.1',
+                            'mat_secondaire': 'Section Mat antenne 5G'
+                        },
+                        'IIIa': {
+                            'doc': 'Terrain IIIa',
+                            'material_specification': 'Section Mat T errain IIIa',
+                            'plot_metallique': 'Section Plot Métallique',
+                            'bras_de_deport': 'Section Bras de déport.2',
+                            'mat_secondaire': 'Section Mat antenne 5G.1'
+                        },
+                        'IIIb': {
+                            'doc': 'Terrain IIIb',
+                            'material_specification': 'Section Mat Terrain IIIb',
+                            'plot_metallique': 'Section Plot Métallique.1',
+                            'bras_de_deport': 'Section Bras de déport.3',
+                            'mat_secondaire': 'Section Mat antenne 5G.2'
+                        },
+                        'IV': {
+                            'doc': 'Terrain IV',
+                            'material_specification': 'Section Mat Terrain IV',
+                            'plot_metallique': 'Section Plot Métallique.2',
+                            'bras_de_deport': 'Section Bras de déport.4',
+                            'mat_secondaire': 'Section Mat antenne 5G.3'
+                        }
+                    }
+
                     terrain_types = ['0', 'II', 'IIIa', 'IIIb', 'IV']
                     for terrain_type in terrain_types:
-                        # Documentation URLs
-                        terrain_col = f'Terrain {terrain_type}'
-                        section_col = f'Section Mat Terrain {terrain_type}'
-                        # Fix for the typo in Excel column name
-                        if terrain_type == 'IIIa':
-                            section_col = 'Section Mat T errain IIIa'
+                        cols = TERRAIN_COLS[terrain_type]
+                        terrain_col = cols['doc']
+                        section_col = cols['material_specification']
                         
-                        if pd.notna(row[terrain_col]) and str(row[terrain_col]).strip():
+                        doc_url = str(row[terrain_col]) if terrain_col in row and pd.notna(row[terrain_col]) else ''
+                        if doc_url.strip():
                             doc_data = {
                                 'equipment': equipment,
                                 'terrain_type': terrain_type,
-                                'document_urls': str(row[terrain_col]),
-                                'document_types': self.extract_file_types(str(row[terrain_col])),
+                                'document_urls': doc_url,
+                                'document_types': self.extract_file_types(doc_url),
                             }
                             
                             if not dry_run:
@@ -128,11 +179,19 @@ class Command(BaseCommand):
                                 terrain_doc = TerrainDocumentation(**doc_data)
                             
                             # Load calculation with material specification
-                            if pd.notna(row[section_col]) and str(row[section_col]).strip():
+                            mat_spec = str(row[section_col]).strip() if section_col in row and pd.notna(row[section_col]) else ''
+                            plot_met = str(row[cols['plot_metallique']]).strip() if cols['plot_metallique'] in row and pd.notna(row[cols['plot_metallique']]) else ''
+                            bras_dep = str(row[cols['bras_de_deport']]).strip() if cols['bras_de_deport'] in row and pd.notna(row[cols['bras_de_deport']]) else ''
+                            mat_sec = str(row[cols['mat_secondaire']]).strip() if cols['mat_secondaire'] in row and pd.notna(row[cols['mat_secondaire']]) else ''
+                            
+                            if mat_spec or plot_met or bras_dep or mat_sec:
                                 load_data = {
                                     'equipment': equipment,
                                     'terrain_type': terrain_type,
-                                    'material_specification': str(row[section_col]).strip(),
+                                    'material_specification': mat_spec,
+                                    'plot_metallique': plot_met,
+                                    'bras_de_deport': bras_dep,
+                                    'mat_secondaire': mat_sec,
                                     'documentation': terrain_doc if not dry_run else None,
                                 }
                                 

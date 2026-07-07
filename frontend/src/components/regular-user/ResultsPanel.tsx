@@ -2,6 +2,7 @@ import { MapPin, Wind, Mountain, FileText, CheckCircle2, ChevronRight, Download,
 import { LookupResult, DocumentInfo } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { getEnabledConfigs, EquipmentConfig } from '../../config/equipmentConfig';
 
 interface ResultsPanelProps {
@@ -71,8 +72,9 @@ export default function ResultsPanel({
 
       setLoadingCataloguePdf(true);
       try {
-        // Extract height from equipment or use a default
-        const height = lookupResult.equipment[0]?.mast_height || 15;
+        // Use building_height since PDF catalogues are categorized by building height
+        const equipment = lookupResult.equipment[0];
+        const height = equipment?.building_height || 15;
         
         const params = new URLSearchParams({
           montage: selectedMontage,
@@ -80,6 +82,10 @@ export default function ResultsPanel({
           region: lookupResult.detected_region || '1',
           height: height.toString()
         });
+
+        if (equipment?.item_id) {
+          params.append('item_id', equipment.item_id);
+        }
 
         const response = await fetch(`/api/geodata/matching-catalogue-pdf/?${params}`);
         
@@ -107,7 +113,7 @@ export default function ResultsPanel({
 
     try {
       // Call backend API to convert docx to PDF
-      const apiUrl = '/api/geodata/preview_document/';
+      const apiUrl = '/api/geodata/preview-document/';
       const response = await fetch(`${apiUrl}?url=${encodeURIComponent(doc.url)}`);
       
       if (!response.ok) {
@@ -268,17 +274,44 @@ export default function ResultsPanel({
                       </div>
                       <p className="text-sm text-slate-400">Montage: {eq.sub_elements || selectedMontage}</p>
                     </div>
-                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
-                      Section Validée
-                    </span>
+                    <div className="flex flex-col gap-2 items-end">
+                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
+                        Section Validée
+                      </span>
+                      {(eq.reference_4g || eq.reference_5g) && (
+                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                          Dimensions Réelles
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                  <div className={`bg-slate-950/50 rounded-lg p-4 border border-slate-800 ${(eq.reference_4g || eq.reference_5g) ? 'mb-3' : ''}`}>
                     <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Spécification Matériau</p>
                     <p className="text-emerald-300 font-medium whitespace-pre-line leading-relaxed">
                       {details.material}
                     </p>
                   </div>
+
+                  {(eq.reference_4g || eq.reference_5g) && (
+                    <div className="bg-indigo-950/30 rounded-lg p-4 border border-indigo-500/30">
+                      <p className="text-xs text-indigo-400/80 uppercase tracking-wider mb-2">Références Équipement</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        {eq.reference_4g && (
+                          <div>
+                            <p className="text-[10px] text-slate-500 uppercase">Modèle 4G</p>
+                            <p className="text-sm font-medium text-white">{eq.reference_4g}</p>
+                          </div>
+                        )}
+                        {eq.reference_5g && (
+                          <div>
+                            <p className="text-[10px] text-slate-500 uppercase">Modèle 5G</p>
+                            <p className="text-sm font-medium text-white">{eq.reference_5g}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {details.docList.length > 0 && (
@@ -316,26 +349,21 @@ export default function ResultsPanel({
             {/* Actions for valid equipment with PDF preview */}
             <div className="mt-6 pt-6 border-t border-slate-800">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <button
-                  onClick={onDownloadPdf}
-                  disabled={pdfGenerating}
-                  className="py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50 disabled:cursor-not-allowed group"
-                >
-                  {pdfGenerating ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Génération en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                      Télécharger la Fiche de Synthèse Technique
-                    </>
-                  )}
-                </button>
+                {cataloguePdf ? (
+                  <a
+                    href={cataloguePdf.url}
+                    download={cataloguePdf.filename}
+                    className="py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20 group"
+                  >
+                    <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                    Télécharger la Note de Calcul
+                  </a>
+                ) : (
+                  <div className="py-4 bg-slate-800 text-slate-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 border-dashed">
+                    <FileText className="w-5 h-5" />
+                    PDF Catalogue Indisponible
+                  </div>
+                )}
                 
                 {firstEquipmentDetails && firstEquipmentDetails.docList.length > 0 && (
                   <button
@@ -407,26 +435,38 @@ export default function ResultsPanel({
                 </div>
               ) : null}
               
-              {/* Inline PDF Preview */}
-              {previewPdfUrl && !conversionError && (
-                <div className="mt-4 bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
-                  <div className="p-3 bg-slate-900/50 border-b border-slate-700/50 flex items-center justify-between">
-                    <span className="text-sm text-slate-300 font-medium">Aperçu du document</span>
-                    <button
-                      onClick={() => setPreviewPdfUrl(null)}
-                      className="text-slate-400 hover:text-white transition-colors"
-                    >
-                      ✕
-                    </button>
+              {/* Modal PDF Preview using Portal to ensure it escapes any parent stacking contexts */}
+              {previewPdfUrl && !conversionError && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                  <div className="bg-slate-900 rounded-2xl border border-slate-700/50 shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="px-6 py-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-500/20 rounded-lg">
+                          <FileText className="w-5 h-5 text-indigo-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg text-white font-bold tracking-wide">Aperçu du document</h3>
+                          <p className="text-xs text-slate-400">Visionneuse PDF intégrée</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setPreviewPdfUrl(null)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 transition-all"
+                        title="Fermer l'aperçu"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <div className="flex-1 w-full bg-slate-200">
+                      <iframe
+                        src={`${previewPdfUrl}#view=FitH`}
+                        className="w-full h-full border-0"
+                        title="Document Preview"
+                      />
+                    </div>
                   </div>
-                  <div className="h-64 bg-white">
-                    <iframe
-                      src={previewPdfUrl}
-                      className="w-full h-full border-0"
-                      title="Document Preview"
-                    />
-                  </div>
-                </div>
+                </div>,
+                document.body
               )}
               
               {conversionError && (
@@ -496,27 +536,51 @@ export default function ResultsPanel({
             </div>
 
             {/* Nouveau bouton pour lancer le calcul via l'API APS */}
-            <button
-              onClick={onTriggerCalculation}
-              disabled={isCalculationPending}
-              className="py-3 px-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-900/20 disabled:opacity-50"
-            >
-              {isCalculationPending ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Calcul en cours sur le serveur distant...
-                </>
-              ) : (
-                <>
-                  <Activity className="w-5 h-5" />
-                  Lancer le calcul structurel (Serveur distant)
-                </>
-              )}
-            </button>
-            <p className="text-xs text-amber-500/70 mt-3 max-w-sm flex gap-1">
+            <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-2xl mx-auto">
+              <button
+                onClick={onTriggerCalculation}
+                disabled={isCalculationPending}
+                className="flex-1 py-3 px-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-900/20 disabled:opacity-50"
+              >
+                {isCalculationPending ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Calcul en cours...
+                  </>
+                ) : (
+                  <>
+                    <Activity className="w-5 h-5" />
+                    Lancer le calcul (APS)
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={onDownloadPdf}
+                disabled={pdfGenerating}
+                className="flex-1 py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50 group"
+              >
+                {pdfGenerating ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                    Fiche Synthèse
+                  </>
+                )}
+              </button>
+            </div>
+            
+            <p className="text-xs text-amber-500/70 mt-4 max-w-sm flex gap-1">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               Génère le payload JSON strict pour exécution sur le serveur de calcul Windows.
             </p>

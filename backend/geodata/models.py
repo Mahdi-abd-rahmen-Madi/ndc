@@ -89,6 +89,8 @@ class AntennaEquipment(models.Model):
     region = models.IntegerField(choices=REGION_CHOICES, blank=True, null=True, verbose_name=_("Region"))
     building_height = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name=_("Building Height (m)"))
     mast_height = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, verbose_name=_("Mast Height (m)"))
+    reference_4g = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Référence 4G"))
+    reference_5g = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Référence 5G"))
     comments = models.TextField(blank=True, verbose_name=_("Comments"))
     item_id = models.CharField(max_length=50, unique=True, blank=True, null=True, verbose_name=_("Item ID"))
     is_deleted = models.BooleanField(default=False, verbose_name=_("Is Deleted"))
@@ -138,6 +140,8 @@ class AntennaEquipment(models.Model):
             'region': self.region,
             'building_height': float(self.building_height) if self.building_height else None,
             'mast_height': float(self.mast_height) if self.mast_height else None,
+            'reference_4g': self.reference_4g,
+            'reference_5g': self.reference_5g,
             'comments': self.comments,
             'item_id': self.item_id,
             'specifications': specs,
@@ -157,6 +161,8 @@ class AntennaEquipment(models.Model):
             self.region = snapshot['region']
             self.building_height = snapshot['building_height']
             self.mast_height = snapshot['mast_height']
+            self.reference_4g = snapshot.get('reference_4g')
+            self.reference_5g = snapshot.get('reference_5g')
             self.comments = snapshot['comments']
             self.item_id = snapshot['item_id']
             self.is_deleted = False
@@ -304,6 +310,9 @@ class TerrainLoadCalculation(models.Model):
     terrain_type = models.CharField(max_length=10, choices=TERRAIN_TYPES, verbose_name=_("Terrain Type"))
     section_material = models.CharField(max_length=255, blank=True, verbose_name=_("Section Material"))
     material_specification = models.CharField(max_length=255, blank=True, help_text=_("Material section specification (e.g., '139x6.3mm')"), verbose_name=_("Material Specification"))
+    plot_metallique = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Section Plot Métallique"))
+    bras_de_deport = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Section Bras de déport"))
+    mat_secondaire = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Section Mat antenne 5G"))
     load_calculations = models.JSONField(default=dict, blank=True, verbose_name=_("Load Calculations"))
     documentation = models.OneToOneField(TerrainDocumentation, on_delete=models.SET_NULL, null=True, blank=True, related_name='load_calculation', verbose_name=_("Documentation"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
@@ -528,6 +537,10 @@ class CatalogueConfig(models.Model):
         ),
         verbose_name=_("Standard Montages")
     )
+    real_world_references = models.JSONField(
+        default=list,
+        help_text=_("List of real world references (e.g. equipment setups)")
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     class Meta:
@@ -592,7 +605,13 @@ class CatalogueConfig(models.Model):
                         "ant4g": {"height": 2769, "width": 469, "thickness": 206, "weight": 51},
                         "ant5g": {"height": 750, "width": 430, "thickness": 240, "weight": 45}
                     },
+                    {
+                        "id": "A9", "name": "Montage A9", "abbreviation": "A9",
+                        "ant4g": {"height": 1500, "width": 500, "thickness": 250, "weight": 45},
+                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                    }
                 ],
+                'real_world_references': [],
             }
         )
         return obj

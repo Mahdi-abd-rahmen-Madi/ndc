@@ -1,4 +1,5 @@
 export interface AntennaSpec {
+  model?: string;
   height: number;
   width: number;
   thickness: number;
@@ -13,11 +14,20 @@ export interface MontageConfig {
   ant5g: AntennaSpec;
 }
 
+export interface RealWorldReference {
+  id: string;
+  name: string;
+  montageId: string;
+  ant4g: { model: string; height: number; width: number; thickness: number; weight: number; };
+  ant5g: { model: string; height: number; width: number; thickness: number; weight: number; };
+}
+
 export interface CatalogueConfig {
   precalculated_building_heights: number[];
   recommended_mast_heights: number[];
   fh_weight_options: number[];
   standard_montages: MontageConfig[];
+  real_world_references: RealWorldReference[];
 }
 
 export interface DocumentInfo {

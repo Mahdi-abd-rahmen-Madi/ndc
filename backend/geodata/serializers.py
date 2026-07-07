@@ -37,7 +37,8 @@ class TerrainLoadCalculationSerializer(serializers.ModelSerializer):
         model = TerrainLoadCalculation
         fields = [
             'id', 'terrain_type', 'section_material',
-            'material_specification', 'load_calculations', 'documentation', 'document_urls'
+            'material_specification', 'plot_metallique', 'bras_de_deport', 'mat_secondaire',
+            'load_calculations', 'documentation', 'document_urls'
         ]
 
 
@@ -130,6 +131,9 @@ class AntennaEquipmentSerializer(serializers.ModelSerializer):
                 terrain_type = calc_data.get('terrain_type')
                 section_material = calc_data.get('section_material', '')
                 material_specification = calc_data.get('material_specification', '')
+                plot_metallique = calc_data.get('plot_metallique', '')
+                bras_de_deport = calc_data.get('bras_de_deport', '')
+                mat_secondaire = calc_data.get('mat_secondaire', '')
                 load_calculations = calc_data.get('load_calculations', {})
                 document_urls = calc_data.pop('document_urls', '')
 
@@ -140,6 +144,9 @@ class AntennaEquipmentSerializer(serializers.ModelSerializer):
                 )
                 load_calc.section_material = section_material
                 load_calc.material_specification = material_specification
+                load_calc.plot_metallique = plot_metallique
+                load_calc.bras_de_deport = bras_de_deport
+                load_calc.mat_secondaire = mat_secondaire
                 load_calc.load_calculations = load_calculations
 
                 # Find or create/update documentation

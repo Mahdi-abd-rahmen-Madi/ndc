@@ -24,6 +24,9 @@ interface TerrainCalc {
   terrain_type: string;
   section_material: string;
   material_specification: string;
+  plot_metallique?: string;
+  bras_de_deport?: string;
+  mat_secondaire?: string;
   document_urls?: string;
   load_calculations?: any;
   documentation?: {
@@ -43,6 +46,8 @@ interface Equipment {
   region: number | null;
   building_height: number | null;
   mast_height: number | null;
+  reference_4g?: string | null;
+  reference_5g?: string | null;
   comments: string;
   item_id: string;
   is_deleted: boolean;
@@ -393,7 +398,7 @@ export default function CatalogueManagement() {
     const [form, setForm] = useState<Partial<Equipment>>(() => {
       const defaultForm = initial || {
         name: '', sub_elements: '', responsible_person: '', status: '', region: null,
-        building_height: null, mast_height: null, comments: '', item_id: '',
+        building_height: null, mast_height: null, reference_4g: '', reference_5g: '', comments: '', item_id: '',
       };
       
       const specs = defaultForm.specifications || [];
@@ -408,6 +413,9 @@ export default function CatalogueManagement() {
           terrain_type: tt,
           section_material: existing?.section_material || '',
           material_specification: existing?.material_specification || '',
+          plot_metallique: existing?.plot_metallique || '',
+          bras_de_deport: existing?.bras_de_deport || '',
+          mat_secondaire: existing?.mat_secondaire || '',
           document_urls: existing?.document_urls || existing?.documentation?.document_urls || '',
           load_calculations: existing?.load_calculations || {},
         };
@@ -548,6 +556,11 @@ export default function CatalogueManagement() {
                 <div className="border-b pb-2">
                   <h4 className="font-bold text-gray-700 text-sm">Spécifications Antennes 4G</h4>
                 </div>
+                <div className="mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Modèle (Référence 4G)</label>
+                  <input value={form.reference_4g || ''} onChange={e => update('reference_4g', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-primary outline-none" />
+                </div>
                 <div className="grid grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 mb-1">Hauteur (mm)</label>
@@ -577,6 +590,11 @@ export default function CatalogueManagement() {
 
                 <div className="border-b pb-2 pt-2">
                   <h4 className="font-bold text-gray-700 text-sm">Spécifications Antennes 5G</h4>
+                </div>
+                <div className="mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Modèle (Référence 5G)</label>
+                  <input value={form.reference_5g || ''} onChange={e => update('reference_5g', e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-sm focus:ring-1 focus:ring-primary outline-none" />
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   <div>
@@ -622,10 +640,28 @@ export default function CatalogueManagement() {
                           className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Spécification Matériau</label>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Mat Principal</label>
                         <input value={form.terrain_calculations?.find(c => c.terrain_type === tt)?.material_specification ?? ''}
                           onChange={e => updateCalc(tt, 'material_specification', e.target.value)}
                           placeholder="e.g. 139x6.3mm"
+                          className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Plot Métallique</label>
+                        <input value={form.terrain_calculations?.find(c => c.terrain_type === tt)?.plot_metallique ?? ''}
+                          onChange={e => updateCalc(tt, 'plot_metallique', e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Bras de déport</label>
+                        <input value={form.terrain_calculations?.find(c => c.terrain_type === tt)?.bras_de_deport ?? ''}
+                          onChange={e => updateCalc(tt, 'bras_de_deport', e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Mat Secondaire (5G)</label>
+                        <input value={form.terrain_calculations?.find(c => c.terrain_type === tt)?.mat_secondaire ?? ''}
+                          onChange={e => updateCalc(tt, 'mat_secondaire', e.target.value)}
                           className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
                       </div>
                     </div>
@@ -703,11 +739,20 @@ export default function CatalogueManagement() {
                     ['Date', eq.date || '—'],
                     ['Hauteur bâtiment', eq.building_height ? `${eq.building_height}m` : '—'],
                     ['Hauteur mât', eq.mast_height ? `${eq.mast_height}m` : '—'],
+                    ['Référence 4G', eq.reference_4g || '—'],
+                    ['Référence 5G', eq.reference_5g || '—'],
                   ].map(([label, value]) => (
-                    <div key={label as string} className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
-                      <p className="font-medium text-gray-800 text-sm">{value || '—'}</p>
-                    </div>
+                    value !== '—' && value ? (
+                      <div key={label as string} className="bg-gray-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+                        <p className="font-medium text-gray-800 text-sm">{value}</p>
+                      </div>
+                    ) : (label !== 'Référence 4G' && label !== 'Référence 5G') ? (
+                      <div key={label as string} className="bg-gray-50 rounded-xl p-3">
+                        <p className="text-xs text-gray-500 mb-0.5">{label}</p>
+                        <p className="font-medium text-gray-800 text-sm">—</p>
+                      </div>
+                    ) : null
                   ))}
                 </div>
                 {eq.comments && (
@@ -742,7 +787,13 @@ export default function CatalogueManagement() {
                       {eq.terrain_calculations.map(c => (
                         <div key={c.id} className="bg-amber-50 rounded-xl p-3 border border-amber-100">
                           <span className="inline-block px-2 py-0.5 bg-amber-200 text-amber-800 rounded text-xs font-bold mb-1">Terrain {c.terrain_type}</span>
-                          <p className="text-sm text-gray-700">{c.section_material} — {c.material_specification}</p>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-1 text-xs text-gray-700">
+                            {c.section_material && <div className="col-span-2"><span className="text-gray-500">Matériau:</span> {c.section_material}</div>}
+                            {c.material_specification && <div><span className="text-gray-500">Mat Principal:</span> {c.material_specification}</div>}
+                            {c.plot_metallique && <div><span className="text-gray-500">Plot Métal.:</span> {c.plot_metallique}</div>}
+                            {c.bras_de_deport && <div><span className="text-gray-500">Bras:</span> {c.bras_de_deport}</div>}
+                            {c.mat_secondaire && <div><span className="text-gray-500">Mat Sec.:</span> {c.mat_secondaire}</div>}
+                          </div>
                         </div>
                       ))}
                     </div>

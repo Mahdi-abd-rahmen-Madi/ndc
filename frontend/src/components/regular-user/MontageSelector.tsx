@@ -2,29 +2,6 @@ import React from 'react';
 import { Settings, Info } from 'lucide-react';
 import { CatalogueConfig, AntennaConfigState } from './types';
 
-export const realWorldReferences = [
-  {
-    id: 'ref-huawei-standard',
-    name: 'Huawei (AAU5613 + ATR4518)',
-    montageId: 'A6',
-    ant4g: { model: 'A6', height: 2688, width: 369, thickness: 166, weight: 33.5 },
-    ant5g: { model: 'A6', height: 750, width: 450, thickness: 240, weight: 45 }
-  },
-  {
-    id: 'ref-ericsson-standard',
-    name: 'Ericsson (AIR 6449 + KRE 101)',
-    montageId: 'A1',
-    ant4g: { model: 'A1', height: 2100, width: 470, thickness: 210, weight: 45 },
-    ant5g: { model: 'A1', height: 1010, width: 500, thickness: 250, weight: 50 }
-  },
-  {
-    id: 'ref-nokia-standard',
-    name: 'Nokia (AEQE + APXV)',
-    montageId: 'A7',
-    ant4g: { model: 'A7', height: 2249, width: 469, thickness: 206, weight: 45 },
-    ant5g: { model: 'A7', height: 730, width: 395, thickness: 180, weight: 28.5 }
-  }
-];
 
 interface MontageSelectorProps {
   selectedMontage: string;
@@ -54,6 +31,7 @@ export default function MontageSelector({
   setSelectedReference
 }: MontageSelectorProps) {
   const montages = config?.standard_montages || [];
+  const realWorldReferences = config?.real_world_references || [];
 
   const handleConfigModeChange = (mode: 'agile' | 'reference') => {
     setConfigMode(mode);
@@ -164,6 +142,16 @@ export default function MontageSelector({
               Antenne 4G
             </h4>
             <div className="space-y-2">
+              <div className="mb-2">
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Modèle</label>
+                <input
+                  type="text"
+                  value={ant4gConfig.model || ''}
+                  onChange={(e) => setAnt4gConfig(prev => ({ ...prev, model: e.target.value }))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
+                  disabled={configMode === 'reference'}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
@@ -218,6 +206,16 @@ export default function MontageSelector({
               Antenne 5G
             </h4>
             <div className="space-y-2">
+              <div className="mb-2">
+                <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Modèle</label>
+                <input
+                  type="text"
+                  value={ant5gConfig.model || ''}
+                  onChange={(e) => setAnt5gConfig(prev => ({ ...prev, model: e.target.value }))}
+                  className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
+                  disabled={configMode === 'reference'}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>

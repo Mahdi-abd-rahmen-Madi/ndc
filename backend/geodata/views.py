@@ -408,69 +408,123 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         """
         config = CatalogueConfig.get_solo()
         
-        # Ensure standard_montages is populated even if DB had an empty list previously
+        defaults = {
+            'precalculated_building_heights': [10, 15, 20, 25, 30, 35, 40, 45],
+            'recommended_mast_heights': [3, 4],
+            'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+            'standard_montages': [
+                {
+                    "id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b",
+                    "ant4g": {"height": 2100, "width": 470, "thickness": 210, "weight": 45},
+                    "ant5g": {"height": 1010, "width": 500, "thickness": 250, "weight": 50}
+                },
+                {
+                    "id": "A2", "name": "Montage A2", "abbreviation": "A2a / A2b",
+                    "ant4g": {"height": 2800, "width": 500, "thickness": 250, "weight": 60},
+                    "ant5g": {"height": 1010, "width": 500, "thickness": 240, "weight": 50}
+                },
+                {
+                    "id": "A3", "name": "Montage A3", "abbreviation": "A3a / A3b",
+                    "ant4g": {"height": 2100, "width": 500, "thickness": 250, "weight": 50},
+                    "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                },
+                {
+                    "id": "A4", "name": "Montage A4", "abbreviation": "A4a / A4b",
+                    "ant4g": {"height": 1509, "width": 469, "thickness": 206, "weight": 34},
+                    "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28}
+                },
+                {
+                    "id": "A5", "name": "Montage A5", "abbreviation": "A5a / A5b",
+                    "ant4g": {"height": 2800, "width": 540, "thickness": 240, "weight": 110},
+                    "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
+                },
+                {
+                    "id": "A6", "name": "Montage A6", "abbreviation": "A6a / A6b",
+                    "ant4g": {"height": 2688, "width": 369, "thickness": 166, "weight": 33.5},
+                    "ant5g": {"height": 750, "width": 450, "thickness": 240, "weight": 45}
+                },
+                {
+                    "id": "A7", "name": "Montage A7", "abbreviation": "A7a / A7b",
+                    "ant4g": {"height": 2249, "width": 469, "thickness": 206, "weight": 45},
+                    "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28.5}
+                },
+                {
+                    "id": "A8", "name": "Montage A8", "abbreviation": "A8a / A8b",
+                    "ant4g": {"height": 2769, "width": 469, "thickness": 206, "weight": 51},
+                    "ant5g": {"height": 750, "width": 430, "thickness": 240, "weight": 45}
+                },
+            ],
+            'real_world_references': [],
+        }
+
+        needs_save = False
+        
         if not config.standard_montages:
-            defaults = {
-                'precalculated_building_heights': [10, 15, 20, 25, 30, 35, 40, 45],
-                'recommended_mast_heights': [3, 4],
-                'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
-                'standard_montages': [
-                    {
-                        "id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b",
-                        "ant4g": {"height": 2100, "width": 470, "thickness": 210, "weight": 45},
-                        "ant5g": {"height": 1010, "width": 500, "thickness": 250, "weight": 50}
-                    },
-                    {
-                        "id": "A2", "name": "Montage A2", "abbreviation": "A2a / A2b",
-                        "ant4g": {"height": 2800, "width": 500, "thickness": 250, "weight": 60},
-                        "ant5g": {"height": 1010, "width": 500, "thickness": 240, "weight": 50}
-                    },
-                    {
-                        "id": "A3", "name": "Montage A3", "abbreviation": "A3a / A3b",
-                        "ant4g": {"height": 2100, "width": 500, "thickness": 250, "weight": 50},
-                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
-                    },
-                    {
-                        "id": "A4", "name": "Montage A4", "abbreviation": "A4a / A4b",
-                        "ant4g": {"height": 1509, "width": 469, "thickness": 206, "weight": 34},
-                        "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28}
-                    },
-                    {
-                        "id": "A5", "name": "Montage A5", "abbreviation": "A5a / A5b",
-                        "ant4g": {"height": 2800, "width": 540, "thickness": 240, "weight": 110},
-                        "ant5g": {"height": 1000, "width": 500, "thickness": 240, "weight": 50}
-                    },
-                    {
-                        "id": "A6", "name": "Montage A6", "abbreviation": "A6a / A6b",
-                        "ant4g": {"height": 2688, "width": 369, "thickness": 166, "weight": 33.5},
-                        "ant5g": {"height": 750, "width": 450, "thickness": 240, "weight": 45}
-                    },
-                    {
-                        "id": "A7", "name": "Montage A7", "abbreviation": "A7a / A7b",
-                        "ant4g": {"height": 2249, "width": 469, "thickness": 206, "weight": 45},
-                        "ant5g": {"height": 730, "width": 395, "thickness": 180, "weight": 28.5}
-                    },
-                    {
-                        "id": "A8", "name": "Montage A8", "abbreviation": "A8a / A8b",
-                        "ant4g": {"height": 2769, "width": 469, "thickness": 206, "weight": 51},
-                        "ant5g": {"height": 750, "width": 430, "thickness": 240, "weight": 45}
-                    },
-                ],
-            }
             config.standard_montages = defaults['standard_montages']
-            if not config.precalculated_building_heights:
-                config.precalculated_building_heights = defaults['precalculated_building_heights']
-            if not config.fh_weight_options:
-                config.fh_weight_options = defaults['fh_weight_options']
-            if not config.recommended_mast_heights:
-                config.recommended_mast_heights = defaults['recommended_mast_heights']
+            needs_save = True
+        if not config.precalculated_building_heights:
+            config.precalculated_building_heights = defaults['precalculated_building_heights']
+            needs_save = True
+        if not config.fh_weight_options:
+            config.fh_weight_options = defaults['fh_weight_options']
+            needs_save = True
+        if not config.recommended_mast_heights:
+            config.recommended_mast_heights = defaults['recommended_mast_heights']
+            needs_save = True
+            
+        if needs_save:
             config.save()
+
+        # Dynamically build real_world_references from AntennaEquipment
+        from django.db.models import Q
+        real_refs_qs = AntennaEquipment.objects.filter(is_deleted=False).filter(
+            Q(reference_4g__isnull=False) & ~Q(reference_4g='') |
+            Q(reference_5g__isnull=False) & ~Q(reference_5g='')
+        )
+        
+        real_world_references = []
+        seen_names = set()
+
+        for eq in real_refs_qs:
+            name = f"{eq.reference_4g or ''} + {eq.reference_5g or ''}".strip(' +') or eq.name
+            
+            if name in seen_names:
+                continue
+            seen_names.add(name)
+
+            spec4g = eq.specifications.filter(antenna_type='4G').first()
+            spec5g = eq.specifications.filter(antenna_type='5G').first()
+            
+            ref = {
+                "id": f"ref-{eq.item_id or eq.id}",
+                "name": name,
+                "montageId": eq.sub_elements or "Custom",
+                "ant4g": {
+                    "model": eq.reference_4g or "",
+                    "height": float(spec4g.height_mm) if spec4g else 0,
+                    "width": float(spec4g.width_mm) if spec4g else 0,
+                    "thickness": float(spec4g.thickness_mm) if spec4g else 0,
+                    "weight": float(spec4g.weight_dan) if spec4g else 0,
+                },
+                "ant5g": {
+                    "model": eq.reference_5g or "",
+                    "height": float(spec5g.height_mm) if spec5g else 0,
+                    "width": float(spec5g.width_mm) if spec5g else 0,
+                    "thickness": float(spec5g.thickness_mm) if spec5g else 0,
+                    "weight": float(spec5g.weight_dan) if spec5g else 0,
+                }
+            }
+            real_world_references.append(ref)
+
+        # Use only dynamically fetched references (ignore old hardcoded database entries)
+        final_refs = real_world_references
 
         return Response({
             'precalculated_building_heights': config.precalculated_building_heights,
             'recommended_mast_heights': config.recommended_mast_heights,
             'fh_weight_options': config.fh_weight_options,
             'standard_montages': config.standard_montages,
+            'real_world_references': final_refs,
         })
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
@@ -2010,33 +2064,68 @@ def get_matching_catalogue_pdf(request):
     terrain_type = request.GET.get('terrain_type')
     region = request.GET.get('region')
     height = request.GET.get('height')
+    item_id = request.GET.get('item_id')
     
     if not all([montage, terrain_type, region, height]):
         return Response({'error': 'Missing required parameters: montage, terrain_type, region, height'}, status=400)
     
     # Build the expected directory structure
     # catalogue/terrain/montage_{montage}/{terrain_type}/{region}/
-    montage_dir = f"montage_{montage.lower()}"
-    base_path = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', montage_dir, terrain_type, region)
+    base_folder_pattern = f"montage_{montage.lower()}*"
+    if item_id:
+        # e.g., 'montage_a10.2_r1_t0' -> 'montage_a10.2_r1'
+        exact_folder = item_id.split('_t')[0]
+        base_folder_pattern = exact_folder
+
+    search_pattern = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', base_folder_pattern, terrain_type, region)
+    base_dirs = glob.glob(search_pattern)
     
-    if not os.path.isdir(base_path):
-        return Response({'error': 'No matching catalogue directory found', 'base_path': base_path}, status=404)
+    if not base_dirs:
+        # Fallback to region 1 if specific region isn't found
+        fallback_pattern = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', base_folder_pattern, terrain_type, '1')
+        base_dirs = glob.glob(fallback_pattern)
+        
+    if not base_dirs:
+        return Response({'error': 'No matching catalogue directory found', 'search_pattern': search_pattern}, status=404)
     
-    # Look for PDF files matching the height
-    # Pattern: H.{height}m.*.pdf or similar
+    # Normalize height to handle cases like "15.00" vs "15"
+    try:
+        height_float = float(height)
+        if height_float.is_integer():
+            height_norm = str(int(height_float))
+        else:
+            height_norm = str(height_float)
+    except ValueError:
+        height_norm = height
+
+    # Look for files matching the height pattern recursively
     height_patterns = [
-        f"H.{height}m.*.pdf",
-        f"H.{height}.*.pdf",
-        f"*{height}*.pdf",
+        f"H.{height_norm}m*",
+        f"H.{height_norm}*",
+        f"*{height_norm}*.*",
+        f"H.{height}m*",
+        f"H.{height}*",
+        f"*{height}*.*",
     ]
     
     matching_files = []
-    for pattern in height_patterns:
-        files = glob.glob(os.path.join(base_path, pattern))
-        matching_files.extend(files)
+    for base_dir in base_dirs:
+        for root, dirs, files in os.walk(base_dir):
+            for file in files:
+                file_lower = file.lower()
+                for pattern in height_patterns:
+                    # simplistic glob match for strings
+                    import fnmatch
+                    if fnmatch.fnmatch(file_lower, pattern.lower()):
+                        # Prioritize PDFs if multiple match
+                        matching_files.append(os.path.join(root, file))
+                        break
     
     if not matching_files:
-        return Response({'error': 'No matching PDF found for criteria', 'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}}, status=404)
+        return Response({'error': 'No matching file found for criteria', 'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}}, status=404)
+    
+    # Sort matching files: prioritize .pdf files
+    matching_files.sort(key=lambda x: 0 if x.lower().endswith('.pdf') else 1)
     
     # Return the first match
     matched_file = matching_files[0]

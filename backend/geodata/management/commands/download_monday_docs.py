@@ -116,6 +116,8 @@ class Command(BaseCommand):
                             self.stdout.write(self.style.SUCCESS(f"    Saved: {local_filepath}"))
                             local_urls_list.append(local_url)
                             success_count += 1
+                            import time
+                            time.sleep(5)  # Sleep between downloads to prevent rate limits
                         else:
                             self.stdout.write(self.style.ERROR(f"    Failed to download: HTTP status {res.status_code}"))
                             failed_count += 1
