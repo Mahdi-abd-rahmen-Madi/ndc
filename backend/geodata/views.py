@@ -524,6 +524,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'recommended_mast_heights': config.recommended_mast_heights,
             'fh_weight_options': config.fh_weight_options,
             'standard_montages': config.standard_montages,
+            'coffret_references': config.coffret_references,
             'real_world_references': final_refs,
         })
 
@@ -765,18 +766,7 @@ class TerrainClassificationViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    @action(detail=False, methods=['get'])
-    def statistics(self, request):
-        """Get terrain type distribution statistics"""
-        try:
-            stats = terrain_service.get_terrain_statistics()
-            return Response(stats)
-        except Exception as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
+
     @action(detail=False, methods=['get'])
     def mappings(self, request):
         """Get all terrain type mappings"""
@@ -977,7 +967,7 @@ class TerrainConfigViewSet(viewsets.ViewSet):
             region = terrain_service.get_region_from_coordinates(longitude, latitude)
             
             # Get spatial extent (using cached data if available)
-            gdf = terrain_service._load_land_use_data()
+            gdf = terrain_service._get_local_land_use_data(longitude, latitude, max(analysis_radius_km, 6.0))
             spatial_extent = terrain_service._calculate_spatial_extent_percentages(longitude, latitude, gdf, radius_km=analysis_radius_km)
             
             # Extract intersecting CLC polygons for visualization
@@ -1554,8 +1544,14 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
             from .services import TerrainClassificationService
             terrain_service = TerrainClassificationService.get_instance()
             
-            # Load land use data
-            gdf = terrain_service._load_land_use_data()
+            # Load local land use data covering the bbox
+            center_lon = (min_lon + max_lon) / 2.0
+            center_lat = (min_lat + max_lat) / 2.0
+            radius_km = max(
+                abs(max_lon - min_lon) * 111.0, 
+                abs(max_lat - min_lat) * 111.0
+            ) / 2.0 + 1.0 # Add 1km buffer
+            gdf = terrain_service._get_local_land_use_data(center_lon, center_lat, radius_km)
             
             # Find intersecting polygons within bbox
             # Spatial index pre-filtering to keep it fast
@@ -1721,7 +1717,10 @@ def terrain_classification_api(request):
             })
         
         # Get spatial extent percentages
-        gdf = terrain_service._load_land_use_data()
+        center_lon = longitude
+        center_lat = latitude
+        radius_km = 5.0
+        gdf = terrain_service._get_local_land_use_data(center_lon, center_lat, radius_km)
         spatial_extent = terrain_service._calculate_spatial_extent_percentages(
             longitude, latitude, gdf
         )
@@ -2070,23 +2069,15 @@ def get_matching_catalogue_pdf(request):
         return Response({'error': 'Missing required parameters: montage, terrain_type, region, height'}, status=400)
     
     # Build the expected directory structure
-    # catalogue/terrain/montage_{montage}/{terrain_type}/{region}/
-    base_folder_pattern = f"montage_{montage.lower()}*"
-    if item_id:
-        # e.g., 'montage_a10.2_r1_t0' -> 'montage_a10.2_r1'
-        exact_folder = item_id.split('_t')[0]
-        base_folder_pattern = exact_folder
-
-    search_pattern = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', base_folder_pattern, terrain_type, region)
-    base_dirs = glob.glob(search_pattern)
+    # catalogue/terrain/Region_{region}/Terrain_{terrain_type}/
+    search_dir = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', f'Region_{region}', f'Terrain_{terrain_type}')
     
-    if not base_dirs:
+    if not os.path.isdir(search_dir):
         # Fallback to region 1 if specific region isn't found
-        fallback_pattern = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', base_folder_pattern, terrain_type, '1')
-        base_dirs = glob.glob(fallback_pattern)
+        search_dir = os.path.join(settings.MEDIA_ROOT, 'catalogue', 'terrain', 'Region_1', f'Terrain_{terrain_type}')
         
-    if not base_dirs:
-        return Response({'error': 'No matching catalogue directory found', 'search_pattern': search_pattern}, status=404)
+    if not os.path.isdir(search_dir):
+        return Response({'error': 'No matching catalogue directory found', 'search_dir': search_dir}, status=404)
     
     # Normalize height to handle cases like "15.00" vs "15"
     try:
@@ -2098,34 +2089,31 @@ def get_matching_catalogue_pdf(request):
     except ValueError:
         height_norm = height
 
-    # Look for files matching the height pattern recursively
-    height_patterns = [
-        f"H.{height_norm}m*",
-        f"H.{height_norm}*",
-        f"*{height_norm}*.*",
-        f"H.{height}m*",
-        f"H.{height}*",
-        f"*{height}*.*",
-    ]
-    
+    # Normalize montage name to match file format
+    montage_normalized = montage.replace(' ', '_')
+    if not montage_normalized.lower().startswith('montage'):
+        montage_normalized = f"Montage_{montage_normalized}"
+
     matching_files = []
-    for base_dir in base_dirs:
-        for root, dirs, files in os.walk(base_dir):
-            for file in files:
-                file_lower = file.lower()
-                for pattern in height_patterns:
-                    # simplistic glob match for strings
-                    import fnmatch
-                    if fnmatch.fnmatch(file_lower, pattern.lower()):
-                        # Prioritize PDFs if multiple match
-                        matching_files.append(os.path.join(root, file))
-                        break
+    
+    try:
+        for file in os.listdir(search_dir):
+            file_lower = file.lower()
+            if not file_lower.endswith('.pdf'):
+                continue
+                
+            # Check if height and montage match
+            if (f"{height_norm}m" in file_lower or f"h.{height_norm}" in file_lower) and \
+               (montage_normalized.lower() in file_lower or montage.lower().replace(' ', '_') in file_lower):
+                matching_files.append(os.path.join(search_dir, file))
+    except Exception as e:
+        pass
     
     if not matching_files:
         return Response({'error': 'No matching file found for criteria', 'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}}, status=404)
     
-    # Sort matching files: prioritize .pdf files
-    matching_files.sort(key=lambda x: 0 if x.lower().endswith('.pdf') else 1)
+    # Sort matching files: prioritize 'reelles' over 'agiles' if both exist
+    matching_files.sort(key=lambda x: 0 if 'reelles' in x.lower() else 1)
     
     # Return the first match
     matched_file = matching_files[0]

@@ -71,10 +71,33 @@ class Command(BaseCommand):
 
             self.stdout.write(f"Processing documentation for {equipment.name} ({terrain_type})")
 
-            # Output folder structure: media/catalogue/{equipment_item_id}/{terrain_type}/
-            safe_item_id = (equipment.item_id or str(equipment.id)).replace(' ', '_').lower()
-            height_folder = str(equipment.building_height) if equipment.building_height else 'unknown'
-            dest_folder = os.path.join(catalogue_dir, 'terrain', safe_item_id, terrain_type, str(equipment.region), height_folder)
+            region_str = str(equipment.region)
+            height_str = str(equipment.building_height) if equipment.building_height else 'unknown'
+            if height_str.endswith('.00'):
+                height_str = height_str[:-3]
+            elif height_str.endswith('.0'):
+                height_str = height_str[:-2]
+            
+            # Determine montage name
+            montage_name = "Montage_Inconnu"
+            if equipment.sub_elements:
+                sub = str(equipment.sub_elements)
+                if sub.lower().startswith('montage'):
+                    montage_name = sub.replace(' ', '_')
+                else:
+                    montage_name = f"Montage_{sub.replace(' ', '_')}"
+            else:
+                import re
+                m = re.search(r'Montage\s+([A-Za-z0-9.]+)', equipment.name, re.IGNORECASE)
+                if m:
+                    montage_name = f"Montage_{m.group(1)}"
+
+            # Determine dimension type
+            dimension_type = "agiles"
+            if getattr(equipment, 'reference_4g', None) or getattr(equipment, 'reference_5g', None):
+                dimension_type = "reelles"
+
+            dest_folder = os.path.join(catalogue_dir, 'terrain', f'Region_{region_str}', f'Terrain_{terrain_type}')
             os.makedirs(dest_folder, exist_ok=True)
 
             for url in urls:
@@ -83,16 +106,15 @@ class Command(BaseCommand):
 
                 # Parse filename
                 parsed_url = urllib.parse.urlparse(url)
-                filename = os.path.basename(parsed_url.path)
-                if not filename:
-                    filename = 'document'
-                
-                # Unquote URL characters (e.g. %20 -> space)
-                filename = urllib.parse.unquote(filename)
+                original_filename = urllib.parse.unquote(os.path.basename(parsed_url.path))
+                ext = os.path.splitext(original_filename)[1]
+                if not ext:
+                    ext = '.pdf'
                 
                 # Settle output filepath
+                filename = f"{height_str}m-{montage_name}-R{region_str}-{terrain_type}-{dimension_type}{ext}"
                 local_filepath = os.path.join(dest_folder, filename)
-                local_url = f"{settings.MEDIA_URL}catalogue/terrain/{safe_item_id}/{terrain_type}/{str(equipment.region)}/{height_folder}/{filename}"
+                local_url = f"{settings.MEDIA_URL}catalogue/terrain/Region_{region_str}/Terrain_{terrain_type}/{filename}"
 
                 # Download if doesn't exist or overwrite is set
                 if not os.path.exists(local_filepath) or options['overwrite']:

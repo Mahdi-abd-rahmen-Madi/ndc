@@ -1,4 +1,4 @@
-import { MapPin, Wind, Mountain, FileText, CheckCircle2, ChevronRight, Download, Activity, AlertCircle, RefreshCw, Radio, Layers } from 'lucide-react';
+import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, AlertCircle, RefreshCw, Radio, Layers } from 'lucide-react';
 import { LookupResult, DocumentInfo } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
@@ -10,7 +10,6 @@ interface ResultsPanelProps {
   selectedAddress: any;
   selectedMontage: string;
   isSearching: boolean;
-  onPreviewDocument: (doc: { url: string; filename: string }) => void;
   onDownloadPdf: () => void;
   pdfGenerating: boolean;
   onTriggerCalculation: () => void;
@@ -26,6 +25,7 @@ interface ResultsPanelProps {
   nombreSecteurs?: number;
   equipmentValues?: Record<string, any>;
   equipmentToggles?: Record<string, boolean>;
+  ndcPdfUrl?: string | null;
 }
 
 export default function ResultsPanel({
@@ -33,7 +33,6 @@ export default function ResultsPanel({
   selectedAddress,
   selectedMontage,
   isSearching,
-  onPreviewDocument,
   onDownloadPdf,
   pdfGenerating,
   onTriggerCalculation,
@@ -48,7 +47,8 @@ export default function ResultsPanel({
   setMatSecondaire,
   nombreSecteurs = 3,
   equipmentValues = {},
-  equipmentToggles = {}
+  equipmentToggles = {},
+  ndcPdfUrl = null
 }: ResultsPanelProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -59,7 +59,7 @@ export default function ResultsPanel({
 
   // Get first equipment details for preview button
   const firstEquipmentDetails = lookupResult && lookupResult.equipment.length > 0 
-    ? getTerrainDetails(lookupResult.equipment[0]) 
+    ? getTerrainDetails(lookupResult.equipment[0], lookupResult.detected_terrain_type) 
     : null;
 
   // Fetch matching catalogue PDF based on user criteria
@@ -76,8 +76,13 @@ export default function ResultsPanel({
         const equipment = lookupResult.equipment[0];
         const height = equipment?.building_height || 15;
         
+        let actualMontage = selectedMontage;
+        if (actualMontage === 'Custom' && equipment?.sub_elements) {
+          actualMontage = equipment.sub_elements;
+        }
+        
         const params = new URLSearchParams({
-          montage: selectedMontage,
+          montage: actualMontage,
           terrain_type: lookupResult.detected_terrain_type || 'IIIa',
           region: lookupResult.detected_region || '1',
           height: height.toString()
@@ -133,6 +138,32 @@ export default function ResultsPanel({
       }
     } catch (error) {
       console.error('Error converting document:', error);
+      setConversionError(true);
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const handlePreviewTemplate = async () => {
+    setIsConverting(true);
+    setConversionError(false);
+    setPreviewPdfUrl(null);
+
+    try {
+      const apiUrl = '/api/calculations/preview_template/';
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error('Preview failed');
+      const data = await response.json();
+      if (data.ndc_pdf_url) {
+        const fullUrl = data.ndc_pdf_url.startsWith('http') 
+          ? data.ndc_pdf_url 
+          : `${window.location.origin}${data.ndc_pdf_url}`;
+        setPreviewPdfUrl(fullUrl);
+      } else {
+        throw new Error('No preview URL returned');
+      }
+    } catch (error) {
+      console.error('Error fetching template preview:', error);
       setConversionError(true);
     } finally {
       setIsConverting(false);
@@ -248,9 +279,46 @@ export default function ResultsPanel({
               </div>
             );
           })}
+
+          {/* Section Mat in Configuration Équipements */}
+          {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <h4 className="text-sm font-bold text-white">Sections d'Équipement</h4>
+              </div>
+              <div className="space-y-2 text-sm">
+                {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-400">Section Mat Terrain 0:</span>
+                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.matPrincipal || matPrincipal}</span>
+                  </div>
+                )}
+                {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-400">Section Plot Métallique:</span>
+                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.plotMetallique || plotMetallique}</span>
+                  </div>
+                )}
+                {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-400">Section Bras de déport:</span>
+                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.brasDeDeport || brasDeDeport}</span>
+                  </div>
+                )}
+                {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-400">Section Mat antenne 5G:</span>
+                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.matSecondaire || matSecondaire}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
 
       {/* Equipment Results */}
       <div>
@@ -261,7 +329,7 @@ export default function ResultsPanel({
         {lookupResult.equipment.length > 0 ? (
           <div className="space-y-4">
             {lookupResult.equipment.map((eq: any, idx: number) => {
-              const details = getTerrainDetails(eq);
+              const details = getTerrainDetails(eq, lookupResult.detected_terrain_type);
               
               return (
               <div key={idx} className="bg-gradient-to-br from-slate-800/80 to-slate-900 border border-emerald-500/30 rounded-xl overflow-hidden shadow-lg shadow-emerald-900/10 hover:border-emerald-500/50 transition-colors">
@@ -314,34 +382,6 @@ export default function ResultsPanel({
                   )}
                 </div>
 
-                {details.docList.length > 0 && (
-                  <div className="p-4 bg-slate-900/80">
-                    <p className="text-xs font-semibold text-slate-400 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4" /> Documents Techniques Associés
-                    </p>
-                    <div className="space-y-2">
-                      {details.docList.map((doc: DocumentInfo, dIdx: number) => (
-                        <button
-                          key={dIdx}
-                          onClick={() => onPreviewDocument({ url: doc.url, filename: doc.filename })}
-                          className="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors group border border-slate-700/50"
-                        >
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className={`p-2 rounded-md shrink-0 ${
-                              doc.ext === 'PDF' ? 'bg-rose-500/10 text-rose-400' : 'bg-blue-500/10 text-blue-400'
-                            }`}>
-                              <FileText className="w-4 h-4" />
-                            </div>
-                            <span className="text-sm text-slate-300 group-hover:text-white truncate">
-                              {doc.filename}
-                            </span>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             );
             })}
@@ -350,40 +390,50 @@ export default function ResultsPanel({
             <div className="mt-6 pt-6 border-t border-slate-800">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {cataloguePdf ? (
-                  <a
-                    href={cataloguePdf.url}
-                    download={cataloguePdf.filename}
-                    className="py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/20 group"
+                  <button
+                    disabled
+                    title="Bientôt disponible"
+                    className="py-4 bg-slate-800 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 cursor-not-allowed opacity-70"
                   >
-                    <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                    <Download className="w-5 h-5" />
                     Télécharger la Note de Calcul
-                  </a>
+                  </button>
                 ) : (
-                  <div className="py-4 bg-slate-800 text-slate-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 border-dashed">
+                  <div className="py-4 bg-slate-800 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 border-dashed opacity-70">
                     <FileText className="w-5 h-5" />
                     PDF Catalogue Indisponible
                   </div>
                 )}
                 
-                {firstEquipmentDetails && firstEquipmentDetails.docList.length > 0 && (
+                {ndcPdfUrl ? (
                   <button
-                    onClick={() => handlePreviewDocument(firstEquipmentDetails.docList[0])}
-                    disabled={isConverting}
-                    className="py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    onClick={() => setPreviewPdfUrl(ndcPdfUrl)}
+                    className="py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 border border-indigo-500 shadow-lg shadow-indigo-900/20 transition-all"
                   >
-                    {isConverting ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 animate-spin" />
-                        Conversion en cours...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                        Aperçu Document
-                      </>
-                    )}
+                    <FileText className="w-5 h-5" />
+                    Aperçu Document
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    title="Document non généré"
+                    className="py-4 bg-slate-800 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 cursor-not-allowed opacity-70"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Aperçu Document (En attente)
                   </button>
                 )}
+              </div>
+              
+              <div className="mt-4">
+                <button
+                  onClick={handlePreviewTemplate}
+                  disabled={isConverting}
+                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 transition-all text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  Prévisualiser le Template NDC (Mode Debug)
+                </button>
               </div>
 
               {/* Catalogue PDF Section */}

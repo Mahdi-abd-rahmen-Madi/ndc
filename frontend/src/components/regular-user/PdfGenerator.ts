@@ -2,10 +2,12 @@ import jsPDF from 'jspdf';
 import { LookupResult, TerrainDetails } from './types';
 
 // The helper to get terrain details for an equipment item
-export const getTerrainDetails = (eq: any): TerrainDetails => {
-  const terrainTypeKey = `Terrain ${eq.terrain || 'IIIa'}`;
+export const getTerrainDetails = (eq: any, detectedTerrain?: string): TerrainDetails => {
+  const rawTerrainType = detectedTerrain || eq.terrain || 'IIIa';
+  const terrainTypeKey = `Terrain ${rawTerrainType}`;
+  
   const terrainCalc = eq.terrain_calculations?.find(
-    (tc: any) => tc.terrain_type === terrainTypeKey
+    (tc: any) => tc.terrain_type === rawTerrainType || tc.terrain_type === terrainTypeKey
   );
   
   let materialDisplay = terrainCalc?.material_specification || eq.sub_elements || 'Montage Standard';
@@ -25,6 +27,10 @@ export const getTerrainDetails = (eq: any): TerrainDetails => {
   return {
     terrain: terrainTypeKey,
     material: materialDisplay,
+    matPrincipal: terrainCalc?.material_specification,
+    plotMetallique: terrainCalc?.plot_metallique,
+    brasDeDeport: terrainCalc?.bras_de_deport,
+    matSecondaire: terrainCalc?.mat_secondaire,
     docList: terrainCalc?.documentation ? (
       (terrainCalc.document_urls || terrainCalc.documentation.document_urls || '')
         .split(',')
@@ -61,12 +67,29 @@ interface PdfGeneratorOptions {
   ant5gThickness: number;
   ant5gWeight: number;
   hasFhEquipment: boolean;
-  fhWeight: number;
+  fhDiameter: number;
   fhReference: string;
+  fhQuantity: number;
   hasRrhEquipment: boolean;
   rrhReference: string;
+  rrhQuantity: number;
   hasRruEquipment: boolean;
   rruReference: string;
+  rruQuantity: number;
+  hasTdEquipment: boolean;
+  tdType: 'tetraphase' | 'monophase';
+  tdReference: string;
+  tgbtReference: string;
+  hasGps: boolean;
+  gpsQuantity: number;
+  gpsReference: string;
+  hasBoitierLovage: boolean;
+  boitierLovageQuantity: number;
+  boitierLovageReference: string;
+  hasCoffret: boolean;
+  coffretQuantity: number;
+  coffretReference: string;
+  coffretOptions: { id: string; name: string }[];
   miniMapImage: string | null;
   nombreSecteurs: number;
 }
@@ -96,12 +119,22 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       ant5gThickness,
       ant5gWeight,
       hasFhEquipment,
-      fhWeight,
+      fhDiameter,
       fhReference,
+      fhQuantity,
       hasRrhEquipment,
       rrhReference,
+      rrhQuantity,
       hasRruEquipment,
       rruReference,
+      rruQuantity,
+      hasTdEquipment,
+      tdType,
+      tdReference,
+      tgbtReference,
+      hasGps, gpsQuantity, gpsReference,
+      hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
+      hasCoffret, coffretQuantity, coffretReference, coffretOptions,
       miniMapImage,
       nombreSecteurs
     } = options;
@@ -239,6 +272,10 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (hasFhEquipment) count++;
       if (hasRrhEquipment) count++;
       if (hasRruEquipment) count++;
+      if (hasTdEquipment) count++;
+      if (hasGps) count++;
+      if (hasBoitierLovage) count++;
+      if (hasCoffret) count++;
       
       const boxHeight = 10 + count * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
@@ -250,15 +287,36 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
       if (hasFhEquipment) {
-        doc.text(`• Faisceau Hertzien (FH) : Poids total ${fhWeight} kg - Référence: ${fhReference || 'N/A'}`, 28, lineY);
+        doc.text(`• Faisceau Hertzien (FH): Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
         lineY += 8;
       }
       if (hasRrhEquipment) {
-        doc.text(`• RRH : Référence ${rrhReference || 'Standard'}`, 28, lineY);
+        doc.text(`• RRH : Référence ${rrhReference || 'Standard'} - Qté: ${rrhQuantity}`, 28, lineY);
         lineY += 8;
       }
       if (hasRruEquipment) {
-        doc.text(`• RRU : Référence ${rruReference || 'Standard'}`, 28, lineY);
+        doc.text(`• RRU : Référence ${rruReference || 'Standard'} - Qté: ${rruQuantity}`, 28, lineY);
+        lineY += 8;
+      }
+      if (hasTdEquipment) {
+        const tdStr = tdType === 'monophase' 
+          ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - Réf TGBT ${tgbtReference || 'N/A'}`
+          : `• TD Tétraphasé : Référence ${tdReference || 'N/A'}`;
+        doc.text(tdStr, 28, lineY);
+        lineY += 8;
+      }
+      if (hasGps) {
+        doc.text(`• GPS : Référence ${gpsReference || 'Standard'} - Qté: ${gpsQuantity}`, 28, lineY);
+        lineY += 8;
+      }
+      if (hasBoitierLovage) {
+        doc.text(`• Boitier de lovage : Référence ${boitierLovageReference || 'Standard'} - Qté: ${boitierLovageQuantity}`, 28, lineY);
+        lineY += 8;
+      }
+      if (hasCoffret) {
+        const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
+        const refName = refObj ? refObj.name : (coffretReference || 'Standard');
+        doc.text(`• Coffrets fibre / hybride : ${refName} - Qté: ${coffretQuantity}`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 10;
@@ -274,7 +332,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
 
     const eq = lookupResult.equipment[0];
     if (eq) {
-      const { material } = getTerrainDetails(eq);
+      const { material } = getTerrainDetails(eq, lookupResult.detected_terrain_type);
       
       doc.setFillColor(240, 253, 244); // bg-emerald-50
       doc.setDrawColor(52, 211, 153); // border-emerald-400

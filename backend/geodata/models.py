@@ -541,6 +541,11 @@ class CatalogueConfig(models.Model):
         default=list,
         help_text=_("List of real world references (e.g. equipment setups)")
     )
+    coffret_references = models.JSONField(
+        default=list,
+        help_text=_("List of coffret references (e.g. HTTA, hybride, etc.)"),
+        verbose_name=_("Coffret References")
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     class Meta:
@@ -564,6 +569,15 @@ class CatalogueConfig(models.Model):
                 'precalculated_building_heights': [10, 15, 20, 25, 30, 35, 40, 45],
                 'recommended_mast_heights': [3, 4],
                 'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+                'coffret_references': [
+                    { "id": "HDB24MKII", "name": "Coffrets hybride (400x350x150, 4kg)" },
+                    { "id": "622191062", "name": "Coffret PANAMA (215x360x111mm, 2.8kg)" },
+                    { "id": "TRANS_FO", "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)" },
+                    { "id": "SLHDU056-12-00", "name": "Coffrets HTTA 1 (300x400x150mm, 5.8kg)" },
+                    { "id": "SLHDU056-12-2+4", "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)" },
+                    { "id": "SLHDU056-12-3+3", "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)" },
+                    { "id": "SLHDU005-12", "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)" }
+                ],
                 'standard_montages': [
                     {
                         "id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b",

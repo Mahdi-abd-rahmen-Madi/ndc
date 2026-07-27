@@ -34,14 +34,6 @@ class TerrainClassificationService:
         self.coastline_data = None
         self.coastline_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline.geojson')
         self.cache_timeout = 3600  # 1 hour cache
-        self._spatial_index = None
-        self._water_areas = None
-        self._urban_areas = None
-        self._forest_areas = None
-        self._agriculture_areas = None
-        self._complex_agriculture_areas = None
-        self._spatial_indexes = {}
-        self._index_cache_timeout = 7200  # 2 hours for spatial indexes
         self._performance_metrics = {
             'cache_hits': 0,
             'cache_misses': 0,
@@ -66,91 +58,36 @@ class TerrainClassificationService:
         
         return _terrain_service_instance
         
-    def _load_land_use_data(self):
-        """Load land use data from FlatGeobuf file with spatial indexing."""
-        if self.land_use_data is None:
-            try:
-                self.land_use_data = gpd.read_file(self.land_use_file)
-                logger.info(f"Loaded {len(self.land_use_data)} land use polygons")
-                
-                # Create spatial index for faster queries
-                self.land_use_data.sindex
-                
-                # Pre-filter water and urban areas for performance
-                self._pre_filter_areas()
-                
-            except Exception as e:
-                logger.error(f"Failed to load land use data: {e}")
-                raise
-        return self.land_use_data
-    
-    def _pre_filter_areas(self):
-        """Pre-filter water and urban areas for performance optimization with multi-level indexing."""
-        if self.land_use_data is not None:
-            # Get performance settings from configuration
-            config = terrain_config_service.load_config()
-            performance_settings = config.get('performance_settings', {})
-            prefilter_categories = performance_settings.get('prefilter_categories', {})
-            
-            # Water and coastal codes from configuration
-            water_codes = prefilter_categories.get('water_codes', [
-                '511', '512', '521', '522', '523',  # Water bodies and coastal
-                '421', '422', '423',                # Coastal wetlands
-                '331', '332', '333', '334', '335'  # Natural areas near coast
-            ])
-            
-            # Urban and industrial codes from configuration
-            urban_codes = prefilter_categories.get('urban_codes', [
-                '111', '112', '141',  # Dense urban zones
-                '121', '122', '123', '124',  # Urbanized/industrial zones
-                '131', '132', '133', '142'   # Industrial zones
-            ])
-            
-            # Forest codes for specialized indexing
-            forest_codes = ['311', '312', '313', '321', '322', '323', '324']
-            
-            # Agriculture codes for specialized indexing
-            agriculture_codes = ['211', '212', '213', '231']
-            complex_agriculture_codes = ['241', '242', '243', '244']
-            
-            # Pre-filter areas with spatial indexing
-            self._water_areas = self._create_indexed_subset(water_codes, 'water')
-            self._urban_areas = self._create_indexed_subset(urban_codes, 'urban')
-            self._forest_areas = self._create_indexed_subset(forest_codes, 'forest')
-            self._agriculture_areas = self._create_indexed_subset(agriculture_codes, 'agriculture')
-            self._complex_agriculture_areas = self._create_indexed_subset(complex_agriculture_codes, 'complex_agriculture')
-            
-            logger.info(f"Pre-filtered areas: {len(self._water_areas)} water, {len(self._urban_areas)} urban, "
-                       f"{len(self._forest_areas)} forest, {len(self._agriculture_areas)} agriculture, "
-                       f"{len(self._complex_agriculture_areas)} complex agriculture")
-    
-    def _create_indexed_subset(self, codes: List[str], category_name: str) -> gpd.GeoDataFrame:
-        """Create a spatially indexed subset of land use data for specific codes."""
+    def _get_local_land_use_data(self, longitude: float, latitude: float, radius_km: float = 6.0) -> gpd.GeoDataFrame:
+        """Load land use data from FlatGeobuf file within a specific bounding box for optimized spatial querying."""
         try:
-            # Filter by codes
-            subset = self.land_use_data[self.land_use_data['Code_18'].isin(codes)].copy()
+            # Convert radius to degrees (approximate)
+            lat_rad = math.radians(latitude)
+            km_per_deg_lat = 111.0
+            km_per_deg_lon = 111.0 * math.cos(lat_rad)
             
-            if len(subset) == 0:
-                return subset
+            radius_deg_lat = radius_km / km_per_deg_lat
+            radius_deg_lon = radius_km / km_per_deg_lon
             
-            # Create spatial index for this subset
-            if hasattr(subset, 'sindex'):
-                subset.sindex
+            # Create bounding box: (minx, miny, maxx, maxy)
+            bbox = (
+                longitude - radius_deg_lon,
+                latitude - radius_deg_lat,
+                longitude + radius_deg_lon,
+                latitude + radius_deg_lat
+            )
             
-            # Create STRtree for faster spatial queries
-            if hasattr(subset, 'geometry') and len(subset) > 0:
-                tree = STRtree(subset.geometry.tolist())
-                self._spatial_indexes[category_name] = {
-                    'tree': tree,
-                    'data': subset,
-                    'created_at': time.time()
-                }
+            logger.debug(f"Querying local land use data within bbox: {bbox}")
+            gdf = gpd.read_file(self.land_use_file, bbox=bbox)
             
-            return subset
-            
+            # Create spatial index for the local subset
+            if not gdf.empty:
+                gdf.sindex
+                
+            return gdf
         except Exception as e:
-            logger.warning(f"Error creating indexed subset for {category_name}: {e}")
-            return self.land_use_data[self.land_use_data['Code_18'].isin(codes)]
+            logger.error(f"Failed to load local land use data: {e}")
+            raise
     
     def _load_wind_coeff_data(self):
         """Load wind coefficient data from GeoJSON file."""
@@ -297,8 +234,8 @@ class TerrainClassificationService:
         self._performance_metrics['cache_misses'] += 1
         
         try:
-            # Load land use data
-            gdf = self._load_land_use_data()
+            # Load local land use data within bounding box
+            gdf = self._get_local_land_use_data(longitude, latitude)
             
             # Create point geometry
             point = Point(longitude, latitude)
@@ -326,7 +263,7 @@ class TerrainClassificationService:
                 # Cache spatial extent data for reuse
                 if spatial_cache_key not in cache:
                     spatial_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf)
-                    cache.set(spatial_cache_key, spatial_data, self._index_cache_timeout)
+                    cache.set(spatial_cache_key, spatial_data, 7200)
                 
                 self._performance_metrics['classification_time'].append(time.time() - start_time)
                 
@@ -380,8 +317,8 @@ class TerrainClassificationService:
             Dictionary with detailed classification information
         """
         try:
-            # Load land use data
-            gdf = self._load_land_use_data()
+            # Load local land use data
+            gdf = self._get_local_land_use_data(longitude, latitude)
             
             # Create point geometry
             point = Point(longitude, latitude)
@@ -539,8 +476,8 @@ class TerrainClassificationService:
             List of unique CLC codes found at the coordinates
         """
         try:
-            # Load land use data
-            gdf = self._load_land_use_data()
+            # Load local land use data
+            gdf = self._get_local_land_use_data(longitude, latitude)
             
             # Create point geometry
             point = Point(longitude, latitude)
@@ -574,8 +511,8 @@ class TerrainClassificationService:
             List of unique CLC codes found within the extent
         """
         try:
-            # Load land use data
-            gdf = self._load_land_use_data()
+            # Load local land use data
+            gdf = self._get_local_land_use_data(longitude, latitude, max(radius_km, 6.0))
             
             # Create point geometry
             point = Point(longitude, latitude)
@@ -1600,9 +1537,17 @@ class TerrainClassificationService:
             True if near coast, False otherwise
         """
         try:
-            # Use pre-filtered water areas for performance
-            water_areas = self._water_areas
-            if water_areas is None or len(water_areas) == 0:
+            # Filter local gdf for water areas
+            config = terrain_config_service.load_config()
+            performance_settings = config.get('performance_settings', {})
+            prefilter_categories = performance_settings.get('prefilter_categories', {})
+            water_codes = prefilter_categories.get('water_codes', [
+                '511', '512', '521', '522', '523',
+                '421', '422', '423',
+                '331', '332', '333', '334', '335'
+            ])
+            water_areas = gdf[gdf['Code_18'].isin(water_codes)]
+            if len(water_areas) == 0:
                 return False
             
             # Get threshold from configuration if not provided
@@ -1664,9 +1609,15 @@ class TerrainClassificationService:
             True if near urban areas, False otherwise
         """
         try:
-            # Use pre-filtered urban areas for performance
-            urban_areas = self._urban_areas
-            if urban_areas is None or len(urban_areas) == 0:
+            # Filter local gdf for urban areas
+            config = terrain_config_service.load_config()
+            performance_settings = config.get('performance_settings', {})
+            prefilter_categories = performance_settings.get('prefilter_categories', {})
+            urban_codes = prefilter_categories.get('urban_codes', [
+                '111', '112', '141', '121', '122', '123', '124', '131', '132', '133', '142'
+            ])
+            urban_areas = gdf[gdf['Code_18'].isin(urban_codes)]
+            if len(urban_areas) == 0:
                 return False
             
             # Create point geometry
@@ -2485,11 +2436,8 @@ class TerrainClassificationService:
         results = []
         start_time = time.time()
         
-        # Load data once for batch processing
-        gdf = self._load_land_use_data()
-        
         # Group coordinates by spatial proximity for optimized processing
-        processed_coords = self._batch_optimize_processing(coordinates, gdf)
+        processed_coords = self._batch_optimize_processing(coordinates)
         
         for lon, lat in processed_coords:
             terrain_type = self.get_terrain_type_at_coordinates(lon, lat)
@@ -2500,7 +2448,7 @@ class TerrainClassificationService:
         
         return results
     
-    def _batch_optimize_processing(self, coordinates: list, gdf: gpd.GeoDataFrame) -> list:
+    def _batch_optimize_processing(self, coordinates: list) -> list:
         """Optimize batch processing by spatial proximity grouping."""
         # For now, return coordinates as-is
         # TODO: Implement spatial clustering for optimization
@@ -2529,7 +2477,7 @@ class TerrainClassificationService:
             result = self._compute_spatial_extent_percentages(longitude, latitude, gdf, radius_km)
             
             # Cache the result
-            cache.set(cache_key, result, self._index_cache_timeout)
+            cache.set(cache_key, result, 7200)
             
             return result
             
@@ -2646,62 +2594,10 @@ class TerrainClassificationService:
         """Optimize memory usage by clearing unused data and indexes."""
         current_time = time.time()
         
-        # Clear old spatial indexes
-        for category, index_data in list(self._spatial_indexes.items()):
-            if current_time - index_data['created_at'] > self._index_cache_timeout:
-                del self._spatial_indexes[category]
-                logger.debug(f"Cleared old spatial index for {category}")
-        
-        # Force garbage collection if needed
         import gc
         gc.collect()
         
         logger.info("Memory usage optimization completed")
-    
-    def get_terrain_statistics(self) -> dict:
-        """
-        Get statistics of terrain type distribution in the land use data.
-        
-        Returns:
-            Dictionary with terrain type counts and percentages
-        """
-        try:
-            gdf = self._load_land_use_data()
-            
-            # Count terrain types for all polygons
-            terrain_counts = {}
-            total_count = len(gdf)
-            unclassified_count = 0
-            
-            for code in gdf['Code_18']:
-                terrain = AntennaEquipment.get_terrain_from_clc_code(code)
-                if terrain:
-                    terrain_counts[terrain] = terrain_counts.get(terrain, 0) + 1
-                else:
-                    unclassified_count += 1
-            
-            # Calculate percentages
-            terrain_stats = {}
-            for terrain, count in terrain_counts.items():
-                percentage = (count / total_count) * 100
-                terrain_stats[terrain] = {
-                    'count': count,
-                    'percentage': round(percentage, 2)
-                }
-            
-            # Add unclassified if any
-            if unclassified_count > 0:
-                terrain_stats['unclassified'] = {
-                    'count': unclassified_count,
-                    'percentage': round((unclassified_count / total_count) * 100, 2)
-                }
-            
-            return terrain_stats
-            
-        except Exception as e:
-            logger.error(f"Error calculating terrain statistics: {e}")
-            return {}
-
 
 class BDTOPOService:
     """Service for analyzing building footprints using IGN BDTOPO vector tiles."""

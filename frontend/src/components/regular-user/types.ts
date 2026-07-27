@@ -28,6 +28,7 @@ export interface CatalogueConfig {
   fh_weight_options: number[];
   standard_montages: MontageConfig[];
   real_world_references: RealWorldReference[];
+  coffret_references: { id: string; name: string }[];
 }
 
 export interface DocumentInfo {
@@ -41,6 +42,10 @@ export interface TerrainDetails {
   terrain: string;
   material: string;
   docList: DocumentInfo[];
+  matPrincipal?: string;
+  plotMetallique?: string;
+  brasDeDeport?: string;
+  matSecondaire?: string;
 }
 
 export interface LookupResult {
@@ -71,3 +76,28 @@ export interface PreviewDocState {
   originalUrl?: string;
   conversionFailed?: boolean;
 }
+
+export type ConfigMode = 'agile' | 'reference';
+export type SimilarityMode = 'all_similar' | 'all_different' | 'none';
+
+export interface SectorData {
+  id: number;
+  selectedHeight: number;
+  selectedMontage4G: string;
+  selectedMontage5G: string;
+  configMode: ConfigMode;
+  selectedReference4G: string;
+  selectedReference5G: string;
+  ant4gConfig: AntennaConfigState;
+  ant5gConfig: AntennaConfigState;
+  // Custom materials
+  matPrincipal: string;
+  plotMetallique: string;
+  brasDeDeport: string;
+  matSecondaire: string;
+  // State for catalogue results specific to this sector
+  lookupResult?: LookupResult | null;
+  loading?: boolean;
+  error?: string | null;
+}
+

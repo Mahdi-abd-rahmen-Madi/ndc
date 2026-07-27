@@ -8,6 +8,8 @@ router.register(r'calculations', views.CalculationJobViewSet, basename='calculat
 
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
-    path('api/', include(router.urls)),
-    path('api/aps/token/', views.APSTokenView.as_view(), name='aps-token'),
+    path('', include(router.urls)),
+    path('aps/token/', views.APSTokenView.as_view(), name='aps-token'),
+    path('upload-photo/', views.PhotoUploadView.as_view(), name='upload-photo'),
+    path('worker/control/', views.WorkerControlView.as_view(), name='worker-control'),
 ]

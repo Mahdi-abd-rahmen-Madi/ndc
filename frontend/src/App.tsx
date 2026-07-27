@@ -9,6 +9,7 @@ import BDTOPOControls from './components/BDTOPOControls';
 import RegionControl from './components/RegionControl';
 import AddressSearch from './components/AddressSearch';
 import CatalogueManagement from './components/CatalogueManagement';
+import NDCPortailTest from './components/regular-user/NDCPortailTest';
 import MontageSelectionModal from './components/MontageSelectionModal';
 import { useTerrainClassification } from './hooks/useTerrainClassification';
 import { useTerrainConfig } from './hooks/useTerrainConfig';
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/portal" element={<MainApp key="public" initialMode="public" />} />
       <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" />} />
+      <Route path="/ndc-portail-test" element={<NDCPortailTest />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -231,6 +233,12 @@ function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
               </button>
             )}
             <Link
+              to="/ndc-portail-test"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white border border-blue-500 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm mr-2"
+            >
+              Mode Test NDC
+            </Link>
+            <Link
               to="/portal"
               className="px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/30 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm"
             >
@@ -248,6 +256,7 @@ function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
             initialMontage={selectedCivilMontage}
             initialSiteType={selectedSiteType}
             initialFoundationType={selectedFoundationType}
+            onResetMontage={() => setShowMontageModal(true)}
           />
         ) : engineerSubTab === 'catalogue' ? (
           <CatalogueManagement />

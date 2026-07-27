@@ -8,7 +8,7 @@ payload = {
         "type": "nouveau",
         "ancrage": "metallique",
         "address": "123 Test Rue, Paris",
-        "latitude": 48.8545,
+        "latitude": 46.8545,
         "longitude": 2.3522
     },
     "environment": {
@@ -43,13 +43,13 @@ payload = {
     },
     "fh_equipment": {
         "enabled": False,
-        "weight_kg": 0.0
+        "diameter_mm": 0.0
     },
-    "lrh_equipment": {
+    "rrh_equipment": {
         "enabled": False,
         "reference": "None"
     },
-    "lru_equipment": {
+    "rru_equipment": {
         "enabled": False,
         "reference": "None"
     },

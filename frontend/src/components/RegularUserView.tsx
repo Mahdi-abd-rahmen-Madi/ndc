@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon } from 'lucide-react';
 import { useCatalogueConfig } from '../hooks/useCatalogueConfig';
 import TerrainMap from './TerrainMap';
@@ -10,26 +10,67 @@ import { useGeocoding } from '../hooks/useGeocoding';
 import NotificationsDropdown from './regular-user/NotificationsDropdown';
 import AddressSearchSection from './regular-user/AddressSearchSection';
 import HeightInputs from './regular-user/HeightInputs';
-import MontageSelector from './regular-user/MontageSelector';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle } from './regular-user/FHEquipmentToggle';
+import SectorConfigurator from './regular-user/SectorConfigurator';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, GenericEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
+import PhotoPromptModal from './regular-user/PhotoPromptModal';
 import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
-import { AntennaConfigState, RequestFormData, PreviewDocState, LookupResult } from './regular-user/types';
+import { SectorData, RequestFormData, PreviewDocState, SimilarityMode } from './regular-user/types';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
   initialMontage?: string | null;
   initialSiteType?: 'nouveau' | 'existant' | null;
   initialFoundationType?: 'metallique' | 'beton' | 'encastre' | null;
+  onResetMontage?: () => void;
 }
+
+const defaultSectorData = (id: number): SectorData => ({
+  id,
+  selectedHeight: 3,
+  selectedMontage4G: '',
+  selectedMontage5G: '',
+  configMode: 'agile',
+  selectedReference4G: 'ref-huawei-standard',
+  selectedReference5G: 'ref-huawei-standard',
+  ant4gConfig: { model: 'A1', height: 2100, width: 470, thickness: 210, weight: 45 },
+  ant5gConfig: { model: 'A1', height: 1010, width: 500, thickness: 250, weight: 50 },
+  matPrincipal: '',
+  plotMetallique: '',
+  brasDeDeport: '',
+  matSecondaire: '',
+  lookupResult: null,
+  loading: false,
+  error: null
+});
+
+// Helper to generate a hash for a sector's calculation inputs
+const getCalculationHash = (s: SectorData) => {
+  return JSON.stringify({
+    selectedHeight: s.selectedHeight,
+    selectedMontage4G: s.selectedMontage4G,
+    selectedMontage5G: s.selectedMontage5G,
+    ant4gConfig: s.ant4gConfig,
+    ant5gConfig: s.ant5gConfig,
+    matPrincipal: s.matPrincipal,
+    plotMetallique: s.plotMetallique,
+    brasDeDeport: s.brasDeDeport,
+    matSecondaire: s.matSecondaire
+  });
+};
+
+const getCatalogueHash = (s: SectorData) => {
+  return `${s.selectedHeight}-${s.selectedMontage4G}-${s.selectedMontage5G}`;
+};
 
 export default function RegularUserView({
   apiBaseUrl,
   initialMontage,
   initialSiteType,
-  initialFoundationType
+  initialFoundationType,
+  onResetMontage
 }: RegularUserViewProps) {
   // Config
   const { config, loading: configLoading } = useCatalogueConfig(apiBaseUrl);
@@ -39,52 +80,62 @@ export default function RegularUserView({
   const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number>(15);
-  const [selectedHeight, setSelectedHeight] = useState<number>(3);
-  const [selectedMontage, setSelectedMontage] = useState<string>(initialMontage || '');
+  const [nombreSecteurs, setNombreSecteurs] = useState<number>(3);
 
-  // Additional Fields
   const siteType = initialSiteType || 'nouveau';
   const foundationType = initialFoundationType || 'metallique';
   const ancrageInfo = initialFoundationType === 'metallique' ? 'Fixation sur plot métallique' :
     initialFoundationType === 'beton' ? 'Fixation sur plot béton' :
       initialFoundationType === 'encastre' ? 'Mât encastré' :
         'Fixation sur plot métallique';
+
+  const [sectors, setSectors] = useState<SectorData[]>(
+    Array.from({ length: 3 }, (_, i) => defaultSectorData(i))
+  );
+
+  const [similarityMode, setSimilarityMode] = useState<SimilarityMode>('none');
+
+  // Global Equipment
   const [dalleThickness, setDalleThickness] = useState<number>(0.5);
   const [plotHeight, setPlotHeight] = useState<number>(0.5);
 
-  // Custom Form Fields when no correspondence
-  const [matPrincipal, setMatPrincipal] = useState<string>('');
-  const [plotMetallique, setPlotMetallique] = useState<string>('');
-  const [brasDeDeport, setBrasDeDeport] = useState<string>('');
-  const [matSecondaire, setMatSecondaire] = useState<string>('');
-
-  // Antenna Config
-  const [configMode, setConfigMode] = useState<'agile' | 'reference'>('agile');
-  const [selectedReference, setSelectedReference] = useState<string>('ref-huawei-standard');
-  const [nombreSecteurs, setNombreSecteurs] = useState<number>(3);
-  const [ant4gConfig, setAnt4gConfig] = useState<AntennaConfigState>({ model: 'A1', height: 2100, width: 470, thickness: 210, weight: 45 });
-  const [ant5gConfig, setAnt5gConfig] = useState<AntennaConfigState>({ model: 'A1', height: 1010, width: 500, thickness: 250, weight: 50 });
   const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
-  const [fhWeight, setFhWeight] = useState<number>(30);
+  const [fhDiameter, setFhDiameter] = useState<number>(300);
   const [fhReference, setFhReference] = useState<string>('');
+  const [fhQuantity, setFhQuantity] = useState<number>(1);
   const [hasRrhEquipment, setHasRrhEquipment] = useState<boolean>(false);
   const [hasRruEquipment, setHasRruEquipment] = useState<boolean>(false);
   const [rrhReference, setRrhReference] = useState<string>('');
+  const [rrhQuantity, setRrhQuantity] = useState<number>(1);
   const [rruReference, setRruReference] = useState<string>('');
+  const [rruQuantity, setRruQuantity] = useState<number>(1);
+  const [hasTdEquipment, setHasTdEquipment] = useState<boolean>(false);
+  const [tdType, setTdType] = useState<'tetraphase' | 'monophase'>('tetraphase');
+  const [tdReference, setTdReference] = useState<string>('');
+  const [tgbtReference, setTgbtReference] = useState<string>('');
+  const [hasGps, setHasGps] = useState<boolean>(false);
+  const [gpsQuantity, setGpsQuantity] = useState<number>(1);
+  const [gpsReference, setGpsReference] = useState<string>('');
+  const [hasBoitierLovage, setHasBoitierLovage] = useState<boolean>(false);
+  const [boitierLovageQuantity, setBoitierLovageQuantity] = useState<number>(1);
+  const [boitierLovageReference, setBoitierLovageReference] = useState<string>('');
+  const [hasCoffret, setHasCoffret] = useState<boolean>(false);
+  const [coffretQuantity, setCoffretQuantity] = useState<number>(1);
+  const [coffretReference, setCoffretReference] = useState<string>('');
 
   // Status State
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
+
+  // Photo Upload State
+  const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
+  const [pendingSectorCalc, setPendingSectorCalc] = useState<SectorData | null>(null);
 
   // Map State
   const [showMap, setShowMap] = useState<boolean>(false);
   const miniMapContainerRef = useRef<HTMLDivElement>(null);
   const miniMapRef = useRef<maplibregl.Map | null>(null);
-
-  // Results State
-  const [lookupResult, setLookupResult] = useState<LookupResult | null>(null);
 
   // Request & Notifications State
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -95,41 +146,66 @@ export default function RegularUserView({
 
   // Sync initialMontage from parent or default to first standard montage
   useEffect(() => {
-    if (config?.standard_montages?.length && !selectedMontage) {
-      if (initialMontage && initialMontage !== 'custom') {
-        setSelectedMontage(initialMontage);
-        const spec = config.standard_montages.find(m => m.id === initialMontage);
-        if (spec) {
-          setAnt4gConfig({ model: initialMontage, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight });
-          setAnt5gConfig({ model: initialMontage, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight });
+    if (config?.standard_montages?.length) {
+      setSectors(prev => prev.map(s => {
+        if (!s.selectedMontage4G) {
+          const mId = (initialMontage && initialMontage !== 'custom') ? initialMontage : config.standard_montages[0].id;
+          const spec = config.standard_montages.find(m => m.id === mId) || config.standard_montages[0];
+          return {
+            ...s,
+            selectedMontage4G: mId,
+            selectedMontage5G: mId,
+            ant4gConfig: { model: mId, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight },
+            ant5gConfig: { model: mId, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight }
+          };
         }
-      } else {
-        const spec = config.standard_montages[0];
-        setSelectedMontage(spec.id);
-        setAnt4gConfig({ model: spec.id, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight });
-        setAnt5gConfig({ model: spec.id, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight });
-      }
+        return s;
+      }));
     }
   }, [initialMontage, config]);
 
-  const handleMontageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setSelectedMontage(val);
+  const updateSector = (index: number, updates: Partial<SectorData>) => {
+    setSectors(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
 
-    if (val === 'custom') return;
-
-    const spec = config?.standard_montages.find(m => m.id === val);
-    if (spec) {
-      setAnt4gConfig({ model: val, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight });
-      setAnt5gConfig({ model: val, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight });
-    }
+      // Auto-sync based on similarityMode
+      if (index === 0) {
+        if (similarityMode === 'all_similar') {
+          next[1] = { ...next[1], ...updates };
+        }
+        if (similarityMode === 'all_similar') {
+          next[2] = { ...next[2], ...updates };
+        }
+      }
+      return next;
+    });
   };
+
+  // Sync data when similarity mode changes
+  useEffect(() => {
+    if (similarityMode === 'all_similar') {
+      setSectors(prev => {
+        const s1 = prev[0];
+        const next = [...prev];
+        next[1] = { ...s1, id: next[1].id, lookupResult: next[1].lookupResult, loading: next[1].loading, error: next[1].error };
+        next[2] = { ...s1, id: next[2].id, lookupResult: next[2].lookupResult, loading: next[2].loading, error: next[2].error };
+        return next;
+      });
+    }
+  }, [similarityMode]);
+
+  // Handle number of sectors changing
+  useEffect(() => {
+    if (nombreSecteurs === 1) {
+      setSimilarityMode('none');
+    }
+  }, [nombreSecteurs, similarityMode]);
 
   const onAddressSelect = (address: GeocodingAddress) => {
     setSelectedAddress(address);
     setSelectedCoords({ latitude: address.latitude, longitude: address.longitude });
-    // Reset lookup to force re-fetch
-    setLookupResult(null);
+    setSectors(prev => prev.map(s => ({ ...s, lookupResult: null })));
     setShowMap(false);
   };
 
@@ -142,7 +218,7 @@ export default function RegularUserView({
       latitude: lat, longitude: lon, city: 'Recherche de l\'adresse...', postcode: '',
       context: '', type: '', importance: 0, target_terrain: null
     });
-    setLookupResult(null);
+    setSectors(prev => prev.map(s => ({ ...s, lookupResult: null })));
     setShowMap(false);
 
     try {
@@ -162,53 +238,69 @@ export default function RegularUserView({
     }
   }, [reverseGeocode]);
 
-  // Fetch API Catalogue
+  const activeSectors = sectors.slice(0, nombreSecteurs);
+  const sectorDependencies = activeSectors.map(s => getCatalogueHash(s)).join('|');
+
+  // Fetch API Catalogue for distinct sectors
   useEffect(() => {
+    if (!selectedCoords) return;
+
     let active = true;
 
     async function fetchCatalogueData() {
-      if (!selectedCoords || !selectedMontage) {
-        if (active) setLookupResult(null);
-        return;
-      }
+      // Group by catalogue lookup hash
+      const uniqueHashes = Array.from(new Set(activeSectors.map(getCatalogueHash)));
 
-      setLoading(true);
-      setError(null);
+      setSectors(prev => prev.map((s, i) => i < nombreSecteurs ? { ...s, loading: true, error: null } : s));
 
       try {
         const precalculatedHeights = config?.precalculated_building_heights || [10, 15, 20, 25, 30, 35, 40, 45];
         let queryHeight = selectedBuildingHeight;
-
         if (!precalculatedHeights.includes(selectedBuildingHeight)) {
           const validHeights = precalculatedHeights.filter(h => h >= selectedBuildingHeight);
           queryHeight = validHeights.length > 0 ? validHeights[0] : precalculatedHeights[precalculatedHeights.length - 1];
         }
 
-        let url = `${apiBaseUrl}/api/geodata/antenna-equipment/public_lookup/?latitude=${selectedCoords.latitude}&longitude=${selectedCoords.longitude}&building_height=${queryHeight}&mast_height=${selectedHeight}`;
-        if (selectedMontage !== 'custom') {
-          url += `&montage=${encodeURIComponent(selectedMontage)}`;
-        }
+        const results = await Promise.all(uniqueHashes.map(async (hash) => {
+          const sector = activeSectors.find(s => getCatalogueHash(s) === hash);
+          if (!sector || !sector.selectedMontage4G || !sector.selectedMontage5G) return { hash, data: null, error: null };
 
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Erreur de communication avec le catalogue.");
-        const data = await res.json();
+          const isCustom = sector.selectedMontage4G !== sector.selectedMontage5G || sector.selectedMontage4G === 'custom';
 
-        if (active) {
-          const eqList = data.equipment || [];
-
-          if (selectedMontage !== 'custom') {
-            // The backend already filters by name if montage is passed.
-            data.equipment = eqList;
-          } else {
-            data.equipment = [];
+          let url = `${apiBaseUrl}/api/geodata/antenna-equipment/public_lookup/?latitude=${selectedCoords!.latitude}&longitude=${selectedCoords!.longitude}&building_height=${queryHeight}&mast_height=${sector.selectedHeight}`;
+          if (!isCustom) {
+            url += `&montage=${encodeURIComponent(sector.selectedMontage4G)}`;
           }
 
-          setLookupResult(data);
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Erreur de communication avec le catalogue.");
+            const data = await res.json();
+
+            if (!isCustom) {
+              data.equipment = data.equipment || [];
+            } else {
+              data.equipment = [];
+            }
+            return { hash, data, error: null };
+          } catch (e: any) {
+            return { hash, data: null, error: e.message || "Erreur" };
+          }
+        }));
+
+        if (active) {
+          setSectors(prev => prev.map(s => {
+            const res = results.find(r => r.hash === getCatalogueHash(s));
+            if (res) {
+              return { ...s, lookupResult: res.data, error: res.error, loading: false };
+            }
+            return s;
+          }));
         }
       } catch (err: any) {
-        if (active) setError(err.message || "Impossible de récupérer les données du catalogue.");
-      } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setSectors(prev => prev.map(s => ({ ...s, loading: false, error: "Erreur globale" })));
+        }
       }
     }
 
@@ -217,7 +309,8 @@ export default function RegularUserView({
       active = false;
       clearTimeout(timeoutId);
     };
-  }, [selectedCoords, selectedBuildingHeight, selectedHeight, selectedMontage, apiBaseUrl, config]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCoords, selectedBuildingHeight, sectorDependencies, apiBaseUrl, config, nombreSecteurs]);
 
   // MiniMap initialization
   useEffect(() => {
@@ -252,62 +345,118 @@ export default function RegularUserView({
     }
   }, [showMap, selectedCoords]);
 
-  const handleTriggerCalculation = async () => {
+  // Group unique configurations for calculations/PDF
+  const uniqueGroupsMap = new Map<string, { hash: string, indices: number[], sector: SectorData }>();
+  activeSectors.forEach((s, idx) => {
+    const hash = getCalculationHash(s);
+    if (!uniqueGroupsMap.has(hash)) {
+      uniqueGroupsMap.set(hash, { hash, indices: [idx], sector: s });
+    } else {
+      uniqueGroupsMap.get(hash)!.indices.push(idx);
+    }
+  });
+  const uniqueGroups = Array.from(uniqueGroupsMap.values());
+
+  const handleTriggerCalculation = async (sector: SectorData) => {
+    setPendingSectorCalc(sector);
+    setShowPhotoPrompt(true);
+  };
+
+  const confirmPhotoAndCalculate = async (photoFile: File, siteName: string, clientName: string) => {
+    if (!pendingSectorCalc) return;
+    const sector = pendingSectorCalc;
+
     setCalculating(true);
+    let photoUrl = null;
+
     try {
+      // 1. Upload Photo
+      const formData = new FormData();
+      formData.append('photo', photoFile);
+
+      const uploadRes = await fetch(`${apiBaseUrl}/api/upload-photo/`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        photoUrl = uploadData.photo_url;
+      } else {
+        alert("Erreur lors de l'envoi de la photo.");
+        setCalculating(false);
+        return;
+      }
+
+      // 2. Launch Calculation
       const payload = {
         schema_version: "1.0",
         site: {
           type: siteType,
-          ancrage: foundationType,
           address: selectedAddress?.name || '',
+          name: siteName,
+          client: clientName,
+          ancrage: foundationType,
           latitude: selectedCoords?.latitude,
           longitude: selectedCoords?.longitude
         },
         environment: {
-          region: lookupResult?.detected_region,
-          terrain_type: lookupResult?.detected_terrain_type,
+          region: sector.lookupResult?.detected_region,
+          terrain_type: sector.lookupResult?.detected_terrain_type,
           building_height_m: selectedBuildingHeight,
           dalle_thickness_m: foundationType === 'beton' ? dalleThickness : null,
           plot_height_m: foundationType === 'beton' ? plotHeight : null
         },
         structure: {
-          mast_height_m: selectedHeight,
-          montage_id: selectedMontage,
-          is_custom_montage: selectedMontage === 'custom',
-          mat_principal: matPrincipal,
-          plot_metallique: plotMetallique,
-          bras_de_deport: brasDeDeport,
-          mat_secondaire: matSecondaire,
+          mast_height_m: sector.selectedHeight,
+          montage_id: (sector.selectedMontage4G === sector.selectedMontage5G && sector.selectedMontage4G !== 'custom') ? sector.selectedMontage4G : 'custom',
+          is_custom_montage: sector.selectedMontage4G !== sector.selectedMontage5G || sector.selectedMontage4G === 'custom',
+          mat_principal: sector.matPrincipal,
+          plot_metallique: sector.plotMetallique,
+          bras_de_deport: sector.brasDeDeport,
+          mat_secondaire: sector.matSecondaire,
           nombre_secteurs: nombreSecteurs
         },
         antenna_4g: {
-          model: ant4gConfig.model,
-          height_mm: ant4gConfig.height,
-          width_mm: ant4gConfig.width,
-          thickness_mm: ant4gConfig.thickness,
-          weight_dan: ant4gConfig.weight
+          model: sector.ant4gConfig.model,
+          height_mm: sector.ant4gConfig.height,
+          width_mm: sector.ant4gConfig.width,
+          thickness_mm: sector.ant4gConfig.thickness,
+          weight_dan: sector.ant4gConfig.weight
         },
         antenna_5g: {
-          model: ant5gConfig.model,
-          height_mm: ant5gConfig.height,
-          width_mm: ant5gConfig.width,
-          thickness_mm: ant5gConfig.thickness,
-          weight_dan: ant5gConfig.weight
+          model: sector.ant5gConfig.model,
+          height_mm: sector.ant5gConfig.height,
+          width_mm: sector.ant5gConfig.width,
+          thickness_mm: sector.ant5gConfig.thickness,
+          weight_dan: sector.ant5gConfig.weight
         },
         fh_equipment: {
           enabled: hasFhEquipment,
-          weight_kg: hasFhEquipment ? fhWeight : null,
-          reference: hasFhEquipment ? fhReference : null
+          diameter_mm: hasFhEquipment ? fhDiameter : null,
+          reference: hasFhEquipment ? fhReference : null,
+          quantity: hasFhEquipment ? fhQuantity : null
         },
         rrh_equipment: {
           enabled: hasRrhEquipment,
-          reference: hasRrhEquipment ? rrhReference : null
+          reference: hasRrhEquipment ? rrhReference : null,
+          quantity: hasRrhEquipment ? rrhQuantity : null
         },
         rru_equipment: {
           enabled: hasRruEquipment,
-          reference: hasRruEquipment ? rruReference : null
-        }
+          reference: hasRruEquipment ? rruReference : null,
+          quantity: hasRruEquipment ? rruQuantity : null
+        },
+        td_equipment: {
+          enabled: hasTdEquipment,
+          type: hasTdEquipment ? tdType : null,
+          reference: hasTdEquipment ? tdReference : null,
+          tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
+        },
+        gps: { enabled: hasGps, quantity: hasGps ? gpsQuantity : null, reference: hasGps ? gpsReference : null },
+        boitier_lovage: { enabled: hasBoitierLovage, quantity: hasBoitierLovage ? boitierLovageQuantity : null, reference: hasBoitierLovage ? boitierLovageReference : null },
+        coffrets_fibre: { enabled: hasCoffret, quantity: hasCoffret ? coffretQuantity : null, reference: hasCoffret ? coffretReference : null },
+        coffrets_hybride: { enabled: false, quantity: null, reference: null }
       };
 
       const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
@@ -316,21 +465,58 @@ export default function RegularUserView({
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        alert('Calcul lancé avec succès (Serveur Distant APS)');
+        const calcData = await res.json();
+        const jobId = calcData.data.id;
+        
+        // 3. Poll for calculation completion
+        let isCompleted = calcData.data.status === 'COMPLETED';
+        let jobResult = calcData.data;
+
+        while (!isCompleted) {
+          await new Promise(r => setTimeout(r, 2000));
+          const pollRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/`);
+          if (pollRes.ok) {
+            jobResult = await pollRes.json();
+            isCompleted = jobResult.status === 'COMPLETED';
+            if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR') {
+              throw new Error("Calcul échoué sur le serveur.");
+            }
+          } else {
+            break;
+          }
+        }
+
+        // 4. Trigger PDF Generation
+        const pdfRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/generate_pdf/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo_url: photoUrl })
+        });
+
+        if (pdfRes.ok) {
+          const pdfData = await pdfRes.json();
+          setNdcPdfUrl(pdfData.ndc_pdf_url);
+          setShowPhotoPrompt(false);
+          setPendingSectorCalc(null);
+          alert('Note de Calcul générée avec succès.');
+        } else {
+          alert('Erreur lors de la génération du PDF Note de Calcul.');
+        }
+
       } else {
         const errData = await res.json();
         console.error("Payload error:", errData);
         alert(`Erreur lors du lancement du calcul: ${errData.error || 'Schema Invalide'}`);
       }
-    } catch (err) {
-      alert('Erreur réseau');
+    } catch (err: any) {
+      alert(`Erreur réseau ou calcul: ${err.message || 'Erreur inconnue'}`);
     } finally {
       setCalculating(false);
     }
   };
 
-  const handleDownloadPdfWrap = async () => {
-    if (!lookupResult) return;
+  const handleDownloadPdfWrap = async (sector: SectorData, groupIndices: number[]) => {
+    if (!sector.lookupResult) return;
 
     let miniMapImage: string | null = null;
     if (miniMapRef.current) {
@@ -348,29 +534,40 @@ export default function RegularUserView({
       ancrageInfo,
       selectedAddress,
       selectedCoords,
-      lookupResult,
+      lookupResult: sector.lookupResult,
       selectedBuildingHeight,
-      selectedHeight,
-      selectedMontage,
-      ant4gModel: ant4gConfig.model,
-      ant4gHeight: ant4gConfig.height,
-      ant4gWidth: ant4gConfig.width,
-      ant4gThickness: ant4gConfig.thickness,
-      ant4gWeight: ant4gConfig.weight,
-      ant5gModel: ant5gConfig.model,
-      ant5gHeight: ant5gConfig.height,
-      ant5gWidth: ant5gConfig.width,
-      ant5gThickness: ant5gConfig.thickness,
-      ant5gWeight: ant5gConfig.weight,
+      selectedHeight: sector.selectedHeight,
+      selectedMontage: sector.selectedMontage4G === sector.selectedMontage5G ? sector.selectedMontage4G : 'custom',
+      ant4gModel: sector.ant4gConfig.model,
+      ant4gHeight: sector.ant4gConfig.height,
+      ant4gWidth: sector.ant4gConfig.width,
+      ant4gThickness: sector.ant4gConfig.thickness,
+      ant4gWeight: sector.ant4gConfig.weight,
+      ant5gModel: sector.ant5gConfig.model,
+      ant5gHeight: sector.ant5gConfig.height,
+      ant5gWidth: sector.ant5gConfig.width,
+      ant5gThickness: sector.ant5gConfig.thickness,
+      ant5gWeight: sector.ant5gConfig.weight,
       hasFhEquipment,
-      fhWeight,
+      fhDiameter,
       fhReference,
+      fhQuantity,
       hasRrhEquipment,
       rrhReference,
+      rrhQuantity,
       hasRruEquipment,
       rruReference,
+      rruQuantity,
+      hasTdEquipment,
+      tdType,
+      tdReference,
+      tgbtReference,
+      hasGps, gpsQuantity, gpsReference,
+      hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
+      hasCoffret, coffretQuantity, coffretReference,
+      coffretOptions: config?.coffret_references || [],
       miniMapImage,
-      nombreSecteurs
+      nombreSecteurs: groupIndices.length
     }, setPdfGenerating);
   };
 
@@ -387,9 +584,11 @@ export default function RegularUserView({
     );
   }
 
+  const anyLoading = activeSectors.some(s => s.loading);
+  const anyError = activeSectors.find(s => s.error)?.error;
+
   return (
     <div className="flex flex-col w-full h-screen bg-slate-950 text-white font-sans overflow-hidden selection:bg-indigo-500/30">
-      {/* Navbar */}
       <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-10 sticky top-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -398,13 +597,33 @@ export default function RegularUserView({
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
             NDC Portail <span className="font-light">Client</span>
           </h1>
+
+          <div className="h-6 w-px bg-slate-700 mx-2 hidden sm:block"></div>
+
+          <div className="hidden sm:flex items-center gap-3 text-sm">
+            <span className="text-slate-400">Site:</span>
+            <span className="text-slate-200 font-medium px-2 py-0.5 bg-slate-800 rounded-md border border-slate-700">
+              {siteType === 'nouveau' ? 'Neuf' : 'Existant'}
+            </span>
+            <span className="text-slate-400 ml-2">Ancrage:</span>
+            <span className="text-slate-200 font-medium px-2 py-0.5 bg-slate-800 rounded-md border border-slate-700">
+              {foundationType === 'metallique' ? 'Plot Métallique' :
+                foundationType === 'beton' ? 'Plot Béton' :
+                  foundationType === 'encastre' ? 'Encastré' : foundationType}
+            </span>
+            <button
+              onClick={onResetMontage}
+              className="ml-2 text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
+            >
+              Modifier
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-xs text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-full font-medium border border-emerald-400/20 shadow-sm flex items-center gap-1.5 hidden sm:flex">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
             En Ligne
           </div>
-
           <NotificationsDropdown
             notifications={notifications}
             unreadCount={unreadCount}
@@ -416,13 +635,8 @@ export default function RegularUserView({
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Panneau de Gauche : Formulaire de Recherche */}
         <div className="w-full md:w-[480px] lg:w-[550px] flex flex-col bg-slate-900 border-r border-slate-800 shadow-2xl z-10 shrink-0">
           <div className="p-5 border-b border-slate-800 bg-slate-900/80 sticky top-0 z-10">
-            <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-              Consultez notre catalogue d'études structurelles précalculées selon la norme Eurocode.
-            </p>
-
             <AddressSearchSection
               onAddressSelect={onAddressSelect}
               selectedAddress={selectedAddress}
@@ -437,74 +651,92 @@ export default function RegularUserView({
               foundationType={foundationType}
               selectedBuildingHeight={selectedBuildingHeight}
               setSelectedBuildingHeight={setSelectedBuildingHeight}
-              selectedHeight={selectedHeight}
-              setSelectedHeight={setSelectedHeight}
+              nombreSecteurs={nombreSecteurs}
+              setNombreSecteurs={setNombreSecteurs}
               dalleThickness={dalleThickness}
               setDalleThickness={setDalleThickness}
               plotHeight={plotHeight}
               setPlotHeight={setPlotHeight}
-              config={config}
+              similarityMode={similarityMode}
+              setSimilarityMode={setSimilarityMode}
             />
 
-            <MontageSelector
-              selectedMontage={selectedMontage}
-              handleMontageChange={handleMontageChange}
-              ant4gConfig={ant4gConfig}
-              setAnt4gConfig={setAnt4gConfig}
-              ant5gConfig={ant5gConfig}
-              setAnt5gConfig={setAnt5gConfig}
-              config={config}
-              configMode={configMode}
-              setConfigMode={setConfigMode}
-              selectedReference={selectedReference}
-              setSelectedReference={setSelectedReference}
-            />
+            {activeSectors.map((sector, idx) => {
+              const isCollapsed = (idx === 1 && similarityMode === 'all_similar') ||
+                (idx === 2 && similarityMode === 'all_similar');
+              return (
+                <Fragment key={sector.id}>
+                  <SectorConfigurator
+                    index={idx}
+                    sectorData={sector}
+                    updateSector={updateSector}
+                    config={config}
+                    collapsed={isCollapsed}
+                  />
+                </Fragment>
+              );
+            })}
 
-            {/* Section 5: Nombre de Secteurs */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col space-y-3">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                5. Nombre de Secteurs
-              </label>
-              <div className="flex gap-2">
-                {[1, 2, 3].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => setNombreSecteurs(num)}
-                    className={`flex-1 py-2 rounded text-xs font-semibold transition-all border ${nombreSecteurs === num
-                        ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 shadow-md'
-                        : 'bg-slate-800 border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'
-                      }`}
-                  >
-                    {num} {num === 1 ? 'Secteur' : 'Secteurs'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Equipment Toggles */}
+            {/* Global Equipment Toggles */}
             <div className="space-y-4">
               <FHEquipmentToggle
                 hasFhEquipment={hasFhEquipment}
                 setHasFhEquipment={setHasFhEquipment}
-                fhWeight={fhWeight}
-                setFhWeight={setFhWeight}
+                fhDiameter={fhDiameter}
+                setFhDiameter={setFhDiameter}
                 fhReference={fhReference}
                 setFhReference={setFhReference}
-                config={config}
+                fhQuantity={fhQuantity}
+                setFhQuantity={setFhQuantity}
               />
               <RRHEquipmentToggle
                 hasRrhEquipment={hasRrhEquipment}
                 setHasRrhEquipment={setHasRrhEquipment}
                 rrhReference={rrhReference}
                 setRrhReference={setRrhReference}
+                rrhQuantity={rrhQuantity}
+                setRrhQuantity={setRrhQuantity}
               />
               <RRUEquipmentToggle
                 hasRruEquipment={hasRruEquipment}
                 setHasRruEquipment={setHasRruEquipment}
                 rruReference={rruReference}
                 setRruReference={setRruReference}
+                rruQuantity={rruQuantity}
+                setRruQuantity={setRruQuantity}
+              />
+              <TDEquipmentToggle
+                hasTdEquipment={hasTdEquipment}
+                setHasTdEquipment={setHasTdEquipment}
+                tdType={tdType}
+                setTdType={setTdType}
+                tdReference={tdReference}
+                setTdReference={setTdReference}
+                tgbtReference={tgbtReference}
+                setTgbtReference={setTgbtReference}
+              />
+              <GenericEquipmentToggle
+                title="Présence équipement GPS"
+                enabled={hasGps} setEnabled={setHasGps}
+                quantity={gpsQuantity} setQuantity={setGpsQuantity}
+                reference={gpsReference} setReference={setGpsReference}
+                colorClass="blue"
+              />
+              <GenericEquipmentToggle
+                title="Présence Boitier de lovage"
+                enabled={hasBoitierLovage} setEnabled={setHasBoitierLovage}
+                quantity={boitierLovageQuantity} setQuantity={setBoitierLovageQuantity}
+                reference={boitierLovageReference} setReference={setBoitierLovageReference}
+                colorClass="purple"
+              />
+              <CoffretEquipmentToggle
+                hasCoffret={hasCoffret}
+                setHasCoffret={setHasCoffret}
+                coffretQuantity={coffretQuantity}
+                setCoffretQuantity={setCoffretQuantity}
+                coffretReference={coffretReference}
+                setCoffretReference={setCoffretReference}
+                coffretOptions={config?.coffret_references || []}
               />
             </div>
 
@@ -527,7 +759,6 @@ export default function RegularUserView({
           </div>
         </div>
 
-        {/* Panneau de Droite : Carte ou Résultats */}
         <div className="flex-1 bg-slate-950 relative flex flex-col min-w-0">
           {showMap && (
             <div className="absolute inset-0 z-10 animate-fadeIn">
@@ -562,7 +793,7 @@ export default function RegularUserView({
                 </div>
               )}
 
-              {selectedCoords && !selectedMontage && (
+              {selectedCoords && (!sectors[0].selectedMontage4G || !sectors[0].selectedMontage5G) && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full">
                   <div className="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 mb-6 shadow-2xl">
                     <Layers className="w-10 h-10 text-indigo-400" />
@@ -574,7 +805,7 @@ export default function RegularUserView({
                 </div>
               )}
 
-              {selectedCoords && selectedMontage && loading && (
+              {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && anyLoading && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full">
                   <div className="relative">
                     <div className="w-20 h-20 border-4 border-slate-800 rounded-full"></div>
@@ -585,48 +816,75 @@ export default function RegularUserView({
                 </div>
               )}
 
-              {selectedCoords && selectedMontage && error && (
+              {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && !anyLoading && anyError && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-rose-400 h-full">
                   <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center mb-6">
                     <AlertCircle className="w-10 h-10" />
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-2">Erreur de catalogue</h3>
-                  <p className="text-sm text-slate-400">{error}</p>
+                  <p className="text-sm text-slate-400">{anyError}</p>
                 </div>
               )}
 
               {/* Dashboard Content */}
-              {selectedCoords && selectedMontage && !loading && !error && lookupResult && (
-                <ResultsPanel
-                  lookupResult={lookupResult}
-                  selectedAddress={selectedAddress}
-                  selectedMontage={selectedMontage}
-                  isSearching={loading}
-                  onPreviewDocument={(doc) => setPreviewDoc(doc as PreviewDocState)}
-                  onDownloadPdf={handleDownloadPdfWrap}
-                  pdfGenerating={pdfGenerating}
-                  onTriggerCalculation={handleTriggerCalculation}
-                  isCalculationPending={calculating}
-                  matPrincipal={matPrincipal}
-                  setMatPrincipal={setMatPrincipal}
-                  plotMetallique={plotMetallique}
-                  setPlotMetallique={setPlotMetallique}
-                  nombreSecteurs={nombreSecteurs}
-                  brasDeDeport={brasDeDeport}
-                  setBrasDeDeport={setBrasDeDeport}
-                  matSecondaire={matSecondaire}
-                  setMatSecondaire={setMatSecondaire}
-                  equipmentToggles={{
-                    fh: hasFhEquipment,
-                    rrh: hasRrhEquipment,
-                    rru: hasRruEquipment
-                  }}
-                  equipmentValues={{
-                    fh: { poids: `${fhWeight} kg`, référence: fhReference || 'N/A' },
-                    rrh: { modèle: rrhReference || 'RRH-001' },
-                    rru: { modèle: rruReference || 'RRU-001' }
-                  }}
-                />
+              {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && !anyLoading && !anyError && (
+                <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                  {uniqueGroups.map((group) => (
+                    <div key={group.hash} className="relative">
+                      <div className="flex items-center gap-3 mb-4">
+                        <h3 className="text-lg font-bold text-white">
+                          Résultats - Secteur{group.indices.length > 1 ? 's' : ''} {group.indices.map(i => i + 1).join(', ')}
+                        </h3>
+                        <div className="h-px flex-1 bg-slate-800"></div>
+                      </div>
+
+                      {group.sector.lookupResult && (
+                        <ResultsPanel
+                          lookupResult={group.sector.lookupResult}
+                          selectedAddress={selectedAddress}
+                          selectedMontage={group.sector.selectedMontage4G === group.sector.selectedMontage5G && group.sector.selectedMontage4G !== 'custom' ? group.sector.selectedMontage4G : 'custom'}
+                          isSearching={false}
+                          onDownloadPdf={() => handleDownloadPdfWrap(group.sector, group.indices)}
+                          pdfGenerating={pdfGenerating}
+                          onTriggerCalculation={() => handleTriggerCalculation(group.sector)}
+                          isCalculationPending={calculating}
+                          matPrincipal={group.sector.matPrincipal}
+                          setMatPrincipal={(val) => updateSector(group.indices[0], { matPrincipal: val })}
+                          plotMetallique={group.sector.plotMetallique}
+                          setPlotMetallique={(val) => updateSector(group.indices[0], { plotMetallique: val })}
+                          nombreSecteurs={group.indices.length}
+                          brasDeDeport={group.sector.brasDeDeport}
+                          setBrasDeDeport={(val) => updateSector(group.indices[0], { brasDeDeport: val })}
+                          matSecondaire={group.sector.matSecondaire}
+                          setMatSecondaire={(val) => updateSector(group.indices[0], { matSecondaire: val })}
+                          equipmentToggles={{
+                            fh: hasFhEquipment,
+                            rrh: hasRrhEquipment,
+                            rru: hasRruEquipment,
+                            td: hasTdEquipment,
+                            gps: hasGps,
+                            boitier_lovage: hasBoitierLovage,
+                            coffrets_fibre: hasCoffretsFibre,
+                            coffrets_hybride: hasCoffretsHybride
+                          }}
+                          equipmentValues={{
+                            fh: { diamètre: `${fhDiameter} mm`, référence: fhReference || 'N/A', quantité: fhQuantity },
+                            rrh: { modèle: rrhReference || 'RRH-001', quantité: rrhQuantity },
+                            rru: { modèle: rruReference || 'RRU-001', quantité: rruQuantity },
+                            td: tdType === 'monophase' 
+                                  ? { type: 'TD Monophasé', référence: tdReference || 'N/A', tgbt: tgbtReference || 'N/A' }
+                                  : { type: 'TD Tétraphasé', référence: tdReference || 'N/A' },
+                            gps: { référence: gpsReference || 'N/A', quantité: gpsQuantity },
+                            boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
+                            coffrets_fibre: { référence: coffretsFibreReference || 'N/A', quantité: coffretsFibreQuantity },
+                            coffrets_hybride: { référence: coffretsHybrideReference || 'N/A', quantité: coffretsHybrideQuantity }
+                          }}
+                          ndcPdfUrl={ndcPdfUrl}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -649,12 +907,22 @@ export default function RegularUserView({
           }, 1500);
         }}
         selectedBuildingHeight={selectedBuildingHeight}
-        selectedHeight={selectedHeight}
+        selectedHeight={sectors[0]?.selectedHeight || 0}
       />
 
       <DocumentPreviewModal
         previewDoc={previewDoc}
         setPreviewDoc={setPreviewDoc}
+      />
+
+      <PhotoPromptModal
+        show={showPhotoPrompt}
+        onClose={() => {
+          setShowPhotoPrompt(false);
+          setPendingSectorCalc(null);
+        }}
+        onConfirm={confirmPhotoAndCalculate}
+        isSubmitting={calculating}
       />
     </div>
   );

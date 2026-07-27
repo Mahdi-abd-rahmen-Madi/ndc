@@ -72,6 +72,62 @@ export const equipmentConfigs: EquipmentConfig[] = [
       { label: 'Puissance', value: '150 W' },
     ],
   },
+  {
+    id: 'td',
+    name: 'Équipement TD',
+    enabled: false, // Controlled by toggle
+    icon: 'Activity',
+    color: 'amber',
+    fields: [
+      { label: 'Type', value: 'N/A' },
+      { label: 'Référence', value: 'N/A' },
+      { label: 'TGBT', value: 'N/A' },
+    ],
+  },
+  {
+    id: 'gps',
+    name: 'GPS',
+    enabled: false,
+    icon: 'Activity',
+    color: 'blue',
+    fields: [
+      { label: 'Référence', value: 'N/A' },
+      { label: 'Quantité', value: 1 },
+    ],
+  },
+  {
+    id: 'boitier_lovage',
+    name: 'Boitier de lovage',
+    enabled: false,
+    icon: 'Activity',
+    color: 'purple',
+    fields: [
+      { label: 'Référence', value: 'N/A' },
+      { label: 'Quantité', value: 1 },
+    ],
+  },
+  {
+    id: 'coffrets_fibre',
+    name: 'Coffrets fibre',
+    enabled: false,
+    icon: 'Activity',
+    color: 'pink',
+    fields: [
+      { label: 'Référence', value: 'N/A' },
+      { label: 'Quantité', value: 1 },
+    ],
+  },
+  {
+    id: 'coffrets_hybride',
+    name: 'Coffrets hybride',
+    enabled: false,
+    icon: 'Activity',
+    color: 'orange',
+    fields: [
+      { label: 'Référence', value: 'N/A' },
+      { label: 'Quantité', value: 1 },
+    ],
+  },
 ];
 
 export const getEnabledConfigs = (enabledToggles?: Record<string, boolean>): EquipmentConfig[] => {

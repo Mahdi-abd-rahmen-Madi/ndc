@@ -48,6 +48,8 @@ class SiteSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['nouveau', 'existant'])
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'encastre'], required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    client = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     latitude = serializers.FloatField()
     longitude = serializers.FloatField()
 
@@ -59,30 +61,37 @@ class EnvironmentSerializer(serializers.Serializer):
     plot_height_m = serializers.FloatField(required=False, allow_null=True)
 
 class StructureSerializer(serializers.Serializer):
-    mast_height_m = serializers.FloatField()
+    hauteur_mat_m = serializers.FloatField()
     montage_id = serializers.CharField()
     is_custom_montage = serializers.BooleanField(default=False)
     mat_principal = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     plot_metallique = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    bras_de_deport = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    bras_de_deport_input = serializers.FloatField(required=False, allow_null=True)
     mat_secondaire = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    outer_diameter_m = serializers.FloatField(required=False, allow_null=True)
+    wall_thickness_m = serializers.FloatField(required=False, allow_null=True)
+    material_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    plot_section = serializers.CharField(required=True)
+    bras_section = serializers.CharField(required=True)
+    mast_5g_section = serializers.CharField(required=True)
 
 class AntennaSerializer(serializers.Serializer):
     model = serializers.CharField()
-    height_mm = serializers.FloatField()
-    width_mm = serializers.FloatField()
-    thickness_mm = serializers.FloatField()
-    weight_dan = serializers.FloatField()
+    hauteur_mm = serializers.FloatField()
+    largeur_mm = serializers.FloatField()
+    epaisseur_mm = serializers.FloatField()
+    poids_kg = serializers.FloatField()
+    hauteur_mat_antenne_m = serializers.FloatField(required=False, allow_null=True)
 
 class FHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
-    weight_kg = serializers.FloatField(required=False, allow_null=True)
+    diameter_mm = serializers.FloatField(required=False, allow_null=True)
 
-class LRHEquipmentSerializer(serializers.Serializer):
+class RRHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
-class LRUEquipmentSerializer(serializers.Serializer):
+class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
@@ -99,6 +108,6 @@ class CalculationPayloadSerializer(serializers.Serializer):
     antenna_4g = AntennaSerializer()
     antenna_5g = AntennaSerializer()
     fh_equipment = FHEquipmentSerializer(required=False)
-    lrh_equipment = LRHEquipmentSerializer(required=False)
-    lru_equipment = LRUEquipmentSerializer(required=False)
+    rrh_equipment = RRHEquipmentSerializer(required=False)
+    rru_equipment = RRUEquipmentSerializer(required=False)
     catalogue_match = CatalogueMatchSerializer(required=False)

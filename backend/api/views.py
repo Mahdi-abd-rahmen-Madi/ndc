@@ -11,6 +11,10 @@ import json
 from .models import UserProfile, CalculationJob
 from .serializers import UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer
 from .aps_service import get_aps_token
+from django.core.files.storage import FileSystemStorage
+from django.conf import settings
+import os
+import uuid
 
 
 class UserProfileViewSet(viewsets.ModelViewSet):
@@ -73,6 +77,29 @@ class APSTokenView(APIView):
             return Response(token_info, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PhotoUploadView(APIView):
+    """
+    Endpoint for uploading a photo before starting a calculation.
+    Returns the temporary photo URL.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        photo = request.FILES.get('photo')
+        if not photo:
+            return Response({'error': 'No photo provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Ensure media/uploads directory exists
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        fs = FileSystemStorage(location=upload_dir, base_url=settings.MEDIA_URL + 'uploads/')
+        filename = fs.save(f"{uuid.uuid4()}_{photo.name}", photo)
+        photo_url = fs.url(filename)
+
+        return Response({'photo_url': photo_url}, status=status.HTTP_201_CREATED)
 
 
 class CalculationJobViewSet(viewsets.ModelViewSet):
@@ -162,3 +189,79 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def generate_pdf(self, request, pk=None):
+        """
+        Endpoint to generate the Note de Calcul PDF from a completed job.
+        Expects {"photo_url": "..."} in the request body.
+        """
+        job = self.get_object()
+        if job.status != 'COMPLETED':
+            return Response({'error': 'Job is not completed yet.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        photo_url = request.data.get('photo_url')
+        if not photo_url:
+            return Response({'error': 'photo_url is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from geodata.ndc_generator import generate_ndc_pdf
+        try:
+            pdf_url = generate_ndc_pdf(job, photo_url)
+            return Response({'ndc_pdf_url': pdf_url}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'])
+    def preview_template(self, request):
+        """
+        Endpoint to generate a preview of the Note de Calcul template with dummy variables.
+        """
+        from geodata.ndc_generator import generate_ndc_pdf
+        import os
+        from django.conf import settings
+        
+        # Use a dummy photo if available, or empty string
+        # Let's create a temporary dummy image or just pass an empty string
+        # but the docxtpl might fail if InlineImage path is invalid.
+        # we updated ndc_generator.py to handle invalid paths by inserting an empty string.
+        photo_url = ''
+        
+        try:
+            pdf_url = generate_ndc_pdf(None, photo_url)
+            return Response({'ndc_pdf_url': pdf_url}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class WorkerControlView(APIView):
+    """
+    Endpoint for Windows Server to ping heartbeat and push logs.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.core.cache import cache
+        import time
+        last_seen = cache.get('worker_last_seen')
+        logs = cache.get('worker_logs', [])
+        
+        is_active = False
+        if last_seen and (time.time() - last_seen) < 15:
+            is_active = True
+            
+        return Response({'is_active': is_active, 'logs': logs})
+
+    def post(self, request):
+        from django.core.cache import cache
+        import time
+        message = request.data.get('message')
+        if message:
+            logs = cache.get('worker_logs', [])
+            # Append new log with ISO timestamp
+            from datetime import datetime
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            logs.append({'time': timestamp, 'message': message})
+            # Keep only the last 50 logs
+            cache.set('worker_logs', logs[-50:], timeout=3600)
+            
+        cache.set('worker_last_seen', time.time(), timeout=3600)
+        return Response({'status': 'ok'})

@@ -18,3 +18,4 @@ mapbox-vector-tile==2.2.0
 geopandas==1.1.2
 psutil==7.2.2
 zstandard
+docxtpl==0.16.8

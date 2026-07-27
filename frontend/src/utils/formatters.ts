@@ -26,12 +26,14 @@ export function formatCoordinatesDMS(coords: Coordinates): string {
 }
 
 // Format percentage
-export function formatPercentage(value: number): string {
+export function formatPercentage(value: number | undefined | null): string {
+  if (value === undefined || value === null) return '0.0%';
   return `${value.toFixed(1)}%`;
 }
 
 // Format distance in kilometers
-export function formatDistanceKm(value: number): string {
+export function formatDistanceKm(value: number | undefined | null): string {
+  if (value === undefined || value === null) return '0.00 km';
   if (value < 1) {
     return `${(value * 1000).toFixed(0)} m`;
   }
@@ -39,7 +41,8 @@ export function formatDistanceKm(value: number): string {
 }
 
 // Format area in square kilometers
-export function formatAreaSqKm(value: number): string {
+export function formatAreaSqKm(value: number | undefined | null): string {
+  if (value === undefined || value === null) return '0.000 km²';
   if (value < 1) {
     return `${(value * 1000000).toFixed(0)} m²`;
   }
@@ -47,7 +50,15 @@ export function formatAreaSqKm(value: number): string {
 }
 
 // Format spatial extent for display
-export function formatSpatialExtent(extent: SpatialExtent): Record<string, string> {
+export function formatSpatialExtent(extent: SpatialExtent | undefined | null): Record<string, string> {
+  if (!extent) return {
+    agriculture: '0.0%',
+    complex_agriculture: '0.0%',
+    forest: '0.0%',
+    urban: '0.0%',
+    coastal: '0.0%',
+  };
+  
   return {
     agriculture: formatPercentage(extent.agriculture),
     complex_agriculture: formatPercentage(extent.complex_agriculture),
