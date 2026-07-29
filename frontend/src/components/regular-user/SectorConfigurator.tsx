@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { ArrowDownToLine } from 'lucide-react';
 import { SectorData, CatalogueConfig, AntennaConfigState } from './types';
 import MontageSelector from './MontageSelector';

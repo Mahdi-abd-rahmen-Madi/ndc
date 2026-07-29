@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import MontageSelectionModal from '../MontageSelectionModal';
 
@@ -78,7 +78,6 @@ interface Payload {
     terrain_type: string;
     building_height_m: number;
     dalle_thickness_m: number;
-    plot_height_m: number;
   };
   structure: {
     hauteur_mat_m: number;
@@ -86,7 +85,6 @@ interface Payload {
     is_custom_montage: boolean;
     mat_principal: string;
     plot_metallique: string;
-    bras_de_deport_input: number;
     mat_secondaire: string;
     outer_diameter_m: number;
     wall_thickness_m: number;
@@ -108,7 +106,6 @@ interface Payload {
     largeur_mm: number;
     epaisseur_mm: number;
     poids_kg: number;
-    hauteur_mat_antenne_m: number;
   };
   fh_equipment: { enabled: boolean; diameter_mm: number };
   rrh_equipment: { enabled: boolean; reference: string };
@@ -127,7 +124,7 @@ export default function NDCPortailTest() {
   const [status, setStatus] = useState<string | null>(null);
   const [resultData, setResultData] = useState<any>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [showVariables, setShowVariables] = useState<boolean>(false);
+    const [, setShowVariables] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'variables' | 'document'>('document');
 
   // Form states
@@ -137,8 +134,6 @@ export default function NDCPortailTest() {
   const [outerDiameter, setOuterDiameter] = useState<number>(0.139);
   const [wallThickness, setWallThickness] = useState<number>(0.004);
   const [materialName, setMaterialName] = useState<string>('S 235');
-  const [brasDeDeport, setBrasDeDeport] = useState<number>(0.3);
-  const [mat5gHeight, setMat5gHeight] = useState<number>(1.0);
 
   // Section states
   const [plotSection, setPlotSection] = useState<string>('TCAR 200x5');
@@ -176,8 +171,7 @@ export default function NDCPortailTest() {
         region: region,
         terrain_type: terrainType,
         building_height_m: 15.0,
-        dalle_thickness_m: 0.2,
-        plot_height_m: 1.5
+        dalle_thickness_m: 0.2
       },
       structure: {
         hauteur_mat_m: mastHeight,
@@ -185,7 +179,6 @@ export default function NDCPortailTest() {
         is_custom_montage: false,
         mat_principal: "Tube S235",
         plot_metallique: ancrage === 'metallique' ? "Standard" : "None",
-        bras_de_deport_input: brasDeDeport,
         mat_secondaire: "None",
         outer_diameter_m: outerDiameter,
         wall_thickness_m: wallThickness,
@@ -206,8 +199,7 @@ export default function NDCPortailTest() {
         hauteur_mm: 1500.0,
         largeur_mm: 300.0,
         epaisseur_mm: 120.0,
-        poids_kg: 35.0,
-        hauteur_mat_antenne_m: mat5gHeight
+        poids_kg: 35.0
       },
       fh_equipment: { enabled: false, diameter_mm: 0.0 },
       rrh_equipment: { enabled: false, reference: "None" },
@@ -285,11 +277,6 @@ export default function NDCPortailTest() {
     }
   };
 
-  const getBadgeClass = (avis: string) => {
-    return avis === 'Favorable' 
-      ? 'bg-green-100 text-green-800 border-green-200' 
-      : 'bg-red-100 text-red-800 border-red-200';
-  };
 
   const renderVariablesPreview = () => {
     const vars = resultData?.note_de_calcul_vars;
@@ -596,28 +583,7 @@ export default function NDCPortailTest() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Longueur Bras Déport (m)</label>
-              <input 
-                type="number" 
-                step="0.05"
-                value={brasDeDeport}
-                onChange={e => setBrasDeDeport(Number(e.target.value))}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Hauteur Mât 5G (m)</label>
-              <input 
-                type="number" 
-                step="0.1"
-                value={mat5gHeight}
-                onChange={e => setMat5gHeight(Number(e.target.value))}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
-              />
-            </div>
-          </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div>

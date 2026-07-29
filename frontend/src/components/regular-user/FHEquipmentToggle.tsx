@@ -442,51 +442,88 @@ export function CoffretEquipmentToggle({
   setCoffretQuantity,
   coffretOptions
 }: CoffretEquipmentToggleProps) {
+  
+  const httaOptions = coffretOptions.filter(opt => opt.name.includes('HTTA'));
+  const otherOptions = coffretOptions.filter(opt => !opt.name.includes('HTTA'));
+  const isHttaSelected = httaOptions.some(opt => opt.id === coffretReference) || coffretReference === 'HTTA';
+  const mainSelectValue = isHttaSelected ? 'HTTA' : coffretReference;
+
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-      <div className="flex items-center justify-between gap-4">
-        <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
-          <div className="relative flex items-center">
-            <input
-              type="checkbox"
-              checked={hasCoffret}
-              onChange={(e) => setHasCoffret(e.target.checked)}
-              className="sr-only"
-            />
-            <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasCoffret ? 'bg-fuchsia-500' : ''}`}></div>
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
-          </div>
-          <Activity className="w-4 h-4 text-fuchsia-400" />
-          Présence Coffrets fibre
-        </label>
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasCoffret}
+                onChange={(e) => setHasCoffret(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasCoffret ? 'bg-fuchsia-500' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Activity className="w-4 h-4 text-fuchsia-400" />
+            Présence Coffrets fibre
+          </label>
+        </div>
 
         {hasCoffret && (
-          <div className="flex items-center gap-4 animate-fadeIn flex-1 justify-end">
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400 shrink-0">Quantité:</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={coffretQuantity}
-                onChange={(e) => setCoffretQuantity(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-fuchsia-500 w-16"
-              />
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-800/80 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-slate-400 shrink-0 w-16 md:w-auto">Quantité:</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={coffretQuantity}
+                  onChange={(e) => setCoffretQuantity(Number(e.target.value))}
+                  className="bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-fuchsia-500 w-20"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 flex-1">
+                <label className="text-xs text-slate-400 shrink-0 w-16 md:w-auto">Type:</label>
+                <select
+                  value={mainSelectValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'HTTA' && httaOptions.length > 0) {
+                      setCoffretReference(httaOptions[0].id);
+                    } else {
+                      setCoffretReference(val);
+                    }
+                  }}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-fuchsia-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {otherOptions.map(ref => (
+                    <option key={ref.id} value={ref.id}>{ref.name}</option>
+                  ))}
+                  {httaOptions.length > 0 && (
+                    <option value="HTTA">Coffrets HTTA</option>
+                  )}
+                </select>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-1 max-w-[280px]">
-              <label className="text-xs text-slate-400 shrink-0">Référence:</label>
-              <select
-                value={coffretReference}
-                onChange={(e) => setCoffretReference(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-fuchsia-500"
-              >
-                <option value="">Sélectionner...</option>
-                {coffretOptions && coffretOptions.map(ref => (
-                  <option key={ref.id} value={ref.id}>{ref.name}</option>
-                ))}
-              </select>
-            </div>
+            {isHttaSelected && httaOptions.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 animate-fadeIn bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
+                <label className="text-xs font-medium text-slate-300 shrink-0 sm:w-24">Variante HTTA:</label>
+                <select
+                  value={coffretReference === 'HTTA' ? httaOptions[0].id : coffretReference}
+                  onChange={(e) => setCoffretReference(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-fuchsia-500"
+                >
+                  {httaOptions.map(ref => (
+                    <option key={ref.id} value={ref.id}>
+                      {ref.name.replace('Coffrets ', '')} ({ref.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         )}
       </div>

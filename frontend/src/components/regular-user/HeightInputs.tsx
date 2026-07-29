@@ -12,6 +12,8 @@ interface HeightInputsProps {
   setDalleThickness: (val: number) => void;
   plotHeight: number;
   setPlotHeight: (val: number) => void;
+  etancheite?: string;
+  setEtancheite?: (val: string) => void;
   similarityMode: SimilarityMode;
   setSimilarityMode: (mode: SimilarityMode) => void;
 }
@@ -27,6 +29,8 @@ export default function HeightInputs({
   setDalleThickness,
   plotHeight,
   setPlotHeight,
+  etancheite = "",
+  setEtancheite,
   similarityMode,
   setSimilarityMode
 }: HeightInputsProps) {
@@ -116,6 +120,22 @@ export default function HeightInputs({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Étancheité */}
+      <div className="p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl mt-4 relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
+        <div className="absolute right-0 top-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full -z-10 group-hover:bg-indigo-500/10 transition-colors"></div>
+        <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2">
+          <Layers className="w-3.5 h-3.5 text-indigo-400" />
+          Étancheité
+        </label>
+        <input
+          type="text"
+          value={etancheite}
+          onChange={(e) => setEtancheite?.(e.target.value)}
+          placeholder="Valeur (vide pour l'instant)"
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 transition-colors"
+        />
       </div>
 
       {/* Dalle & Plot (Visible except for Encastré) */}

@@ -864,8 +864,8 @@ export default function RegularUserView({
                             td: hasTdEquipment,
                             gps: hasGps,
                             boitier_lovage: hasBoitierLovage,
-                            coffrets_fibre: hasCoffretsFibre,
-                            coffrets_hybride: hasCoffretsHybride
+                            coffrets_fibre: hasCoffret,
+                            coffrets_hybride: false
                           }}
                           equipmentValues={{
                             fh: { diamètre: `${fhDiameter} mm`, référence: fhReference || 'N/A', quantité: fhQuantity },
@@ -876,8 +876,8 @@ export default function RegularUserView({
                                   : { type: 'TD Tétraphasé', référence: tdReference || 'N/A' },
                             gps: { référence: gpsReference || 'N/A', quantité: gpsQuantity },
                             boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
-                            coffrets_fibre: { référence: coffretsFibreReference || 'N/A', quantité: coffretsFibreQuantity },
-                            coffrets_hybride: { référence: coffretsHybrideReference || 'N/A', quantité: coffretsHybrideQuantity }
+                            coffrets_fibre: { référence: coffretReference || 'N/A', quantité: coffretQuantity },
+                            coffrets_hybride: { référence: 'N/A', quantité: 0 }
                           }}
                           ndcPdfUrl={ndcPdfUrl}
                         />
