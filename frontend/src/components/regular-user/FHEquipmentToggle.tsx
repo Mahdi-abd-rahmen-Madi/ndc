@@ -428,8 +428,6 @@ export interface CoffretEquipmentToggleProps {
   setHasCoffret: (val: boolean) => void;
   coffretReference: string;
   setCoffretReference: (val: string) => void;
-  coffretQuantity: number;
-  setCoffretQuantity: (val: number) => void;
   coffretOptions: { id: string; name: string }[];
 }
 
@@ -438,8 +436,6 @@ export function CoffretEquipmentToggle({
   setHasCoffret,
   coffretReference,
   setCoffretReference,
-  coffretQuantity,
-  setCoffretQuantity,
   coffretOptions
 }: CoffretEquipmentToggleProps) {
   
@@ -471,18 +467,6 @@ export function CoffretEquipmentToggle({
         {hasCoffret && (
           <div className="flex flex-col gap-4 pt-3 border-t border-slate-800/80 animate-fadeIn">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400 shrink-0 w-16 md:w-auto">Quantité:</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={coffretQuantity}
-                  onChange={(e) => setCoffretQuantity(Number(e.target.value))}
-                  className="bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-fuchsia-500 w-20"
-                />
-              </div>
-
               <div className="flex items-center gap-2 flex-1">
                 <label className="text-xs text-slate-400 shrink-0 w-16 md:w-auto">Type:</label>
                 <select

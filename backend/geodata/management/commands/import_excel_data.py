@@ -61,9 +61,9 @@ class Command(BaseCommand):
                     equipment_data = {
                         'name': str(row['Name']).strip(),
                         'sub_elements': str(row['Sous-éléments']) if pd.notna(row['Sous-éléments']) else '',
-                        'responsible_person': str(row['Personne']).strip() if pd.notna(row['Personne']) else '',
-                        'status': str(row['Statut']) if pd.notna(row['Statut']) else '',
-                        'region': int(row['REGION']) if pd.notna(row['REGION']) and str(row['REGION']).strip() else None,
+                        'responsible_person': str(row['Personne']).strip() if 'Personne' in row and pd.notna(row['Personne']) else '',
+                        'status': str(row['Statut']) if 'Statut' in row and pd.notna(row['Statut']) else '',
+                        'region': int(row['REGION']) if 'REGION' in row and pd.notna(row['REGION']) and str(row['REGION']).strip() else None,
                         'building_height': float(row['Hauteur BATIMENT (m)']) if pd.notna(row['Hauteur BATIMENT (m)']) else None,
                         'mast_height': float(row['Hauteur MAT (m)']) if pd.notna(row['Hauteur MAT (m)']) else None,
                         'reference_4g': str(row['Référence 4G']).strip() if 'Référence 4G' in row and pd.notna(row['Référence 4G']) else None,

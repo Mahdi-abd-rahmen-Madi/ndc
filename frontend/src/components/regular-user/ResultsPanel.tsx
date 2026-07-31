@@ -1,5 +1,5 @@
 import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, AlertCircle, RefreshCw, Radio, Layers } from 'lucide-react';
-import { LookupResult, DocumentInfo } from './types';
+import { LookupResult, DocumentInfo, SectorData } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -26,6 +26,7 @@ interface ResultsPanelProps {
   equipmentValues?: Record<string, any>;
   equipmentToggles?: Record<string, boolean>;
   ndcPdfUrl?: string | null;
+  sectors?: SectorData[];
 }
 
 export default function ResultsPanel({
@@ -48,7 +49,8 @@ export default function ResultsPanel({
   nombreSecteurs = 3,
   equipmentValues = {},
   equipmentToggles = {},
-  ndcPdfUrl = null
+  ndcPdfUrl = null,
+  sectors = []
 }: ResultsPanelProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -183,7 +185,7 @@ export default function ResultsPanel({
   }
 
   return (
-    <div className="h-full flex flex-col p-6 overflow-y-auto custom-scrollbar">
+    <div className="flex flex-col">
       {/* Header Results with Classification on Right */}
       <div className="flex items-start justify-between mb-8 pb-6 border-b border-slate-800">
         <div className="flex-1">
@@ -242,13 +244,122 @@ export default function ResultsPanel({
         </div>
       </div>
 
+      {/* Configuration Antennes par Secteur */}
+      {sectors && sectors.length > 0 && (
+        <div className="mb-8 animate-slide-in">
+          <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Radio className="w-4 h-4 text-indigo-400" />
+            Configuration Antennes par Secteur
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sectors.map((sector, idx) => (
+              <div key={sector.id} className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 border-l-indigo-500 hover:border-indigo-500/30 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                    Secteur {idx + 1}
+                  </h4>
+                  <span className="text-[10px] text-slate-400 px-2 py-0.5 bg-slate-900 rounded-full border border-slate-800">
+                    h mât: {sector.selectedHeight}m
+                  </span>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* 4G Antenna */}
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-semibold text-blue-400 mb-1">
+                      <span>Antenne 4G</span>
+                      <span className="text-[10px] text-slate-500 truncate max-w-[120px]">{sector.ant4gConfig.model || 'Standard'}</span>
+                    </div>
+                    <div className="bg-slate-950/40 rounded p-2 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Dimensions:</span>
+                        <span className="text-slate-300 font-medium">{sector.ant4gConfig.height}×{sector.ant4gConfig.width}×{sector.ant4gConfig.thickness} mm</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Poids:</span>
+                        <span className="text-slate-300 font-medium">{sector.ant4gConfig.weight} daN</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5G Antenna */}
+                  <div>
+                    <div className="flex items-center justify-between text-xs font-semibold text-purple-400 mb-1">
+                      <span>Antenne 5G</span>
+                      <span className="text-[10px] text-slate-500 truncate max-w-[120px]">{sector.ant5gConfig.model || 'Standard'}</span>
+                    </div>
+                    <div className="bg-slate-950/40 rounded p-2 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Dimensions:</span>
+                        <span className="text-slate-300 font-medium">{sector.ant5gConfig.height}×{sector.ant5gConfig.width}×{sector.ant5gConfig.thickness} mm</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Poids:</span>
+                        <span className="text-slate-300 font-medium">{sector.ant5gConfig.weight} daN</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Equipment Configuration */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Radio className="w-4 h-4" />
+          <Radio className="w-4 h-4 text-indigo-400" />
           Configuration Équipements
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Section Mat in Configuration Équipements */}
+          {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+            <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 border-l-indigo-500 hover:border-indigo-500/30 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
+              <div className="flex items-center gap-2 mb-3.5">
+                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <h4 className="text-sm font-bold text-white">Sections d'Équipement</h4>
+              </div>
+              <div className="space-y-2.5 text-xs">
+                {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
+                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                    <span className="text-slate-400 font-medium">Mât Principal:</span>
+                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
+                      {firstEquipmentDetails?.matPrincipal || matPrincipal}
+                    </span>
+                  </div>
+                )}
+                {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
+                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                    <span className="text-slate-400 font-medium">Plot Métallique:</span>
+                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
+                      {firstEquipmentDetails?.plotMetallique || plotMetallique}
+                    </span>
+                  </div>
+                )}
+                {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
+                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                    <span className="text-slate-400 font-medium">Bras de déport:</span>
+                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
+                      {firstEquipmentDetails?.brasDeDeport || brasDeDeport}
+                    </span>
+                  </div>
+                )}
+                {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                    <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
+                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
+                      {firstEquipmentDetails?.matSecondaire || matSecondaire}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {enabledConfigs.map((config: EquipmentConfig) => {
             const IconComponent = config.icon === 'Radio' ? Radio : Activity;
             const colorClass = config.color === 'blue' ? 'blue' :
@@ -256,19 +367,29 @@ export default function ResultsPanel({
                               config.color === 'amber' ? 'amber' :
                               config.color === 'rose' ? 'rose' : 'emerald';
             
+            // Premium color accent borders
+            const accentBorderClasses: Record<string, string> = {
+              blue: 'border-l-blue-500 hover:border-blue-500/30',
+              purple: 'border-l-purple-500 hover:border-purple-500/30',
+              amber: 'border-l-amber-500 hover:border-amber-500/30',
+              rose: 'border-l-rose-500 hover:border-rose-500/30',
+              emerald: 'border-l-emerald-500 hover:border-emerald-500/30',
+            };
+            const accentBorder = accentBorderClasses[colorClass] || 'border-l-indigo-500 hover:border-indigo-500/30';
+
             return (
-              <div key={config.id} className={`bg-slate-800/50 rounded-xl p-4 border border-slate-700/50`}>
-                <div className="flex items-center gap-2 mb-3">
+              <div key={config.id} className={`bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 ${accentBorder} hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300`}>
+                <div className="flex items-center gap-2 mb-3.5">
                   <div className={`p-2 bg-${colorClass}-500/10 rounded-lg text-${colorClass}-400`}>
                     <IconComponent className="w-4 h-4" />
                   </div>
                   <h4 className="text-sm font-bold text-white">{config.name}</h4>
                 </div>
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2.5 text-xs">
                   {config.fields.map((field, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span className="text-slate-400">{field.label}:</span>
-                      <span className="text-white font-medium">
+                    <div key={idx} className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                      <span className="text-slate-400 font-medium">{field.label}</span>
+                      <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30">
                         {equipmentValues[config.id]?.[field.label.toLowerCase()] || 
                          equipmentValues[config.id]?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] || 
                          field.value}
@@ -280,43 +401,6 @@ export default function ResultsPanel({
             );
           })}
 
-          {/* Section Mat in Configuration Équipements */}
-          {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <h4 className="text-sm font-bold text-white">Sections d'Équipement</h4>
-              </div>
-              <div className="space-y-2 text-sm">
-                {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-400">Section Mat Terrain 0:</span>
-                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.matPrincipal || matPrincipal}</span>
-                  </div>
-                )}
-                {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-400">Section Plot Métallique:</span>
-                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.plotMetallique || plotMetallique}</span>
-                  </div>
-                )}
-                {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-400">Section Bras de déport:</span>
-                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.brasDeDeport || brasDeDeport}</span>
-                  </div>
-                )}
-                {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-400">Section Mat antenne 5G:</span>
-                    <span className="text-white font-medium text-right">{firstEquipmentDetails?.matSecondaire || matSecondaire}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -574,12 +658,12 @@ export default function ResultsPanel({
                 />
               </div>
               <div className="flex flex-col space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât secondaire</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât 5G</label>
                 <input
                   type="text"
                   value={matSecondaire}
                   onChange={(e) => setMatSecondaire(e.target.value)}
-                  placeholder="Ex: Mât auxiliaire..."
+                  placeholder="Ex: Mât 5G..."
                   className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>

@@ -120,7 +120,6 @@ export default function RegularUserView({
   const [boitierLovageQuantity, setBoitierLovageQuantity] = useState<number>(1);
   const [boitierLovageReference, setBoitierLovageReference] = useState<string>('');
   const [hasCoffret, setHasCoffret] = useState<boolean>(false);
-  const [coffretQuantity, setCoffretQuantity] = useState<number>(1);
   const [coffretReference, setCoffretReference] = useState<string>('');
 
   // Status State
@@ -455,7 +454,7 @@ export default function RegularUserView({
         },
         gps: { enabled: hasGps, quantity: hasGps ? gpsQuantity : null, reference: hasGps ? gpsReference : null },
         boitier_lovage: { enabled: hasBoitierLovage, quantity: hasBoitierLovage ? boitierLovageQuantity : null, reference: hasBoitierLovage ? boitierLovageReference : null },
-        coffrets_fibre: { enabled: hasCoffret, quantity: hasCoffret ? coffretQuantity : null, reference: hasCoffret ? coffretReference : null },
+        coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
         coffrets_hybride: { enabled: false, quantity: null, reference: null }
       };
 
@@ -564,7 +563,7 @@ export default function RegularUserView({
       tgbtReference,
       hasGps, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
-      hasCoffret, coffretQuantity, coffretReference,
+      hasCoffret, coffretReference,
       coffretOptions: config?.coffret_references || [],
       miniMapImage,
       nombreSecteurs: groupIndices.length
@@ -732,8 +731,6 @@ export default function RegularUserView({
               <CoffretEquipmentToggle
                 hasCoffret={hasCoffret}
                 setHasCoffret={setHasCoffret}
-                coffretQuantity={coffretQuantity}
-                setCoffretQuantity={setCoffretQuantity}
                 coffretReference={coffretReference}
                 setCoffretReference={setCoffretReference}
                 coffretOptions={config?.coffret_references || []}
@@ -770,7 +767,7 @@ export default function RegularUserView({
           )}
 
           {!showMap && (
-            <div className="absolute inset-0 bg-slate-950 overflow-hidden z-0">
+            <div className="absolute inset-0 bg-slate-950 overflow-hidden z-0 flex flex-col">
               <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-indigo-900/20 to-transparent pointer-events-none"></div>
 
               {!selectedCoords && (
@@ -876,7 +873,7 @@ export default function RegularUserView({
                                   : { type: 'TD Tétraphasé', référence: tdReference || 'N/A' },
                             gps: { référence: gpsReference || 'N/A', quantité: gpsQuantity },
                             boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
-                            coffrets_fibre: { référence: coffretReference || 'N/A', quantité: coffretQuantity },
+                            coffrets_fibre: { référence: coffretReference || 'N/A' },
                             coffrets_hybride: { référence: 'N/A', quantité: 0 }
                           }}
                           ndcPdfUrl={ndcPdfUrl}

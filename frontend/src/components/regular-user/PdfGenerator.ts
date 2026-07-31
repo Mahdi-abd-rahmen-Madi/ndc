@@ -5,20 +5,20 @@ import { LookupResult, TerrainDetails } from './types';
 export const getTerrainDetails = (eq: any, detectedTerrain?: string): TerrainDetails => {
   const rawTerrainType = detectedTerrain || eq.terrain || 'IIIa';
   const terrainTypeKey = `Terrain ${rawTerrainType}`;
-  
+
   const terrainCalc = eq.terrain_calculations?.find(
     (tc: any) => tc.terrain_type === rawTerrainType || tc.terrain_type === terrainTypeKey
   );
-  
+
   let materialDisplay = terrainCalc?.material_specification || eq.sub_elements || 'Montage Standard';
-  
+
   if (terrainCalc) {
     const parts = [];
     if (terrainCalc.material_specification) parts.push(`Mat Principal: ${terrainCalc.material_specification}`);
     if (terrainCalc.plot_metallique) parts.push(`Plot Métallique: ${terrainCalc.plot_metallique}`);
     if (terrainCalc.bras_de_deport) parts.push(`Bras de déport: ${terrainCalc.bras_de_deport}`);
-    if (terrainCalc.mat_secondaire) parts.push(`Mat Secondaire: ${terrainCalc.mat_secondaire}`);
-    
+    if (terrainCalc.mat_secondaire) parts.push(`Mat 5G: ${terrainCalc.mat_secondaire}`);
+
     if (parts.length > 0) {
       materialDisplay = parts.join('\n');
     }
@@ -87,7 +87,6 @@ interface PdfGeneratorOptions {
   boitierLovageQuantity: number;
   boitierLovageReference: string;
   hasCoffret: boolean;
-  coffretQuantity: number;
   coffretReference: string;
   coffretOptions: { id: string; name: string }[];
   miniMapImage: string | null;
@@ -96,7 +95,7 @@ interface PdfGeneratorOptions {
 
 export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGenerating: (val: boolean) => void) => {
   setPdfGenerating(true);
-  
+
   try {
     const {
       siteType,
@@ -134,7 +133,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       tgbtReference,
       hasGps, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
-      hasCoffret, coffretQuantity, coffretReference, coffretOptions,
+      hasCoffret, coffretReference, coffretOptions,
       miniMapImage,
       nombreSecteurs
     } = options;
@@ -267,7 +266,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     // Additional Equipment (FH, RRH, RRU)
     if (hasFhEquipment || hasRrhEquipment || hasRruEquipment) {
       doc.setFillColor(255, 245, 245);
-      
+
       let count = 0;
       if (hasFhEquipment) count++;
       if (hasRrhEquipment) count++;
@@ -276,14 +275,14 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (hasGps) count++;
       if (hasBoitierLovage) count++;
       if (hasCoffret) count++;
-      
+
       const boxHeight = 10 + count * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text(`Équipements Additionnels :`, 25, yPos + 8);
-      
+
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
       if (hasFhEquipment) {
@@ -299,7 +298,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         lineY += 8;
       }
       if (hasTdEquipment) {
-        const tdStr = tdType === 'monophase' 
+        const tdStr = tdType === 'monophase'
           ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - Réf TGBT ${tgbtReference || 'N/A'}`
           : `• TD Tétraphasé : Référence ${tdReference || 'N/A'}`;
         doc.text(tdStr, 28, lineY);
@@ -316,7 +315,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (hasCoffret) {
         const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
         const refName = refObj ? refObj.name : (coffretReference || 'Standard');
-        doc.text(`• Coffrets fibre / hybride : ${refName} - Qté: ${coffretQuantity}`, 28, lineY);
+        doc.text(`• Coffrets fibre / hybride : ${refName}`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 10;
@@ -333,16 +332,16 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     const eq = lookupResult.equipment[0];
     if (eq) {
       const { material } = getTerrainDetails(eq, lookupResult.detected_terrain_type);
-      
+
       doc.setFillColor(240, 253, 244); // bg-emerald-50
       doc.setDrawColor(52, 211, 153); // border-emerald-400
       doc.rect(20, yPos, 170, 30, 'FD');
-      
+
       doc.setTextColor(5, 150, 105); // text-emerald-600
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('SECTION DE MÂT VALIDÉE', 25, yPos + 10);
-      
+
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(11);
       doc.text(material, 25, yPos + 20);
@@ -363,7 +362,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
 
     // Footer
     const pageCount = doc.getNumberOfPages();
-    for(let i = 1; i <= pageCount; i++) {
+    for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);

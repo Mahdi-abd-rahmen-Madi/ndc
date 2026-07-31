@@ -56,7 +56,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
       { label: 'Modèle', value: 'RRU-001' },
       { label: 'Dimensions', value: '500×300×200 mm' },
       { label: 'Poids', value: '15 kg' },
-      { label: 'Puissance', value: '100 W' },
     ],
   },
   {
@@ -69,7 +68,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
       { label: 'Modèle', value: 'RRH-001' },
       { label: 'Dimensions', value: '600×400×250 mm' },
       { label: 'Poids', value: '20 kg' },
-      { label: 'Puissance', value: '150 W' },
     ],
   },
   {
@@ -114,7 +112,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'pink',
     fields: [
       { label: 'Référence', value: 'N/A' },
-      { label: 'Quantité', value: 1 },
     ],
   },
   {
