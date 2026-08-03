@@ -42,7 +42,7 @@ export default function HeightInputs({
         {/* Hauteur Bâtiment */}
         <div className="md:col-span-4 flex flex-col space-y-2 p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
           <div className="absolute right-0 top-0 w-24 h-24 bg-indigo-500/5 rounded-bl-full -z-10 group-hover:bg-indigo-500/10 transition-colors"></div>
-          
+
           <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <ArrowUpToLine className="w-3.5 h-3.5 text-indigo-400" />
@@ -77,8 +77,8 @@ export default function HeightInputs({
                 type="button"
                 onClick={() => setNombreSecteurs(num)}
                 className={`flex-1 py-2 rounded text-xs font-semibold transition-all border ${nombreSecteurs === num
-                    ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 shadow-md'
-                    : 'bg-slate-800 border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'
+                  ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 shadow-md'
+                  : 'bg-slate-800 border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'
                   }`}
               >
                 {num} {num === 1 ? 'Secteur' : 'Secteurs'}
@@ -100,7 +100,7 @@ export default function HeightInputs({
                   className={`flex-1 py-1.5 px-2 rounded text-xs font-semibold transition-all border text-center ${similarityMode === 'all_similar'
                     ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30 shadow-md'
                     : 'bg-slate-800 border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Tous identiques
                 </button>
@@ -112,7 +112,7 @@ export default function HeightInputs({
                   className={`flex-1 py-1.5 px-2 rounded text-xs font-semibold transition-all border text-center ${similarityMode === 'all_different'
                     ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30 shadow-md'
                     : 'bg-slate-800 border-transparent text-slate-400 hover:bg-slate-700 hover:text-white'
-                  }`}
+                    }`}
                 >
                   Tous différents
                 </button>
@@ -129,13 +129,18 @@ export default function HeightInputs({
           <Layers className="w-3.5 h-3.5 text-indigo-400" />
           Étancheité
         </label>
-        <input
-          type="text"
-          value={etancheite}
-          onChange={(e) => setEtancheite?.(e.target.value)}
-          placeholder="Valeur (vide pour l'instant)"
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 transition-colors"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            step="0.1"
+            value={etancheite}
+            onChange={(e) => setEtancheite?.(e.target.value)}
+            placeholder="0.5"
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 transition-colors"
+          />
+          <span className="text-slate-400 text-sm">m</span>
+        </div>
       </div>
 
       {/* Dalle & Plot (Visible except for Encastré) */}

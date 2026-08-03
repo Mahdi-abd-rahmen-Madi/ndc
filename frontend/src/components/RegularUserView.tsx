@@ -466,7 +466,7 @@ export default function RegularUserView({
       if (res.ok) {
         const calcData = await res.json();
         const jobId = calcData.data.id;
-        
+
         // 3. Poll for calculation completion
         let isCompleted = calcData.data.status === 'COMPLETED';
         let jobResult = calcData.data;
@@ -722,7 +722,7 @@ export default function RegularUserView({
                 colorClass="blue"
               />
               <GenericEquipmentToggle
-                title="Présence Boitier de lovage"
+                title="Présence Boitiers de lovage"
                 enabled={hasBoitierLovage} setEnabled={setHasBoitierLovage}
                 quantity={boitierLovageQuantity} setQuantity={setBoitierLovageQuantity}
                 reference={boitierLovageReference} setReference={setBoitierLovageReference}
@@ -868,9 +868,9 @@ export default function RegularUserView({
                             fh: { diamètre: `${fhDiameter} mm`, référence: fhReference || 'N/A', quantité: fhQuantity },
                             rrh: { modèle: rrhReference || 'RRH-001', quantité: rrhQuantity },
                             rru: { modèle: rruReference || 'RRU-001', quantité: rruQuantity },
-                            td: tdType === 'monophase' 
-                                  ? { type: 'TD Monophasé', référence: tdReference || 'N/A', tgbt: tgbtReference || 'N/A' }
-                                  : { type: 'TD Tétraphasé', référence: tdReference || 'N/A' },
+                            td: tdType === 'monophase'
+                              ? { type: 'TD Monophasé', référence: tdReference || 'N/A', tgbt: tgbtReference || 'N/A' }
+                              : { type: 'TD Tétraphasé', référence: tdReference || 'N/A' },
                             gps: { référence: gpsReference || 'N/A', quantité: gpsQuantity },
                             boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
                             coffrets_fibre: { référence: coffretReference || 'N/A' },

@@ -483,7 +483,7 @@ export function CoffretEquipmentToggle({
                 >
                   <option value="">Sélectionner...</option>
                   {otherOptions.map(ref => (
-                    <option key={ref.id} value={ref.id}>{ref.name}</option>
+                    <option key={ref.id} value={ref.id}>{ref.id}</option>
                   ))}
                   {httaOptions.length > 0 && (
                     <option value="HTTA">Coffrets HTTA</option>
@@ -493,8 +493,8 @@ export function CoffretEquipmentToggle({
             </div>
 
             {isHttaSelected && httaOptions.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 animate-fadeIn bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
-                <label className="text-xs font-medium text-slate-300 shrink-0 sm:w-24">Variante HTTA:</label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 animate-fadeIn bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 mt-4">
+                <label className="text-xs font-medium text-slate-300 shrink-0 sm:w-24">Référence HTTA:</label>
                 <select
                   value={coffretReference === 'HTTA' ? httaOptions[0].id : coffretReference}
                   onChange={(e) => setCoffretReference(e.target.value)}
@@ -502,12 +502,76 @@ export function CoffretEquipmentToggle({
                 >
                   {httaOptions.map(ref => (
                     <option key={ref.id} value={ref.id}>
-                      {ref.name.replace('Coffrets ', '')} ({ref.id})
+                      {ref.id}
                     </option>
                   ))}
                 </select>
               </div>
             )}
+
+            {(() => {
+              const actualRef = isHttaSelected && coffretReference === 'HTTA' && httaOptions.length > 0 ? httaOptions[0].id : coffretReference;
+              const selectedRef = coffretOptions.find(r => r.id === actualRef);
+              if (!selectedRef) return null;
+              
+              let h = '', w = '', t = '', weight = '';
+              const match = selectedRef.name.match(/\(([^,]+),\s*([\d.]+)kg\)/i);
+              if (match) {
+                const dims = match[1].replace(/mm/i, '').trim();
+                const parts = dims.split(/x/i);
+                if (parts.length === 3) {
+                  h = parts[0].trim();
+                  w = parts[1].trim();
+                  t = parts[2].trim();
+                }
+                weight = match[2].trim();
+              }
+
+              return (
+                <div className="space-y-2 mt-4 animate-fadeIn bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
+                      <input
+                        type="text"
+                        value={h}
+                        disabled
+                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
+                      <input
+                        type="text"
+                        value={w}
+                        disabled
+                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
+                      <input
+                        type="text"
+                        value={t}
+                        disabled
+                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
+                      <input
+                        type="text"
+                        value={weight}
+                        disabled
+                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

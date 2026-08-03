@@ -38,7 +38,11 @@ export default function MontageSelector({
   setSelectedReference5G
 }: MontageSelectorProps) {
   const montages = config?.standard_montages || [];
-  const realWorldReferences = config?.real_world_references || [];
+  const realWorldReferences = (config?.real_world_references || []).filter(r => 
+    !r.ant4g.model.toLowerCase().includes('agile') &&
+    !r.ant5g.model.toLowerCase().includes('agile') &&
+    !r.name.toLowerCase().includes('agile')
+  );
 
   const unique4GRefs = Array.from(new Map(realWorldReferences.map(r => [r.ant4g.model, r])).values());
   const unique5GRefs = Array.from(new Map(realWorldReferences.map(r => [r.ant5g.model, r])).values());
@@ -167,16 +171,7 @@ export default function MontageSelector({
             </div>
 
             <div className="space-y-2">
-              <div className="mb-2">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Modèle</label>
-                <input
-                  type="text"
-                  value={ant4gConfig.model || ''}
-                  onChange={(e) => setAnt4gConfig(prev => ({ ...prev, model: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                  disabled={configMode === 'reference'}
-                />
-              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
@@ -262,16 +257,7 @@ export default function MontageSelector({
             </div>
 
             <div className="space-y-2">
-              <div className="mb-2">
-                <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Modèle</label>
-                <input
-                  type="text"
-                  value={ant5gConfig.model || ''}
-                  onChange={(e) => setAnt5gConfig(prev => ({ ...prev, model: e.target.value }))}
-                  className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                  disabled={configMode === 'reference'}
-                />
-              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>

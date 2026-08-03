@@ -658,7 +658,7 @@ export default function CatalogueManagement() {
                           className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Mat 5G (5G)</label>
+                        <label className="block text-[11px] font-semibold text-gray-500 mb-0.5">Mat 5G </label>
                         <input value={form.terrain_calculations?.find(c => c.terrain_type === tt)?.mat_secondaire ?? ''}
                           onChange={e => updateCalc(tt, 'mat_secondaire', e.target.value)}
                           className="w-full border border-gray-300 rounded-lg px-2.5 py-1 text-sm focus:ring-1 focus:ring-primary outline-none" />
