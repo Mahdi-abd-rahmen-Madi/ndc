@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  db:
+    # Using Postgres 18 with PostGIS
+    image: postgis/postgis:18-3.5
+    container_name: ndc_postgis
+    environment:
+      POSTGRES_USER: ndc_user
+      POSTGRES_PASSWORD: ndc_password
+      POSTGRES_DB: ndc_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

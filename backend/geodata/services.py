@@ -16,6 +16,8 @@ from .models import AntennaEquipment
 from .terrain_config_service import terrain_config_service
 from .vector_tile_parser import create_vector_tile_parser
 
+import threading
+
 logger = logging.getLogger(__name__)
 
 # Module-level cache for singleton service instance
@@ -34,6 +36,7 @@ class TerrainClassificationService:
         self.coastline_data = None
         self.coastline_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline.geojson')
         self.cache_timeout = 3600  # 1 hour cache
+        self._thread_local = threading.local()
         self._performance_metrics = {
             'cache_hits': 0,
             'cache_misses': 0,
@@ -59,7 +62,7 @@ class TerrainClassificationService:
         return _terrain_service_instance
         
     def _get_local_land_use_data(self, longitude: float, latitude: float, radius_km: float = 6.0) -> gpd.GeoDataFrame:
-        """Load land use data from FlatGeobuf file within a specific bounding box for optimized spatial querying."""
+        """Load land use data from PostGIS within a specific bounding box for optimized spatial querying."""
         try:
             # Convert radius to degrees (approximate)
             lat_rad = math.radians(latitude)
@@ -70,15 +73,24 @@ class TerrainClassificationService:
             radius_deg_lon = radius_km / km_per_deg_lon
             
             # Create bounding box: (minx, miny, maxx, maxy)
-            bbox = (
-                longitude - radius_deg_lon,
-                latitude - radius_deg_lat,
-                longitude + radius_deg_lon,
-                latitude + radius_deg_lat
-            )
+            minx = longitude - radius_deg_lon
+            miny = latitude - radius_deg_lat
+            maxx = longitude + radius_deg_lon
+            maxy = latitude + radius_deg_lat
             
-            logger.debug(f"Querying local land use data within bbox: {bbox}")
-            gdf = gpd.read_file(self.land_use_file, bbox=bbox)
+            logger.debug(f"Querying local land use data within bbox: {(minx, miny, maxx, maxy)}")
+            
+            from sqlalchemy import create_engine
+            db_settings = settings.DATABASES['default']
+            conn_str = f"postgresql://{db_settings['USER']}:{db_settings['PASSWORD']}@{db_settings.get('HOST', 'localhost')}:{db_settings.get('PORT', '5432')}/{db_settings['NAME']}"
+            engine = create_engine(conn_str)
+            
+            # Create PostGIS intersection query
+            sql = f"""
+                SELECT * FROM land_use_data 
+                WHERE geometry && ST_MakeEnvelope({minx}, {miny}, {maxx}, {maxy}, 4326)
+            """
+            gdf = gpd.read_postgis(sql, engine, geom_col='geometry')
             
             # Create spatial index for the local subset
             if not gdf.empty:
@@ -219,18 +231,10 @@ class TerrainClassificationService:
         """
         start_time = time.time()
         
-        # Create hierarchical cache key
-        cache_key = f"terrain_{longitude:.6f}_{latitude:.6f}"
-        confidence_cache_key = f"confidence_{longitude:.6f}_{latitude:.6f}"
-        spatial_cache_key = f"spatial_{longitude:.6f}_{latitude:.6f}"
+        # Clear thread-local memo for this request
+        self._thread_local.memo = {}
         
-        # Try to get from cache first
-        cached_result = cache.get(cache_key)
-        if cached_result is not None:
-            self._performance_metrics['cache_hits'] += 1
-            self._performance_metrics['classification_time'].append(time.time() - start_time)
-            return cached_result
-        
+        # We've removed coordinate caching to ensure dynamic evaluation
         self._performance_metrics['cache_misses'] += 1
         
         try:
@@ -253,18 +257,6 @@ class TerrainClassificationService:
                     terrain_type, longitude, latitude, gdf
                 )
                 
-                # Cache the result with hierarchical timeout
-                cache_timeout = self._get_adaptive_cache_timeout(terrain_type)
-                cache.set(cache_key, terrain_type, cache_timeout)
-                
-                # Cache confidence score separately
-                cache.set(confidence_cache_key, confidence_score, cache_timeout)
-                
-                # Cache spatial extent data for reuse
-                if spatial_cache_key not in cache:
-                    spatial_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf)
-                    cache.set(spatial_cache_key, spatial_data, 7200)
-                
                 self._performance_metrics['classification_time'].append(time.time() - start_time)
                 
                 logger.debug(f"Coordinates ({longitude}, {latitude}) -> CLC: {clc_code} -> Terrain: {terrain_type} (Confidence: {confidence_score:.2f})")
@@ -273,16 +265,11 @@ class TerrainClassificationService:
                 # If there's no intersecting CLC polygon, check if it's within 1km of the physical coastline
                 # (e.g. on water or in unmapped coastal margins). If it is, classify as Terrain '0'
                 if self._is_near_physical_coastline(longitude, latitude, threshold_km=1.0):
-                    cache_timeout = self._get_adaptive_cache_timeout('0')
-                    cache.set(cache_key, '0', cache_timeout)
-                    cache.set(confidence_cache_key, 0.95, cache_timeout)
                     self._performance_metrics['classification_time'].append(time.time() - start_time)
                     logger.debug(f"Coordinates ({longitude}, {latitude}) -> Outside landmass but near physical coastline -> Terrain: 0")
                     return '0'
 
                 logger.warning(f"No land use data found at coordinates ({longitude}, {latitude})")
-                cache.set(cache_key, None, self.cache_timeout)
-                cache.set(confidence_cache_key, 0.0, self.cache_timeout)
                 self._performance_metrics['classification_time'].append(time.time() - start_time)
                 return None
                 
@@ -317,6 +304,7 @@ class TerrainClassificationService:
             Dictionary with detailed classification information
         """
         try:
+            self._thread_local.memo = {}
             # Load local land use data
             gdf = self._get_local_land_use_data(longitude, latitude)
             
@@ -870,15 +858,22 @@ class TerrainClassificationService:
             logger.debug(f"Error calculating score for rule {rule_name}: {e}")
             return 0.0
     
-    def _multi_scale_analysis(self, longitude: float, latitude: float, gdf, scales: List[float] = None) -> Dict[float, dict]:
+    def _multi_scale_analysis(self, longitude: float, latitude: float, gdf, scales: List[float] = None, memo: dict = None) -> Dict[float, dict]:
         """Perform multi-scale spatial analysis at different radii."""
         if scales is None:
             scales = [0.5, 1.0, 2.0, 5.0]  # 500m, 1km, 2km, 5km
         
+        if not hasattr(self._thread_local, 'memo'):
+            self._thread_local.memo = {}
+            
         results = {}
         for scale in scales:
-            extent_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, scale)
-            results[scale] = extent_data
+            if scale in self._thread_local.memo:
+                results[scale] = self._thread_local.memo[scale]
+            else:
+                extent_data = self._calculate_spatial_extent_percentages(longitude, latitude, gdf, scale)
+                self._thread_local.memo[scale] = extent_data
+                results[scale] = extent_data
         
         return results
     
