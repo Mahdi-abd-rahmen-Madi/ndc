@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
@@ -64,6 +66,40 @@ class HomeView(APIView):
             }
         })
 
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        user_obj = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
+        user = None
+        if user_obj:
+            user = authenticate(username=user_obj.username, password=password)
+            
+        if user:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({'token': token.key, 'email': user.username, 'is_admin': user.is_staff})
+        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response({'error': 'Email and password required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if User.objects.filter(username=email).exists():
+            return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        user = User.objects.create_user(username=email, email=email, password=password)
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({'token': token.key, 'email': user.username, 'is_admin': user.is_staff}, status=status.HTTP_201_CREATED)
+
 
 class APSTokenView(APIView):
     """
@@ -111,9 +147,10 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.AllowAny] # Adjust as per your auth requirements
 
     def get_queryset(self):
-        # Users can only see their own jobs unless admin/windows server
-        # For simplicity now, let's allow all or filter by user if authenticated
-        return CalculationJob.objects.all()
+        # Return only the current user's jobs if authenticated
+        if self.request.user.is_authenticated:
+            return CalculationJob.objects.filter(user=self.request.user)
+        return CalculationJob.objects.none()
 
     def create(self, request, *args, **kwargs):
         payload_serializer = CalculationPayloadSerializer(data=request.data)
@@ -144,6 +181,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # Create a new job
         # Set user if authenticated
         user = request.user if request.user.is_authenticated else None
+        
+        # Attach site_image_url if provided
+        site_image_url = input_data.get('site_image_url', '')
         
         job = CalculationJob.objects.create(
             user=user,
@@ -201,6 +241,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Job is not completed yet.'}, status=status.HTTP_400_BAD_REQUEST)
 
         photo_url = request.data.get('photo_url')
+        if not photo_url and job.input_data and job.input_data.get('site_image_url'):
+            photo_url = job.input_data.get('site_image_url')
+            
         if not photo_url:
             return Response({'error': 'photo_url is required.'}, status=status.HTTP_400_BAD_REQUEST)
 

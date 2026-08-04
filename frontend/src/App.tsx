@@ -19,20 +19,53 @@ import { useGeocoding } from './hooks/useGeocoding';
 import type { GeocodingAddress } from './utils/types';
 import RegularUserView from './components/RegularUserView';
 import LandingPage from './components/LandingPage';
+import LoginView from './components/LoginView';
 
 export default function App() {
+  // Auth State
+  const [token, setToken] = useState<string | null>(localStorage.getItem('ndc_auth_token'));
+  const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('ndc_user_email'));
+  const [isAdmin, setIsAdmin] = useState<boolean>(localStorage.getItem('ndc_is_admin') === 'true');
+
+  const handleLoginSuccess = (newToken: string, email: string, adminStatus: boolean) => {
+    localStorage.setItem('ndc_auth_token', newToken);
+    localStorage.setItem('ndc_user_email', email);
+    localStorage.setItem('ndc_is_admin', adminStatus ? 'true' : 'false');
+    setToken(newToken);
+    setUserEmail(email);
+    setIsAdmin(adminStatus);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('ndc_auth_token');
+    localStorage.removeItem('ndc_user_email');
+    localStorage.removeItem('ndc_is_admin');
+    setToken(null);
+    setUserEmail(null);
+    setIsAdmin(false);
+  };
+
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/portal" element={<MainApp key="public" initialMode="public" />} />
-      <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" />} />
+      <Route path="/" element={<LandingPage token={token} userEmail={userEmail} isAdmin={isAdmin} onLogout={handleLogout} />} />
+      <Route path="/portal" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
+      <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
       <Route path="/ndc-portail-test" element={<NDCPortailTest />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
+interface MainAppProps {
+  initialMode: 'engineer' | 'public';
+  token: string | null;
+  userEmail: string | null;
+  isAdmin: boolean;
+  onLoginSuccess: (token: string, email: string, isAdmin: boolean) => void;
+  onLogout: () => void;
+}
+
+function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLogout }: MainAppProps) {
   const [userMode] = useState<'engineer' | 'public'>(initialMode);
   const [engineerSubTab, setEngineerSubTab] = useState<'map' | 'catalogue'>('map');
   const [activeTab, setActiveTab] = useState('details');
@@ -48,6 +81,11 @@ function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
   const [selectedCivilMontage, setSelectedCivilMontage] = useState<string | null>(null);
   const [selectedSiteType, setSelectedSiteType] = useState<'nouveau' | 'existant' | null>(null);
   const [selectedFoundationType, setSelectedFoundationType] = useState<'metallique' | 'beton' | 'encastre' | null>(null);
+
+  // Route protection
+  if (userMode === 'engineer' && token && !isAdmin) {
+    return <Navigate to="/portal" replace />;
+  }
 
   const {
     classify,
@@ -194,6 +232,16 @@ function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
 
   const apiBaseUrl = import.meta.env.VITE_API_URL || '';
 
+  if (userMode === 'public' && !token) {
+    return <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />;
+  }
+
+  // Also require login for engineer if we want to be strict, but the user requested:
+  // "admin is the only one capable of accessing espace ingenieur"
+  if (userMode === 'engineer' && !token) {
+    return <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />;
+  }
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
       {/* Header (Only shown for engineer mode since portal has its own custom navbar) */}
@@ -257,6 +305,9 @@ function MainApp({ initialMode }: { initialMode: 'engineer' | 'public' }) {
             initialSiteType={selectedSiteType}
             initialFoundationType={selectedFoundationType}
             onResetMontage={() => setShowMontageModal(true)}
+            token={token!}
+            userEmail={userEmail!}
+            onLogout={onLogout}
           />
         ) : engineerSubTab === 'catalogue' ? (
           <CatalogueManagement />

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'channels',
+    'rest_framework.authtoken',
     'api',
     'geodata',
 ]

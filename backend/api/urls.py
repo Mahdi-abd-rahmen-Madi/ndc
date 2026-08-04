@@ -12,4 +12,6 @@ urlpatterns = [
     path('aps/token/', views.APSTokenView.as_view(), name='aps-token'),
     path('upload-photo/', views.PhotoUploadView.as_view(), name='upload-photo'),
     path('worker/control/', views.WorkerControlView.as_view(), name='worker-control'),
+    path('auth/login/', views.LoginView.as_view(), name='login'),
+    path('auth/register/', views.RegisterView.as_view(), name='register'),
 ]

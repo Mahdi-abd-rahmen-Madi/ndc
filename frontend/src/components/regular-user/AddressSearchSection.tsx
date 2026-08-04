@@ -70,7 +70,7 @@ export default function AddressSearchSection({
           value={addressQuery}
           onChange={(e) => handleAddressSearch(e.target.value)}
           className="w-full pl-10 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-inner transition-all"
-          placeholder={selectedAddress ? selectedAddress.name : "Entrez une adresse ou code postal..."}
+          placeholder={selectedAddress ? selectedAddress.label : "Entrez une adresse ou code postal..."}
         />
         
         {/* Dropdown results */}

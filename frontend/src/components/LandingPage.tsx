@@ -1,7 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Compass, Shield, FileText } from 'lucide-react';
+import { ArrowRight, Compass, Shield, FileText, LogOut, User as UserIcon } from 'lucide-react';
 
-export default function LandingPage() {
+interface LandingPageProps {
+  token: string | null;
+  userEmail: string | null;
+  isAdmin: boolean;
+  onLogout: () => void;
+}
+
+export default function LandingPage({ token, userEmail, isAdmin, onLogout }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col justify-between relative overflow-hidden font-sans selection:bg-indigo-500/30">
       {/* Background decoration */}
@@ -22,13 +29,31 @@ export default function LandingPage() {
             NDC <span className="font-light">Structure</span>
           </span>
         </div>
-        <div>
-          <Link
-            to="/engineer"
-            className="px-4 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl transition-all font-medium"
-          >
-            Espace Ingénieur
-          </Link>
+        <div className="flex items-center gap-4">
+          {token && (
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="flex items-center gap-1 text-sm font-medium text-slate-300 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-800">
+                <UserIcon className="w-4 h-4 text-indigo-400" />
+                {userEmail}
+              </span>
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+                title="Déconnexion"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">Déconnexion</span>
+              </button>
+            </div>
+          )}
+          {token && isAdmin && (
+            <Link
+              to="/engineer"
+              className="px-4 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl transition-all font-medium"
+            >
+              Espace Ingénieur
+            </Link>
+          )}
         </div>
       </header>
 
@@ -61,7 +86,7 @@ export default function LandingPage() {
               className="group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-2xl flex items-center gap-3 transition-all duration-300 shadow-xl shadow-indigo-900/30 hover:shadow-indigo-500/40 hover:-translate-y-0.5 overflow-hidden w-full sm:w-auto justify-center"
             >
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-              <span>Accéder au Portail Client NDC</span>
+              <span>{token ? 'Accéder au Portail Client NDC' : 'Se connecter / S\'inscrire'}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>

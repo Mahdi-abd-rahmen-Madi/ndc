@@ -483,7 +483,7 @@ export function CoffretEquipmentToggle({
                 >
                   <option value="">Sélectionner...</option>
                   {otherOptions.map(ref => (
-                    <option key={ref.id} value={ref.id}>{ref.id}</option>
+                    <option key={ref.id} value={ref.id}>{ref.name.replace(/\s*\([^)]*\)/g, '').trim()}</option>
                   ))}
                   {httaOptions.length > 0 && (
                     <option value="HTTA">Coffrets HTTA</option>
@@ -502,7 +502,7 @@ export function CoffretEquipmentToggle({
                 >
                   {httaOptions.map(ref => (
                     <option key={ref.id} value={ref.id}>
-                      {ref.id}
+                      {ref.name.replace(/\s*\([^)]*\)/g, '').trim()}
                     </option>
                   ))}
                 </select>

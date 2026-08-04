@@ -25,6 +25,9 @@ interface RegularUserViewProps {
   initialSiteType?: 'nouveau' | 'existant' | null;
   initialFoundationType?: 'metallique' | 'beton' | 'encastre' | null;
   onResetMontage?: () => void;
+  token: string;
+  userEmail: string;
+  onLogout: () => void;
 }
 
 const defaultSectorData = (id: number): SectorData => ({
@@ -70,7 +73,10 @@ export default function RegularUserView({
   initialMontage,
   initialSiteType,
   initialFoundationType,
-  onResetMontage
+  onResetMontage,
+  token,
+  userEmail,
+  onLogout
 }: RegularUserViewProps) {
   // Config
   const { config, loading: configLoading } = useCatalogueConfig(apiBaseUrl);
@@ -96,7 +102,7 @@ export default function RegularUserView({
   const [similarityMode, setSimilarityMode] = useState<SimilarityMode>('none');
 
   // Global Equipment
-  const [dalleThickness, setDalleThickness] = useState<number>(0.5);
+  const [dalleThickness, setDalleThickness] = useState<number | string>('');
   const [plotHeight, setPlotHeight] = useState<number>(0.5);
 
   const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
@@ -130,6 +136,7 @@ export default function RegularUserView({
   // Photo Upload State
   const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
   const [pendingSectorCalc, setPendingSectorCalc] = useState<SectorData | null>(null);
+  const [siteImageUrl, setSiteImageUrl] = useState<string | null>(null);
 
   // Map State
   const [showMap, setShowMap] = useState<boolean>(false);
@@ -357,42 +364,26 @@ export default function RegularUserView({
   const uniqueGroups = Array.from(uniqueGroupsMap.values());
 
   const handleTriggerCalculation = async (sector: SectorData) => {
+    if (!siteImageUrl) {
+      alert("Veuillez uploader une photo du site avant de lancer le calcul.");
+      return;
+    }
     setPendingSectorCalc(sector);
     setShowPhotoPrompt(true);
   };
 
-  const confirmPhotoAndCalculate = async (photoFile: File, siteName: string, clientName: string) => {
+  const confirmAndCalculate = async (siteName: string, clientName: string) => {
     if (!pendingSectorCalc) return;
     const sector = pendingSectorCalc;
 
     setCalculating(true);
-    let photoUrl = null;
-
+    
     try {
-      // 1. Upload Photo
-      const formData = new FormData();
-      formData.append('photo', photoFile);
-
-      const uploadRes = await fetch(`${apiBaseUrl}/api/upload-photo/`, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (uploadRes.ok) {
-        const uploadData = await uploadRes.json();
-        photoUrl = uploadData.photo_url;
-      } else {
-        alert("Erreur lors de l'envoi de la photo.");
-        setCalculating(false);
-        return;
-      }
-
-      // 2. Launch Calculation
       const payload = {
         schema_version: "1.0",
         site: {
           type: siteType,
-          address: selectedAddress?.name || '',
+          address: selectedAddress?.label || '',
           name: siteName,
           client: clientName,
           ancrage: foundationType,
@@ -403,7 +394,7 @@ export default function RegularUserView({
           region: sector.lookupResult?.detected_region,
           terrain_type: sector.lookupResult?.detected_terrain_type,
           building_height_m: selectedBuildingHeight,
-          dalle_thickness_m: foundationType === 'beton' ? dalleThickness : null,
+          dalle_thickness_m: foundationType === 'beton' ? (dalleThickness === '' ? null : Number(dalleThickness) / 100) : null,
           plot_height_m: foundationType === 'beton' ? plotHeight : null
         },
         structure: {
@@ -455,12 +446,16 @@ export default function RegularUserView({
         gps: { enabled: hasGps, quantity: hasGps ? gpsQuantity : null, reference: hasGps ? gpsReference : null },
         boitier_lovage: { enabled: hasBoitierLovage, quantity: hasBoitierLovage ? boitierLovageQuantity : null, reference: hasBoitierLovage ? boitierLovageReference : null },
         coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
-        coffrets_hybride: { enabled: false, quantity: null, reference: null }
+        coffrets_hybride: { enabled: false, quantity: null, reference: null },
+        site_image_url: siteImageUrl
       };
 
       const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -489,7 +484,7 @@ export default function RegularUserView({
         const pdfRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/generate_pdf/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo_url: photoUrl })
+          body: JSON.stringify({ photo_url: siteImageUrl })
         });
 
         if (pdfRes.ok) {
@@ -619,6 +614,15 @@ export default function RegularUserView({
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-xs text-slate-400">{userEmail}</span>
+            <button
+              onClick={onLogout}
+              className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors"
+            >
+              Déconnexion
+            </button>
+          </div>
           <div className="text-xs text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-full font-medium border border-emerald-400/20 shadow-sm flex items-center gap-1.5 hidden sm:flex">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
             En Ligne
@@ -658,6 +662,8 @@ export default function RegularUserView({
               setPlotHeight={setPlotHeight}
               similarityMode={similarityMode}
               setSimilarityMode={setSimilarityMode}
+              apiBaseUrl={apiBaseUrl}
+              onSiteImageUploaded={setSiteImageUrl}
             />
 
             {activeSectors.map((sector, idx) => {
@@ -914,11 +920,8 @@ export default function RegularUserView({
 
       <PhotoPromptModal
         show={showPhotoPrompt}
-        onClose={() => {
-          setShowPhotoPrompt(false);
-          setPendingSectorCalc(null);
-        }}
-        onConfirm={confirmPhotoAndCalculate}
+        onClose={() => setShowPhotoPrompt(false)}
+        onConfirm={confirmAndCalculate}
         isSubmitting={calculating}
       />
     </div>
