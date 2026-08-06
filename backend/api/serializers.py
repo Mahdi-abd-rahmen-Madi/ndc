@@ -33,7 +33,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'user', 'username', 'email', 'first_name', 'last_name',
             'phone', 'department', 'role', 'engineer_profile', 'avatar',
-            'created_at', 'updated_at'
+            'client_logo', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 
@@ -50,6 +50,7 @@ class SiteSerializer(serializers.Serializer):
     address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    client_logo_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     latitude = serializers.FloatField()
     longitude = serializers.FloatField()
 

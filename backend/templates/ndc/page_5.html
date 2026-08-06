@@ -1,0 +1,28 @@
+<h2>Géométrie des pièces</h2>
+<table>
+    <tr style="background-color: #f2f2f2;">
+        <th>Section</th>
+        <th>Longueur (m)</th>
+        <th>Type de barre</th>
+    </tr>
+    <tr>
+        <td>TCAR {{ plot_diam }}x{{ plot_epaisseur }}</td>
+        <td>{{ plot_height_m }}</td>
+        <td>Plot</td>
+    </tr>
+    <tr>
+        <td>TCAR {{ bras_deport_diam }}x{{ bras_deport_epaisseur }}</td>
+        <td>0.3</td>
+        <td>Bras de déport</td>
+    </tr>
+    <tr>
+        <td>TRON {{ mat_4g_diam }}x{{ mat_4g_epaisseur }}</td>
+        <td>{{ hauteur_mat_m }}</td>
+        <td>Mat principal</td>
+    </tr>
+    <tr>
+        <td>TRON {{ mat_5g_diam }}x{{ mat_5g_epaisseur }}</td>
+        <td>1.0</td>
+        <td>Mat antenne</td>
+    </tr>
+</table>

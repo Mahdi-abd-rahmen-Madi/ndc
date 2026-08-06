@@ -1,0 +1,49 @@
+<h2>MODELISATION 3D</h2>
+<h3>Vue structure 3D</h3>
+<div style="width: 100%; height: 60mm; border: 1px dashed #ccc; text-align: center; margin-bottom: 10mm; display: flex; align-items: center; justify-content: center;">
+    <em>[Emplacement Vue 3D]</em>
+</div>
+
+<h2>Tableau des valeurs de chargements</h2>
+<table>
+    <tr>
+        <th>SECTEURS</th>
+        <th>SECTEURS</th>
+        <th>SECTEURS</th>
+        <th>SECTEURS</th>
+        <th>SECTEURS</th>
+        <th>SECTEURS</th>
+    </tr>
+    <tr style="background-color: #f2f2f2;">
+        <th>Désignation</th>
+        <th>Quantité</th>
+        <th>Dimensions [mm]</th>
+        <th>Poids [daN]</th>
+        <th>HBA/sol [m]</th>
+        <th>État</th>
+    </tr>
+    <tr>
+        <td>ANTENNE 4G</td>
+        <td>1</td>
+        <td>{{ ant_4g_dims }}</td>
+        <td>{{ ant_4g_weight }}</td>
+        <td>{{ hauteur_mat_m }}</td>
+        <td>Projet</td>
+    </tr>
+    <tr>
+        <td>ANTENNE 5G</td>
+        <td>1</td>
+        <td>{{ ant_5g_dims }}</td>
+        <td>{{ ant_5g_weight }}</td>
+        <td>{{ ant_5g_hba }}</td>
+        <td>Projet</td>
+    </tr>
+    <tr>
+        <td>Echelle Sôll</td>
+        <td>1</td>
+        <td>-</td>
+        <td>15 (h)</td>
+        <td>-</td>
+        <td>Projet</td>
+    </tr>
+</table>

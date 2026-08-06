@@ -19,3 +19,4 @@ geopandas==1.1.2
 psutil==7.2.2
 zstandard
 docxtpl==0.16.8
+weasyprint==62.3

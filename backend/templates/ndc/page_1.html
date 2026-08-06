@@ -1,0 +1,62 @@
+<h1>NOTE DE CALCULS</h1>
+
+<table class="big-box-table">
+    <tr>
+        <td style="width: 50%; text-align: center;">
+            <div class="photo-container">
+                {% if photo_abs %}
+                    <img src="file://{{ photo_abs }}" alt="Photo du site">
+                {% else %}
+                    <!-- Placeholder si pas de photo -->
+                    <div style="width: 55mm; height: 55mm; border: 1px dashed #ccc; display: inline-block;"></div>
+                {% endif %}
+            </div>
+        </td>
+        <td style="width: 50%; vertical-align: top;" align="right">
+            {% if client_logo_abs %}
+                <div style="margin-bottom: 2mm; text-align: right; width: 100%;">
+                    <img src="file://{{ client_logo_abs }}" alt="Logo du Client" style="max-height: 20mm; max-width: 40mm; display: inline-block;">
+                </div>
+            {% endif %}
+            <table class="criteria-table" style="float: right; margin-top: 0;">
+                <tr>
+                    <td class="label">Structure</td>
+                    <td class="value">Favorable</td>
+                </tr>
+                <tr>
+                    <td class="label">Déplacement et Dépointage</td>
+                    <td class="value">Favorable</td>
+                </tr>
+                <tr>
+                    <td class="label">Boulons et Ancrages</td>
+                    <td class="value">Favorable</td>
+                </tr>
+                <tr>
+                    <td class="label">Glissement</td>
+                    <td class="value">Favorable</td>
+                </tr>
+                <tr>
+                    <td class="label">Renversement</td>
+                    <td class="value">Favorable</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; text-align: center;">
+    <tr>
+        <th style="width: 40%;">Nom du site</th>
+        <td style="width: 60%;" colspan="3">{{ site_name }}</td>
+    </tr>
+    <tr>
+        <th>Adresse du site</th>
+        <td colspan="3">{{ site_address }}</td>
+    </tr>
+    <tr>
+        <th>Date</th>
+        <td style="width: 25%;">{{ current_date }}</td>
+        <th style="width: 15%;">Client</th>
+        <td style="width: 20%;">{{ client_name }}</td>
+    </tr>
+</table>

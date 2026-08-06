@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -32,23 +33,37 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get', 'patch'])
     def me(self, request):
         if request.method == 'GET':
-            try:
-                profile = request.user.profile
-                serializer = self.get_serializer(profile)
-                return Response(serializer.data)
-            except UserProfile.DoesNotExist:
-                return Response({'detail': 'Profile not found'}, status=404)
-        
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            serializer = self.get_serializer(profile)
+            return Response(serializer.data)
+
         elif request.method == 'PATCH':
-            try:
-                profile = request.user.profile
-                serializer = self.get_serializer(profile, data=request.data, partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(serializer.data)
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            except UserProfile.DoesNotExist:
-                return Response({'detail': 'Profile not found'}, status=404)
+            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            serializer = self.get_serializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_logo(self, request):
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+            
+        file_obj = request.data.get('file')
+        if not file_obj:
+            file_keys = list(request.FILES.keys())
+            data_keys = list(request.data.keys())
+            return Response({'error': f'No file provided. FILES keys: {file_keys}, data keys: {data_keys}'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        import uuid
+        ext = file_obj.name.split('.')[-1] if '.' in file_obj.name else 'png'
+        file_obj.name = f"{uuid.uuid4().hex}.{ext}"
+            
+        profile.client_logo = file_obj
+        profile.save()
+        
+        serializer = self.get_serializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class HomeView(APIView):
@@ -254,23 +269,29 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'post'])
     def preview_template(self, request):
         """
         Endpoint to generate a preview of the Note de Calcul template with dummy variables.
         """
         from geodata.ndc_generator import generate_ndc_pdf
-        import os
-        from django.conf import settings
+
+        # Use photo_url from query parameters (GET) or body (POST)
+        # Support both GET and POST requests
+        photo_url = request.GET.get('photo_url') or request.data.get('site', {}).get('photo_url') or ''
         
-        # Use a dummy photo if available, or empty string
-        # Let's create a temporary dummy image or just pass an empty string
-        # but the docxtpl might fail if InlineImage path is invalid.
-        # we updated ndc_generator.py to handle invalid paths by inserting an empty string.
-        photo_url = ''
-        
+        # When called via POST, request.data has the full JSON payload
+        preview_data = request.data if request.data else {
+            'site': {
+                'name': request.GET.get('site_name') or '',
+                'client': request.GET.get('client_name') or '',
+                'address': request.GET.get('address') or '',
+                'client_logo_url': request.GET.get('client_logo_url') or ''
+            }
+        }
+
         try:
-            pdf_url = generate_ndc_pdf(None, photo_url)
+            pdf_url = generate_ndc_pdf(None, photo_url, preview_data=preview_data)
             return Response({'ndc_pdf_url': pdf_url}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

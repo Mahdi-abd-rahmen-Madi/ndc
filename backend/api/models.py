@@ -43,6 +43,7 @@ class UserProfile(models.Model):
     department = models.CharField(max_length=255, blank=True, verbose_name=_("Department"))
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Role"))
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name=_("Avatar"))
+    client_logo = models.ImageField(upload_to='client_logos/', blank=True, null=True, verbose_name=_("Client Logo"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 

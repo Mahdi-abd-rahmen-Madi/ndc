@@ -9,13 +9,12 @@ import { useGeocoding } from '../hooks/useGeocoding';
 // Sub-components
 import NotificationsDropdown from './regular-user/NotificationsDropdown';
 import AddressSearchSection from './regular-user/AddressSearchSection';
-import HeightInputs from './regular-user/HeightInputs';
+import UserInput from './regular-user/UserInput';
 import SectorConfigurator from './regular-user/SectorConfigurator';
 import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, GenericEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
-import PhotoPromptModal from './regular-user/PhotoPromptModal';
 import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
 import { SectorData, RequestFormData, PreviewDocState, SimilarityMode } from './regular-user/types';
 
@@ -134,9 +133,10 @@ export default function RegularUserView({
   const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
 
   // Photo Upload State
-  const [showPhotoPrompt, setShowPhotoPrompt] = useState(false);
-  const [pendingSectorCalc, setPendingSectorCalc] = useState<SectorData | null>(null);
   const [siteImageUrl, setSiteImageUrl] = useState<string | null>(null);
+  const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
+  const [siteName, setSiteName] = useState<string>('');
+  const [clientName, setClientName] = useState<string>('');
 
   // Map State
   const [showMap, setShowMap] = useState<boolean>(false);
@@ -187,6 +187,28 @@ export default function RegularUserView({
       return next;
     });
   };
+
+  // Fetch user profile on mount to prefill client logo if available
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem('ndc_auth_token');
+        if (!token) return;
+        const res = await fetch(`${apiBaseUrl}/api/user-profiles/me/`, {
+          headers: { 'Authorization': `Token ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.client_logo) {
+            setClientLogoUrl(data.client_logo);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+      }
+    };
+    fetchProfile();
+  }, [apiBaseUrl]);
 
   // Sync data when similarity mode changes
   useEffect(() => {
@@ -368,14 +390,18 @@ export default function RegularUserView({
       alert("Veuillez uploader une photo du site avant de lancer le calcul.");
       return;
     }
-    setPendingSectorCalc(sector);
-    setShowPhotoPrompt(true);
+    if (!clientLogoUrl) {
+      alert("Veuillez uploader le logo du client avant de lancer le calcul.");
+      return;
+    }
+    if (!siteName.trim() || !clientName.trim()) {
+      alert("Veuillez renseigner le nom du site et du client dans le panneau de gauche.");
+      return;
+    }
+    confirmAndCalculate(sector);
   };
 
-  const confirmAndCalculate = async (siteName: string, clientName: string) => {
-    if (!pendingSectorCalc) return;
-    const sector = pendingSectorCalc;
-
+  const confirmAndCalculate = async (sector: SectorData) => {
     setCalculating(true);
     
     try {
@@ -386,6 +412,7 @@ export default function RegularUserView({
           address: selectedAddress?.label || '',
           name: siteName,
           client: clientName,
+          client_logo_url: clientLogoUrl,
           ancrage: foundationType,
           latitude: selectedCoords?.latitude,
           longitude: selectedCoords?.longitude
@@ -490,8 +517,6 @@ export default function RegularUserView({
         if (pdfRes.ok) {
           const pdfData = await pdfRes.json();
           setNdcPdfUrl(pdfData.ndc_pdf_url);
-          setShowPhotoPrompt(false);
-          setPendingSectorCalc(null);
           alert('Note de Calcul générée avec succès.');
         } else {
           alert('Erreur lors de la génération du PDF Note de Calcul.');
@@ -649,7 +674,7 @@ export default function RegularUserView({
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
-            <HeightInputs
+            <UserInput
               siteType={siteType}
               foundationType={foundationType}
               selectedBuildingHeight={selectedBuildingHeight}
@@ -663,7 +688,14 @@ export default function RegularUserView({
               similarityMode={similarityMode}
               setSimilarityMode={setSimilarityMode}
               apiBaseUrl={apiBaseUrl}
+              siteImageUrl={siteImageUrl}
               onSiteImageUploaded={setSiteImageUrl}
+              siteName={siteName}
+              setSiteName={setSiteName}
+              clientName={clientName}
+              setClientName={setClientName}
+              clientLogoUrl={clientLogoUrl}
+              onClientLogoUploaded={setClientLogoUrl}
             />
 
             {activeSectors.map((sector, idx) => {
@@ -883,6 +915,15 @@ export default function RegularUserView({
                             coffrets_hybride: { référence: 'N/A', quantité: 0 }
                           }}
                           ndcPdfUrl={ndcPdfUrl}
+                          siteImageUrl={siteImageUrl}
+                          siteName={siteName}
+                          clientName={clientName}
+                          clientLogoUrl={clientLogoUrl}
+                          ant4gConfig={group.sector.ant4gConfig}
+                          ant5gConfig={group.sector.ant5gConfig}
+                          buildingHeight={selectedBuildingHeight}
+                          mastHeight={group.sector.selectedHeight}
+                          plotHeight={plotHeight}
                         />
                       )}
                     </div>
@@ -916,13 +957,6 @@ export default function RegularUserView({
       <DocumentPreviewModal
         previewDoc={previewDoc}
         setPreviewDoc={setPreviewDoc}
-      />
-
-      <PhotoPromptModal
-        show={showPhotoPrompt}
-        onClose={() => setShowPhotoPrompt(false)}
-        onConfirm={confirmAndCalculate}
-        isSubmitting={calculating}
       />
     </div>
   );

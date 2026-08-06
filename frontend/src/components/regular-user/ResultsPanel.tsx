@@ -1,5 +1,5 @@
-import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, AlertCircle, RefreshCw, Radio, Layers } from 'lucide-react';
-import { LookupResult, DocumentInfo, SectorData } from './types';
+import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, AlertCircle, RefreshCw, Radio, Layers, Settings } from 'lucide-react';
+import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -27,6 +27,15 @@ interface ResultsPanelProps {
   equipmentToggles?: Record<string, boolean>;
   ndcPdfUrl?: string | null;
   sectors?: SectorData[];
+  siteImageUrl?: string | null;
+  siteName?: string;
+  clientName?: string;
+  clientLogoUrl?: string | null;
+  ant4gConfig?: AntennaConfigState;
+  ant5gConfig?: AntennaConfigState;
+  buildingHeight?: number;
+  mastHeight?: number;
+  plotHeight?: number;
 }
 
 export default function ResultsPanel({
@@ -50,7 +59,16 @@ export default function ResultsPanel({
   equipmentValues = {},
   equipmentToggles = {},
   ndcPdfUrl = null,
-  sectors = []
+  sectors = [],
+  siteImageUrl = null,
+  siteName = '',
+  clientName = '',
+  clientLogoUrl = null,
+  ant4gConfig,
+  ant5gConfig,
+  buildingHeight,
+  mastHeight,
+  plotHeight
 }: ResultsPanelProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -152,8 +170,55 @@ export default function ResultsPanel({
     setPreviewPdfUrl(null);
 
     try {
-      const apiUrl = '/api/calculations/preview_template/';
-      const response = await fetch(apiUrl);
+      const payload: any = {
+        site: {
+          name: siteName,
+          client: clientName,
+          address: selectedAddress?.label || selectedAddress?.name || '',
+          client_logo_url: clientLogoUrl,
+          photo_url: siteImageUrl
+        },
+        environment: {
+          region: lookupResult?.detected_region,
+          terrain_type: lookupResult?.detected_terrain_type,
+          building_height_m: buildingHeight,
+          plot_height_m: plotHeight
+        },
+        structure: {
+          mast_height_m: mastHeight,
+          mat_principal: firstEquipmentDetails?.matPrincipal || matPrincipal,
+          mat_secondaire: firstEquipmentDetails?.matSecondaire || matSecondaire,
+          plot_metallique: firstEquipmentDetails?.plotMetallique || plotMetallique,
+          bras_de_deport: firstEquipmentDetails?.brasDeDeport || brasDeDeport
+        }
+      };
+
+      if (ant4gConfig) {
+        payload.antenna_4g = {
+          height_mm: ant4gConfig.height,
+          width_mm: ant4gConfig.width,
+          thickness_mm: ant4gConfig.thickness,
+          weight_dan: ant4gConfig.weight
+        };
+      }
+      
+      if (ant5gConfig) {
+        payload.antenna_5g = {
+          height_mm: ant5gConfig.height,
+          width_mm: ant5gConfig.width,
+          thickness_mm: ant5gConfig.thickness,
+          weight_dan: ant5gConfig.weight
+        };
+      }
+
+      const response = await fetch('/api/calculations/preview_template/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}`
+        },
+        body: JSON.stringify(payload)
+      });
       if (!response.ok) throw new Error('Preview failed');
       const data = await response.json();
       if (data.ndc_pdf_url) {
@@ -307,6 +372,144 @@ export default function ResultsPanel({
         </div>
       )}
 
+      {/* Profil Structurel Recommandé */}
+      {lookupResult.equipment.length > 0 && (
+        <div className="mb-8 animate-slide-in">
+          <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+            Profil Structurel Recommandé
+          </h3>
+          <div className="space-y-4">
+            {lookupResult.equipment.map((eq: any, idx: number) => {
+              const details = getTerrainDetails(eq, lookupResult.detected_terrain_type);
+              
+              const rawName = eq.name || '';
+              const rawMontage = eq.sub_elements || selectedMontage || '';
+              
+              // Hide A1 / A1.2 text variations as requested
+              const isA1Name = /a1(\.\d+)?/i.test(rawName);
+              const isA1Montage = /a1(\.\d+)?/i.test(rawMontage);
+              
+              const displayName = isA1Name ? "Configuration Validée" : rawName;
+              const showMontage = !isA1Montage;
+              
+              return (
+              <div key={idx} className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/40 transition-all duration-300 group">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-5">
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors shadow-inner">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <h4 className="text-xl font-extrabold text-white tracking-tight">{displayName}</h4>
+                      </div>
+                      {showMontage && rawMontage && (
+                        <div className="flex items-center gap-2 ml-12">
+                          <Layers className="w-4 h-4 text-slate-500" />
+                          <p className="text-sm text-slate-400 font-medium">Montage: <span className="text-slate-300">{rawMontage}</span></p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 items-end">
+                      <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Section Validée
+                      </span>
+                      {(eq.reference_4g || eq.reference_5g) && (
+                        <span className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full border border-indigo-500/20 flex items-center gap-1.5 shadow-sm">
+                          <Activity className="w-3.5 h-3.5" />
+                          Dimensions Réelles
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className={`bg-slate-950/40 rounded-xl p-5 border border-slate-800/50 ${(eq.reference_4g || eq.reference_5g) ? 'mb-4' : ''}`}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Settings className="w-4 h-4 text-slate-400" />
+                      <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spécification Matériau</p>
+                    </div>
+                    {!(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                      <p className="text-emerald-300/90 font-medium whitespace-pre-line leading-relaxed text-sm">
+                        {details.material}
+                      </p>
+                    )}
+                    
+                    {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                      <div className="space-y-2.5 text-xs pt-2">
+                        {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
+                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                            <span className="text-slate-400 font-medium">Mât Principal:</span>
+                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
+                              {firstEquipmentDetails?.matPrincipal || matPrincipal}
+                            </span>
+                          </div>
+                        )}
+                        {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
+                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                            <span className="text-slate-400 font-medium">Plot Métallique:</span>
+                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
+                              {firstEquipmentDetails?.plotMetallique || plotMetallique}
+                            </span>
+                          </div>
+                        )}
+                        {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
+                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                            <span className="text-slate-400 font-medium">Bras de déport:</span>
+                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
+                              {firstEquipmentDetails?.brasDeDeport || brasDeDeport}
+                            </span>
+                          </div>
+                        )}
+                        {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                            <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
+                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
+                              {firstEquipmentDetails?.matSecondaire || matSecondaire}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {(eq.reference_4g || eq.reference_5g) && (
+                    <div className="bg-indigo-950/20 rounded-xl p-5 border border-indigo-500/20">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Radio className="w-4 h-4 text-indigo-400" />
+                        <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold">Références Équipement</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {eq.reference_4g && (
+                          <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-blue-500/30 transition-colors">
+                            <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
+                              <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                              Modèle 4G
+                            </p>
+                            <p className="text-sm font-bold text-slate-200">{eq.reference_4g}</p>
+                          </div>
+                        )}
+                        {eq.reference_5g && (
+                          <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-purple-500/30 transition-colors">
+                            <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
+                              <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></span>
+                              Modèle 5G
+                            </p>
+                            <p className="text-sm font-bold text-slate-200">{eq.reference_5g}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Equipment Configuration */}
       <div className="mb-8">
         <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -314,52 +517,6 @@ export default function ResultsPanel({
           Configuration Équipements
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Section Mat in Configuration Équipements */}
-          {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-            <div className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 border-l-indigo-500 hover:border-indigo-500/30 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
-              <div className="flex items-center gap-2 mb-3.5">
-                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <h4 className="text-sm font-bold text-white">Sections d'Équipement</h4>
-              </div>
-              <div className="space-y-2.5 text-xs">
-                {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
-                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                    <span className="text-slate-400 font-medium">Mât Principal:</span>
-                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
-                      {firstEquipmentDetails?.matPrincipal || matPrincipal}
-                    </span>
-                  </div>
-                )}
-                {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
-                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                    <span className="text-slate-400 font-medium">Plot Métallique:</span>
-                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
-                      {firstEquipmentDetails?.plotMetallique || plotMetallique}
-                    </span>
-                  </div>
-                )}
-                {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
-                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                    <span className="text-slate-400 font-medium">Bras de déport:</span>
-                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
-                      {firstEquipmentDetails?.brasDeDeport || brasDeDeport}
-                    </span>
-                  </div>
-                )}
-                {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                  <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                    <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
-                    <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
-                      {firstEquipmentDetails?.matSecondaire || matSecondaire}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {enabledConfigs.map((config: EquipmentConfig) => {
             const IconComponent = config.icon === 'Radio' ? Radio : Activity;
             const colorClass = config.color === 'blue' ? 'blue' :
@@ -404,111 +561,11 @@ export default function ResultsPanel({
         </div>
       </div>
 
-      {/* Equipment Results */}
+      {/* Actions & Fallbacks */}
       <div>
-        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-          Profil Structurel Recommandé
-        </h3>
-        
         {lookupResult.equipment.length > 0 ? (
-          <div className="space-y-4">
-            {lookupResult.equipment.map((eq: any, idx: number) => {
-              const details = getTerrainDetails(eq, lookupResult.detected_terrain_type);
-              
-              return (
-              <div key={idx} className="bg-gradient-to-br from-slate-800/80 to-slate-900 border border-emerald-500/30 rounded-xl overflow-hidden shadow-lg shadow-emerald-900/10 hover:border-emerald-500/50 transition-colors">
-                <div className="p-5 border-b border-slate-800/80">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                        <h4 className="text-lg font-bold text-white">{eq.name}</h4>
-                      </div>
-                      <p className="text-sm text-slate-400">Montage: {eq.sub_elements || selectedMontage}</p>
-                    </div>
-                    <div className="flex flex-col gap-2 items-end">
-                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20">
-                        Section Validée
-                      </span>
-                      {(eq.reference_4g || eq.reference_5g) && (
-                        <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
-                          Dimensions Réelles
-                        </span>
-                      )}
-                    </div>
-                  </div>
+          <div className="mt-6 pt-6 border-t border-slate-800">
 
-                  <div className={`bg-slate-950/50 rounded-lg p-4 border border-slate-800 ${(eq.reference_4g || eq.reference_5g) ? 'mb-3' : ''}`}>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Spécification Matériau</p>
-                    <p className="text-emerald-300 font-medium whitespace-pre-line leading-relaxed">
-                      {details.material}
-                    </p>
-                  </div>
-
-                  {(eq.reference_4g || eq.reference_5g) && (
-                    <div className="bg-indigo-950/30 rounded-lg p-4 border border-indigo-500/30">
-                      <p className="text-xs text-indigo-400/80 uppercase tracking-wider mb-2">Références Équipement</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        {eq.reference_4g && (
-                          <div>
-                            <p className="text-[10px] text-slate-500 uppercase">Modèle 4G</p>
-                            <p className="text-sm font-medium text-white">{eq.reference_4g}</p>
-                          </div>
-                        )}
-                        {eq.reference_5g && (
-                          <div>
-                            <p className="text-[10px] text-slate-500 uppercase">Modèle 5G</p>
-                            <p className="text-sm font-medium text-white">{eq.reference_5g}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            );
-            })}
-
-            {/* Actions for valid equipment with PDF preview */}
-            <div className="mt-6 pt-6 border-t border-slate-800">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {cataloguePdf ? (
-                  <button
-                    disabled
-                    title="Bientôt disponible"
-                    className="py-4 bg-slate-800 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 cursor-not-allowed opacity-70"
-                  >
-                    <Download className="w-5 h-5" />
-                    Télécharger la Note de Calcul
-                  </button>
-                ) : (
-                  <div className="py-4 bg-slate-800 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 border-dashed opacity-70">
-                    <FileText className="w-5 h-5" />
-                    PDF Catalogue Indisponible
-                  </div>
-                )}
-                
-                {ndcPdfUrl ? (
-                  <button
-                    onClick={() => setPreviewPdfUrl(ndcPdfUrl)}
-                    className="py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 border border-indigo-500 shadow-lg shadow-indigo-900/20 transition-all"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Aperçu Document
-                  </button>
-                ) : (
-                  <button
-                    disabled
-                    title="Document non généré"
-                    className="py-4 bg-slate-800 text-slate-500 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 cursor-not-allowed opacity-70"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Aperçu Document (En attente)
-                  </button>
-                )}
-              </div>
-              
               <div className="mt-4">
                 <button
                   onClick={handlePreviewTemplate}
@@ -611,7 +668,6 @@ export default function ResultsPanel({
                 </div>
               )}
             </div>
-          </div>
         ) : (
           <div className="bg-slate-800/30 border border-slate-700 border-dashed rounded-xl p-8 text-center flex flex-col items-center">
             <div className="p-4 bg-slate-800 rounded-full mb-4 relative">
