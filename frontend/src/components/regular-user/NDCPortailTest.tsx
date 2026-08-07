@@ -65,19 +65,11 @@ const VARIABLE_DESCRIPTIONS: Record<string, { label: string, category: string, u
 interface Payload {
   schema_version: string;
   site: {
-    type: string;
-    address: string;
-    name: string;
-    client: string;
     ancrage: string;
-    latitude: number;
-    longitude: number;
   };
   environment: {
     region: number;
     terrain_type: string;
-    building_height_m: number;
-    dalle_thickness_m: number;
   };
   structure: {
     hauteur_mat_m: number;
@@ -86,8 +78,7 @@ interface Payload {
     mat_principal: string;
     plot_metallique: string;
     mat_secondaire: string;
-    outer_diameter_m: number;
-    wall_thickness_m: number;
+    mast_section: string;
     material_name: string;
     plot_section: string;
     bras_section: string;
@@ -107,16 +98,55 @@ interface Payload {
     epaisseur_mm: number;
     poids_kg: number;
   };
-  fh_equipment: { enabled: boolean; diameter_mm: number };
-  rrh_equipment: { enabled: boolean; reference: string };
-  rru_equipment: { enabled: boolean; reference: string };
-  catalogue_match: { found: boolean; equipment_id: string | null; material_specification: string };
 }
 
 const EUROCODE_STEEL = ["Steel", "S 235", "S 275", "S 355", "S 420", "S 460", "S 500", "S 550", "S 600", "S 620", "S 650", "S 690", "S 700"];
-const EUROCODE_CONCRETE = ["C12/15", "C16/20", "C20/25", "C25/30", "C30/37", "C35/45", "C40/50", "C45/55", "C50/60", "C55/67", "C60/75", "C70/85", "C80/95", "C90/105"];
+const EUROCODE_CONCRETE = ["Concrete", "C12/15", "C16/20", "C20/25", "C25/30", "C30/37", "C35/45", "C40/50", "C45/55", "C50/60"];
 const FRENCH_STEEL = ["ACIER", "ACIER E24", "ACIER E28", "ACIER E30", "ACIER E36", "ACIER E42", "S 355 M", "S 420 M", "S 460 M", "INOX"];
 const FRENCH_CONCRETE = ["BETON", "BETON20", "BETON25", "BETON30", "BETON35", "BETON40", "BETON45", "BETON50", "BETON55", "BETON60"];
+
+const COMMON_SECTIONS = [
+  "TCAR 22x2.3", "TCAR 25x2.5", "TCAR 28x2.5", "TCAR 28x2.6", "TCAR 28x4",
+  "TCAR 30x2.5", "TCAR 35x2.5", "TCAR 35x2.7", "TCAR 35x3.2", "TCAR 35x4",
+  "TCAR 40x2.5", "TCAR 40x2.7", "TCAR 40x3.2", "TCAR 40x4",
+  "TCAR 45x2.5", "TCAR 45x2.7", "TCAR 45x3.2", "TCAR 45x4",
+  "TCAR 50x2.5", "TCAR 50x3.2", "TCAR 50x4", "TCAR 50x5",
+  "TCAR 55x2.5", "TCAR 55x3.2", "TCAR 55x5",
+  "TCAR 60x2.5", "TCAR 60x3.2", "TCAR 60x4", "TCAR 60x5",
+  "TCAR 70x3.2", "TCAR 70x4", "TCAR 70x5",
+  "TCAR 80x3.2", "TCAR 80x3.6", "TCAR 80x4", "TCAR 80x5", "TCAR 80x6.3",
+  "TCAR 90x3.2", "TCAR 90x4", "TCAR 90x5", "TCAR 90x6.3", "TCAR 90x7.1", "TCAR 90x8",
+  "TCAR 100x10", "TCAR 100x3.2", "TCAR 100x4", "TCAR 100x5", "TCAR 100x6.3", "TCAR 100x7.1", "TCAR 100x8",
+  "TCAR 120x3.2", "TCAR 120x4", "TCAR 120x5", "TCAR 120x6.3", "TCAR 120x7.1", "TCAR 120x8",
+  "TCAR 135x3.2", "TCAR 135x4", "TCAR 135x5", "TCAR 135x7.1",
+  "TCAR 140x3.6", "TCAR 140x4.5", "TCAR 140x6.3", "TCAR 140x7.1", "TCAR 140x8",
+  "TCAR 150x10", "TCAR 150x12", "TCAR 150x4", "TCAR 150x5", "TCAR 150x6", "TCAR 150x8",
+  "TCAR 180x10", "TCAR 180x12", "TCAR 180x3.6", "TCAR 180x6.3", "TCAR 180x8",
+  "TCAR 200x10", "TCAR 200x12", "TCAR 200x5", "TCAR 200x6", "TCAR 200x8",
+  "TCAR 250x10", "TCAR 250x12", "TCAR 250x6", "TCAR 250x8",
+  "TCAR 300x10", "TCAR 300x12", "TCAR 300x6", "TCAR 300x8",
+  "TCAR 350x10", "TCAR 350x12", "TCAR 350x8",
+  "TRON 21x2.3", "TRON 26x2.3", "TRON 26x2.5", "TRON 26x3.2",
+  "TRON 28x2.5", "TRON 30x2.5", "TRON 32x2.5",
+  "TRON 33x2.6", "TRON 33x3.2", "TRON 33x4",
+  "TRON 35x2.5", "TRON 38x2.5", "TRON 40x2.5",
+  "TRON 42x2.6", "TRON 42x3.2", "TRON 42x4",
+  "TRON 48x2.5", "TRON 48x2.9", "TRON 48x3.2", "TRON 48x4",
+  "TRON 50x2.5", "TRON 51x2.5", "TRON 55x2.5", "TRON 57x2.5",
+  "TRON 60x2.5", "TRON 60x2.9", "TRON 60x3.2", "TRON 60x4", "TRON 60x5",
+  "TRON 61x2.5", "TRON 62x2.5", "TRON 70x2.5", "TRON 70x2.9",
+  "TRON 76x2.5", "TRON 76x2.9", "TRON 76x3.6", "TRON 76x4", "TRON 76x5",
+  "TRON 88x2.5", "TRON 88x3.2", "TRON 88x4", "TRON 88x5",
+  "TRON 101x10", "TRON 101x3.6", "TRON 101x4", "TRON 101x5", "TRON 101x8",
+  "TRON 114x10", "TRON 114x3.6", "TRON 114x5", "TRON 114x6.3", "TRON 114x8",
+  "TRON 139x10", "TRON 139x12.5", "TRON 139x4", "TRON 139x5", "TRON 139x6.3", "TRON 139x8",
+  "TRON 168x10", "TRON 168x12.5", "TRON 168x4.5", "TRON 168x6.3", "TRON 168x7.1", "TRON 168x8",
+  "TRON 219x4.5", "TRON 219x5.6", "TRON 219x6.3",
+  "TRON 273x5", "TRON 273x6.3",
+  "TRON 323x5.6", "TRON 323x6.3", "TRON 323x7.1",
+  "TRON 355x6.3", "TRON 355x8",
+  "TRON 406x6.3", "TRON 406x8"
+];
 
 export default function NDCPortailTest() {
   const [loading, setLoading] = useState(false);
@@ -124,16 +154,20 @@ export default function NDCPortailTest() {
   const [status, setStatus] = useState<string | null>(null);
   const [resultData, setResultData] = useState<any>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [, setShowVariables] = useState<boolean>(false);
+  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<'variables' | 'document'>('document');
 
   // Form states
   const [region, setRegion] = useState<number>(2);
-  const [terrainType, setTerrainType] = useState<string>('III');
-  const [mastHeight, setMastHeight] = useState<number>(5.5);
-  const [outerDiameter, setOuterDiameter] = useState<number>(0.139);
-  const [wallThickness, setWallThickness] = useState<number>(0.004);
-  const [materialName, setMaterialName] = useState<string>('S 235');
+  const [terrainType, setTerrainType] = useState<string>('0');
+  const [mastHeight, setMastHeight] = useState<number>(4.0);
+  const [mastSection, setMastSection] = useState<string>('TRON 139x6.3');
+  const [materialName, setMaterialName] = useState<string>('ACIER E24');
+
+  // Antenna weights
+  const [weight4G, setWeight4G] = useState<number>(49.5);
+  const [weight5G, setWeight5G] = useState<number>(22.0);
 
   // Section states
   const [plotSection, setPlotSection] = useState<string>('TCAR 200x5');
@@ -154,24 +188,16 @@ export default function NDCPortailTest() {
     setResultData(null);
     setPdfUrl(null);
     setJobId(null);
-    setShowVariables(false);
+
 
     const payload: Payload = {
       schema_version: "1.0",
       site: {
-        type: siteType || "nouveau",
-        address: "Site Test Portail, Paris",
-        name: "Tour de Test Alpha",
-        client: "Client Test",
-        ancrage: ancrage || "metallique",
-        latitude: 48.8566,
-        longitude: 2.3522
+        ancrage: ancrage || "metallique"
       },
       environment: {
         region: region,
-        terrain_type: terrainType,
-        building_height_m: 15.0,
-        dalle_thickness_m: 0.2
+        terrain_type: terrainType
       },
       structure: {
         hauteur_mat_m: mastHeight,
@@ -180,8 +206,7 @@ export default function NDCPortailTest() {
         mat_principal: "Tube S235",
         plot_metallique: ancrage === 'metallique' ? "Standard" : "None",
         mat_secondaire: "None",
-        outer_diameter_m: outerDiameter,
-        wall_thickness_m: wallThickness,
+        mast_section: mastSection,
         material_name: materialName,
         plot_section: plotSection,
         bras_section: brasSection,
@@ -192,19 +217,15 @@ export default function NDCPortailTest() {
         hauteur_mm: 2000.0,
         largeur_mm: 400.0,
         epaisseur_mm: 150.0,
-        poids_kg: 45.0
+        poids_kg: weight4G
       },
       antenna_5g: {
         model: "Antenna_5G_Type_B",
         hauteur_mm: 1500.0,
         largeur_mm: 300.0,
         epaisseur_mm: 120.0,
-        poids_kg: 35.0
-      },
-      fh_equipment: { enabled: false, diameter_mm: 0.0 },
-      rrh_equipment: { enabled: false, reference: "None" },
-      rru_equipment: { enabled: false, reference: "None" },
-      catalogue_match: { found: false, equipment_id: null, material_specification: "S235" }
+        poids_kg: weight5G
+      }
     };
 
     try {
@@ -247,6 +268,7 @@ export default function NDCPortailTest() {
             if (currentStatus === 'COMPLETED' || currentStatus === 'FAILED') {
               setLoading(false);
               setResultData(response.data.result_data);
+              setScreenshotUrl(response.data.screenshot || null);
             }
           })
           .catch(error => {
@@ -320,6 +342,18 @@ export default function NDCPortailTest() {
             </div>
           ))}
         </div>
+
+        {screenshotUrl && (
+          <div className="border-t border-gray-200 p-4 bg-slate-50">
+            <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+              Capture 3D Robot
+            </h3>
+            <div className="rounded-lg overflow-hidden border border-gray-300 shadow-sm bg-white p-2">
+              <img src={screenshotUrl} alt="Capture 3D Robot" className="w-full h-auto object-contain rounded" />
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -419,8 +453,8 @@ export default function NDCPortailTest() {
                   <tbody>
                     <tr>
                       <td className="border border-indigo-100 p-1.5 text-gray-700">Mât Principal</td>
-                      <td className="border border-indigo-100 p-1.5 text-gray-800 font-medium">{vars.var_1 || (outerDiameter*1000).toFixed(0)}</td>
-                      <td className="border border-indigo-100 p-1.5 text-gray-800 font-medium">{vars.var_2 || (wallThickness*1000).toFixed(0)}</td>
+                      <td className="border border-indigo-100 p-1.5 text-gray-800 font-medium">{vars.var_1 || (mastSection.match(/(\d+)\s*[xX]\s*(\d+)/)?.[1] || '139')}</td>
+                      <td className="border border-indigo-100 p-1.5 text-gray-800 font-medium">{vars.var_2 || (mastSection.match(/(\d+)\s*[xX]\s*(\d+)/)?.[2] || '4')}</td>
                       <td className="border border-indigo-100 p-1.5 text-gray-800 font-medium">{vars.var_3 || (mastHeight*1000).toFixed(0)}</td>
                     </tr>
                     {vars.var_6 && vars.var_6 !== '0.0' && (
@@ -539,26 +573,16 @@ export default function NDCPortailTest() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Diamètre extérieur D (m)</label>
-              <input 
-                type="number" 
-                step="0.001"
-                value={outerDiameter}
-                onChange={e => setOuterDiameter(Number(e.target.value))}
+              <label className="block text-sm font-medium text-gray-700 mb-2">Section Mât Principal</label>
+              <select 
+                value={mastSection}
+                onChange={e => setMastSection(e.target.value)}
                 className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Épaisseur paroi t (m)</label>
-              <input 
-                type="number" 
-                step="0.001"
-                value={wallThickness}
-                onChange={e => setWallThickness(Number(e.target.value))}
-                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
-              />
+              >
+                {COMMON_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Matériau (Robot DB)</label>
@@ -588,31 +612,55 @@ export default function NDCPortailTest() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Section Plot</label>
-              <input 
-                type="text" 
+              <select 
                 value={plotSection}
                 onChange={e => setPlotSection(e.target.value)}
-                placeholder="ex: TCAR 200x5"
                 className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
-              />
+              >
+                {COMMON_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Section Bras</label>
-              <input 
-                type="text" 
+              <select 
                 value={brasSection}
                 onChange={e => setBrasSection(e.target.value)}
-                placeholder="ex: TCAR 50x5"
+                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
+              >
+                {COMMON_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Section Mât 5G</label>
+              <select 
+                value={mast5gSection}
+                onChange={e => setMast5gSection(e.target.value)}
+                className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
+              >
+                {COMMON_SECTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <h3 className="text-md font-medium text-gray-800 mb-4 border-b pb-2">Poids des Équipements</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Poids Antenne 4G (kg)</label>
+              <input 
+                type="number" 
+                step="0.1"
+                value={weight4G}
+                onChange={e => setWeight4G(Number(e.target.value))}
                 className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Section Mât 5G</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Poids Antenne 5G (kg)</label>
               <input 
-                type="text" 
-                value={mast5gSection}
-                onChange={e => setMast5gSection(e.target.value)}
-                placeholder="ex: TRON 76x5"
+                type="number" 
+                step="0.1"
+                value={weight5G}
+                onChange={e => setWeight5G(Number(e.target.value))}
                 className="w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2 border"
               />
             </div>
@@ -696,7 +744,7 @@ export default function NDCPortailTest() {
               <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center z-10">
                 <h2 className="text-2xl font-bold text-gray-800">Résultats Robot Structural Analysis</h2>
                 <button 
-                  onClick={() => { setResultData(null); setShowVariables(false); }}
+                  onClick={() => { setResultData(null); }}
                   className="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-full hover:bg-gray-100"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -40,24 +40,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class CalculationJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalculationJob
-        fields = ['id', 'user', 'input_hash', 'input_data', 'status', 'result_data', 'error_message', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'input_hash', 'status', 'result_data', 'error_message', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'input_hash', 'input_data', 'status', 'result_data', 'error_message', 'screenshot', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'input_hash', 'status', 'result_data', 'error_message', 'screenshot', 'created_at', 'updated_at']
 
 
 class SiteSerializer(serializers.Serializer):
-    type = serializers.ChoiceField(choices=['nouveau', 'existant'])
+    type = serializers.ChoiceField(choices=['nouveau', 'existant'], required=False, allow_null=True)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'encastre'], required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client_logo_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    latitude = serializers.FloatField()
-    longitude = serializers.FloatField()
+    latitude = serializers.FloatField(required=False, allow_null=True)
+    longitude = serializers.FloatField(required=False, allow_null=True)
 
 class EnvironmentSerializer(serializers.Serializer):
     region = serializers.IntegerField()
     terrain_type = serializers.CharField()
-    building_height_m = serializers.FloatField()
+    building_height_m = serializers.FloatField(required=False, allow_null=True)
     dalle_thickness_m = serializers.FloatField(required=False, allow_null=True)
     plot_height_m = serializers.FloatField(required=False, allow_null=True)
 
@@ -69,12 +69,11 @@ class StructureSerializer(serializers.Serializer):
     plot_metallique = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     bras_de_deport_input = serializers.FloatField(required=False, allow_null=True)
     mat_secondaire = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    outer_diameter_m = serializers.FloatField(required=False, allow_null=True)
-    wall_thickness_m = serializers.FloatField(required=False, allow_null=True)
     material_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    plot_section = serializers.CharField(required=True)
-    bras_section = serializers.CharField(required=True)
-    mast_5g_section = serializers.CharField(required=True)
+    plot_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    bras_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    mast_5g_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    mast_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 class AntennaSerializer(serializers.Serializer):
     model = serializers.CharField()

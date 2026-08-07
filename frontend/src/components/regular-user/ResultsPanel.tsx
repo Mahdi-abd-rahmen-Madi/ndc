@@ -58,7 +58,6 @@ export default function ResultsPanel({
   nombreSecteurs = 3,
   equipmentValues = {},
   equipmentToggles = {},
-  ndcPdfUrl = null,
   sectors = [],
   siteImageUrl = null,
   siteName = '',
@@ -78,8 +77,8 @@ export default function ResultsPanel({
   const enabledConfigs = getEnabledConfigs(equipmentToggles);
 
   // Get first equipment details for preview button
-  const firstEquipmentDetails = lookupResult && lookupResult.equipment.length > 0 
-    ? getTerrainDetails(lookupResult.equipment[0], lookupResult.detected_terrain_type) 
+  const firstEquipmentDetails = lookupResult && lookupResult.equipment.length > 0
+    ? getTerrainDetails(lookupResult.equipment[0], lookupResult.detected_terrain_type)
     : null;
 
   // Fetch matching catalogue PDF based on user criteria
@@ -95,12 +94,12 @@ export default function ResultsPanel({
         // Use building_height since PDF catalogues are categorized by building height
         const equipment = lookupResult.equipment[0];
         const height = equipment?.building_height || 15;
-        
+
         let actualMontage = selectedMontage;
         if (actualMontage === 'Custom' && equipment?.sub_elements) {
           actualMontage = equipment.sub_elements;
         }
-        
+
         const params = new URLSearchParams({
           montage: actualMontage,
           terrain_type: lookupResult.detected_terrain_type || 'IIIa',
@@ -113,7 +112,7 @@ export default function ResultsPanel({
         }
 
         const response = await fetch(`/api/geodata/matching-catalogue-pdf/?${params}`);
-        
+
         if (response.ok) {
           const data = await response.json();
           setCataloguePdf({ url: data.url, filename: data.filename });
@@ -140,17 +139,17 @@ export default function ResultsPanel({
       // Call backend API to convert docx to PDF
       const apiUrl = '/api/geodata/preview-document/';
       const response = await fetch(`${apiUrl}?url=${encodeURIComponent(doc.url)}`);
-      
+
       if (!response.ok) {
         throw new Error('Conversion failed');
       }
 
       const data = await response.json();
-      
+
       if (data.preview_url) {
         // Construct full URL if it's a relative path
-        const fullUrl = data.preview_url.startsWith('http') 
-          ? data.preview_url 
+        const fullUrl = data.preview_url.startsWith('http')
+          ? data.preview_url
           : `${window.location.origin}${data.preview_url}`;
         setPreviewPdfUrl(fullUrl);
       } else {
@@ -164,66 +163,132 @@ export default function ResultsPanel({
     }
   };
 
+  const [pollingMsg, setPollingMsg] = useState<string>('');
+
   const handlePreviewTemplate = async () => {
     setIsConverting(true);
     setConversionError(false);
     setPreviewPdfUrl(null);
+    setPollingMsg('Création du job Robot...');
 
     try {
       const payload: any = {
         site: {
-          name: siteName,
-          client: clientName,
+          name: siteName || '',
+          client: clientName || '',
           address: selectedAddress?.label || selectedAddress?.name || '',
-          client_logo_url: clientLogoUrl,
-          photo_url: siteImageUrl
+          client_logo_url: clientLogoUrl || '',
+          photo_url: siteImageUrl || '',
+          ancrage: 'metallique' // Robot Worker requires this
         },
         environment: {
-          region: lookupResult?.detected_region,
-          terrain_type: lookupResult?.detected_terrain_type,
-          building_height_m: buildingHeight,
-          plot_height_m: plotHeight
+          region: typeof lookupResult?.detected_region === 'object' 
+            ? (lookupResult.detected_region as any).number 
+            : parseInt(String(lookupResult?.detected_region || '2').replace(/\D/g, ''), 10) || 2,
+          terrain_type: lookupResult?.detected_terrain_type || '0',
+          building_height_m: buildingHeight || 0,
+          plot_height_m: plotHeight || 0
         },
         structure: {
-          mast_height_m: mastHeight,
-          mat_principal: firstEquipmentDetails?.matPrincipal || matPrincipal,
-          mat_secondaire: firstEquipmentDetails?.matSecondaire || matSecondaire,
-          plot_metallique: firstEquipmentDetails?.plotMetallique || plotMetallique,
-          bras_de_deport: firstEquipmentDetails?.brasDeDeport || brasDeDeport
+          mast_height_m: mastHeight || 0,
+          hauteur_mat_m: mastHeight || 0,
+          montage_id: selectedMontage || "cas_1",
+          is_custom_montage: selectedMontage === 'Custom',
+          mat_principal: firstEquipmentDetails?.matPrincipal || matPrincipal || '',
+          mat_secondaire: firstEquipmentDetails?.matSecondaire || matSecondaire || '',
+          plot_metallique: firstEquipmentDetails?.plotMetallique || plotMetallique || '',
+          bras_de_deport: firstEquipmentDetails?.brasDeDeport || brasDeDeport || '',
+          mast_section: firstEquipmentDetails?.matPrincipal || matPrincipal || '',
+          plot_section: firstEquipmentDetails?.plotMetallique || plotMetallique || '',
+          bras_section: firstEquipmentDetails?.brasDeDeport || brasDeDeport || '',
+          mast_5g_section: firstEquipmentDetails?.matSecondaire || matSecondaire || '',
+          material_name: 'S 235'
         }
       };
 
       if (ant4gConfig) {
         payload.antenna_4g = {
-          height_mm: ant4gConfig.height,
-          width_mm: ant4gConfig.width,
-          thickness_mm: ant4gConfig.thickness,
-          weight_dan: ant4gConfig.weight
-        };
-      }
-      
-      if (ant5gConfig) {
-        payload.antenna_5g = {
-          height_mm: ant5gConfig.height,
-          width_mm: ant5gConfig.width,
-          thickness_mm: ant5gConfig.thickness,
-          weight_dan: ant5gConfig.weight
+          model: ant4gConfig.model || 'Standard',
+          hauteur_mm: ant4gConfig.height,
+          largeur_mm: ant4gConfig.width,
+          epaisseur_mm: ant4gConfig.thickness,
+          poids_kg: ant4gConfig.weight
         };
       }
 
-      const response = await fetch('/api/calculations/preview_template/', {
+      if (ant5gConfig) {
+        payload.antenna_5g = {
+          model: ant5gConfig.model || 'Standard',
+          hauteur_mm: ant5gConfig.height,
+          largeur_mm: ant5gConfig.width,
+          epaisseur_mm: ant5gConfig.thickness,
+          poids_kg: ant5gConfig.weight
+        };
+      }
+
+      let calculationJobId = null;
+      
+      try {
+        const calcResponse = await fetch('/api/calculations/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (calcResponse.ok) {
+          const calcData = await calcResponse.json();
+          calculationJobId = calcData.data?.id;
+        } else {
+          const errText = await calcResponse.text();
+          console.error("Calculation API returned error:", errText);
+        }
+      } catch (e) {
+        console.error("Failed to trigger robot calculation", e);
+      }
+
+      if (calculationJobId) {
+        setPollingMsg('Calcul Robot en cours...');
+        let isCompleted = false;
+        let attempts = 0;
+        while (!isCompleted && attempts < 40) { // Max ~80 seconds
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            const pollResponse = await fetch(`/api/calculations/${calculationJobId}/`, {
+              headers: {
+                'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}`
+              }
+            });
+            if (pollResponse.ok) {
+              const pollData = await pollResponse.json();
+              if (pollData.status === 'COMPLETED' || pollData.status === 'FAILED') {
+                isCompleted = true;
+              }
+            }
+          } catch (e) {
+             console.error("Polling error", e);
+          }
+          attempts++;
+        }
+      }
+
+      setPollingMsg('Génération du PDF...');
+      const pdfEndpoint = calculationJobId ? `/api/calculations/${calculationJobId}/generate_pdf/` : '/api/calculations/preview_template/';
+
+      const response = await fetch(pdfEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, photo_url: siteImageUrl })
       });
       if (!response.ok) throw new Error('Preview failed');
       const data = await response.json();
       if (data.ndc_pdf_url) {
-        const fullUrl = data.ndc_pdf_url.startsWith('http') 
-          ? data.ndc_pdf_url 
+        const fullUrl = data.ndc_pdf_url.startsWith('http')
+          ? data.ndc_pdf_url
           : `${window.location.origin}${data.ndc_pdf_url}`;
         setPreviewPdfUrl(fullUrl);
       } else {
@@ -234,6 +299,7 @@ export default function ResultsPanel({
       setConversionError(true);
     } finally {
       setIsConverting(false);
+      setPollingMsg('');
     }
   };
 
@@ -270,7 +336,7 @@ export default function ResultsPanel({
             </p>
           )}
         </div>
-        
+
         {/* Consolidated Classification Section on Right */}
         <div className="flex gap-3 ml-6">
           <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors">
@@ -328,7 +394,7 @@ export default function ResultsPanel({
                     h mât: {sector.selectedHeight}m
                   </span>
                 </div>
-                
+
                 <div className="space-y-4">
                   {/* 4G Antenna */}
                   <div>
@@ -381,130 +447,130 @@ export default function ResultsPanel({
           <div className="space-y-4">
             {lookupResult.equipment.map((eq: any, idx: number) => {
               const details = getTerrainDetails(eq, lookupResult.detected_terrain_type);
-              
+
               const rawName = eq.name || '';
               const rawMontage = eq.sub_elements || selectedMontage || '';
-              
+
               // Hide A1 / A1.2 text variations as requested
               const isA1Name = /a1(\.\d+)?/i.test(rawName);
               const isA1Montage = /a1(\.\d+)?/i.test(rawMontage);
-              
+
               const displayName = isA1Name ? "Configuration Validée" : rawName;
               const showMontage = !isA1Montage;
-              
+
               return (
-              <div key={idx} className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/40 transition-all duration-300 group">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-5">
-                    <div>
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors shadow-inner">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <div key={idx} className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/40 transition-all duration-300 group">
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-5">
+                      <div>
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors shadow-inner">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          </div>
+                          <h4 className="text-xl font-extrabold text-white tracking-tight">{displayName}</h4>
                         </div>
-                        <h4 className="text-xl font-extrabold text-white tracking-tight">{displayName}</h4>
+                        {showMontage && rawMontage && (
+                          <div className="flex items-center gap-2 ml-12">
+                            <Layers className="w-4 h-4 text-slate-500" />
+                            <p className="text-sm text-slate-400 font-medium">Montage: <span className="text-slate-300">{rawMontage}</span></p>
+                          </div>
+                        )}
                       </div>
-                      {showMontage && rawMontage && (
-                        <div className="flex items-center gap-2 ml-12">
-                          <Layers className="w-4 h-4 text-slate-500" />
-                          <p className="text-sm text-slate-400 font-medium">Montage: <span className="text-slate-300">{rawMontage}</span></p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2 items-end">
-                      <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Section Validée
-                      </span>
-                      {(eq.reference_4g || eq.reference_5g) && (
-                        <span className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full border border-indigo-500/20 flex items-center gap-1.5 shadow-sm">
-                          <Activity className="w-3.5 h-3.5" />
-                          Dimensions Réelles
+                      <div className="flex flex-col gap-2 items-end">
+                        <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Section Validée
                         </span>
+                        {(eq.reference_4g || eq.reference_5g) && (
+                          <span className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full border border-indigo-500/20 flex items-center gap-1.5 shadow-sm">
+                            <Activity className="w-3.5 h-3.5" />
+                            Dimensions Réelles
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={`bg-slate-950/40 rounded-xl p-5 border border-slate-800/50 ${(eq.reference_4g || eq.reference_5g) ? 'mb-4' : ''}`}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Settings className="w-4 h-4 text-slate-400" />
+                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spécification Matériau</p>
+                      </div>
+                      {!(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                        <p className="text-emerald-300/90 font-medium whitespace-pre-line leading-relaxed text-sm">
+                          {details.material}
+                        </p>
+                      )}
+
+                      {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                        <div className="space-y-2.5 text-xs pt-2">
+                          {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
+                            <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                              <span className="text-slate-400 font-medium">Mât Principal:</span>
+                              <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
+                                {firstEquipmentDetails?.matPrincipal || matPrincipal}
+                              </span>
+                            </div>
+                          )}
+                          {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
+                            <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                              <span className="text-slate-400 font-medium">Plot Métallique:</span>
+                              <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
+                                {firstEquipmentDetails?.plotMetallique || plotMetallique}
+                              </span>
+                            </div>
+                          )}
+                          {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
+                            <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                              <span className="text-slate-400 font-medium">Bras de déport:</span>
+                              <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
+                                {firstEquipmentDetails?.brasDeDeport || brasDeDeport}
+                              </span>
+                            </div>
+                          )}
+                          {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
+                            <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                              <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
+                              <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
+                                {firstEquipmentDetails?.matSecondaire || matSecondaire}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
 
-                  <div className={`bg-slate-950/40 rounded-xl p-5 border border-slate-800/50 ${(eq.reference_4g || eq.reference_5g) ? 'mb-4' : ''}`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Settings className="w-4 h-4 text-slate-400" />
-                      <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spécification Matériau</p>
-                    </div>
-                    {!(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                      <p className="text-emerald-300/90 font-medium whitespace-pre-line leading-relaxed text-sm">
-                        {details.material}
-                      </p>
-                    )}
-                    
-                    {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                      <div className="space-y-2.5 text-xs pt-2">
-                        {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
-                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                            <span className="text-slate-400 font-medium">Mât Principal:</span>
-                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
-                              {firstEquipmentDetails?.matPrincipal || matPrincipal}
-                            </span>
-                          </div>
-                        )}
-                        {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
-                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                            <span className="text-slate-400 font-medium">Plot Métallique:</span>
-                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
-                              {firstEquipmentDetails?.plotMetallique || plotMetallique}
-                            </span>
-                          </div>
-                        )}
-                        {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
-                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                            <span className="text-slate-400 font-medium">Bras de déport:</span>
-                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
-                              {firstEquipmentDetails?.brasDeDeport || brasDeDeport}
-                            </span>
-                          </div>
-                        )}
-                        {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                          <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                            <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
-                            <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
-                              {firstEquipmentDetails?.matSecondaire || matSecondaire}
-                            </span>
-                          </div>
-                        )}
+                    {(eq.reference_4g || eq.reference_5g) && (
+                      <div className="bg-indigo-950/20 rounded-xl p-5 border border-indigo-500/20">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Radio className="w-4 h-4 text-indigo-400" />
+                          <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold">Références Équipement</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {eq.reference_4g && (
+                            <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-blue-500/30 transition-colors">
+                              <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
+                                <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                                Modèle 4G
+                              </p>
+                              <p className="text-sm font-bold text-slate-200">{eq.reference_4g}</p>
+                            </div>
+                          )}
+                          {eq.reference_5g && (
+                            <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-purple-500/30 transition-colors">
+                              <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
+                                <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></span>
+                                Modèle 5G
+                              </p>
+                              <p className="text-sm font-bold text-slate-200">{eq.reference_5g}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {(eq.reference_4g || eq.reference_5g) && (
-                    <div className="bg-indigo-950/20 rounded-xl p-5 border border-indigo-500/20">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Radio className="w-4 h-4 text-indigo-400" />
-                        <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold">Références Équipement</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        {eq.reference_4g && (
-                          <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-blue-500/30 transition-colors">
-                            <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
-                              <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
-                              Modèle 4G
-                            </p>
-                            <p className="text-sm font-bold text-slate-200">{eq.reference_4g}</p>
-                          </div>
-                        )}
-                        {eq.reference_5g && (
-                          <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-purple-500/30 transition-colors">
-                            <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
-                              <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></span>
-                              Modèle 5G
-                            </p>
-                            <p className="text-sm font-bold text-slate-200">{eq.reference_5g}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
-
-              </div>
-            );
+              );
             })}
           </div>
         </div>
@@ -520,10 +586,10 @@ export default function ResultsPanel({
           {enabledConfigs.map((config: EquipmentConfig) => {
             const IconComponent = config.icon === 'Radio' ? Radio : Activity;
             const colorClass = config.color === 'blue' ? 'blue' :
-                              config.color === 'purple' ? 'purple' :
-                              config.color === 'amber' ? 'amber' :
-                              config.color === 'rose' ? 'rose' : 'emerald';
-            
+              config.color === 'purple' ? 'purple' :
+                config.color === 'amber' ? 'amber' :
+                  config.color === 'rose' ? 'rose' : 'emerald';
+
             // Premium color accent borders
             const accentBorderClasses: Record<string, string> = {
               blue: 'border-l-blue-500 hover:border-blue-500/30',
@@ -547,9 +613,9 @@ export default function ResultsPanel({
                     <div key={idx} className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
                       <span className="text-slate-400 font-medium">{field.label}</span>
                       <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30">
-                        {equipmentValues[config.id]?.[field.label.toLowerCase()] || 
-                         equipmentValues[config.id]?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] || 
-                         field.value}
+                        {equipmentValues[config.id]?.[field.label.toLowerCase()] ||
+                          equipmentValues[config.id]?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
+                          field.value}
                       </span>
                     </div>
                   ))}
@@ -566,108 +632,115 @@ export default function ResultsPanel({
         {lookupResult.equipment.length > 0 ? (
           <div className="mt-6 pt-6 border-t border-slate-800">
 
-              <div className="mt-4">
-                <button
-                  onClick={handlePreviewTemplate}
-                  disabled={isConverting}
-                  className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 transition-all text-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  Prévisualiser le Template NDC (Mode Debug)
-                </button>
-              </div>
-
-              {/* Catalogue PDF Section */}
-              {loadingCataloguePdf ? (
-                <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl flex items-center justify-center">
-                  <div className="flex items-center gap-2 text-slate-400">
+              <button
+                onClick={handlePreviewTemplate}
+                disabled={isConverting}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 transition-all text-sm"
+              >
+                {isConverting ? (
+                  <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Recherche du PDF catalogue...</span>
+                    {pollingMsg || 'Prévisualisation...'}
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    Prévisualiser le Template NDC (Mode Debug)
+                  </>
+                )}
+              </button>
+
+            {/* Catalogue PDF Section */}
+            {loadingCataloguePdf ? (
+              <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl flex items-center justify-center">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Recherche du PDF catalogue...</span>
+                </div>
+              </div>
+            ) : cataloguePdf ? (
+              <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-emerald-400" />
+                    <div>
+                      <p className="text-sm font-semibold text-white">PDF Catalogue Correspondant</p>
+                      <p className="text-xs text-slate-400">{cataloguePdf.filename}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handlePreviewDocument({ url: cataloguePdf.url, filename: cataloguePdf.filename, ext: 'PDF' })}
+                      disabled={isConverting}
+                      className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isConverting ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Conversion...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-4 h-4" />
+                          <span>Aperçu</span>
+                        </>
+                      )}
+                    </button>
+                    <a
+                      href={cataloguePdf.url}
+                      download={cataloguePdf.filename}
+                      className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg flex items-center gap-2 transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Télécharger</span>
+                    </a>
                   </div>
                 </div>
-              ) : cataloguePdf ? (
-                <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-emerald-400" />
+              </div>
+            ) : null}
+
+            {/* Modal PDF Preview using Portal to ensure it escapes any parent stacking contexts */}
+            {previewPdfUrl && !conversionError && createPortal(
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="bg-slate-900 rounded-2xl border border-slate-700/50 shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="px-6 py-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-500/20 rounded-lg">
+                        <FileText className="w-5 h-5 text-indigo-400" />
+                      </div>
                       <div>
-                        <p className="text-sm font-semibold text-white">PDF Catalogue Correspondant</p>
-                        <p className="text-xs text-slate-400">{cataloguePdf.filename}</p>
+                        <h3 className="text-lg text-white font-bold tracking-wide">Aperçu du document</h3>
+                        <p className="text-xs text-slate-400">Visionneuse PDF intégrée</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handlePreviewDocument({ url: cataloguePdf.url, filename: cataloguePdf.filename, ext: 'PDF' })}
-                        disabled={isConverting}
-                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isConverting ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                            <span>Conversion...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="w-4 h-4" />
-                            <span>Aperçu</span>
-                          </>
-                        )}
-                      </button>
-                      <a
-                        href={cataloguePdf.url}
-                        download={cataloguePdf.filename}
-                        className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg flex items-center gap-2 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Télécharger</span>
-                      </a>
-                    </div>
+                    <button
+                      onClick={() => setPreviewPdfUrl(null)}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 transition-all"
+                      title="Fermer l'aperçu"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex-1 w-full bg-slate-200">
+                    <iframe
+                      src={`${previewPdfUrl}#view=FitH`}
+                      className="w-full h-full border-0"
+                      title="Document Preview"
+                    />
                   </div>
                 </div>
-              ) : null}
-              
-              {/* Modal PDF Preview using Portal to ensure it escapes any parent stacking contexts */}
-              {previewPdfUrl && !conversionError && createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                  <div className="bg-slate-900 rounded-2xl border border-slate-700/50 shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                    <div className="px-6 py-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-indigo-500/20 rounded-lg">
-                          <FileText className="w-5 h-5 text-indigo-400" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg text-white font-bold tracking-wide">Aperçu du document</h3>
-                          <p className="text-xs text-slate-400">Visionneuse PDF intégrée</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setPreviewPdfUrl(null)}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 transition-all"
-                        title="Fermer l'aperçu"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="flex-1 w-full bg-slate-200">
-                      <iframe
-                        src={`${previewPdfUrl}#view=FitH`}
-                        className="w-full h-full border-0"
-                        title="Document Preview"
-                      />
-                    </div>
-                  </div>
-                </div>,
-                document.body
-              )}
-              
-              {conversionError && (
-                <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
-                  <p className="text-sm text-rose-400">
-                    Impossible de prévisualiser ce document. Veuillez le télécharger.
-                  </p>
-                </div>
-              )}
-            </div>
+              </div>,
+              document.body
+            )}
+
+            {conversionError && (
+              <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
+                <p className="text-sm text-rose-400">
+                  Impossible de prévisualiser ce document. Veuillez le télécharger.
+                </p>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="bg-slate-800/30 border border-slate-700 border-dashed rounded-xl p-8 text-center flex flex-col items-center">
             <div className="p-4 bg-slate-800 rounded-full mb-4 relative">
@@ -681,7 +754,7 @@ export default function ResultsPanel({
             <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
               Les critères sélectionnés ou la configuration sur-mesure ne correspondent à aucune étude précalculée dans notre base de données.
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-6">
               <div className="flex flex-col space-y-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât principal</label>
@@ -769,7 +842,7 @@ export default function ResultsPanel({
                 )}
               </button>
             </div>
-            
+
             <p className="text-xs text-amber-500/70 mt-4 max-w-sm flex gap-1">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               Génère le payload JSON strict pour exécution sur le serveur de calcul Windows.

@@ -54,7 +54,7 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
     context['mat_4g_epaisseur'] = epaisseur_4g or '[EPAISSEUR_4G]'
     
     # 4G Mast Length (mast_height_m * 1000)
-    mast_height_m = structure_data.get('mast_height_m')
+    mast_height_m = structure_data.get('mast_height_m') or structure_data.get('hauteur_mat_m')
     if mast_height_m:
         try:
             context['mat_4g_longueur'] = int(float(mast_height_m) * 1000)
@@ -72,7 +72,7 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
     context['mat_5g_longueur'] = 1000  # Hardcoded to 1000mm (1.0m) as in robot_worker.py
 
     # Bras de déport (parsed from raw string via Regex)
-    bras_str = structure_data.get('bras_de_deport') or ''
+    bras_str = structure_data.get('bras_de_deport') or 'TCAR 50x5'
     diam_bras, epaisseur_bras = parse_dimensions(bras_str)
             
     context['bras_deport_diam'] = diam_bras or '[DIAM_BRAS]'
@@ -87,25 +87,25 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
 
     # 4G Antenna info
     antenna_4g = active_data.get('antenna_4g', {})
-    a4g_w = antenna_4g.get('width_mm')
-    a4g_h = antenna_4g.get('height_mm')
-    a4g_t = antenna_4g.get('thickness_mm')
+    a4g_w = antenna_4g.get('largeur_mm') or antenna_4g.get('width_mm')
+    a4g_h = antenna_4g.get('hauteur_mm') or antenna_4g.get('height_mm')
+    a4g_t = antenna_4g.get('epaisseur_mm') or antenna_4g.get('thickness_mm')
     if a4g_h and a4g_w and a4g_t:
         context['ant_4g_dims'] = f"{int(float(a4g_h))}x{int(float(a4g_w))}x{int(float(a4g_t))}"
     else:
         context['ant_4g_dims'] = '[ANT_4G_DIMS]'
-    context['ant_4g_weight'] = antenna_4g.get('weight_dan') or '[ANT_4G_WEIGHT]'
+    context['ant_4g_weight'] = antenna_4g.get('poids_kg') or antenna_4g.get('weight_dan') or '[ANT_4G_WEIGHT]'
 
     # 5G Antenna info
     antenna_5g = active_data.get('antenna_5g', {})
-    a5g_w = antenna_5g.get('width_mm')
-    a5g_h = antenna_5g.get('height_mm')
-    a5g_t = antenna_5g.get('thickness_mm')
+    a5g_w = antenna_5g.get('largeur_mm') or antenna_5g.get('width_mm')
+    a5g_h = antenna_5g.get('hauteur_mm') or antenna_5g.get('height_mm')
+    a5g_t = antenna_5g.get('epaisseur_mm') or antenna_5g.get('thickness_mm')
     if a5g_h and a5g_w and a5g_t:
         context['ant_5g_dims'] = f"{int(float(a5g_h))}x{int(float(a5g_w))}x{int(float(a5g_t))}"
     else:
         context['ant_5g_dims'] = '[ANT_5G_DIMS]'
-    context['ant_5g_weight'] = antenna_5g.get('weight_dan') or '[ANT_5G_WEIGHT]'
+    context['ant_5g_weight'] = antenna_5g.get('poids_kg') or antenna_5g.get('weight_dan') or '[ANT_5G_WEIGHT]'
     
     # 5G Mast HBA (from robot_worker.py: hauteur_mat_m + 0.2)
     if mast_height_m:
@@ -117,7 +117,7 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
         context['ant_5g_hba'] = '[ANT_5G_HBA]'
     
     # Hauteur mat m (for page 4 and 5)
-    context['hauteur_mat_m'] = mast_height_m or '[HAUTEUR_MAT_M]'
+    context['hauteur_mat_m'] = '[HAUTEUR_MAT_M]' if mast_height_m is None else mast_height_m
 
     # Environment
     env = active_data.get('environment', {})
@@ -180,6 +180,16 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
         context['photo_abs'] = photo_abs
     else:
         context['photo_abs'] = None
+        
+    # Robot Screenshot Path
+    if job and job.screenshot:
+        screenshot_path = job.screenshot.path
+        if os.path.exists(screenshot_path):
+            context['robot_screenshot_abs'] = screenshot_path
+        else:
+            context['robot_screenshot_abs'] = None
+    else:
+        context['robot_screenshot_abs'] = None
         
     # Logo Path
     logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')

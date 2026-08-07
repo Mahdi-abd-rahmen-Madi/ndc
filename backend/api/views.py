@@ -228,14 +228,30 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         """
         Endpoint for Windows Server to submit calculation results.
         """
-        job = self.get_object()
+        try:
+            job = CalculationJob.objects.get(pk=pk)
+        except CalculationJob.DoesNotExist:
+            return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
         
         if job.status == 'COMPLETED':
             return Response({'error': 'Job already completed.'}, status=status.HTTP_400_BAD_REQUEST)
             
-        result_data = request.data.get('result_data')
-        error_message = request.data.get('error_message')
-        job_status = request.data.get('status', 'COMPLETED')
+        import json
+        
+        if 'screenshot' in request.FILES:
+            job.screenshot = request.FILES['screenshot']
+            
+        if 'result_data' in request.POST:
+            try:
+                result_data = json.loads(request.POST['result_data'])
+            except json.JSONDecodeError:
+                result_data = request.POST['result_data']
+            error_message = request.POST.get('error_message')
+            job_status = request.POST.get('status', 'COMPLETED')
+        else:
+            result_data = request.data.get('result_data')
+            error_message = request.data.get('error_message')
+            job_status = request.data.get('status', 'COMPLETED')
         
         job.status = job_status
         job.result_data = result_data
