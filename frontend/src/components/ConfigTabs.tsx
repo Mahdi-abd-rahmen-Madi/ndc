@@ -1,6 +1,8 @@
 // ConfigTabs component
 
 import type { ConfigTabsProps } from '../utils/types';
+import { useAppStore } from '../stores/useAppStore';
+import { cn } from '../utils/cn';
 import DetailsTab from './DetailsTab';
 import RulesTab from './RulesTab';
 import ProcessTab from './ProcessTab';
@@ -8,13 +10,14 @@ import TestingTab from './TestingTab';
 import ConfigTab from './ConfigTab';
 
 export default function ConfigTabs({
-  activeTab,
-  onTabChange,
   classificationResult,
   config,
-  currentAnalysisRadius,
-  onRadiusChange,
-}: ConfigTabsProps) {
+}: Omit<ConfigTabsProps, 'activeTab' | 'onTabChange' | 'currentAnalysisRadius' | 'onRadiusChange'>) {
+  const activeTab = useAppStore(state => state.activeTab);
+  const setActiveTab = useAppStore(state => state.setActiveTab);
+  const currentAnalysisRadius = useAppStore(state => state.currentAnalysisRadius);
+  const setCurrentAnalysisRadius = useAppStore(state => state.setCurrentAnalysisRadius);
+
   const tabs = [
     { id: 'details', label: 'Détails' },
     { id: 'rules', label: 'Règles' },
@@ -29,12 +32,13 @@ export default function ConfigTabs({
         {tabs.map(tab => (
           <button
             key={tab.id}
-            className={`config-tab flex-1 p-3 text-center cursor-pointer border-none bg-transparent transition-all font-medium ${
+            className={cn(
+              "config-tab flex-1 p-3 text-center cursor-pointer border-none bg-transparent transition-all font-medium",
               activeTab === tab.id
-                ? 'bg-white border-b-3 border-primary text-primary'
-                : 'hover:bg-gray-100 text-gray-600'
-            }`}
-            onClick={() => onTabChange(tab.id)}
+                ? "bg-white border-b-3 border-primary text-primary"
+                : "hover:bg-gray-100 text-gray-600"
+            )}
+            onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
           </button>
@@ -55,7 +59,7 @@ export default function ConfigTabs({
           <TestingTab
             classificationResult={classificationResult}
             currentAnalysisRadius={currentAnalysisRadius}
-            onRadiusChange={onRadiusChange}
+            onRadiusChange={setCurrentAnalysisRadius}
           />
         )}
         {activeTab === 'config' && (

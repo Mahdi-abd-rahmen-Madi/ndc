@@ -5,17 +5,18 @@ import { Search, MapPin, X, Loader2 } from 'lucide-react';
 import { useGeocoding } from '../hooks/useGeocoding';
 import type { GeocodingAddress } from '../utils/types';
 
+import { useAppStore } from '../stores/useAppStore';
+
 interface AddressSearchProps {
   onAddressSelect: (address: GeocodingAddress) => void;
-  selectedAddress: GeocodingAddress | null;
   onClearAddress: () => void;
 }
 
 export default function AddressSearch({
   onAddressSelect,
-  selectedAddress,
   onClearAddress,
 }: AddressSearchProps) {
+  const selectedAddress = useAppStore(state => state.selectedAddress);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<GeocodingAddress[]>([]);
   const [isOpen, setIsOpen] = useState(false);

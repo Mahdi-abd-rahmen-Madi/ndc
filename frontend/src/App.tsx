@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
+import { useAppStore } from './stores/useAppStore';
+import { cn } from './utils/cn';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import maplibregl from 'maplibre-gl';
 import TerrainMap from './components/TerrainMap';
@@ -8,8 +10,6 @@ import ConfigTabs from './components/ConfigTabs';
 import BDTOPOControls from './components/BDTOPOControls';
 import RegionControl from './components/RegionControl';
 import AddressSearch from './components/AddressSearch';
-import CatalogueManagement from './components/CatalogueManagement';
-import NDCPortailTest from './components/regular-user/NDCPortailTest';
 import MontageSelectionModal from './components/MontageSelectionModal';
 import { useTerrainClassification } from './hooks/useTerrainClassification';
 import { useTerrainConfig } from './hooks/useTerrainConfig';
@@ -17,42 +17,39 @@ import { useRegionBoundaries } from './hooks/useRegionBoundaries';
 import { useBDTOPO } from './hooks/useBDTOPO';
 import { useGeocoding } from './hooks/useGeocoding';
 import type { GeocodingAddress } from './utils/types';
-import RegularUserView from './components/RegularUserView';
-import LandingPage from './components/LandingPage';
-import LoginView from './components/LoginView';
+
+// Lazy loaded route components
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const LoginView = lazy(() => import('./components/LoginView'));
+const NDCPortailTest = lazy(() => import('./components/regular-user/NDCPortailTest'));
+const RegularUserView = lazy(() => import('./components/RegularUserView'));
+const CatalogueManagement = lazy(() => import('./components/CatalogueManagement'));
 
 export default function App() {
-  // Auth State
-  const [token, setToken] = useState<string | null>(localStorage.getItem('ndc_auth_token'));
-  const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('ndc_user_email'));
-  const [isAdmin, setIsAdmin] = useState<boolean>(localStorage.getItem('ndc_is_admin') === 'true');
+  const token = useAppStore((state) => state.token);
+  const userEmail = useAppStore((state) => state.userEmail);
+  const isAdmin = useAppStore((state) => state.isAdmin);
+  const setAuth = useAppStore((state) => state.setAuth);
+  const logout = useAppStore((state) => state.logout);
 
   const handleLoginSuccess = (newToken: string, email: string, adminStatus: boolean) => {
-    localStorage.setItem('ndc_auth_token', newToken);
-    localStorage.setItem('ndc_user_email', email);
-    localStorage.setItem('ndc_is_admin', adminStatus ? 'true' : 'false');
-    setToken(newToken);
-    setUserEmail(email);
-    setIsAdmin(adminStatus);
+    setAuth(newToken, email, adminStatus);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('ndc_auth_token');
-    localStorage.removeItem('ndc_user_email');
-    localStorage.removeItem('ndc_is_admin');
-    setToken(null);
-    setUserEmail(null);
-    setIsAdmin(false);
+    logout();
   };
 
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage token={token} userEmail={userEmail} isAdmin={isAdmin} onLogout={handleLogout} />} />
-      <Route path="/portal" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
-      <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
-      <Route path="/ndc-portail-test" element={<NDCPortailTest />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Chargement...</div>}>
+      <Routes>
+        <Route path="/" element={<LandingPage token={token} userEmail={userEmail} isAdmin={isAdmin} onLogout={handleLogout} />} />
+        <Route path="/portal" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
+        <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
+        <Route path="/ndc-portail-test" element={<NDCPortailTest />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
@@ -67,20 +64,30 @@ interface MainAppProps {
 
 function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLogout }: MainAppProps) {
   const [userMode] = useState<'engineer' | 'public'>(initialMode);
-  const [engineerSubTab, setEngineerSubTab] = useState<'map' | 'catalogue'>('map');
-  const [activeTab, setActiveTab] = useState('details');
-  const [currentAnalysisRadius, setCurrentAnalysisRadius] = useState(0.5);
-  const [showConfigPanel, setShowConfigPanel] = useState(false);
+  
+  // Zustand Store
+  const engineerSubTab = useAppStore((state) => state.engineerSubTab);
+  const setEngineerSubTab = useAppStore((state) => state.setEngineerSubTab);
+  const showConfigPanel = useAppStore((state) => state.showConfigPanel);
+  const setShowConfigPanel = useAppStore((state) => state.setShowConfigPanel);
+  const currentAnalysisRadius = useAppStore((state) => state.currentAnalysisRadius);
+  
+  const regionsVisible = useAppStore((state) => state.regionsVisible);
+  const setRegionsVisible = useAppStore((state) => state.setRegionsVisible);
+  const selectedCoords = useAppStore((state) => state.selectedCoords);
+  const setSelectedCoords = useAppStore((state) => state.setSelectedCoords);
+  const setSelectedAddress = useAppStore((state) => state.setSelectedAddress);
+  
+  const showMontageModal = useAppStore((state) => state.showMontageModal);
+  const setShowMontageModal = useAppStore((state) => state.setShowMontageModal);
+  const selectedCivilMontage = useAppStore((state) => state.selectedCivilMontage);
+  const setSelectedCivilMontage = useAppStore((state) => state.setSelectedCivilMontage);
+  const selectedSiteType = useAppStore((state) => state.selectedSiteType);
+  const setSelectedSiteType = useAppStore((state) => state.setSelectedSiteType);
+  const selectedFoundationType = useAppStore((state) => state.selectedFoundationType);
+  const setSelectedFoundationType = useAppStore((state) => state.setSelectedFoundationType);
+
   const [mapInstance, setMapInstance] = useState<maplibregl.Map | null>(null);
-
-  const [regionsVisible, setRegionsVisible] = useState(false);
-  const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
-
-  const [showMontageModal, setShowMontageModal] = useState(true);
-  const [selectedCivilMontage, setSelectedCivilMontage] = useState<string | null>(null);
-  const [selectedSiteType, setSelectedSiteType] = useState<'nouveau' | 'existant' | null>(null);
-  const [selectedFoundationType, setSelectedFoundationType] = useState<'metallique' | 'beton' | 'encastre' | null>(null);
 
   // Route protection
   if (userMode === 'engineer' && token && !isAdmin) {
@@ -187,10 +194,9 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
     setMapInstance(map);
   }, []);
 
-  const handleRadiusChange = useCallback((radius: number) => {
-    setCurrentAnalysisRadius(radius);
-    setAnalysisRadius(radius);
-  }, [setAnalysisRadius]);
+  useEffect(() => {
+    setAnalysisRadius(currentAnalysisRadius);
+  }, [currentAnalysisRadius, setAnalysisRadius]);
 
   const handleBDTOPOStyleChange = useCallback(() => {
     if (mapInstance) {
@@ -233,13 +239,21 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
   const apiBaseUrl = import.meta.env.VITE_API_URL || '';
 
   if (userMode === 'public' && !token) {
-    return <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />;
+    return (
+      <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Chargement...</div>}>
+        <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />
+      </Suspense>
+    );
   }
 
   // Also require login for engineer if we want to be strict, but the user requested:
   // "admin is the only one capable of accessing espace ingenieur"
   if (userMode === 'engineer' && !token) {
-    return <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />;
+    return (
+      <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Chargement...</div>}>
+        <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />
+      </Suspense>
+    );
   }
 
   return (
@@ -261,13 +275,19 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
             <div className="flex items-center bg-white/10 rounded-lg p-0.5 mr-2">
               <button
                 onClick={() => setEngineerSubTab('map')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${engineerSubTab === 'map' ? 'bg-white text-primary shadow-sm' : 'text-white/70 hover:text-white'}`}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium transition",
+                  engineerSubTab === 'map' ? "bg-white text-primary shadow-sm" : "text-white/70 hover:text-white"
+                )}
               >
                 Carte
               </button>
               <button
                 onClick={() => setEngineerSubTab('catalogue')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${engineerSubTab === 'catalogue' ? 'bg-white text-primary shadow-sm' : 'text-white/70 hover:text-white'}`}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium transition",
+                  engineerSubTab === 'catalogue' ? "bg-white text-primary shadow-sm" : "text-white/70 hover:text-white"
+                )}
               >
                 Base de données
               </button>
@@ -333,7 +353,6 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
               {/* Address Search */}
               <AddressSearch
                 onAddressSelect={handleAddressSelect}
-                selectedAddress={selectedAddress}
                 onClearAddress={handleClearAddress}
               />
 
@@ -358,7 +377,6 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
               classificationResult={classificationResult}
               loading={classificationLoading}
               error={classificationError}
-              currentAnalysisRadius={currentAnalysisRadius}
             />
 
             {/* Config Panel (when shown) */}
@@ -374,12 +392,8 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
                   </button>
                 </div>
                 <ConfigTabs
-                  activeTab={activeTab}
-                  onTabChange={setActiveTab}
                   classificationResult={classificationResult}
                   config={config}
-                  currentAnalysisRadius={currentAnalysisRadius}
-                  onRadiusChange={handleRadiusChange}
                 />
               </div>
             )}

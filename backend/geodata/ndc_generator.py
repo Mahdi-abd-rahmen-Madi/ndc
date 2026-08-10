@@ -216,3 +216,18 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
     # Return the relative URL of the generated PDF
     pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}.pdf"
     return pdf_url
+
+def generate_ndc_pdf_task(job_id, photo_url_or_path):
+    from api.models import CalculationJob
+    try:
+        job = CalculationJob.objects.get(id=job_id)
+        pdf_url = generate_ndc_pdf(job, photo_url_or_path)
+        # Assuming the job has a pdf_url field, or we store it in result_data
+        if not isinstance(job.result_data, dict):
+            job.result_data = {}
+        job.result_data['ndc_pdf_url'] = pdf_url
+        job.save()
+        return pdf_url
+    except CalculationJob.DoesNotExist:
+        print(f"Job {job_id} not found for PDF generation")
+        return None

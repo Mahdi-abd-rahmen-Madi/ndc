@@ -80,7 +80,7 @@ class TerrainClassificationService:
             
             logger.debug(f"Querying local land use data within bbox: {(minx, miny, maxx, maxy)}")
             
-            from sqlalchemy import create_engine
+            from sqlalchemy import create_engine, text
             db_settings = settings.DATABASES['default']
             conn_str = f"postgresql://{db_settings['USER']}:{db_settings['PASSWORD']}@{db_settings.get('HOST', 'localhost')}:{db_settings.get('PORT', '5432')}/{db_settings['NAME']}"
             engine = create_engine(conn_str)
@@ -90,7 +90,8 @@ class TerrainClassificationService:
                 SELECT * FROM land_use_data 
                 WHERE geometry && ST_MakeEnvelope({minx}, {miny}, {maxx}, {maxy}, 4326)
             """
-            gdf = gpd.read_postgis(sql, engine, geom_col='geometry')
+            with engine.connect() as conn:
+                gdf = gpd.read_postgis(text(sql), conn, geom_col='geometry')
             
             # Create spatial index for the local subset
             if not gdf.empty:

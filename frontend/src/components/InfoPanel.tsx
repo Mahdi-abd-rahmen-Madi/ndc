@@ -4,8 +4,10 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import type { InfoPanelProps } from '../utils/types';
 import { getTerrainTypeInfo, getTerrainTypeGradient } from '../utils/terrainTypes';
 import { formatCoordinates, formatSpatialExtent } from '../utils/formatters';
+import { useAppStore } from '../stores/useAppStore';
 
-export default function InfoPanel({ classificationResult, loading, error, currentAnalysisRadius }: InfoPanelProps) {
+export default function InfoPanel({ classificationResult, loading, error }: Omit<InfoPanelProps, 'currentAnalysisRadius'>) {
+  const currentAnalysisRadius = useAppStore(state => state.currentAnalysisRadius);
   if (loading) {
     return (
       <div className="info-panel w-[350px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform">

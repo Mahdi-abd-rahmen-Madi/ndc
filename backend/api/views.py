@@ -157,7 +157,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
     """
     Handles calculation requests and acts as a catalog/cache for previous results.
     """
-    queryset = CalculationJob.objects.all()
+    queryset = CalculationJob.objects.select_related('user').all()
     serializer_class = CalculationJobSerializer
     permission_classes = [permissions.AllowAny] # Adjust as per your auth requirements
 
@@ -207,21 +207,17 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             status='PENDING'
         )
         
+        # Dispatch the job to the FastAPI worker asynchronously
+        from django_q.tasks import async_task
+        async_task('api.tasks.send_job_to_worker', job.id)
+        
         serializer = self.get_serializer(job)
         return Response({
             'message': 'New calculation job queued.',
             'cached': False,
             'data': serializer.data
         }, status=status.HTTP_201_CREATED)
-
-    @action(detail=False, methods=['get'])
-    def pending(self, request):
-        """
-        Endpoint for Windows Server to poll for pending jobs.
-        """
-        jobs = CalculationJob.objects.filter(status='PENDING')
-        serializer = self.get_serializer(jobs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    # 'pending' endpoint has been completely removed in favor of push notifications via FastAPI
 
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
@@ -275,13 +271,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         if not photo_url and job.input_data and job.input_data.get('site_image_url'):
             photo_url = job.input_data.get('site_image_url')
             
-        if not photo_url:
-            return Response({'error': 'photo_url is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        # photo_url is optional, it will be None or empty string if not provided
+        photo_url = photo_url or ''
 
-        from geodata.ndc_generator import generate_ndc_pdf
+        from django_q.tasks import async_task
         try:
-            pdf_url = generate_ndc_pdf(job, photo_url)
-            return Response({'ndc_pdf_url': pdf_url}, status=status.HTTP_200_OK)
+            # We use a task wrapper that handles job ID instead of job object
+            task_id = async_task('geodata.ndc_generator.generate_ndc_pdf_task', job.id, photo_url)
+            return Response({'message': 'PDF generation queued', 'task_id': task_id}, status=status.HTTP_202_ACCEPTED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

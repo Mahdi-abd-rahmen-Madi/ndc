@@ -2,8 +2,8 @@ import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, Ale
 import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { getEnabledConfigs, EquipmentConfig } from '../../config/equipmentConfig';
+import PdfPreviewModal from './PdfPreviewModal';
 
 interface ResultsPanelProps {
   lookupResult: LookupResult | null;
@@ -36,6 +36,10 @@ interface ResultsPanelProps {
   buildingHeight?: number;
   mastHeight?: number;
   plotHeight?: number;
+  recommendedMastSection?: string;
+  recommendedPlotSection?: string;
+  recommendedBrasSection?: string;
+  recommendedMast5gSection?: string;
 }
 
 export default function ResultsPanel({
@@ -67,7 +71,11 @@ export default function ResultsPanel({
   ant5gConfig,
   buildingHeight,
   mastHeight,
-  plotHeight
+  plotHeight,
+  recommendedMastSection = 'TRON 139x6.3',
+  recommendedPlotSection = 'TCAR 200x5',
+  recommendedBrasSection = 'TCAR 50x5',
+  recommendedMast5gSection = 'TRON 76x5'
 }: ResultsPanelProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -164,6 +172,34 @@ export default function ResultsPanel({
   };
 
   const [pollingMsg, setPollingMsg] = useState<string>('');
+  
+  // Helper to poll job status
+  const pollJobStatus = async (jobId: string, maxAttempts = 40): Promise<any> => {
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      try {
+        const res = await fetch(`/api/calculations/${jobId}/`, {
+          headers: { 'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Check if PDF generation is completed (ndc_pdf_url exists) or job failed
+          if (data.status === 'FAILED' || (data.status === 'COMPLETED' && data.result_data?.ndc_pdf_url)) {
+            return data;
+          }
+          // If just COMPLETED but no PDF yet, we keep polling (for generate_pdf step)
+          if (data.status === 'COMPLETED' && attempts > 0) {
+             return data; // Return early if we are just polling for initial completion
+          }
+        }
+      } catch (e) {
+        console.error("Polling error", e);
+      }
+      attempts++;
+    }
+    throw new Error("Polling timeout");
+  };
 
   const handlePreviewTemplate = async () => {
     setIsConverting(true);
@@ -182,9 +218,13 @@ export default function ResultsPanel({
           ancrage: 'metallique' // Robot Worker requires this
         },
         environment: {
-          region: typeof lookupResult?.detected_region === 'object' 
-            ? (lookupResult.detected_region as any).number 
-            : parseInt(String(lookupResult?.detected_region || '2').replace(/\D/g, ''), 10) || 2,
+          region: (() => {
+            const r = lookupResult?.detected_region;
+            if (typeof r === 'object' && r !== null) return (r as any).number || 2;
+            if (typeof r === 'number') return r;
+            if (typeof r === 'string') return parseInt(r.replace(/\D/g, ''), 10) || 2;
+            return 2;
+          })(),
           terrain_type: lookupResult?.detected_terrain_type || '0',
           building_height_m: buildingHeight || 0,
           plot_height_m: plotHeight || 0
@@ -194,14 +234,14 @@ export default function ResultsPanel({
           hauteur_mat_m: mastHeight || 0,
           montage_id: selectedMontage || "cas_1",
           is_custom_montage: selectedMontage === 'Custom',
-          mat_principal: firstEquipmentDetails?.matPrincipal || matPrincipal || '',
-          mat_secondaire: firstEquipmentDetails?.matSecondaire || matSecondaire || '',
-          plot_metallique: firstEquipmentDetails?.plotMetallique || plotMetallique || '',
-          bras_de_deport: firstEquipmentDetails?.brasDeDeport || brasDeDeport || '',
-          mast_section: firstEquipmentDetails?.matPrincipal || matPrincipal || '',
-          plot_section: firstEquipmentDetails?.plotMetallique || plotMetallique || '',
-          bras_section: firstEquipmentDetails?.brasDeDeport || brasDeDeport || '',
-          mast_5g_section: firstEquipmentDetails?.matSecondaire || matSecondaire || '',
+          mat_principal: firstEquipmentDetails?.matPrincipal || matPrincipal || recommendedMastSection,
+          mat_secondaire: firstEquipmentDetails?.matSecondaire || matSecondaire || recommendedMast5gSection,
+          plot_metallique: firstEquipmentDetails?.plotMetallique || plotMetallique || recommendedPlotSection,
+          bras_de_deport: firstEquipmentDetails?.brasDeDeport || brasDeDeport || recommendedBrasSection,
+          mast_section: firstEquipmentDetails?.matPrincipal || matPrincipal || recommendedMastSection,
+          plot_section: firstEquipmentDetails?.plotMetallique || plotMetallique || recommendedPlotSection,
+          bras_section: firstEquipmentDetails?.brasDeDeport || brasDeDeport || recommendedBrasSection,
+          mast_5g_section: firstEquipmentDetails?.matSecondaire || matSecondaire || recommendedMast5gSection,
           material_name: 'S 235'
         }
       };
@@ -227,6 +267,7 @@ export default function ResultsPanel({
       }
 
       let calculationJobId = null;
+      let finalJobStatus = null;
       
       try {
         const calcResponse = await fetch('/api/calculations/', {
@@ -250,31 +291,18 @@ export default function ResultsPanel({
 
       if (calculationJobId) {
         setPollingMsg('Calcul Robot en cours...');
-        let isCompleted = false;
-        let attempts = 0;
-        while (!isCompleted && attempts < 40) { // Max ~80 seconds
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          try {
-            const pollResponse = await fetch(`/api/calculations/${calculationJobId}/`, {
-              headers: {
-                'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}`
-              }
-            });
-            if (pollResponse.ok) {
-              const pollData = await pollResponse.json();
-              if (pollData.status === 'COMPLETED' || pollData.status === 'FAILED') {
-                isCompleted = true;
-              }
-            }
-          } catch (e) {
-             console.error("Polling error", e);
-          }
-          attempts++;
+        try {
+           const finalJob = await pollJobStatus(calculationJobId, 40);
+           finalJobStatus = finalJob.status;
+        } catch(e) {
+           console.error(e);
         }
       }
 
       setPollingMsg('Génération du PDF...');
-      const pdfEndpoint = calculationJobId ? `/api/calculations/${calculationJobId}/generate_pdf/` : '/api/calculations/preview_template/';
+      const pdfEndpoint = (calculationJobId && finalJobStatus === 'COMPLETED') 
+        ? `/api/calculations/${calculationJobId}/generate_pdf/` 
+        : '/api/calculations/preview_template/';
 
       const response = await fetch(pdfEndpoint, {
         method: 'POST',
@@ -286,10 +314,32 @@ export default function ResultsPanel({
       });
       if (!response.ok) throw new Error('Preview failed');
       const data = await response.json();
-      if (data.ndc_pdf_url) {
-        const fullUrl = data.ndc_pdf_url.startsWith('http')
-          ? data.ndc_pdf_url
-          : `${window.location.origin}${data.ndc_pdf_url}`;
+      
+      let finalPdfUrl = data.ndc_pdf_url;
+      
+      // If it's an async task (from generate_pdf), poll until PDF URL is ready
+      if (data.task_id && calculationJobId) {
+         setPollingMsg('Génération asynchrone du PDF...');
+         let pdfAttempts = 0;
+         while (!finalPdfUrl && pdfAttempts < 30) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const pollRes = await fetch(`/api/calculations/${calculationJobId}/`, {
+              headers: { 'Authorization': `Token ${localStorage.getItem('ndc_auth_token')}` }
+            });
+            if (pollRes.ok) {
+              const pollData = await pollRes.json();
+              if (pollData.result_data?.ndc_pdf_url) {
+                finalPdfUrl = pollData.result_data.ndc_pdf_url;
+              }
+            }
+            pdfAttempts++;
+         }
+      }
+
+      if (finalPdfUrl) {
+        const fullUrl = finalPdfUrl.startsWith('http')
+          ? finalPdfUrl
+          : `${window.location.origin}${finalPdfUrl}`;
         setPreviewPdfUrl(fullUrl);
       } else {
         throw new Error('No preview URL returned');
@@ -699,39 +749,12 @@ export default function ResultsPanel({
               </div>
             ) : null}
 
-            {/* Modal PDF Preview using Portal to ensure it escapes any parent stacking contexts */}
-            {previewPdfUrl && !conversionError && createPortal(
-              <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                <div className="bg-slate-900 rounded-2xl border border-slate-700/50 shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="px-6 py-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-500/20 rounded-lg">
-                        <FileText className="w-5 h-5 text-indigo-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg text-white font-bold tracking-wide">Aperçu du document</h3>
-                        <p className="text-xs text-slate-400">Visionneuse PDF intégrée</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setPreviewPdfUrl(null)}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 transition-all"
-                      title="Fermer l'aperçu"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="flex-1 w-full bg-slate-200">
-                    <iframe
-                      src={`${previewPdfUrl}#view=FitH`}
-                      className="w-full h-full border-0"
-                      title="Document Preview"
-                    />
-                  </div>
-                </div>
-              </div>,
-              document.body
-            )}
+            {/* Modal PDF Preview extracted to component */}
+            <PdfPreviewModal
+              previewPdfUrl={previewPdfUrl}
+              conversionError={conversionError}
+              onClose={() => setPreviewPdfUrl(null)}
+            />
 
             {conversionError && (
               <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">

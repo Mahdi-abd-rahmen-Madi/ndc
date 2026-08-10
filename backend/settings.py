@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'api',
     'geodata',
+    'django_q',
 ]
 
 MIDDLEWARE = [
@@ -181,3 +182,21 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Media files configuration for local downloads
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Django Q2 Settings
+Q_CLUSTER = {
+    'name': 'ndc_cluster',
+    'workers': 4,
+    'recycle': 500,
+    'timeout': 300,
+    'retry': 360,
+    'compress': True,
+    'save_limit': 250,
+    'queue_limit': 500,
+    'cpu_affinity': 1,
+    'label': 'Django Q',
+    'orm': 'default'
+}
+
+# FastAPI Worker
+WORKER_BASE_URL = config('WORKER_BASE_URL', default='http://127.0.0.1:8001')

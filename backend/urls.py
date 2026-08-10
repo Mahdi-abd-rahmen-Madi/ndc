@@ -32,6 +32,10 @@ def serve_media_custom(request, path):
         content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     elif path.lower().endswith('.doc'):
         content_type = 'application/msword'
+    elif path.lower().endswith('.png'):
+        content_type = 'image/png'
+    elif path.lower().endswith('.jpg') or path.lower().endswith('.jpeg'):
+        content_type = 'image/jpeg'
         
     with open(full_path, 'rb') as f:
         content = f.read()
