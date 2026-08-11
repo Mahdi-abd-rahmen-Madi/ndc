@@ -233,6 +233,19 @@ export default function NDCPortailTest() {
       const newJobId = response.data.data.id;
       setJobId(newJobId);
       setStatus(response.data.data.status);
+
+      // Envoi de la requête au worker (push) puisqu'il ne poll plus
+      try {
+        const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://127.0.0.1:8001';
+        await axios.post(`${workerUrl}/api/jobs`, {
+          id: newJobId,
+          input_data: payload
+        });
+        console.log("Requête envoyée au worker avec succès.");
+      } catch (workerError) {
+        console.error("Erreur lors de l'envoi au worker:", workerError);
+      }
+
     } catch (error) {
       console.error(error);
       setStatus('Erreur lors de la création du job.');
@@ -240,7 +253,7 @@ export default function NDCPortailTest() {
     }
   };
 
-  const [workerStatus, setWorkerStatus] = useState<boolean>(false);
+  const [workerStatus, setWorkerStatus] = useState<'IDLE' | 'BUSY' | 'OFFLINE'>('OFFLINE');
   const [workerLogs, setWorkerLogs] = useState<{time: string, message: string}[]>([]);
 
   // Poll for job status and worker control
@@ -248,11 +261,18 @@ export default function NDCPortailTest() {
     let interval: NodeJS.Timeout;
     const fetchWorkerControl = async () => {
       try {
+        const workerUrl = import.meta.env.VITE_WORKER_URL || 'http://127.0.0.1:8001';
+        const statusResponse = await axios.get(`${workerUrl}/api/status`);
+        setWorkerStatus(statusResponse.data.status);
+      } catch (error) {
+        setWorkerStatus('OFFLINE');
+      }
+
+      try {
         const response = await axios.get(`${apiBaseUrl}/api/worker/control/`);
-        setWorkerStatus(response.data.is_active);
         setWorkerLogs(response.data.logs);
       } catch (error) {
-        setWorkerStatus(false);
+        // ignore
       }
     };
 
@@ -520,9 +540,9 @@ export default function NDCPortailTest() {
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Portail de Test Robot SDK</h1>
               <div className="flex items-center gap-2 mt-2">
-                <div className={`w-3 h-3 rounded-full ${workerStatus ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
+                <div className={`w-3 h-3 rounded-full ${workerStatus === 'IDLE' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]' : workerStatus === 'BUSY' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]'}`}></div>
                 <span className="text-sm font-medium text-gray-600">
-                  {workerStatus ? 'Worker en ligne (Windows)' : 'Worker hors ligne'}
+                  {workerStatus === 'IDLE' ? 'Worker en ligne (En attente)' : workerStatus === 'BUSY' ? 'Worker en ligne (Calcul en cours...)' : 'Worker hors ligne'}
                 </span>
               </div>
             </div>
