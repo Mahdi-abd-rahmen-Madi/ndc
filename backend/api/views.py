@@ -264,8 +264,8 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         Expects {"photo_url": "..."} in the request body.
         """
         job = self.get_object()
-        if job.status != 'COMPLETED':
-            return Response({'error': 'Job is not completed yet.'}, status=status.HTTP_400_BAD_REQUEST)
+        if job.status not in ['COMPLETED', 'PENDING']:
+            return Response({'error': 'Job must be COMPLETED or PENDING (inspect mode).'}, status=status.HTTP_400_BAD_REQUEST)
 
         photo_url = request.data.get('photo_url')
         if not photo_url and job.input_data and job.input_data.get('site_image_url'):

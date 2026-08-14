@@ -1,2 +1,8 @@
 <h2>Tableau des combinaisons</h2>
-<p><em>[Insérer le tableau des combinaisons ici]</em></p>
+{% if combinaisons_abs %}
+    <div style="text-align: center; margin-top: 20px;">
+        <img src="file://{{ combinaisons_abs }}" style="max-width: 100%; border: 1px solid #ccc;" alt="Tableau des combinaisons">
+    </div>
+{% else %}
+    <p><em>[Insérer le tableau des combinaisons ici]</em></p>
+{% endif %}

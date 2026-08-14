@@ -185,11 +185,11 @@ export default function ResultsPanel({
         if (res.ok) {
           const data = await res.json();
           // Check if PDF generation is completed (ndc_pdf_url exists) or job failed
-          if (data.status === 'FAILED' || (data.status === 'COMPLETED' && data.result_data?.ndc_pdf_url)) {
+          if (data.status === 'FAILED' || ((data.status === 'COMPLETED' || data.status === 'PENDING') && data.result_data?.ndc_pdf_url)) {
             return data;
           }
-          // If just COMPLETED but no PDF yet, we keep polling (for generate_pdf step)
-          if (data.status === 'COMPLETED' && attempts > 0) {
+          // If just COMPLETED or PENDING with result data but no PDF yet, we keep polling (for generate_pdf step)
+          if ((data.status === 'COMPLETED' || (data.status === 'PENDING' && data.result_data)) && attempts > 0) {
              return data; // Return early if we are just polling for initial completion
           }
         }
@@ -300,7 +300,7 @@ export default function ResultsPanel({
       }
 
       setPollingMsg('Génération du PDF...');
-      const pdfEndpoint = (calculationJobId && finalJobStatus === 'COMPLETED') 
+      const pdfEndpoint = (calculationJobId && (finalJobStatus === 'COMPLETED' || finalJobStatus === 'PENDING')) 
         ? `/api/calculations/${calculationJobId}/generate_pdf/` 
         : '/api/calculations/preview_template/';
 

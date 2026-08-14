@@ -182,14 +182,30 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
         context['photo_abs'] = None
         
     # Robot Screenshot Path
-    if job and job.screenshot:
-        screenshot_path = job.screenshot.path
-        if os.path.exists(screenshot_path):
-            context['robot_screenshot_abs'] = screenshot_path
-        else:
-            context['robot_screenshot_abs'] = None
-    else:
+    screenshot_found = False
+    
+    if job:
+        # 1. Try to read from worker share folder first as requested by user
+        worker_screenshot_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_3d_view.jpg"
+        if os.path.exists(worker_screenshot_path):
+            context['robot_screenshot_abs'] = worker_screenshot_path
+            screenshot_found = True
+        # 2. Fallback to django uploaded screenshot
+        elif job.screenshot:
+            screenshot_path = job.screenshot.path
+            if os.path.exists(screenshot_path):
+                context['robot_screenshot_abs'] = screenshot_path
+                screenshot_found = True
+                
+    if not screenshot_found:
         context['robot_screenshot_abs'] = None
+        
+    # Combinaisons Image Path
+    combinaisons_path = "/home/mahdi/worker_share/static/combinaisons/cas1.png"
+    if os.path.exists(combinaisons_path):
+        context['combinaisons_abs'] = combinaisons_path
+    else:
+        context['combinaisons_abs'] = None
         
     # Logo Path
     logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')
