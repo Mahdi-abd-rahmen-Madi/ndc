@@ -29,6 +29,10 @@ DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Security Cookie Settings (True for HTTPS in production)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
+
 
 # Application definition
 
@@ -83,10 +87,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'wsgi.application'
 ASGI_APPLICATION = 'asgi.application'
 
-# Django Channels configuration
+# Django Channels configuration using PostgresChannelLayer for production WebSockets
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        'BACKEND': 'channels_postgres.core.PostgresChannelLayer',
+        'CONFIG': {
+            'ENGINE': 'django.db.backends.postgresql',
+        },
     }
 }
 
@@ -100,7 +107,20 @@ import dj_database_url
 DATABASE_URL = config('DATABASE_URL', default='sqlite:///db.sqlite3')
 
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL)
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=config('CONN_MAX_AGE', default=600, cast=int),
+        ssl_require=config('DB_SSL_REQUIRE', default=False, cast=bool)
+    )
+}
+
+# Unified Database Cache Backend for Multi-Process Deployments
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'ndc_cache_table',
+        'TIMEOUT': config('CACHE_TIMEOUT', default=3600, cast=int),
+    }
 }
 DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 
@@ -152,6 +172,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static_collected')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -173,11 +194,11 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173', cast=lambda v: [s.strip() for s in v.split(',')])
 CORS_ALLOW_CREDENTIALS = True
 
-# Security settings for mobile access
-X_FRAME_OPTIONS = 'ALLOWALL'
-SECURE_BROWSER_XSS_FILTER = False
-SECURE_CONTENT_TYPE_NOSNIFF = False
-CORS_ALLOW_ALL_ORIGINS = True
+# Security settings for mobile access / frames
+X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='SAMEORIGIN')
+SECURE_BROWSER_XSS_FILTER = config('SECURE_BROWSER_XSS_FILTER', default=True, cast=bool)
+SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
 # Media files configuration for local downloads
 MEDIA_URL = '/media/'
@@ -200,3 +221,6 @@ Q_CLUSTER = {
 
 # FastAPI Worker
 WORKER_BASE_URL = config('WORKER_BASE_URL', default='http://127.0.0.1:8001')
+
+# Worker shared directory mount path (host side for VM worker files)
+WORKER_SHARE_DIR = config('WORKER_SHARE_DIR', default='/home/mahdi/worker_share')

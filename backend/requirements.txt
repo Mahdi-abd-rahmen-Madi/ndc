@@ -23,4 +23,5 @@ weasyprint>=63.0
 django-q2==1.7.4
 daphne
 channels
+channels-postgres>=0.4.0
 SQLAlchemy==2.0.30

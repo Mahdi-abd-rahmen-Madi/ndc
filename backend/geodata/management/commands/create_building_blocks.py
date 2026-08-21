@@ -27,7 +27,8 @@ class Command(BaseCommand):
         eps = options['eps']
         departments = options['departments']
 
-        log_dir = "/home/mahdi/CascadeProjects/ndc/backend/data"
+        from django.conf import settings
+        log_dir = os.path.join(settings.BASE_DIR, 'data')
         os.makedirs(log_dir, exist_ok=True)
         log_file_path = os.path.join(log_dir, "create_building_blocks.log")
 

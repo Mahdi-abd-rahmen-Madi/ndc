@@ -1,8 +1,10 @@
+import os
 import sys
 from docx import Document
 
 def main():
-    template_path = "/home/mahdi/CascadeProjects/ndc/backend/data/Template NDC_modified.docx"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(base_dir, "data", "Template NDC_modified.docx")
     doc = Document(template_path)
     
     # We want to find {{ photo_img }} and remove it.

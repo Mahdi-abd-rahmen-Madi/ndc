@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     # Using Postgres 18 with PostGIS
-    image: postgis/postgis:18-3.5
+    image: postgis/postgis:18-3.6-alpine
     container_name: ndc_postgis
     environment:
       POSTGRES_USER: ndc_user
@@ -12,7 +12,28 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ndc_user -d ndc_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:latest
+    container_name: ndc_syncthing
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      - ./syncthing_data:/config
+      - ./backups:/backups
+    ports:
+      - "8384:8384"
+      - "22000:22000/tcp"
+      - "22000:22000/udp"
     restart: unless-stopped
 
 volumes:

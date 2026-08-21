@@ -55,8 +55,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--output-dir',
             type=str,
-            default='/home/mahdi/CascadeProjects/ndc/backend/data/cadastre',
-            help='Directory to store processed FlatGeobuf files'
+            default=None,
+            help='Directory to store processed FlatGeobuf files. Defaults to {settings.BASE_DIR}/data/cadastre'
         )
         parser.add_argument(
             '--skip-validation',
@@ -79,6 +79,8 @@ class Command(BaseCommand):
         batch_size = options['batch_size']
         temp_dir = options['temp_dir']
         output_dir = options['output_dir']
+        if not output_dir:
+            output_dir = str(settings.BASE_DIR / 'data' / 'cadastre')
         skip_validation = options['skip_validation']
         
         # Validate and create directories
