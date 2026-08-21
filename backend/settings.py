@@ -17,6 +17,20 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+if os.name == 'nt':
+    pg_bin = r'C:\Program Files\PostgreSQL\18\bin'
+    if os.path.exists(pg_bin):
+        os.environ['PATH'] = pg_bin + ';' + os.environ.get('PATH', '')
+        gdal_dll = os.path.join(pg_bin, 'libgdal-35.dll')
+        geos_dll = os.path.join(pg_bin, 'libgeos_c.dll')
+        if os.path.exists(gdal_dll):
+            GDAL_LIBRARY_PATH = gdal_dll
+        if os.path.exists(geos_dll):
+            GEOS_LIBRARY_PATH = geos_dll
+        gdal_data = r'C:\Program Files\PostgreSQL\18\gdal-data'
+        if os.path.exists(gdal_data):
+            os.environ['GDAL_DATA'] = gdal_data
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/

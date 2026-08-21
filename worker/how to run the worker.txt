@@ -1,0 +1,1 @@
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "python C:\Users\cometa\KVM_Share\robot_worker.py"

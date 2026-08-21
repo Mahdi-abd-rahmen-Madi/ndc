@@ -20,6 +20,9 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.venv/
+venv/
+env/
 
 # Django
 *.log
@@ -27,33 +30,35 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Environment variables
+# Environment variables & secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+env.txt
+password.txt
+*.kdbx
+autodesk_backup_code.txt
 
-# IDE
+# IDE & Tools
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.gh_bin/
+.stfolder/
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Temporary files
+ntuser.ini
 *.tmp
 *.temp
 
-# Data files
+# Data & Large binaries
 *.xlsx
 *.fgb
-venv/
-env/
+*.exe
+*.rtd
 node_modules/
-data/
 media/
+worker/screenshots/

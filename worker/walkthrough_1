@@ -1,0 +1,30 @@
+# Walkthrough: NDC Template Integration & 3D Modeling
+
+I have successfully updated the `robot_worker.py` script to align entirely with the structural logic expected by your `Template NDC_modified.docx` template.
+
+## What changed?
+
+### 1. Expanded Physical 3D Topology
+Instead of just applying forces to a simple pole, the script now physically models all 4 distinct bars. This ensures the structural engine correctly accounts for torque, flexure, and eccentric loading:
+- **Bar 1**: The base plot
+- **Bar 2**: The main mast (where the 4G antenna is mounted)
+- **Bar 3**: The offset arm (`bras de déport`)
+- **Bar 4**: The smaller antenna mast (where the 5G antenna is mounted)
+
+### 2. Eurocode Aerodynamic Profiling
+The script now uses the precise EN 1991-1-4 formulas required by the civil engineering template. Based on the selected region and terrain category, it calculates the aerodynamic profile at 15 meters:
+- **Terrain Roughness** ($k_r$, $c_r$)
+- **Turbulence Intensity** ($I_v$)
+- **Peak Dynamic Pressure** ($q_p$)
+
+> [!TIP]
+> The dynamic pressure ($q_p$) is applied uniformly to the mast ($daN/ml$), and multiplied by the Frontal/Lateral exposed area of the antennas to create highly accurate wind point loads.
+
+### 3. Load Cases & The "Chute d'Homme"
+We've mapped out exactly how the combinations load the structure:
+- **Case 1 (Dead Load)**: Self-weight of the structure + exact weights of the 4G/5G antennas.
+- **Case 2 (Chute d'Homme)**: The critical static fall arrest load ($F_x = 220$ daN, $F_z = -980$ daN) applied directly to the top of the main mast.
+- **Case 3 & 4 (Wind)**: The Frontal ($Vx$) and Lateral ($Vy$) wind forces applied across the mast and antenna surfaces.
+
+### 4. NDC Export Payload
+All of these computed values (from `var_1` to `var_57`) are now packaged neatly into a `note_de_calcul_vars` dictionary and shipped back in the API result payload. This means your Django backend can directly merge this block with the `.docx` file—no extra math required!

@@ -1,0 +1,4 @@
+Important Note for your Django Backend: Because the payload is now sent as multipart/form-data (instead of raw JSON), your Django API will need to read it like this:
+
+The image file will be available in request.FILES['screenshot'].
+The result data will be available as a JSON string in request.POST.get('result_data'), so you'll just need to use json.loads() on it to get your dictionary back.
