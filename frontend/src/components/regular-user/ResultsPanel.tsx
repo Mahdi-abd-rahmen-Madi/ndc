@@ -1,4 +1,4 @@
-import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, AlertCircle, RefreshCw, Radio, Layers, Settings } from 'lucide-react';
+import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings } from 'lucide-react';
 import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
@@ -10,18 +10,10 @@ interface ResultsPanelProps {
   selectedAddress: any;
   selectedMontage: string;
   isSearching: boolean;
-  onDownloadPdf: () => void;
-  pdfGenerating: boolean;
-  onTriggerCalculation: () => void;
-  isCalculationPending: boolean;
-  matPrincipal: string;
-  setMatPrincipal: (val: string) => void;
-  plotMetallique: string;
-  setPlotMetallique: (val: string) => void;
-  brasDeDeport: string;
-  setBrasDeDeport: (val: string) => void;
-  matSecondaire: string;
-  setMatSecondaire: (val: string) => void;
+  matPrincipal?: string;
+  plotMetallique?: string;
+  brasDeDeport?: string;
+  matSecondaire?: string;
   nombreSecteurs?: number;
   equipmentValues?: Record<string, any>;
   equipmentToggles?: Record<string, boolean>;
@@ -47,18 +39,10 @@ export default function ResultsPanel({
   selectedAddress,
   selectedMontage,
   isSearching,
-  onDownloadPdf,
-  pdfGenerating,
-  onTriggerCalculation,
-  isCalculationPending,
   matPrincipal,
-  setMatPrincipal,
   plotMetallique,
-  setPlotMetallique,
   brasDeDeport,
-  setBrasDeDeport,
   matSecondaire,
-  setMatSecondaire,
   nombreSecteurs = 3,
   equipmentValues = {},
   equipmentToggles = {},
@@ -79,6 +63,7 @@ export default function ResultsPanel({
 }: ResultsPanelProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [conversionError, setConversionError] = useState(false);
   const [cataloguePdf, setCataloguePdf] = useState<{ url: string; filename: string } | null>(null);
   const [loadingCataloguePdf, setLoadingCataloguePdf] = useState(false);
@@ -92,7 +77,7 @@ export default function ResultsPanel({
   // Fetch matching catalogue PDF based on user criteria
   useEffect(() => {
     const fetchCataloguePdf = async () => {
-      if (!lookupResult || !selectedMontage) {
+      if (!lookupResult || !selectedMontage || (mastHeight !== 3 && mastHeight !== 4)) {
         setCataloguePdf(null);
         return;
       }
@@ -168,6 +153,54 @@ export default function ResultsPanel({
       setConversionError(true);
     } finally {
       setIsConverting(false);
+    }
+  };
+
+  const handleDownloadDocumentPdf = async (doc: DocumentInfo) => {
+    // If it's already a PDF, download it directly
+    if (doc.url.toLowerCase().endsWith('.pdf')) {
+      const link = document.createElement('a');
+      link.href = doc.url;
+      link.download = doc.filename;
+      link.click();
+      return;
+    }
+
+    setIsDownloadingPdf(true);
+    try {
+      const apiUrl = '/api/geodata/preview-document/';
+      const response = await fetch(`${apiUrl}?url=${encodeURIComponent(doc.url)}`);
+
+      if (!response.ok) {
+        throw new Error('Conversion failed');
+      }
+
+      const data = await response.json();
+
+      if (data.preview_url) {
+        const fullUrl = data.preview_url.startsWith('http')
+          ? data.preview_url
+          : `${window.location.origin}${data.preview_url}`;
+        
+        // Derive pdf filename by replacing extension
+        const pdfFilename = doc.filename.replace(/\.[^/.]+$/, "") + ".pdf";
+
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.download = pdfFilename;
+        link.click();
+      } else {
+        throw new Error('No preview URL returned');
+      }
+    } catch (error) {
+      console.error('Error downloading document as PDF:', error);
+      // Fallback: download original docx
+      const link = document.createElement('a');
+      link.href = doc.url;
+      link.download = doc.filename;
+      link.click();
+    } finally {
+      setIsDownloadingPdf(false);
     }
   };
 
@@ -385,44 +418,44 @@ export default function ResultsPanel({
               {selectedAddress.name}, {selectedAddress.city}
             </p>
           )}
-        </div>
-
-        {/* Consolidated Classification Section on Right */}
-        <div className="flex gap-3 ml-6">
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors">
-            <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 shrink-0">
+               {/* Consolidated Classification Section on Right */}
+        <div className="flex flex-wrap items-center justify-end gap-3 ml-6">
+          <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-indigo-500/30 transition-all duration-300">
+            <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 shrink-0 group-hover:bg-indigo-500/20 group-hover:scale-110 transition-all">
               <Layers className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Secteurs</p>
-              <p className="text-sm font-bold text-white">
+            <div className="pr-2">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Secteurs</p>
+              <p className="text-base font-bold text-white leading-none">
                 {nombreSecteurs}
               </p>
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors">
-            <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 shrink-0">
+          
+          <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-blue-500/30 transition-all duration-300">
+            <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 shrink-0 group-hover:bg-blue-500/20 group-hover:scale-110 transition-all">
               <Wind className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Région</p>
-              <p className="text-sm font-bold text-white">
-                Région {lookupResult.detected_region || 'N/A'}
+            <div className="pr-2">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Région de Vent</p>
+              <p className="text-base font-bold text-white leading-none">
+                {lookupResult.detected_region ? `Région ${lookupResult.detected_region}` : 'N/A'}
               </p>
             </div>
           </div>
-          <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50 flex items-center gap-3 hover:bg-slate-800 transition-colors">
-            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 shrink-0">
+          
+          <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-emerald-500/30 transition-all duration-300">
+            <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 shrink-0 group-hover:bg-emerald-500/20 group-hover:scale-110 transition-all">
               <Mountain className="w-5 h-5" />
             </div>
-            <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Terrain</p>
-              <p className="text-sm font-bold text-white">
+            <div className="pr-2">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Terrain</p>
+              <p className="text-base font-bold text-white leading-none">
                 Type {lookupResult.detected_terrain_type || 'IIIa'}
               </p>
             </div>
           </div>
-        </div>
+        </div>     </div>
       </div>
 
       {/* Configuration Antennes par Secteur */}
@@ -488,9 +521,9 @@ export default function ResultsPanel({
         </div>
       )}
 
-      {/* Profil Structurel Recommandé */}
+      {/* Profil Structurel Recommandé (Hidden internally per request) */}
       {lookupResult.equipment.length > 0 && (
-        <div className="mb-8 animate-slide-in">
+        <div className="hidden mb-8 animate-slide-in">
           <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
             Profil Structurel Recommandé
           </h3>
@@ -632,7 +665,7 @@ export default function ResultsPanel({
           <Radio className="w-4 h-4 text-indigo-400" />
           Configuration Équipements
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {enabledConfigs.map((config: EquipmentConfig) => {
             const IconComponent = config.icon === 'Radio' ? Radio : Activity;
             const colorClass = config.color === 'blue' ? 'blue' :
@@ -650,122 +683,77 @@ export default function ResultsPanel({
             };
             const accentBorder = accentBorderClasses[colorClass] || 'border-l-indigo-500 hover:border-indigo-500/30';
 
-            return (
-              <div key={config.id} className={`bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 ${accentBorder} hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300`}>
-                <div className="flex items-center gap-2 mb-3.5">
-                  <div className={`p-2 bg-${colorClass}-500/10 rounded-lg text-${colorClass}-400`}>
-                    <IconComponent className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-sm font-bold text-white">{config.name}</h4>
-                </div>
-                <div className="space-y-2.5 text-xs">
-                  {config.fields.map((field, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                      <span className="text-slate-400 font-medium">{field.label}</span>
-                      <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30">
-                        {equipmentValues[config.id]?.[field.label.toLowerCase()] ||
-                          equipmentValues[config.id]?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
-                          field.value}
-                      </span>
+            // Extract Quantité field if it exists
+            const quantiteField = config.fields.find(f => f.label.toLowerCase().includes('quantit'));
+            const otherFields = config.fields.filter(f => !f.label.toLowerCase().includes('quantit'));
+
+            const renderCard = (keyId: string, qValue: any, itemValues: any, indexLabel?: string) => (
+              <div key={keyId} className={`group relative bg-slate-800/40 backdrop-blur-md rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:bg-slate-800/80 transition-all duration-300`}>
+                <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-1.5 bg-${colorClass}-500/10 rounded-lg text-${colorClass}-400 group-hover:bg-${colorClass}-500/20 group-hover:scale-110 transition-all shadow-inner`}>
+                      <IconComponent className="w-3.5 h-3.5" />
                     </div>
-                  ))}
+                    <h4 className="text-[11px] font-extrabold text-white tracking-tight truncate max-w-[120px]" title={config.name}>
+                      {config.name} {indexLabel || ''}
+                    </h4>
+                  </div>
+                  {qValue !== null && (
+                    <div className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 shadow-sm flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-slate-300">x{qValue}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1 justify-center">
+                  {otherFields.length > 0 ? otherFields.map((field, idx) => {
+                    const val = itemValues?.[field.label.toLowerCase()] ||
+                                itemValues?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
+                                field.value;
+                    return (
+                      <div key={idx} className="flex justify-between items-center bg-slate-950/20 rounded p-1.5 border border-slate-800/30 hover:border-slate-700 transition-colors">
+                        <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">{field.label}</span>
+                        <span className="text-xs font-bold text-slate-200 text-right max-w-[65%] truncate" title={String(val)}>
+                          {val}
+                        </span>
+                      </div>
+                    );
+                  }) : (
+                    <div className="flex items-center justify-center h-full text-slate-500 text-[10px] italic">
+                      Aucun paramètre
+                    </div>
+                  )}
                 </div>
               </div>
             );
-          })}
 
+            if (config.id === 'rrh' && equipmentValues.rrhItems && Array.isArray(equipmentValues.rrhItems)) {
+              return equipmentValues.rrhItems.map((item, index) => 
+                renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rrhItems.length > 1 ? `#${index + 1}` : '')
+              );
+            }
+
+            if (config.id === 'rru' && equipmentValues.rruItems && Array.isArray(equipmentValues.rruItems)) {
+              return equipmentValues.rruItems.map((item, index) => 
+                renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rruItems.length > 1 ? `#${index + 1}` : '')
+              );
+            }
+
+            let quantiteValue = null;
+            if (quantiteField) {
+              quantiteValue = equipmentValues[config.id]?.[quantiteField.label.toLowerCase()] ||
+                              equipmentValues[config.id]?.[quantiteField.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
+                              quantiteField.value;
+            }
+
+            return renderCard(config.id, quantiteValue, equipmentValues[config.id]);
+          })}
         </div>
       </div>
 
       {/* Actions & Fallbacks */}
       <div>
-        {lookupResult.equipment.length > 0 ? (
-          <div className="mt-6 pt-6 border-t border-slate-800">
-
-              <button
-                onClick={handlePreviewTemplate}
-                disabled={isConverting}
-                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 transition-all text-sm"
-              >
-                {isConverting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    {pollingMsg || 'Prévisualisation...'}
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Prévisualiser le Template NDC (Mode Debug)
-                  </>
-                )}
-              </button>
-
-            {/* Catalogue PDF Section */}
-            {loadingCataloguePdf ? (
-              <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl flex items-center justify-center">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Recherche du PDF catalogue...</span>
-                </div>
-              </div>
-            ) : cataloguePdf ? (
-              <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-emerald-400" />
-                    <div>
-                      <p className="text-sm font-semibold text-white">PDF Catalogue Correspondant</p>
-                      <p className="text-xs text-slate-400">{cataloguePdf.filename}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handlePreviewDocument({ url: cataloguePdf.url, filename: cataloguePdf.filename, ext: 'PDF' })}
-                      disabled={isConverting}
-                      className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isConverting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Conversion...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="w-4 h-4" />
-                          <span>Aperçu</span>
-                        </>
-                      )}
-                    </button>
-                    <a
-                      href={cataloguePdf.url}
-                      download={cataloguePdf.filename}
-                      className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg flex items-center gap-2 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Télécharger</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {/* Modal PDF Preview extracted to component */}
-            <PdfPreviewModal
-              previewPdfUrl={previewPdfUrl}
-              conversionError={conversionError}
-              onClose={() => setPreviewPdfUrl(null)}
-            />
-
-            {conversionError && (
-              <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
-                <p className="text-sm text-rose-400">
-                  Impossible de prévisualiser ce document. Veuillez le télécharger.
-                </p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="bg-slate-800/30 border border-slate-700 border-dashed rounded-xl p-8 text-center flex flex-col items-center">
+        {lookupResult.equipment.length === 0 && (
+          <div className="hidden bg-slate-800/30 border border-slate-700 border-dashed rounded-xl p-8 text-center flex flex-col items-center">
             <div className="p-4 bg-slate-800 rounded-full mb-4 relative">
               <span className="absolute -top-1 -right-1 flex h-4 w-4">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -773,106 +761,151 @@ export default function ResultsPanel({
               </span>
               <FileText className="w-8 h-8 text-slate-500" />
             </div>
-            <h4 className="text-lg font-bold text-white mb-2">Aucun matériel standard</h4>
-            <p className="text-sm text-slate-400 max-w-md mx-auto mb-6">
-              Les critères sélectionnés ou la configuration sur-mesure ne correspondent à aucune étude précalculée dans notre base de données.
+            <h4 className="text-lg font-bold text-white mb-2">Configuration Hors Catalogue</h4>
+            <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
+              Les paramètres saisis nécessitent une note de calcul spécifique. À titre indicatif, voici la recommandation standard jusqu'à 4m.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 mb-6">
-              <div className="flex flex-col space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât principal</label>
-                <input
-                  type="text"
-                  value={matPrincipal}
-                  onChange={(e) => setMatPrincipal(e.target.value)}
-                  placeholder="Ex: Mât standard..."
-                  className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
+            {/* Recommended configuration based on 3-4m values */}
+            <div className={`w-full max-w-2xl mx-auto text-left mb-6 ${(mastHeight || 0) > 4 ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+              <div className="flex items-center gap-2 mb-4 text-emerald-400">
+                <CheckCircle2 className="w-5 h-5" />
+                <h3 className="font-bold">Configuration Validée {((mastHeight || 0) > 4) && <span className="text-sm font-normal text-slate-400">(Recommandée uniquement pour 3m et 4m)</span>}</h3>
               </div>
-              <div className="flex flex-col space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Plot métallique</label>
-                <input
-                  type="text"
-                  value={plotMetallique}
-                  onChange={(e) => setPlotMetallique(e.target.value)}
-                  placeholder="Ex: Plot type B..."
-                  className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="flex flex-col space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Bras de déport</label>
-                <input
-                  type="text"
-                  value={brasDeDeport}
-                  onChange={(e) => setBrasDeDeport(e.target.value)}
-                  placeholder="Ex: Bras standard..."
-                  className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
-              </div>
-              <div className="flex flex-col space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mât 5G</label>
-                <input
-                  type="text"
-                  value={matSecondaire}
-                  onChange={(e) => setMatSecondaire(e.target.value)}
-                  placeholder="Ex: Mât 5G..."
-                  className="w-full py-2 px-3 text-sm bg-slate-900 border border-slate-800 rounded-lg text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                />
+              <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-6 relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
+                <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10 group-hover:bg-emerald-500/10 transition-colors"></div>
+                <div className="flex flex-col gap-2 items-end absolute top-4 right-4">
+                  <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Section Validée
+                  </span>
+                </div>
+                
+                <div className="bg-slate-950/40 rounded-xl p-5 border border-slate-800/50 mt-8">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Settings className="w-4 h-4 text-slate-400" />
+                    <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spécification Matériau</p>
+                  </div>
+                  <div className="space-y-2.5 text-xs pt-2">
+                    <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                      <span className="text-slate-400 font-medium">Plot Métallique:</span>
+                      <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right">TCAR 150x5</span>
+                    </div>
+                    <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                      <span className="text-slate-400 font-medium">Bras de déport:</span>
+                      <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right">TCAR 50x5</span>
+                    </div>
+                    <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
+                      <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
+                      <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right">TRON 76x5</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Nouveau bouton pour lancer le calcul via l'API APS */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-2xl mx-auto">
-              <button
-                onClick={onTriggerCalculation}
-                disabled={isCalculationPending}
-                className="flex-1 py-3 px-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-900/20 disabled:opacity-50"
-              >
-                {isCalculationPending ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Calcul en cours...
-                  </>
-                ) : (
-                  <>
-                    <Activity className="w-5 h-5" />
-                    Lancer le calcul (APS)
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={onDownloadPdf}
-                disabled={pdfGenerating}
-                className="flex-1 py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-900/20 disabled:opacity-50 group"
-              >
-                {pdfGenerating ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-                    Fiche Synthèse
-                  </>
-                )}
-              </button>
-            </div>
-
-            <p className="text-xs text-amber-500/70 mt-4 max-w-sm flex gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              Génère le payload JSON strict pour exécution sur le serveur de calcul Windows.
-            </p>
           </div>
         )}
       </div>
+
+      {/* Bottom Section: Template Preview OR Catalogue PDF */}
+      {(mastHeight !== 3 && mastHeight !== 4) || lookupResult.equipment.length === 0 ? (
+        <div className="mt-6 pt-6 border-t border-slate-800">
+          <button
+            onClick={handlePreviewTemplate}
+            disabled={isConverting}
+            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl font-bold flex items-center justify-center gap-2 border border-slate-700 transition-all text-sm"
+          >
+            {isConverting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                {pollingMsg || 'Prévisualisation...'}
+              </>
+            ) : (
+              <>
+                <FileText className="w-4 h-4" />
+                Prévisualiser le Template NDC (Mode Debug)
+              </>
+            )}
+          </button>
+        </div>
+      ) : (
+        /* Catalogue PDF Section */
+        (loadingCataloguePdf || cataloguePdf) ? (
+          <div className="mt-6 pt-6 border-t border-slate-800">
+          {loadingCataloguePdf ? (
+            <div className="mt-4 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl flex items-center justify-center">
+              <div className="flex items-center gap-2 text-slate-400">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Recherche du PDF catalogue...</span>
+              </div>
+            </div>
+          ) : cataloguePdf ? (
+            <div className="mt-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-emerald-400" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">PDF Catalogue Correspondant</p>
+                    <p className="text-xs text-slate-400">{cataloguePdf.filename}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handlePreviewDocument({ url: cataloguePdf.url, filename: cataloguePdf.filename, ext: 'PDF' })}
+                    disabled={isConverting}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isConverting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Conversion...</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-4 h-4" />
+                        <span>Aperçu</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDownloadDocumentPdf({ url: cataloguePdf.url, filename: cataloguePdf.filename, ext: 'PDF' })}
+                    disabled={isDownloadingPdf}
+                    className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isDownloadingPdf ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Téléchargement...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Télécharger</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+        ) : null
+      )}
+
+      {/* Modal PDF Preview extracted to component */}
+      <PdfPreviewModal
+        previewPdfUrl={previewPdfUrl}
+        conversionError={conversionError}
+        onClose={() => setPreviewPdfUrl(null)}
+      />
+
+      {conversionError && (
+        <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
+          <p className="text-sm text-rose-400">
+            Impossible de prévisualiser ce document. Veuillez le télécharger.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

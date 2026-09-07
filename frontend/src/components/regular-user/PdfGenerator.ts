@@ -71,11 +71,9 @@ interface PdfGeneratorOptions {
   fhReference: string;
   fhQuantity: number;
   hasRrhEquipment: boolean;
-  rrhReference: string;
-  rrhQuantity: number;
+  rrhItems: { id: string; reference: string; quantity: number }[];
   hasRruEquipment: boolean;
-  rruReference: string;
-  rruQuantity: number;
+  rruItems: { id: string; reference: string; quantity: number }[];
   hasTdEquipment: boolean;
   tdType: 'tetraphase' | 'monophase';
   tdReference: string;
@@ -122,11 +120,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       fhReference,
       fhQuantity,
       hasRrhEquipment,
-      rrhReference,
-      rrhQuantity,
+      rrhItems,
       hasRruEquipment,
-      rruReference,
-      rruQuantity,
+      rruItems,
       hasTdEquipment,
       tdType,
       tdReference,
@@ -269,8 +265,8 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
 
       let count = 0;
       if (hasFhEquipment) count++;
-      if (hasRrhEquipment) count++;
-      if (hasRruEquipment) count++;
+      if (hasRrhEquipment && rrhItems) count += rrhItems.length;
+      if (hasRruEquipment && rruItems) count += rruItems.length;
       if (hasTdEquipment) count++;
       if (hasGps) count++;
       if (hasBoitierLovage) count++;
@@ -289,13 +285,17 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         doc.text(`• Faisceau Hertzien (FH): Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
         lineY += 8;
       }
-      if (hasRrhEquipment) {
-        doc.text(`• RRH : Référence ${rrhReference || 'Standard'} - Qté: ${rrhQuantity}`, 28, lineY);
-        lineY += 8;
+      if (hasRrhEquipment && rrhItems) {
+        rrhItems.forEach((item, index) => {
+          doc.text(`• RRH ${rrhItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
+          lineY += 8;
+        });
       }
-      if (hasRruEquipment) {
-        doc.text(`• RRU : Référence ${rruReference || 'Standard'} - Qté: ${rruQuantity}`, 28, lineY);
-        lineY += 8;
+      if (hasRruEquipment && rruItems) {
+        rruItems.forEach((item, index) => {
+          doc.text(`• RRU ${rruItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
+          lineY += 8;
+        });
       }
       if (hasTdEquipment) {
         const tdStr = tdType === 'monophase'

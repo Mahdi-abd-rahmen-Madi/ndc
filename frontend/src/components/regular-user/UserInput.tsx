@@ -25,8 +25,6 @@ interface UserInputProps {
   setSiteName: (val: string) => void;
   clientName: string;
   setClientName: (val: string) => void;
-  clientLogoUrl?: string | null;
-  onClientLogoUploaded?: (url: string | null) => void;
 }
 
 export default function UserInput({
@@ -50,16 +48,11 @@ export default function UserInput({
   siteName,
   setSiteName,
   clientName,
-  setClientName,
-  clientLogoUrl,
-  onClientLogoUploaded
+  setClientName
 }: UserInputProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-
-  const [isLogoUploading, setIsLogoUploading] = useState(false);
-  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -125,67 +118,6 @@ export default function UserInput({
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!onClientLogoUploaded) return;
-
-    setLogoUploadError(null);
-
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setLogoUploadError('Format invalide. Seuls JPG et PNG sont acceptés.');
-      e.target.value = '';
-      return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) {
-      setLogoUploadError('Fichier trop volumineux (max 10MB).');
-      e.target.value = '';
-      return;
-    }
-
-    try {
-      setIsLogoUploading(true);
-      let fileToUpload = file;
-      
-      // Compress if larger than 1MB
-      if (file.size > 1024 * 1024) {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true
-        };
-        fileToUpload = await imageCompression(file, options);
-      }
-
-      const formData = new FormData();
-      formData.append('file', fileToUpload);
-
-      const token = localStorage.getItem('ndc_auth_token');
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/upload_logo/`, {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Token ${token}` } : {},
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        onClientLogoUploaded(data.client_logo);
-      } else {
-        const errText = await res.text();
-        console.error('Logo upload failed:', errText);
-        setLogoUploadError(`Erreur: ${res.status} ${errText.substring(0, 50)}`);
-      }
-    } catch (err) {
-      console.error('Logo upload failed:', err);
-      setLogoUploadError('Erreur de connexion. Veuillez réessayer.');
-    } finally {
-      setIsLogoUploading(false);
-      e.target.value = '';
-    }
-  };
-
   return (
     <>
       {/* Image Upload Field */}
@@ -243,71 +175,6 @@ export default function UserInput({
                   <>
                     <Camera className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors" />
                     <span className="text-slate-400 group-hover:text-slate-300 transition-colors">Ajouter une image (JPG, PNG)</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Client Logo Upload Field */}
-      {onClientLogoUploaded && (
-        <div className="mb-4">
-          <label className="text-xs font-semibold text-slate-300 flex items-center justify-between mb-2">
-            <span className="flex items-center gap-1.5">
-              <Camera className="w-3.5 h-3.5 text-indigo-400" />
-              Logo du client <span className="text-red-400 ml-1">* (Requis)</span>
-            </span>
-            {clientLogoUrl && (
-              <button 
-                onClick={() => onClientLogoUploaded(null)}
-                className="text-xs text-red-400 hover:text-red-300 transition-colors"
-              >
-                Retirer
-              </button>
-            )}
-          </label>
-          <div className="flex items-center gap-3">
-            {clientLogoUrl && (
-              <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center p-1">
-                <img 
-                  src={clientLogoUrl.startsWith('http') || clientLogoUrl.startsWith('data:') ? clientLogoUrl : `${apiBaseUrl}${clientLogoUrl.startsWith('/') ? '' : '/'}${clientLogoUrl}`} 
-                  alt="Client Logo" 
-                  className="w-full h-full object-contain" 
-                />
-              </div>
-            )}
-            <div className="relative group flex-1">
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png"
-                onChange={handleLogoUpload}
-                disabled={isLogoUploading}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
-              />
-              <div className={`w-full py-2.5 px-3 bg-slate-900 border ${logoUploadError ? 'border-red-500/50' : clientLogoUrl ? 'border-emerald-500/50' : 'border-slate-800'} rounded-xl text-sm flex items-center justify-center gap-2 transition-all group-hover:border-indigo-500/50`}>
-                {isLogoUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
-                    <span className="text-slate-400">Upload & Compression...</span>
-                  </>
-                ) : logoUploadError ? (
-                  <>
-                    <AlertCircle className="w-4 h-4 text-red-400" />
-                    <span className="text-red-400 font-medium">{logoUploadError}</span>
-                  </>
-                ) : clientLogoUrl ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                      Logo sélectionné
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition-colors" />
-                    <span className="text-slate-400 group-hover:text-slate-300 transition-colors">Ajouter un logo (JPG, PNG)</span>
                   </>
                 )}
               </div>
@@ -451,7 +318,7 @@ export default function UserInput({
 
       {/* Dalle & Plot (Visible except for Encastré) */}
       {foundationType !== 'encastre' && (
-        <div className={`grid ${siteType === 'existant' ? 'grid-cols-2' : 'grid-cols-1'} gap-4 p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl mt-4`}>
+        <div className={`grid ${siteType === 'existant' ? 'grid-cols-3' : 'grid-cols-2'} gap-4 p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl mt-4`}>
           <div className="flex flex-col space-y-2">
             <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
               <FileStack className="w-3.5 h-3.5 text-indigo-400" />
@@ -469,6 +336,19 @@ export default function UserInput({
               />
               <span className="text-slate-400 text-sm">cm</span>
             </div>
+          </div>
+          <div className="flex flex-col space-y-2">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              Étanchéité
+            </label>
+            <input
+              type="text"
+              value={etancheite}
+              onChange={(e) => setEtancheite?.(e.target.value)}
+              placeholder="Ex: multicouche bicouche"
+              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 transition-colors"
+            />
           </div>
           {siteType === 'existant' && (
             <div className="flex flex-col space-y-2">

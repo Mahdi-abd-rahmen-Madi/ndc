@@ -1,14 +1,7 @@
-import { Radio, Activity } from 'lucide-react';
+import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import React from 'react';
+import type { EquipmentItem } from '../RegularUserView';
 
-const FH_REFERENCES = [
-  { id: 'Andrew VHLP1-38', name: 'Andrew VHLP1-38 (0.3m)', diameter: 300 },
-  { id: 'Andrew VHLP2-38', name: 'Andrew VHLP2-38 (0.6m)', diameter: 600 },
-  { id: 'Ericsson MINI-LINK 300', name: 'Ericsson MINI-LINK (0.3m)', diameter: 300 },
-  { id: 'Ericsson MINI-LINK 600', name: 'Ericsson MINI-LINK (0.6m)', diameter: 600 },
-  { id: 'Huawei RTN 300', name: 'Huawei RTN (0.3m)', diameter: 300 },
-  { id: 'Huawei RTN 600', name: 'Huawei RTN (0.6m)', diameter: 600 },
-];
 
 interface FHEquipmentToggleProps {
   hasFhEquipment: boolean;
@@ -19,6 +12,7 @@ interface FHEquipmentToggleProps {
   setFhReference: (val: string) => void;
   fhQuantity: number;
   setFhQuantity: (val: number) => void;
+  fhOptions?: { id: string; vendor: string; name: string; diameter: number; weight: number }[];
 }
 
 export default function FHEquipmentToggle({
@@ -29,18 +23,21 @@ export default function FHEquipmentToggle({
   fhReference,
   setFhReference,
   fhQuantity,
-  setFhQuantity
+  setFhQuantity,
+  fhOptions = []
 }: FHEquipmentToggleProps) {
 
   const handleReferenceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setFhReference(val);
-    const ref = FH_REFERENCES.find(r => r.id === val);
+    const ref = fhOptions.find(r => r.id === val);
     if (ref) {
       setFhDiameter(ref.diameter);
     }
   };
 
+  const selectedRef = fhOptions.find(r => r.id === fhReference);
+  const vendors = Array.from(new Set(fhOptions.map(o => o.vendor)));
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col space-y-3">
@@ -62,49 +59,90 @@ export default function FHEquipmentToggle({
         </div>
 
         {hasFhEquipment && (
-          <div className="flex flex-col md:flex-row md:items-center gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+            
+            {/* Row 1: Quantité & Référence */}
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              {/* Quantité */}
+              <div className="flex flex-col">
+                <label className="text-xs text-slate-400 mb-1">Quantité:</label>
+                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={fhQuantity || 1}
+                    onChange={(e) => setFhQuantity(Math.max(1, Number(e.target.value)))}
+                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="flex flex-col border-l border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => setFhQuantity((fhQuantity || 1) + 1)}
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFhQuantity(Math.max(1, (fhQuantity || 1) - 1))}
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-            {/* Quantité */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400 shrink-0">Quantité:</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={fhQuantity}
-                onChange={(e) => setFhQuantity(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 w-16"
-              />
-            </div>
-
-            {/* Référence */}
-            <div className="flex items-center gap-2 flex-1">
-              <label className="text-xs text-slate-400 shrink-0">Référence:</label>
-              <select
-                value={fhReference}
-                onChange={handleReferenceChange}
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Sélectionner...</option>
-                {FH_REFERENCES.map(ref => (
-                  <option key={ref.id} value={ref.id}>{ref.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Diamètre (Visual Only) */}
-            <div className="flex items-center gap-2 opacity-70">
-              <label className="text-xs text-slate-400 shrink-0">Diamètre:</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={fhDiameter ? fhDiameter : ''}
-                  disabled
-                  className="bg-slate-800/50 border border-slate-700/50 rounded-lg py-1.5 px-3 text-sm text-slate-300 w-20 cursor-not-allowed"
-                />
-                <span className="absolute right-3 top-1.5 text-slate-500 text-sm pointer-events-none">mm</span>
+              {/* Référence */}
+              <div className="flex flex-col flex-1">
+                <label className="text-xs text-slate-400 mb-1">Référence:</label>
+                <select
+                  value={fhReference}
+                  onChange={handleReferenceChange}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {vendors.map(vendor => (
+                    <optgroup key={vendor} label={vendor}>
+                      {fhOptions.filter(o => o.vendor === vendor).map(ref => (
+                        <option key={ref.id} value={ref.id}>{ref.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
             </div>
+
+            {/* Row 2: Diamètre & Poids (Visual Only) */}
+            {selectedRef && (
+              <div className="flex gap-4 opacity-80">
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-400 mb-1">Diamètre:</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={selectedRef.diameter}
+                      disabled
+                      className="bg-slate-800/50 border border-slate-700/50 rounded-lg py-1.5 px-3 text-sm text-slate-300 w-24 cursor-not-allowed"
+                    />
+                    <span className="absolute right-3 top-1.5 text-slate-500 text-sm pointer-events-none">mm</span>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-400 mb-1">Poids:</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={selectedRef.weight}
+                      disabled
+                      className="bg-slate-800/50 border border-slate-700/50 rounded-lg py-1.5 px-3 text-sm text-slate-300 w-24 cursor-not-allowed"
+                    />
+                    <span className="absolute right-3 top-1.5 text-slate-500 text-sm pointer-events-none">kg</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
         )}
@@ -116,23 +154,32 @@ export default function FHEquipmentToggle({
 export interface RRHEquipmentToggleProps {
   hasRrhEquipment: boolean;
   setHasRrhEquipment: (val: boolean) => void;
-  rrhReference: string;
-  setRrhReference: (val: string) => void;
-  rrhQuantity: number;
-  setRrhQuantity: (val: number) => void;
+  rrhItems: EquipmentItem[];
+  setRrhItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
 }
 
 export function RRHEquipmentToggle({
   hasRrhEquipment,
   setHasRrhEquipment,
-  rrhReference,
-  setRrhReference,
-  rrhQuantity,
-  setRrhQuantity
+  rrhItems,
+  setRrhItems
 }: RRHEquipmentToggleProps) {
+  const addRrhRow = () => {
+    setRrhItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
+  };
+
+  const removeRrhRow = (id: string) => {
+    if (rrhItems.length > 1) {
+      setRrhItems(prev => prev.filter(item => item.id !== id));
+    }
+  };
+
+  const updateRrhItem = (id: string, field: 'reference' | 'quantity', value: any) => {
+    setRrhItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
           <div className="relative flex items-center">
             <input
@@ -149,31 +196,43 @@ export function RRHEquipmentToggle({
         </label>
 
         {hasRrhEquipment && (
-          <div className="flex items-center gap-4 animate-fadeIn flex-1 justify-end">
-            {/* Quantité */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400 shrink-0">Quantité:</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={rrhQuantity}
-                onChange={(e) => setRrhQuantity(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-rose-500 w-16"
-              />
-            </div>
+          <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
+            {rrhItems.map((item, index) => (
+              <div key={item.id} className="flex items-end gap-4">
+                {/* Référence */}
+                <div className="flex flex-col flex-1">
+                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Modèle:</label>}
+                  <input
+                    type="text"
+                    value={item.reference}
+                    onChange={(e) => updateRrhItem(item.id, 'reference', e.target.value)}
+                    placeholder="Ex: RRH-001"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500 placeholder-slate-500"
+                  />
+                </div>
 
-            {/* Référence */}
-            <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-              <label className="text-xs text-slate-400 shrink-0">Référence:</label>
-              <input
-                type="text"
-                value={rrhReference}
-                onChange={(e) => setRrhReference(e.target.value)}
-                placeholder="Ex: RRH-001"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500 placeholder-slate-500"
-              />
-            </div>
+                {/* Actions */}
+                <div className="flex flex-col justify-end h-[36px]">
+                  <button
+                    type="button"
+                    onClick={() => removeRrhRow(item.id)}
+                    disabled={rrhItems.length === 1}
+                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addRrhRow}
+              className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg border border-slate-700 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Ajouter
+            </button>
           </div>
         )}
       </div>
@@ -184,23 +243,32 @@ export function RRHEquipmentToggle({
 export interface RRUEquipmentToggleProps {
   hasRruEquipment: boolean;
   setHasRruEquipment: (val: boolean) => void;
-  rruReference: string;
-  setRruReference: (val: string) => void;
-  rruQuantity: number;
-  setRruQuantity: (val: number) => void;
+  rruItems: EquipmentItem[];
+  setRruItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
 }
 
 export function RRUEquipmentToggle({
   hasRruEquipment,
   setHasRruEquipment,
-  rruReference,
-  setRruReference,
-  rruQuantity,
-  setRruQuantity
+  rruItems,
+  setRruItems
 }: RRUEquipmentToggleProps) {
+  const addRruRow = () => {
+    setRruItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
+  };
+
+  const removeRruRow = (id: string) => {
+    if (rruItems.length > 1) {
+      setRruItems(prev => prev.filter(item => item.id !== id));
+    }
+  };
+
+  const updateRruItem = (id: string, field: 'reference' | 'quantity', value: any) => {
+    setRruItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-2">
         <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
           <div className="relative flex items-center">
             <input
@@ -217,31 +285,43 @@ export function RRUEquipmentToggle({
         </label>
 
         {hasRruEquipment && (
-          <div className="flex items-center gap-4 animate-fadeIn flex-1 justify-end">
-            {/* Quantité */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400 shrink-0">Quantité:</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={rruQuantity}
-                onChange={(e) => setRruQuantity(Number(e.target.value))}
-                className="bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 w-16"
-              />
-            </div>
+          <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
+            {rruItems.map((item, index) => (
+              <div key={item.id} className="flex items-end gap-4">
+                {/* Référence */}
+                <div className="flex flex-col flex-1">
+                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Modèle:</label>}
+                  <input
+                    type="text"
+                    value={item.reference}
+                    onChange={(e) => updateRruItem(item.id, 'reference', e.target.value)}
+                    placeholder="Ex: RRU-001"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 placeholder-slate-500"
+                  />
+                </div>
 
-            {/* Référence */}
-            <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-              <label className="text-xs text-slate-400 shrink-0">Référence:</label>
-              <input
-                type="text"
-                value={rruReference}
-                onChange={(e) => setRruReference(e.target.value)}
-                placeholder="Ex: RRU-001"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 placeholder-slate-500"
-              />
-            </div>
+                {/* Actions */}
+                <div className="flex flex-col justify-end h-[36px]">
+                  <button
+                    type="button"
+                    onClick={() => removeRruRow(item.id)}
+                    disabled={rruItems.length === 1}
+                    className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addRruRow}
+              className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg border border-slate-700 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Ajouter
+            </button>
           </div>
         )}
       </div>
@@ -316,8 +396,8 @@ export function TDEquipmentToggle({
 
             {/* References */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-xs text-slate-400 shrink-0">Référence TD:</label>
+              <div className="flex flex-col flex-1">
+                <label className="text-xs text-slate-400 mb-1">Référence TD:</label>
                 <input
                   type="text"
                   value={tdReference}
@@ -328,8 +408,8 @@ export function TDEquipmentToggle({
               </div>
 
               {tdType === 'monophase' && (
-                <div className="flex items-center gap-2 flex-1 animate-fadeIn">
-                  <label className="text-xs text-slate-400 shrink-0">Référence TGBT:</label>
+                <div className="flex flex-col flex-1 animate-fadeIn">
+                  <label className="text-xs text-slate-400 mb-1">Référence TGBT:</label>
                   <input
                     type="text"
                     value={tgbtReference}
@@ -351,8 +431,8 @@ export interface GenericEquipmentToggleProps {
   title: string;
   enabled: boolean;
   setEnabled: (val: boolean) => void;
-  quantity: number;
-  setQuantity: (val: number) => void;
+  quantity?: number;
+  setQuantity?: (val: number) => void;
   reference: string;
   setReference: (val: string) => void;
   colorClass?: string;
@@ -389,23 +469,43 @@ export function GenericEquipmentToggle({
         </label>
 
         {enabled && (
-          <div className="flex items-center gap-4 animate-fadeIn flex-1 justify-end">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fadeIn flex-1 justify-end mt-3 md:mt-0">
             {/* Quantité */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-400 shrink-0">Quantité:</label>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className={`bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-${colorClass}-500 w-16`}
-              />
-            </div>
+            {quantity !== undefined && setQuantity !== undefined && (
+              <div className="flex flex-col">
+                <label className="text-xs text-slate-400 mb-1">Quantité:</label>
+                <div className={`flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-${colorClass}-500`}>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={quantity || 1}
+                    onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="flex flex-col border-l border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((quantity || 1) + 1)}
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, (quantity || 1) - 1))}
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Référence */}
-            <div className="flex items-center gap-2 flex-1 max-w-[200px]">
-              <label className="text-xs text-slate-400 shrink-0">Référence:</label>
+            <div className="flex flex-col flex-1 md:max-w-[200px]">
+              <label className="text-xs text-slate-400 mb-1">Référence:</label>
               <input
                 type="text"
                 value={reference}
@@ -421,7 +521,82 @@ export function GenericEquipmentToggle({
   );
 }
 
+export interface BoitierLovageEquipmentToggleProps {
+  hasBoitierLovage: boolean;
+  setHasBoitierLovage: (val: boolean) => void;
+  boitierLovageReference: string;
+  setBoitierLovageReference: (val: string) => void;
+  gpsReference: string;
+  setGpsReference: (val: string) => void;
+}
 
+export function BoitierLovageEquipmentToggle({
+  hasBoitierLovage,
+  setHasBoitierLovage,
+  boitierLovageReference,
+  setBoitierLovageReference,
+  gpsReference,
+  setGpsReference
+}: BoitierLovageEquipmentToggleProps) {
+  return (
+    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasBoitierLovage}
+                onChange={(e) => setHasBoitierLovage(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasBoitierLovage ? 'bg-purple-500' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasBoitierLovage ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Activity className="w-4 h-4 text-purple-400" />
+            Présence Boitiers de lovage
+          </label>
+        </div>
+
+        {hasBoitierLovage && (
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+            {/* Boitier Lovage Reference */}
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <label className="text-xs text-slate-400 shrink-0">Réf. Boitier:</label>
+                <input
+                  type="text"
+                  value={boitierLovageReference}
+                  onChange={(e) => setBoitierLovageReference(e.target.value)}
+                  placeholder="Référence Boitier"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500 placeholder-slate-500"
+                />
+              </div>
+            </div>
+            
+            {/* Embedded GPS Equipment */}
+            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Activity className="w-3 h-3 text-blue-400" />
+                <span className="text-xs font-semibold text-slate-300">Équipement GPS (Inclus)</span>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-xs text-slate-400 mb-1">Réf. GPS:</label>
+                <input
+                  type="text"
+                  value={gpsReference}
+                  onChange={(e) => setGpsReference(e.target.value)}
+                  placeholder="Référence GPS"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export interface CoffretEquipmentToggleProps {
   hasCoffret: boolean;

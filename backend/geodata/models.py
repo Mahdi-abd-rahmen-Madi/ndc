@@ -546,6 +546,11 @@ class CatalogueConfig(models.Model):
         help_text=_("List of coffret references (e.g. HTTA, hybride, etc.)"),
         verbose_name=_("Coffret References")
     )
+    fh_references = models.JSONField(
+        default=list,
+        help_text=_("List of FH equipment references with diameter and weight"),
+        verbose_name=_("FH References")
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     class Meta:
@@ -577,6 +582,13 @@ class CatalogueConfig(models.Model):
                     { "id": "SLHDU056-12-2+4", "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)" },
                     { "id": "SLHDU056-12-3+3", "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)" },
                     { "id": "SLHDU005-12", "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)" }
+                ],
+                'fh_references': [
+                    { "id": "fh_free_30", "vendor": "FREE", "name": "80GHz", "diameter": 300, "weight": 6, "reference": "80GHz" },
+                    { "id": "fh_free_60", "vendor": "FREE", "name": "18GHz", "diameter": 600, "weight": 14.5, "reference": "18GHz" },
+                    { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H" },
+                    { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H" },
+                    { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H" }
                 ],
                 'standard_montages': [
                     {

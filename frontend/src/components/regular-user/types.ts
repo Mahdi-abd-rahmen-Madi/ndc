@@ -29,6 +29,7 @@ export interface CatalogueConfig {
   standard_montages: MontageConfig[];
   real_world_references: RealWorldReference[];
   coffret_references: { id: string; name: string }[];
+  fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
 }
 
 export interface DocumentInfo {

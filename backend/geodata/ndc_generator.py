@@ -138,6 +138,15 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
     context['categorie_terrain'] = env.get('terrain_type') or '[CATEGORIE_TERRAIN]'
     context['hauteur_m'] = env.get('building_height_m') or '[HAUTEUR_M]'
     context['plot_height_m'] = env.get('plot_height_m') or '[PLOT_HEIGHT_M]'
+    context['etancheite'] = env.get('etancheite') or '[ETANCHEITE]'
+    
+    dalle_m = env.get('dalle_thickness_m')
+    if dalle_m is not None:
+        context['epaisseur_dalle_mm'] = int(float(dalle_m) * 1000)
+    else:
+        context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
+        
+    context['nombre_secteurs'] = structure.get('nombre_secteurs') or 3
 
     # Static Vb mapping
     vb_map = {1: 22, 2: 24, 3: 26, 4: 28}
@@ -201,7 +210,7 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
         context['robot_screenshot_abs'] = None
         
     # Combinaisons Image Path
-    combinaisons_path = "/home/mahdi/worker_share/static/combinaisons/cas1.png"
+    combinaisons_path = os.path.join(settings.MEDIA_ROOT, 'combinaisons', 'table.png')
     if os.path.exists(combinaisons_path):
         context['combinaisons_abs'] = combinaisons_path
     else:

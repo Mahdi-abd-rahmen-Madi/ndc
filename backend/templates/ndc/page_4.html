@@ -13,12 +13,13 @@
 <h2>Tableau des valeurs de chargements</h2>
 <table>
     <tr>
-        <th>SECTEURS</th>
-        <th>SECTEURS</th>
-        <th>SECTEURS</th>
-        <th>SECTEURS</th>
-        <th>SECTEURS</th>
-        <th>SECTEURS</th>
+        <th colspan="6" style="text-align: center; font-size: 14px;">
+            {% if nombre_secteurs > 1 %}
+                SECTEURS ({{ nombre_secteurs }} Secteurs Identiques)
+            {% else %}
+                SECTEUR
+            {% endif %}
+        </th>
     </tr>
     <tr style="background-color: #f2f2f2;">
         <th>Désignation</th>
@@ -30,7 +31,7 @@
     </tr>
     <tr>
         <td>ANTENNE 4G</td>
-        <td>1</td>
+        <td>{{ nombre_secteurs }}</td>
         <td>{{ ant_4g_dims }}</td>
         <td>{{ ant_4g_weight }}</td>
         <td>{{ hauteur_mat_m }}</td>
@@ -38,7 +39,7 @@
     </tr>
     <tr>
         <td>ANTENNE 5G</td>
-        <td>1</td>
+        <td>{{ nombre_secteurs }}</td>
         <td>{{ ant_5g_dims }}</td>
         <td>{{ ant_5g_weight }}</td>
         <td>{{ ant_5g_hba }}</td>

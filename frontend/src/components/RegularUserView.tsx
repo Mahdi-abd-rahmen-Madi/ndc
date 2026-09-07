@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
-import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon } from 'lucide-react';
+import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon, Activity, Radio, TriangleAlert } from 'lucide-react';
+
+export interface EquipmentItem {
+  id: string;
+  reference: string;
+  quantity: number;
+}
+
 import { useCatalogueConfig } from '../hooks/useCatalogueConfig';
 import TerrainMap from './TerrainMap';
 import type { GeocodingAddress } from '../utils/types';
@@ -10,8 +17,9 @@ import { useGeocoding } from '../hooks/useGeocoding';
 import NotificationsDropdown from './regular-user/NotificationsDropdown';
 import AddressSearchSection from './regular-user/AddressSearchSection';
 import UserInput from './regular-user/UserInput';
+import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, GenericEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, GenericEquipmentToggle, BoitierLovageEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
@@ -98,10 +106,11 @@ export default function RegularUserView({
     Array.from({ length: 3 }, (_, i) => defaultSectorData(i))
   );
 
-  const [similarityMode, setSimilarityMode] = useState<SimilarityMode>('none');
+  const [similarityMode, setSimilarityMode] = useState<SimilarityMode>('all_similar');
 
   // Global Equipment
   const [dalleThickness, setDalleThickness] = useState<number | string>('');
+  const [etancheite, setEtancheite] = useState<string>('');
   const [plotHeight, setPlotHeight] = useState<number>(0.5);
 
   const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
@@ -110,19 +119,14 @@ export default function RegularUserView({
   const [fhQuantity, setFhQuantity] = useState<number>(1);
   const [hasRrhEquipment, setHasRrhEquipment] = useState<boolean>(false);
   const [hasRruEquipment, setHasRruEquipment] = useState<boolean>(false);
-  const [rrhReference, setRrhReference] = useState<string>('');
-  const [rrhQuantity, setRrhQuantity] = useState<number>(1);
-  const [rruReference, setRruReference] = useState<string>('');
-  const [rruQuantity, setRruQuantity] = useState<number>(1);
+  const [rrhItems, setRrhItems] = useState<EquipmentItem[]>([{ id: crypto.randomUUID(), reference: '', quantity: 1 }]);
+  const [rruItems, setRruItems] = useState<EquipmentItem[]>([{ id: crypto.randomUUID(), reference: '', quantity: 1 }]);
   const [hasTdEquipment, setHasTdEquipment] = useState<boolean>(false);
   const [tdType, setTdType] = useState<'tetraphase' | 'monophase'>('tetraphase');
   const [tdReference, setTdReference] = useState<string>('');
   const [tgbtReference, setTgbtReference] = useState<string>('');
-  const [hasGps, setHasGps] = useState<boolean>(false);
-  const [gpsQuantity, setGpsQuantity] = useState<number>(1);
   const [gpsReference, setGpsReference] = useState<string>('');
   const [hasBoitierLovage, setHasBoitierLovage] = useState<boolean>(false);
-  const [boitierLovageQuantity, setBoitierLovageQuantity] = useState<number>(1);
   const [boitierLovageReference, setBoitierLovageReference] = useState<string>('');
   const [hasCoffret, setHasCoffret] = useState<boolean>(false);
   const [coffretReference, setCoffretReference] = useState<string>('');
@@ -135,6 +139,7 @@ export default function RegularUserView({
   // Photo Upload State
   const [siteImageUrl, setSiteImageUrl] = useState<string | null>(null);
   const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [siteName, setSiteName] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
 
@@ -376,7 +381,17 @@ export default function RegularUserView({
   // Group unique configurations for calculations/PDF
   const uniqueGroupsMap = new Map<string, { hash: string, indices: number[], sector: SectorData }>();
   activeSectors.forEach((s, idx) => {
-    const hash = getCalculationHash(s);
+    let hash = `${s.selectedHeight}_${s.selectedMontage4G}_${s.selectedMontage5G}_${s.matPrincipal}_${s.matSecondaire}_${s.brasDeDeport}_${s.plotMetallique}`;
+    if (s.selectedMontage4G === 'custom' || s.selectedMontage5G === 'custom') {
+      hash += `_4G${s.ant4gConfig.height}x${s.ant4gConfig.width}x${s.ant4gConfig.thickness}w${s.ant4gConfig.weight}`;
+      hash += `_5G${s.ant5gConfig.height}x${s.ant5gConfig.width}x${s.ant5gConfig.thickness}w${s.ant5gConfig.weight}`;
+    }
+    if (s.configMode === 'reference') {
+      hash += `_ref4G${s.selectedReference4G}_ref5G${s.selectedReference5G}`;
+    }
+    if (similarityMode === 'all_similar') {
+      hash = 'unified_group';
+    }
     if (!uniqueGroupsMap.has(hash)) {
       uniqueGroupsMap.set(hash, { hash, indices: [idx], sector: s });
     } else {
@@ -391,7 +406,7 @@ export default function RegularUserView({
       return;
     }
     if (!clientLogoUrl) {
-      alert("Veuillez uploader le logo du client avant de lancer le calcul.");
+      alert("Veuillez configurer votre logo client dans les paramètres du profil (bouton Profil en haut à droite) avant de générer le document.");
       return;
     }
     if (!siteName.trim() || !clientName.trim()) {
@@ -422,6 +437,7 @@ export default function RegularUserView({
           terrain_type: sector.lookupResult?.detected_terrain_type,
           building_height_m: selectedBuildingHeight,
           dalle_thickness_m: foundationType === 'beton' ? (dalleThickness === '' ? null : Number(dalleThickness) / 100) : null,
+          etancheite: foundationType === 'beton' ? etancheite : null,
           plot_height_m: foundationType === 'beton' ? plotHeight : null
         },
         structure: {
@@ -451,18 +467,17 @@ export default function RegularUserView({
         fh_equipment: {
           enabled: hasFhEquipment,
           diameter_mm: hasFhEquipment ? fhDiameter : null,
-          reference: hasFhEquipment ? fhReference : null,
-          quantity: hasFhEquipment ? fhQuantity : null
+          reference: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.reference || null) : null,
+          quantity: hasFhEquipment ? fhQuantity : null,
+          weight_kg: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.weight || null) : null
         },
         rrh_equipment: {
           enabled: hasRrhEquipment,
-          reference: hasRrhEquipment ? rrhReference : null,
-          quantity: hasRrhEquipment ? rrhQuantity : null
+          items: hasRrhEquipment ? rrhItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
         },
         rru_equipment: {
           enabled: hasRruEquipment,
-          reference: hasRruEquipment ? rruReference : null,
-          quantity: hasRruEquipment ? rruQuantity : null
+          items: hasRruEquipment ? rruItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
         },
         td_equipment: {
           enabled: hasTdEquipment,
@@ -470,8 +485,8 @@ export default function RegularUserView({
           reference: hasTdEquipment ? tdReference : null,
           tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
         },
-        gps: { enabled: hasGps, quantity: hasGps ? gpsQuantity : null, reference: hasGps ? gpsReference : null },
-        boitier_lovage: { enabled: hasBoitierLovage, quantity: hasBoitierLovage ? boitierLovageQuantity : null, reference: hasBoitierLovage ? boitierLovageReference : null },
+        gps: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? gpsReference : null },
+        boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
         coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
         coffrets_hybride: { enabled: false, quantity: null, reference: null },
         site_image_url: siteImageUrl
@@ -572,17 +587,15 @@ export default function RegularUserView({
       fhReference,
       fhQuantity,
       hasRrhEquipment,
-      rrhReference,
-      rrhQuantity,
+      rrhItems,
       hasRruEquipment,
-      rruReference,
-      rruQuantity,
+      rruItems,
       hasTdEquipment,
       tdType,
       tdReference,
       tgbtReference,
-      hasGps, gpsQuantity, gpsReference,
-      hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
+      hasGps: hasBoitierLovage, gpsQuantity: 1, gpsReference,
+      hasBoitierLovage, boitierLovageQuantity: 1, boitierLovageReference,
       hasCoffret, coffretReference,
       coffretOptions: config?.coffret_references || [],
       miniMapImage,
@@ -608,6 +621,14 @@ export default function RegularUserView({
 
   return (
     <div className="flex flex-col w-full h-screen bg-slate-950 text-white font-sans overflow-hidden selection:bg-indigo-500/30">
+      {isProfileModalOpen && (
+        <UserProfileModal
+          onClose={() => setIsProfileModalOpen(false)}
+          clientLogoUrl={clientLogoUrl}
+          onClientLogoUploaded={setClientLogoUrl}
+          apiBaseUrl={apiBaseUrl}
+        />
+      )}
       <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-10 sticky top-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -641,6 +662,23 @@ export default function RegularUserView({
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">
             <span className="text-xs text-slate-400">{userEmail}</span>
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors flex items-center gap-1.5"
+            >
+              {clientLogoUrl ? (
+                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-600 bg-slate-700 shrink-0">
+                  <img
+                    src={clientLogoUrl.startsWith('http') || clientLogoUrl.startsWith('data:') ? clientLogoUrl : `${apiBaseUrl}${clientLogoUrl.startsWith('/') ? '' : '/'}${clientLogoUrl}`}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <UserIcon className="w-4 h-4 text-slate-400" />
+              )}
+              Profil
+            </button>
             <button
               onClick={onLogout}
               className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors"
@@ -683,6 +721,8 @@ export default function RegularUserView({
               setNombreSecteurs={setNombreSecteurs}
               dalleThickness={dalleThickness}
               setDalleThickness={setDalleThickness}
+              etancheite={etancheite}
+              setEtancheite={setEtancheite}
               plotHeight={plotHeight}
               setPlotHeight={setPlotHeight}
               similarityMode={similarityMode}
@@ -694,8 +734,6 @@ export default function RegularUserView({
               setSiteName={setSiteName}
               clientName={clientName}
               setClientName={setClientName}
-              clientLogoUrl={clientLogoUrl}
-              onClientLogoUploaded={setClientLogoUrl}
             />
 
             {activeSectors.map((sector, idx) => {
@@ -725,22 +763,19 @@ export default function RegularUserView({
                 setFhReference={setFhReference}
                 fhQuantity={fhQuantity}
                 setFhQuantity={setFhQuantity}
+                fhOptions={config?.fh_references || []}
               />
               <RRHEquipmentToggle
                 hasRrhEquipment={hasRrhEquipment}
                 setHasRrhEquipment={setHasRrhEquipment}
-                rrhReference={rrhReference}
-                setRrhReference={setRrhReference}
-                rrhQuantity={rrhQuantity}
-                setRrhQuantity={setRrhQuantity}
+                rrhItems={rrhItems}
+                setRrhItems={setRrhItems}
               />
               <RRUEquipmentToggle
                 hasRruEquipment={hasRruEquipment}
                 setHasRruEquipment={setHasRruEquipment}
-                rruReference={rruReference}
-                setRruReference={setRruReference}
-                rruQuantity={rruQuantity}
-                setRruQuantity={setRruQuantity}
+                rruItems={rruItems}
+                setRruItems={setRruItems}
               />
               <TDEquipmentToggle
                 hasTdEquipment={hasTdEquipment}
@@ -752,19 +787,10 @@ export default function RegularUserView({
                 tgbtReference={tgbtReference}
                 setTgbtReference={setTgbtReference}
               />
-              <GenericEquipmentToggle
-                title="Présence équipement GPS"
-                enabled={hasGps} setEnabled={setHasGps}
-                quantity={gpsQuantity} setQuantity={setGpsQuantity}
-                reference={gpsReference} setReference={setGpsReference}
-                colorClass="blue"
-              />
-              <GenericEquipmentToggle
-                title="Présence Boitiers de lovage"
-                enabled={hasBoitierLovage} setEnabled={setHasBoitierLovage}
-                quantity={boitierLovageQuantity} setQuantity={setBoitierLovageQuantity}
-                reference={boitierLovageReference} setReference={setBoitierLovageReference}
-                colorClass="purple"
+              <BoitierLovageEquipmentToggle
+                hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
+                boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
+                gpsReference={gpsReference} setGpsReference={setGpsReference}
               />
               <CoffretEquipmentToggle
                 hasCoffret={hasCoffret}
@@ -879,38 +905,35 @@ export default function RegularUserView({
                           selectedAddress={selectedAddress}
                           selectedMontage={group.sector.selectedMontage4G === group.sector.selectedMontage5G && group.sector.selectedMontage4G !== 'custom' ? group.sector.selectedMontage4G : 'custom'}
                           isSearching={false}
-                          onDownloadPdf={() => handleDownloadPdfWrap(group.sector, group.indices)}
-                          pdfGenerating={pdfGenerating}
-                          onTriggerCalculation={() => handleTriggerCalculation(group.sector)}
-                          isCalculationPending={calculating}
                           matPrincipal={group.sector.matPrincipal}
-                          setMatPrincipal={(val) => updateSector(group.indices[0], { matPrincipal: val })}
                           plotMetallique={group.sector.plotMetallique}
-                          setPlotMetallique={(val) => updateSector(group.indices[0], { plotMetallique: val })}
                           nombreSecteurs={group.indices.length}
                           brasDeDeport={group.sector.brasDeDeport}
-                          setBrasDeDeport={(val) => updateSector(group.indices[0], { brasDeDeport: val })}
                           matSecondaire={group.sector.matSecondaire}
-                          setMatSecondaire={(val) => updateSector(group.indices[0], { matSecondaire: val })}
                           equipmentToggles={{
                             fh: hasFhEquipment,
                             rrh: hasRrhEquipment,
                             rru: hasRruEquipment,
                             td: hasTdEquipment,
-                            gps: hasGps,
+                            gps: hasBoitierLovage,
                             boitier_lovage: hasBoitierLovage,
                             coffrets_fibre: hasCoffret,
                             coffrets_hybride: false
                           }}
                           equipmentValues={{
-                            fh: { diamètre: `${fhDiameter} mm`, référence: fhReference || 'N/A', quantité: fhQuantity },
-                            rrh: { modèle: rrhReference || 'RRH-001', quantité: rrhQuantity },
-                            rru: { modèle: rruReference || 'RRU-001', quantité: rruQuantity },
+                            fh: { 
+                              diamètre: `${fhDiameter} mm`, 
+                              référence: config?.fh_references?.find(r => r.id === fhReference)?.reference || 'N/A', 
+                              quantité: fhQuantity, 
+                              poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A' 
+                            },
+                            rrhItems: hasRrhEquipment ? rrhItems : null,
+                            rruItems: hasRruEquipment ? rruItems : null,
                             td: tdType === 'monophase'
                               ? { type: 'TD Monophasé', référence: tdReference || 'N/A', tgbt: tgbtReference || 'N/A' }
                               : { type: 'TD Tétraphasé', référence: tdReference || 'N/A' },
-                            gps: { référence: gpsReference || 'N/A', quantité: gpsQuantity },
-                            boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
+                            gps: { référence: gpsReference || 'N/A' },
+                            boitier_lovage: { référence: boitierLovageReference || 'N/A' },
                             coffrets_fibre: { référence: coffretReference || 'N/A' },
                             coffrets_hybride: { référence: 'N/A', quantité: 0 }
                           }}

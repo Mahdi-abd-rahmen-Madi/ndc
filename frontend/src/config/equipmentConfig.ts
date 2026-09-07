@@ -19,8 +19,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'blue',
     fields: [
       { label: 'Modèle', value: 'A1' },
-      { label: 'Dimensions', value: '2100×470×210 mm' },
-      { label: 'Poids', value: '45 daN' },
     ],
   },
   {
@@ -31,8 +29,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'purple',
     fields: [
       { label: 'Modèle', value: 'A1' },
-      { label: 'Dimensions', value: '1010×500×250 mm' },
-      { label: 'Poids', value: '50 daN' },
     ],
   },
   {
@@ -42,8 +38,8 @@ export const equipmentConfigs: EquipmentConfig[] = [
     icon: 'Activity',
     color: 'amber',
     fields: [
-      { label: 'Poids', value: '30 kg' },
       { label: 'Référence', value: 'N/A' },
+      { label: 'Quantité', value: 1 },
     ],
   },
   {
@@ -54,8 +50,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'emerald',
     fields: [
       { label: 'Modèle', value: 'RRU-001' },
-      { label: 'Dimensions', value: '500×300×200 mm' },
-      { label: 'Poids', value: '15 kg' },
     ],
   },
   {
@@ -66,8 +60,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'rose',
     fields: [
       { label: 'Modèle', value: 'RRH-001' },
-      { label: 'Dimensions', value: '600×400×250 mm' },
-      { label: 'Poids', value: '20 kg' },
     ],
   },
   {
@@ -90,7 +82,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'blue',
     fields: [
       { label: 'Référence', value: 'N/A' },
-      { label: 'Quantité', value: 1 },
     ],
   },
   {
@@ -101,7 +92,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     color: 'purple',
     fields: [
       { label: 'Référence', value: 'N/A' },
-      { label: 'Quantité', value: 1 },
     ],
   },
   {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Settings, Info } from 'lucide-react';
 import { CatalogueConfig, AntennaConfigState } from './types';
 
@@ -44,14 +44,59 @@ export default function MontageSelector({
     !r.name.toLowerCase().includes('agile')
   );
 
-  const unique4GRefs = Array.from(new Map(realWorldReferences.map(r => [r.ant4g.model, r])).values());
-  const unique5GRefs = Array.from(new Map(realWorldReferences.map(r => [r.ant5g.model, r])).values());
+  // Create maps for unique references, preferring ones that have actual dimensions (height > 0)
+  const unique4GMap = new Map<string, typeof realWorldReferences[0]>();
+  const unique5GMap = new Map<string, typeof realWorldReferences[0]>();
+
+  realWorldReferences.forEach(r => {
+    // For 4G
+    if (r.ant4g?.model) {
+      const existing = unique4GMap.get(r.ant4g.model);
+      if (!existing || (existing.ant4g.height === 0 && r.ant4g.height > 0)) {
+        unique4GMap.set(r.ant4g.model, r);
+      }
+    }
+    // For 5G
+    if (r.ant5g?.model) {
+      const existing = unique5GMap.get(r.ant5g.model);
+      if (!existing || (existing.ant5g.height === 0 && r.ant5g.height > 0)) {
+        unique5GMap.set(r.ant5g.model, r);
+      }
+    }
+  });
+
+  const unique4GRefs = Array.from(unique4GMap.values());
+  const unique5GRefs = Array.from(unique5GMap.values());
+
+  useEffect(() => {
+    if (configMode === 'reference' && unique4GRefs.length > 0 && unique5GRefs.length > 0) {
+      let updated = false;
+      
+      const current4G = realWorldReferences.find(r => r.id === selectedReference4G);
+      if (!current4G) {
+        const fallback4G = unique4GRefs[0];
+        setSelectedReference4G(fallback4G.id);
+        setAnt4gConfig(fallback4G.ant4g);
+        handleMontage4GChange(fallback4G.montageId);
+        updated = true;
+      }
+      
+      const current5G = realWorldReferences.find(r => r.id === selectedReference5G);
+      if (!current5G) {
+        const fallback5G = unique5GRefs[0];
+        setSelectedReference5G(fallback5G.id);
+        setAnt5gConfig(fallback5G.ant5g);
+        handleMontage5GChange(fallback5G.montageId);
+        updated = true;
+      }
+    }
+  }, [configMode, selectedReference4G, selectedReference5G, unique4GRefs, unique5GRefs]);
 
   const handleConfigModeChange = (mode: 'agile' | 'reference') => {
     setConfigMode(mode);
     if (mode === 'reference') {
-      const ref4G = realWorldReferences.find(r => r.id === selectedReference4G) || realWorldReferences[0];
-      const ref5G = realWorldReferences.find(r => r.id === selectedReference5G) || realWorldReferences[0];
+      const ref4G = realWorldReferences.find(r => r.id === selectedReference4G) || unique4GRefs[0];
+      const ref5G = realWorldReferences.find(r => r.id === selectedReference5G) || unique5GRefs[0];
       
       if (ref4G) {
         setSelectedReference4G(ref4G.id);
@@ -156,17 +201,25 @@ export default function MontageSelector({
                   <option value="custom">Sur-mesure (Configuration Manuelle)</option>
                 </select>
               ) : (
-                <select
-                  value={selectedReference4G}
-                  onChange={handleReference4GChange}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
-                >
-                  {unique4GRefs.map((ref) => (
-                    <option key={ref.id} value={ref.id}>
-                      {ref.ant4g.model}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-col gap-2">
+                  <select
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                  >
+                    <option value="ericsson">Ericsson</option>
+                    <option value="huawei" disabled>Huawei (Indisponible)</option>
+                  </select>
+                  <select
+                    value={selectedReference4G}
+                    onChange={handleReference4GChange}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                  >
+                    {unique4GRefs.map((ref) => (
+                      <option key={ref.id} value={ref.id}>
+                        {ref.ant4g.model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 
@@ -242,17 +295,25 @@ export default function MontageSelector({
                   <option value="custom">Sur-mesure (Configuration Manuelle)</option>
                 </select>
               ) : (
-                <select
-                  value={selectedReference5G}
-                  onChange={handleReference5GChange}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
-                >
-                  {unique5GRefs.map((ref) => (
-                    <option key={ref.id} value={ref.id}>
-                      {ref.ant5g.model}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-col gap-2">
+                  <select
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                  >
+                    <option value="ericsson">Ericsson</option>
+                    <option value="huawei" disabled>Huawei (Indisponible)</option>
+                  </select>
+                  <select
+                    value={selectedReference5G}
+                    onChange={handleReference5GChange}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                  >
+                    {unique5GRefs.map((ref) => (
+                      <option key={ref.id} value={ref.id}>
+                        {ref.ant5g.model}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
             </div>
 

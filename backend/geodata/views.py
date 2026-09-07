@@ -412,6 +412,13 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'precalculated_building_heights': [10, 15, 20, 25, 30, 35, 40, 45],
             'recommended_mast_heights': [3, 4],
             'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
+            'fh_references': [
+                { "id": "fh_free_30", "vendor": "FREE", "name": "80GHz", "diameter": 300, "weight": 6, "reference": "80GHz" },
+                { "id": "fh_free_60", "vendor": "FREE", "name": "18GHz", "diameter": 600, "weight": 14.5, "reference": "18GHz" },
+                { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H" },
+                { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H" },
+                { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H" }
+            ],
             'standard_montages': [
                 {
                     "id": "A1", "name": "Montage A1", "abbreviation": "A1a / A1b",
@@ -471,6 +478,9 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         if not config.recommended_mast_heights:
             config.recommended_mast_heights = defaults['recommended_mast_heights']
             needs_save = True
+        if not hasattr(config, 'fh_references') or not config.fh_references:
+            config.fh_references = defaults['fh_references']
+            needs_save = True
             
         if needs_save:
             config.save()
@@ -482,42 +492,47 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             Q(reference_5g__isnull=False) & ~Q(reference_5g='')
         )
         
-        real_world_references = []
-        seen_names = set()
+        real_world_references_dict = {}
 
         for eq in real_refs_qs:
             name = f"{eq.reference_4g or ''} + {eq.reference_5g or ''}".strip(' +') or eq.name
             
-            if name in seen_names:
-                continue
-            seen_names.add(name)
-
             spec4g = eq.specifications.filter(antenna_type='4G').first()
             spec5g = eq.specifications.filter(antenna_type='5G').first()
             
+            h4 = float(spec4g.height_mm) if spec4g else 0
+            h5 = float(spec5g.height_mm) if spec5g else 0
+
             ref = {
                 "id": f"ref-{eq.item_id or eq.id}",
                 "name": name,
                 "montageId": eq.sub_elements or "Custom",
                 "ant4g": {
                     "model": eq.reference_4g or "",
-                    "height": float(spec4g.height_mm) if spec4g else 0,
+                    "height": h4,
                     "width": float(spec4g.width_mm) if spec4g else 0,
                     "thickness": float(spec4g.thickness_mm) if spec4g else 0,
                     "weight": float(spec4g.weight_dan) if spec4g else 0,
                 },
                 "ant5g": {
                     "model": eq.reference_5g or "",
-                    "height": float(spec5g.height_mm) if spec5g else 0,
+                    "height": h5,
                     "width": float(spec5g.width_mm) if spec5g else 0,
                     "thickness": float(spec5g.thickness_mm) if spec5g else 0,
                     "weight": float(spec5g.weight_dan) if spec5g else 0,
                 }
             }
-            real_world_references.append(ref)
+            
+            if name in real_world_references_dict:
+                existing_ref = real_world_references_dict[name]
+                # If existing has 0 dimensions but new one has actual dimensions, overwrite
+                if (existing_ref["ant4g"]["height"] == 0 and h4 > 0) or (existing_ref["ant5g"]["height"] == 0 and h5 > 0):
+                    real_world_references_dict[name] = ref
+            else:
+                real_world_references_dict[name] = ref
 
         # Use only dynamically fetched references (ignore old hardcoded database entries)
-        final_refs = real_world_references
+        final_refs = list(real_world_references_dict.values())
 
         return Response({
             'precalculated_building_heights': config.precalculated_building_heights,
@@ -525,6 +540,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'fh_weight_options': config.fh_weight_options,
             'standard_montages': config.standard_montages,
             'coffret_references': config.coffret_references,
+            'fh_references': config.fh_references,
             'real_world_references': final_refs,
         })
 
@@ -584,7 +600,12 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         
         if mast_height:
             try:
-                queryset = queryset.filter(mast_height=float(mast_height))
+                mh = float(mast_height)
+                from django.db.models import Q
+                if mh in [3.0, 4.0]:
+                    queryset = queryset.filter(Q(mast_height=mh) | Q(mast_height__isnull=True))
+                else:
+                    queryset = queryset.filter(mast_height=mh)
             except ValueError:
                 pass
 
@@ -2099,7 +2120,7 @@ def get_matching_catalogue_pdf(request):
     try:
         for file in os.listdir(search_dir):
             file_lower = file.lower()
-            if not file_lower.endswith('.pdf'):
+            if not (file_lower.endswith('.pdf') or file_lower.endswith('.docx')):
                 continue
                 
             # Check if height and montage match

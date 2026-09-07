@@ -59,6 +59,7 @@ class EnvironmentSerializer(serializers.Serializer):
     terrain_type = serializers.CharField()
     building_height_m = serializers.FloatField(required=False, allow_null=True)
     dalle_thickness_m = serializers.FloatField(required=False, allow_null=True)
+    etancheite = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     plot_height_m = serializers.FloatField(required=False, allow_null=True)
 
 class StructureSerializer(serializers.Serializer):
@@ -74,6 +75,7 @@ class StructureSerializer(serializers.Serializer):
     bras_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     mast_5g_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     mast_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    nombre_secteurs = serializers.IntegerField(required=False, allow_null=True, default=3)
 
 class AntennaSerializer(serializers.Serializer):
     model = serializers.CharField()
@@ -86,14 +88,21 @@ class AntennaSerializer(serializers.Serializer):
 class FHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
     diameter_mm = serializers.FloatField(required=False, allow_null=True)
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    quantity = serializers.IntegerField(required=False, allow_null=True)
+    weight_kg = serializers.FloatField(required=False, allow_null=True)
+
+class EquipmentItemSerializer(serializers.Serializer):
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    quantity = serializers.IntegerField(required=False, allow_null=True)
 
 class RRHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
-    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    items = EquipmentItemSerializer(many=True, required=False)
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
-    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    items = EquipmentItemSerializer(many=True, required=False)
 
 class CatalogueMatchSerializer(serializers.Serializer):
     found = serializers.BooleanField()
