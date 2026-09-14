@@ -30,6 +30,9 @@ export interface CatalogueConfig {
   real_world_references: RealWorldReference[];
   coffret_references: { id: string; name: string }[];
   fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
+  td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
+  rru_references: { id: string; vendor: string; reference: string }[];
+  rrh_references: { id: string; vendor: string; reference: string }[];
 }
 
 export interface DocumentInfo {
@@ -87,6 +90,8 @@ export interface SectorData {
   selectedMontage4G: string;
   selectedMontage5G: string;
   configMode: ConfigMode;
+  selectedVendor4G: string;
+  selectedVendor5G: string;
   selectedReference4G: string;
   selectedReference5G: string;
   ant4gConfig: AntennaConfigState;

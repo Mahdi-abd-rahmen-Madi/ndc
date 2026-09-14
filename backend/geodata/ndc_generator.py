@@ -1,4 +1,5 @@
 import os
+import math
 import uuid
 import urllib.parse
 from datetime import datetime
@@ -6,11 +7,96 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from weasyprint import HTML
 
-def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
+# ---------------------------------------------------------------------------
+# EC1 Wind Calculation (EN 1991-1-4)
+# ---------------------------------------------------------------------------
+
+# z₀ roughness lengths and z_min per terrain category
+# Keys match the canonical frontend/DB values: '0', 'II', 'IIIa', 'IIIb', 'IV'
+TERRAIN_Z0 = {
+    '0':    (0.003,  1),   # (z0 in m, zmin in m)
+    'II':   (0.05,   2),
+    'IIIa': (0.2,    5),
+    'IIIb': (0.5,   10),
+    'IV':   (1.0,   15),
+}
+
+# Reference terrain is always Terrain II
+Z0_II = 0.05
+
+# Air density (kg/m³) — standard EN 1991-1-4 value
+RHO_AIR = 1.25
+
+
+def calculate_wind_params(terrain_type: str, z_total: float, vb: float) -> dict:
+    """
+    Compute the EC1 wind chain for a given terrain category, total height z,
+    and reference wind speed Vb.
+
+    Parameters
+    ----------
+    terrain_type : str
+        One of '0', 'II', 'IIIa', 'IIIb', 'IV'.  Falls back to 'IIIa' if
+        the value is not recognised.
+    z_total : float
+        Total height above ground (m): building + plot + mast.
+    vb : float
+        Reference wind speed (m/s) from the regional Vb map.
+
+    Returns
+    -------
+    dict with keys:
+        kr      – roughness factor
+        cr_z    – roughness coefficient cr(z)
+        vm      – mean wind speed Vm (m/s)
+        iv_z    – turbulence intensity Iv(z)
+        qp_pa   – peak velocity pressure (Pa)
+        qp_dan  – peak velocity pressure (daN/m²)
+        z_used  – effective z after clamping to zmin
+    """
+    z0, zmin = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
+
+    # Clamp z to zmin (EC1 §4.3.2)
+    z_used = max(z_total, zmin)
+
+    # kr — terrain roughness factor (EC1 eq. 4.5)
+    kr = 0.19 * (z0 / Z0_II) ** 0.07
+
+    # cr(z) — roughness coefficient (EC1 eq. 4.4)
+    cr_z = kr * math.log(z_used / z0)
+
+    # c₀ = 1.0 (flat terrain, no orography correction)
+    c0 = 1.0
+
+    # Vm — mean wind speed (EC1 eq. 4.3)
+    vm = cr_z * c0 * vb
+
+    # Iv(z) — turbulence intensity (EC1 eq. 4.7, kI=1, c0=1)
+    iv_z = 1.0 / math.log(z_used / z0)
+
+    # qp(z) — peak velocity pressure in Pa (EC1 eq. 4.8)
+    qp_pa = (1 + 7 * iv_z) * 0.5 * RHO_AIR * vm ** 2
+
+    # Convert Pa → daN/m²  (1 daN/m² = 10 Pa)
+    qp_dan = qp_pa / 10.0
+
+    return {
+        'kr':     round(kr, 3),
+        'cr_z':   round(cr_z, 3),
+        'vm':     round(vm, 2),
+        'iv_z':   round(iv_z, 4),
+        'qp_pa':  round(qp_pa, 2),
+        'qp_dan': round(qp_dan, 2),
+        'z_used': round(z_used, 2),
+    }
+
+def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False):
     """
     Generates a PDF from HTML templates using WeasyPrint based on job calculation results.
     """
     context = {}
+    context['is_subsequent_sector'] = is_subsequent_sector
+    context['is_cover_only'] = is_cover_only
     
     result_data = job.result_data if job else {}
     input_data = job.input_data if job else {}
@@ -141,16 +227,57 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
     context['etancheite'] = env.get('etancheite') or '[ETANCHEITE]'
     
     dalle_m = env.get('dalle_thickness_m')
-    if dalle_m is not None:
-        context['epaisseur_dalle_mm'] = int(float(dalle_m) * 1000)
+    if dalle_m:
+        try:
+            context['epaisseur_dalle_mm'] = int(float(dalle_m) * 1000)
+        except (ValueError, TypeError):
+            context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
     else:
         context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
         
-    context['nombre_secteurs'] = structure.get('nombre_secteurs') or 3
+    context['nombre_secteurs'] = structure_data.get('nombre_secteurs') or 3
 
     # Static Vb mapping
     vb_map = {1: 22, 2: 24, 3: 26, 4: 28}
-    context['vb_m_s'] = vb_map.get(region_num, '[Vb_m/s]')
+    vb = vb_map.get(region_num)
+    context['vb_m_s'] = vb if vb is not None else '[Vb_m/s]'
+
+    # ------------------------------------------------------------------
+    # Wind calculation (EC1 / EN 1991-1-4)
+    # z = hauteur_bâtiment + hauteur_plot + hauteur_mât
+    # ------------------------------------------------------------------
+    terrain_type_str = str(env.get('terrain_type') or 'IIIa')
+
+    try:
+        h_bat  = float(env.get('building_height_m') or 0)
+    except (ValueError, TypeError):
+        h_bat = 0.0
+    try:
+        h_plot = float(env.get('plot_height_m') or 0)
+    except (ValueError, TypeError):
+        h_plot = 0.0
+    try:
+        h_mat  = float(mast_height_m or 0)
+    except (ValueError, TypeError):
+        h_mat = 0.0
+
+    z_total = h_bat + h_plot + h_mat
+
+    if vb is not None and z_total > 0:
+        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
+        context['vm_z']    = wind['vm']
+        context['iv_z']    = wind['iv_z']
+        context['qp_z']    = wind['qp_dan']
+        context['cr_z']    = wind['cr_z']
+        context['kr_z']    = wind['kr']
+        context['z_total'] = wind['z_used']
+    else:
+        context['vm_z']    = '[Vm]'
+        context['iv_z']    = '[Iv(z)]'
+        context['qp_z']    = '[qp]'
+        context['cr_z']    = '[cr(z)]'
+        context['kr_z']    = '[kr]'
+        context['z_total'] = '[z]'
     
     # Client Logo
     client_logo_url = site_info.get('client_logo_url')
@@ -176,8 +303,10 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None):
     else:
         context['client_logo_abs'] = None
     
+    context['is_subsequent_sector'] = is_subsequent_sector
+    
     # Resolve Photo Path
-    photo_url_or_path = urllib.parse.unquote(photo_url_or_path)
+    photo_url_or_path = urllib.parse.unquote(photo_url_or_path or '')
 
     if photo_url_or_path.startswith(settings.MEDIA_URL):
         photo_rel = photo_url_or_path[len(settings.MEDIA_URL):]

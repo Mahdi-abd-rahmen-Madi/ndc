@@ -309,6 +309,126 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['post'])
+    def generate_site_ndc(self, request):
+        """
+        Endpoint to generate a combined Site Note de Calcul PDF.
+        Expects a list of job IDs in the request body, and optionally a photo_url.
+        """
+        try:
+            from geodata.ndc_generator import generate_ndc_pdf
+            import os
+            from django.conf import settings
+            import uuid
+            from pypdf import PdfWriter
+            from api.models import CalculationJob
+    
+            fast_track = request.data.get('fast_track', False)
+            photo_url = request.data.get('photo_url', '')
+            
+            if fast_track:
+                catalogue_pdf_urls = request.data.get('catalogue_pdf_urls', [])
+                if isinstance(catalogue_pdf_urls, str):
+                    catalogue_pdf_urls = [catalogue_pdf_urls]
+                    
+                preview_data = {
+                    'site': {
+                        'name': request.data.get('site_name', ''),
+                        'client': request.data.get('client_name', ''),
+                        'address': request.data.get('address', '')
+                    },
+                    'environment': {
+                        'etancheite': request.data.get('etancheite'),
+                        'dalle_thickness_m': request.data.get('dalle_thickness_m')
+                    }
+                }
+                
+                # Generate cover only
+                cover_pdf_url = generate_ndc_pdf(None, photo_url, preview_data=preview_data, is_cover_only=True)
+                
+                # Merge Cover + Catalogue PDFs
+                merger = PdfWriter()
+                import urllib.parse
+                
+                # Cover path
+                if cover_pdf_url.startswith(settings.MEDIA_URL):
+                    cover_rel_path = cover_pdf_url[len(settings.MEDIA_URL):]
+                    cover_abs_path = os.path.join(settings.MEDIA_ROOT, cover_rel_path)
+                    if os.path.exists(cover_abs_path):
+                        merger.append(cover_abs_path)
+                        
+                # Catalogue paths
+                for cat_url in catalogue_pdf_urls:
+                    if cat_url.startswith(settings.MEDIA_URL):
+                        cat_rel_path = cat_url[len(settings.MEDIA_URL):]
+                        cat_rel_path = urllib.parse.unquote(cat_rel_path)
+                        
+                        # Ensure we are dealing with a PDF file (convert .docx if necessary)
+                        if not cat_rel_path.lower().endswith('.pdf'):
+                            from geodata.utils_preview import get_pdf_preview_path
+                            pdf_rel_path = get_pdf_preview_path(cat_rel_path)
+                            if pdf_rel_path:
+                                cat_rel_path = pdf_rel_path
+                        
+                        cat_abs_path = os.path.join(settings.MEDIA_ROOT, cat_rel_path)
+                        if os.path.exists(cat_abs_path):
+                            merger.append(cat_abs_path)
+                
+                output_filename = f"SITE_NDC_FAST_{uuid.uuid4().hex[:8]}.pdf"
+                outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+                os.makedirs(outdir, exist_ok=True)
+                merged_pdf_path = os.path.join(outdir, output_filename)
+                merger.write(merged_pdf_path)
+                merger.close()
+                
+                final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+                return Response({'ndc_pdf_url': final_pdf_url}, status=status.HTTP_200_OK)
+
+            job_ids = request.data.get('job_ids', [])
+    
+            if not job_ids:
+                return Response({'error': 'No job IDs provided'}, status=status.HTTP_400_BAD_REQUEST)
+    
+            temp_pdfs = []
+            merger = PdfWriter()
+
+            for i, job_id in enumerate(job_ids):
+                job = CalculationJob.objects.get(id=job_id)
+                # First sector gets the cover page and hypotheses. Subsequent ones don't.
+                is_subsequent = (i > 0)
+                
+                job_photo_url = photo_url
+                if not job_photo_url and job.input_data and job.input_data.get('site_image_url'):
+                    job_photo_url = job.input_data.get('site_image_url')
+                    
+                pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent)
+                
+                # Convert relative URL back to absolute file path
+                if pdf_url.startswith(settings.MEDIA_URL):
+                    rel_path = pdf_url[len(settings.MEDIA_URL):]
+                    abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+                    if os.path.exists(abs_path):
+                        temp_pdfs.append(abs_path)
+                        merger.append(abs_path)
+    
+            output_filename = f"SITE_NDC_{uuid.uuid4().hex[:8]}.pdf"
+            outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+            os.makedirs(outdir, exist_ok=True)
+            
+            merged_pdf_path = os.path.join(outdir, output_filename)
+            merger.write(merged_pdf_path)
+            merger.close()
+    
+            # Clean up temp pdfs if we want to, but it's fine to leave them since they are in uploads
+            
+            final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+            return Response({'ndc_pdf_url': final_pdf_url}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class WorkerControlView(APIView):
     """
     Endpoint for Windows Server to ping heartbeat and push logs.

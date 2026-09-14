@@ -24,3 +24,4 @@ django-q2==1.7.4
 daphne
 channels
 SQLAlchemy==2.0.30
+pypdf>=5.1.0

@@ -108,17 +108,21 @@ export default function SectorConfigurator({
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="0"
-              max="15"
-              step="0.5"
-              value={sectorData.selectedHeight}
-              onChange={(e) => updateSector(index, { selectedHeight: Number(e.target.value) })}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 transition-colors"
-            />
-            <span className="text-slate-400 text-sm font-medium">m</span>
+          <div className="flex flex-col gap-1.5 mt-3">
+            <label className="text-xs text-slate-400 pl-1">Hauteur du mât (personnalisé)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="15"
+                step="0.5"
+                placeholder="Ex: 3.5"
+                value={sectorData.selectedHeight || ''}
+                onChange={(e) => updateSector(index, { selectedHeight: Number(e.target.value) })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 transition-colors"
+              />
+              <span className="text-slate-400 text-sm font-medium">m</span>
+            </div>
           </div>
         </div>
 
@@ -140,6 +144,10 @@ export default function SectorConfigurator({
           selectedReference5G={sectorData.selectedReference5G}
           setSelectedReference4G={(ref) => updateSector(index, { selectedReference4G: ref })}
           setSelectedReference5G={(ref) => updateSector(index, { selectedReference5G: ref })}
+          selectedVendor4G={sectorData.selectedVendor4G}
+          selectedVendor5G={sectorData.selectedVendor5G}
+          setSelectedVendor4G={(vendor) => updateSector(index, { selectedVendor4G: vendor })}
+          setSelectedVendor5G={(vendor) => updateSector(index, { selectedVendor5G: vendor })}
         />
 
       </div>

@@ -112,23 +112,26 @@
         .criteria-table {
             width: 80mm;
             border-collapse: separate;
-            border-spacing: 0 5mm;
+            border-spacing: 0 3mm;
         }
         
         .criteria-table td {
             border: 1px solid #000;
-            padding: 3mm;
+            padding: 2mm;
+            vertical-align: middle;
+            height: 8mm; /* Ensure all rows have equal height */
         }
         
         .criteria-table .label {
             font-weight: bold;
-            font-size: 12pt;
+            font-size: 10pt;
             width: 60%;
         }
 
         .criteria-table .value {
             background-color: #00AF50;
             font-weight: bold;
+            font-size: 10pt;
             text-align: center;
             width: 40%;
         }
@@ -153,24 +156,31 @@
         {% endif %}
     </div>
 
-    {% include 'ndc/page_1.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_2.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_3.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_4.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_5.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_6.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_7.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_8.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_9.html' %}
-    <div class="page-break"></div>
-    {% include 'ndc/page_10.html' %}
+    {% if not is_subsequent_sector %}
+        {% include 'ndc/page_1.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_2.html' %}
+        {% if not is_cover_only %}
+            <div class="page-break"></div>
+        {% endif %}
+    {% endif %}
+    
+    {% if not is_cover_only %}
+        {% include 'ndc/page_3.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_4.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_5.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_6.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_7.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_8.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_9.html' %}
+        <div class="page-break"></div>
+        {% include 'ndc/page_10.html' %}
+    {% endif %}
 </body>
 </html>

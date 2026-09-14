@@ -5,11 +5,14 @@
 <p>Pour accès aux antennes, une échelle type Söll est prévue et points d’ancrage jusqu’à la HSA, selon la norme NF EN 795.</p>
 
 <h3>HYPOTHESES DE VENT</h3>
-<p>Région de vent: {{ region_vent }}</p>
-<p>Catégorie de terrain: {{ categorie_terrain }} Hauteur: {{ hauteur_m }} m</p>
+<p>Région de vent : {{ region_vent }}</p>
+<p>Catégorie de terrain : {{ categorie_terrain }} &nbsp;|&nbsp; Hauteur totale z : {{ z_total }} m</p>
 <p>Vitesse de référence du vent : Vb = {{ vb_m_s }} m/s</p>
-<p>Vitesse moyenne du vent à la hauteur z : Vm = {{ var_21 }} m/s</p>
-<p>Pression dynamique de pointe à la hauteur z : qp = {{ var_23 }} daN/m²</p>
+<p>Coefficient de rugosité : kr = {{ kr_z }} &nbsp;|&nbsp; cr(z) = {{ cr_z }}</p>
+<p>Vitesse moyenne du vent à la hauteur z : Vm = {{ vm_z }} m/s</p>
+<p>Intensité de turbulence à la hauteur z : Iv(z) = {{ iv_z }}</p>
+<p>Pression dynamique de pointe à la hauteur z : qp = {{ qp_z }} daN/m²</p>
+
 
 <h3>CALCUL DE CHUTE</h3>
 <p>L’effort engendré en cas de chute d'un homme sur un point d'ancrage répondant à la norme NF EN 795 - Ancrage de classe A1.</p>

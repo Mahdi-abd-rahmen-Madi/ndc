@@ -541,6 +541,9 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'standard_montages': config.standard_montages,
             'coffret_references': config.coffret_references,
             'fh_references': config.fh_references,
+            'td_references': config.td_references,
+            'rru_references': config.rru_references,
+            'rrh_references': config.rrh_references,
             'real_world_references': final_refs,
         })
 

@@ -337,19 +337,27 @@ export default function UserInput({
               <span className="text-slate-400 text-sm">cm</span>
             </div>
           </div>
-          <div className="flex flex-col space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-indigo-400" />
-              Étanchéité
-            </label>
-            <input
-              type="text"
-              value={etancheite}
-              onChange={(e) => setEtancheite?.(e.target.value)}
-              placeholder="Ex: multicouche bicouche"
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 transition-colors"
-            />
-          </div>
+          {siteType === 'existant' && (
+            <div className="flex flex-col space-y-2">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                Épaisseur de l'étanchéité
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={etancheite}
+                  onChange={(e) => setEtancheite?.(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="0"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 transition-colors"
+                />
+                <span className="text-slate-400 text-sm">cm</span>
+              </div>
+            </div>
+          )}
+
           {siteType === 'existant' && (
             <div className="flex flex-col space-y-2">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">

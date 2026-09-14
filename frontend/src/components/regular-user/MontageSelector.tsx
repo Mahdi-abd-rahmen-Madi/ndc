@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Settings, Info } from 'lucide-react';
+import { Settings, Info, Radio, SignalHigh } from 'lucide-react';
 import { CatalogueConfig, AntennaConfigState } from './types';
 
 interface MontageSelectorProps {
@@ -18,6 +18,10 @@ interface MontageSelectorProps {
   selectedReference5G: string;
   setSelectedReference4G: (ref: string) => void;
   setSelectedReference5G: (ref: string) => void;
+  selectedVendor4G?: string;
+  selectedVendor5G?: string;
+  setSelectedVendor4G?: (vendor: string) => void;
+  setSelectedVendor5G?: (vendor: string) => void;
 }
 
 export default function MontageSelector({
@@ -35,7 +39,11 @@ export default function MontageSelector({
   selectedReference4G,
   selectedReference5G,
   setSelectedReference4G,
-  setSelectedReference5G
+  setSelectedReference5G,
+  selectedVendor4G = 'Ericsson',
+  selectedVendor5G = 'Ericsson',
+  setSelectedVendor4G,
+  setSelectedVendor5G
 }: MontageSelectorProps) {
   const montages = config?.standard_montages || [];
   const realWorldReferences = (config?.real_world_references || []).filter(r => 
@@ -70,15 +78,12 @@ export default function MontageSelector({
 
   useEffect(() => {
     if (configMode === 'reference' && unique4GRefs.length > 0 && unique5GRefs.length > 0) {
-      let updated = false;
-      
       const current4G = realWorldReferences.find(r => r.id === selectedReference4G);
       if (!current4G) {
         const fallback4G = unique4GRefs[0];
         setSelectedReference4G(fallback4G.id);
         setAnt4gConfig(fallback4G.ant4g);
         handleMontage4GChange(fallback4G.montageId);
-        updated = true;
       }
       
       const current5G = realWorldReferences.find(r => r.id === selectedReference5G);
@@ -87,7 +92,6 @@ export default function MontageSelector({
         setSelectedReference5G(fallback5G.id);
         setAnt5gConfig(fallback5G.ant5g);
         handleMontage5GChange(fallback5G.montageId);
-        updated = true;
       }
     }
   }, [configMode, selectedReference4G, selectedReference5G, unique4GRefs, unique5GRefs]);
@@ -137,61 +141,87 @@ export default function MontageSelector({
     }
   };
 
+  const renderDimension = (label: string, value: number, unit: string, onChange: (val: number) => void) => {
+    if (configMode === 'reference') {
+      return (
+        <div className="flex flex-col">
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</span>
+          <div className="flex justify-between items-center bg-slate-900/40 border border-slate-700/30 rounded py-1.5 px-2">
+            <span className="text-xs text-white font-mono">{value}</span>
+            <span className="text-[10px] text-slate-500">{unit}</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className="flex flex-col">
+        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">{label} ({unit})</label>
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+        />
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col space-y-4">
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-        <label className="text-sm font-semibold text-white flex items-center gap-2 mb-3">
+        <label className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
           <Settings className="w-4 h-4 text-indigo-400" />
           4. Configuration de l'Antenne
         </label>
 
-        <div className="flex gap-2 p-1 bg-slate-950 rounded-lg mb-4">
+        {/* Segmented Control */}
+        <div className="relative flex p-1 bg-slate-950 rounded-lg mb-5 border border-slate-800/80">
+          <div 
+            className="absolute inset-y-1 bg-indigo-600 rounded-md transition-all duration-300 ease-out"
+            style={{ 
+              width: 'calc(50% - 4px)', 
+              left: configMode === 'agile' ? '4px' : 'calc(50%)' 
+            }}
+          />
           <button
             type="button"
             onClick={() => handleConfigModeChange('agile')}
-            className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${configMode === 'agile'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white'
-              }`}
+            className={`relative flex-1 py-2 rounded-md text-xs font-semibold transition-all z-10 ${
+              configMode === 'agile' ? 'text-white' : 'text-slate-400 hover:text-white'
+            }`}
           >
             Dimensions Agiles
           </button>
           <button
             type="button"
             onClick={() => handleConfigModeChange('reference')}
-            className={`flex-1 py-2 rounded-md text-xs font-semibold transition-all ${configMode === 'reference'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'text-slate-400 hover:text-white'
-              }`}
+            className={`relative flex-1 py-2 rounded-md text-xs font-semibold transition-all z-10 ${
+              configMode === 'reference' ? 'text-white' : 'text-slate-400 hover:text-white'
+            }`}
           >
             Références (Dimensions réelles)
           </button>
         </div>
 
-        {(selectedMontage4G === 'custom' || selectedMontage5G === 'custom' || selectedMontage4G !== selectedMontage5G) && configMode === 'agile' && (
-          <div className="mb-6 bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 flex items-start gap-2 animate-fadeIn">
-            <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-indigo-200">
-              Configuration sur-mesure activée ou configurations 4G/5G différentes. Un nouveau calcul structurel sera nécessaire car cette configuration ne correspond à aucun montage complet précalculé.
-            </p>
-          </div>
-        )}
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Antenne 4G */}
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3">
-            <h4 className="text-xs font-bold text-slate-300 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+          <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/20 hover:from-slate-800/80 hover:to-slate-800/40 transition-colors border border-slate-700/50 rounded-lg p-4">
+            <h4 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-blue-500/20 flex items-center justify-center">
+                <Radio className="w-3.5 h-3.5 text-blue-400" />
+              </div>
               Antenne 4G
             </h4>
             
             {/* Dropdown 4G */}
-            <div className="mb-4">
+            <div className="mb-5">
               {configMode === 'agile' ? (
                 <select
                   value={selectedMontage4G}
                   onChange={(e) => handleMontage4GChange(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                 >
                   {montages.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -201,17 +231,19 @@ export default function MontageSelector({
                   <option value="custom">Sur-mesure (Configuration Manuelle)</option>
                 </select>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <select
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                    value={selectedVendor4G}
+                    onChange={(e) => setSelectedVendor4G?.(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
-                    <option value="ericsson">Ericsson</option>
-                    <option value="huawei" disabled>Huawei (Indisponible)</option>
+                    <option value="Ericsson">Ericsson</option>
+                    <option value="Huawei" disabled>Huawei (Indisponible)</option>
                   </select>
                   <select
                     value={selectedReference4G}
                     onChange={handleReference4GChange}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
                     {unique4GRefs.map((ref) => (
                       <option key={ref.id} value={ref.id}>
@@ -223,69 +255,34 @@ export default function MontageSelector({
               )}
             </div>
 
-            <div className="space-y-2">
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
-                  <input
-                    type="number"
-                    value={ant4gConfig.height}
-                    onChange={(e) => setAnt4gConfig(prev => ({ ...prev, height: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
-                  <input
-                    type="number"
-                    value={ant4gConfig.width}
-                    onChange={(e) => setAnt4gConfig(prev => ({ ...prev, width: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {renderDimension('Hauteur', ant4gConfig.height, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, height: val })))}
+                {renderDimension('Largeur', ant4gConfig.width, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, width: val })))}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
-                  <input
-                    type="number"
-                    value={ant4gConfig.thickness}
-                    onChange={(e) => setAnt4gConfig(prev => ({ ...prev, thickness: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
-                  <input
-                    type="number"
-                    value={ant4gConfig.weight}
-                    onChange={(e) => setAnt4gConfig(prev => ({ ...prev, weight: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {renderDimension('Épaisseur', ant4gConfig.thickness, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, thickness: val })))}
+                {renderDimension('Poids', ant4gConfig.weight, 'Kg', (val) => setAnt4gConfig(prev => ({ ...prev, weight: val })))}
               </div>
             </div>
           </div>
 
           {/* Antenne 5G */}
-          <div className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3">
-            <h4 className="text-xs font-bold text-slate-300 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+          <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/20 hover:from-slate-800/80 hover:to-slate-800/40 transition-colors border border-slate-700/50 rounded-lg p-4">
+            <h4 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-purple-500/20 flex items-center justify-center">
+                <SignalHigh className="w-3.5 h-3.5 text-purple-400" />
+              </div>
               Antenne 5G
             </h4>
             
             {/* Dropdown 5G */}
-            <div className="mb-4">
+            <div className="mb-5">
               {configMode === 'agile' ? (
                 <select
                   value={selectedMontage5G}
                   onChange={(e) => handleMontage5GChange(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                 >
                   {montages.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -295,17 +292,19 @@ export default function MontageSelector({
                   <option value="custom">Sur-mesure (Configuration Manuelle)</option>
                 </select>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <select
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                    value={selectedVendor5G}
+                    onChange={(e) => setSelectedVendor5G?.(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
-                    <option value="ericsson">Ericsson</option>
-                    <option value="huawei" disabled>Huawei (Indisponible)</option>
+                    <option value="Ericsson">Ericsson</option>
+                    <option value="Huawei" disabled>Huawei (Indisponible)</option>
                   </select>
                   <select
                     value={selectedReference5G}
                     onChange={handleReference5GChange}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-slate-600 cursor-pointer"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
                     {unique5GRefs.map((ref) => (
                       <option key={ref.id} value={ref.id}>
@@ -317,51 +316,14 @@ export default function MontageSelector({
               )}
             </div>
 
-            <div className="space-y-2">
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
-                  <input
-                    type="number"
-                    value={ant5gConfig.height}
-                    onChange={(e) => setAnt5gConfig(prev => ({ ...prev, height: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
-                  <input
-                    type="number"
-                    value={ant5gConfig.width}
-                    onChange={(e) => setAnt5gConfig(prev => ({ ...prev, width: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                {renderDimension('Hauteur', ant5gConfig.height, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, height: val })))}
+                {renderDimension('Largeur', ant5gConfig.width, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, width: val })))}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
-                  <input
-                    type="number"
-                    value={ant5gConfig.thickness}
-                    onChange={(e) => setAnt5gConfig(prev => ({ ...prev, thickness: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
-                  <input
-                    type="number"
-                    value={ant5gConfig.weight}
-                    onChange={(e) => setAnt5gConfig(prev => ({ ...prev, weight: Number(e.target.value) }))}
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white"
-                    disabled={configMode === 'reference'}
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {renderDimension('Épaisseur', ant5gConfig.thickness, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, thickness: val })))}
+                {renderDimension('Poids', ant5gConfig.weight, 'Kg', (val) => setAnt5gConfig(prev => ({ ...prev, weight: val })))}
               </div>
             </div>
           </div>

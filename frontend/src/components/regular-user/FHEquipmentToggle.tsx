@@ -156,13 +156,15 @@ export interface RRHEquipmentToggleProps {
   setHasRrhEquipment: (val: boolean) => void;
   rrhItems: EquipmentItem[];
   setRrhItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
+  rrhOptions: { id: string; vendor: string; reference: string }[];
 }
 
 export function RRHEquipmentToggle({
   hasRrhEquipment,
   setHasRrhEquipment,
   rrhItems,
-  setRrhItems
+  setRrhItems,
+  rrhOptions
 }: RRHEquipmentToggleProps) {
   const addRrhRow = () => {
     setRrhItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
@@ -174,9 +176,19 @@ export function RRHEquipmentToggle({
     }
   };
 
-  const updateRrhItem = (id: string, field: 'reference' | 'quantity', value: any) => {
-    setRrhItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const updateRrhItem = (id: string, field: 'reference' | 'quantity' | 'vendor', value: any) => {
+    setRrhItems(prev => prev.map(item => {
+      if (item.id === id) {
+        if (field === 'vendor') {
+          return { ...item, vendor: value, reference: '' }; // reset reference when vendor changes
+        }
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
   };
+  
+  const uniqueVendors = Array.from(new Set(rrhOptions.map(o => o.vendor)));
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col gap-2">
@@ -199,16 +211,71 @@ export function RRHEquipmentToggle({
           <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
             {rrhItems.map((item, index) => (
               <div key={item.id} className="flex items-end gap-4">
-                {/* Référence */}
+                {/* Marque */}
+                <div className="flex flex-col flex-1 max-w-[120px]">
+                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Marque:</label>}
+                  <select
+                    value={item.vendor || ''}
+                    onChange={(e) => updateRrhItem(item.id, 'vendor', e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500"
+                  >
+                    <option value="">Sélectionner</option>
+                    {uniqueVendors.map(vendor => (
+                      <option key={vendor} value={vendor}>{vendor}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Modèle */}
                 <div className="flex flex-col flex-1">
                   {index === 0 && <label className="text-xs text-slate-400 mb-1">Modèle:</label>}
-                  <input
-                    type="text"
+                  <select
                     value={item.reference}
                     onChange={(e) => updateRrhItem(item.id, 'reference', e.target.value)}
-                    placeholder="Ex: RRH-001"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500 placeholder-slate-500"
-                  />
+                    disabled={!item.vendor}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500 disabled:opacity-50"
+                  >
+                    <option value="">Sélectionner une référence</option>
+                    {rrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                      const isSelectedElsewhere = rrhItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
+                      return (
+                        <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
+                          {opt.reference} {isSelectedElsewhere ? '(Déjà sélectionné)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Quantité */}
+                <div className="flex flex-col">
+                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Qté:</label>}
+                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={item.quantity || 1}
+                      onChange={(e) => updateRrhItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                      className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <div className="flex flex-col border-l border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => updateRrhItem(item.id, 'quantity', (item.quantity || 1) + 1)}
+                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateRrhItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
+                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -245,13 +312,15 @@ export interface RRUEquipmentToggleProps {
   setHasRruEquipment: (val: boolean) => void;
   rruItems: EquipmentItem[];
   setRruItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
+  rruOptions: { id: string; vendor: string; reference: string }[];
 }
 
 export function RRUEquipmentToggle({
   hasRruEquipment,
   setHasRruEquipment,
   rruItems,
-  setRruItems
+  setRruItems,
+  rruOptions
 }: RRUEquipmentToggleProps) {
   const addRruRow = () => {
     setRruItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
@@ -263,9 +332,19 @@ export function RRUEquipmentToggle({
     }
   };
 
-  const updateRruItem = (id: string, field: 'reference' | 'quantity', value: any) => {
-    setRruItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  const updateRruItem = (id: string, field: 'reference' | 'quantity' | 'vendor', value: any) => {
+    setRruItems(prev => prev.map(item => {
+      if (item.id === id) {
+        if (field === 'vendor') {
+          return { ...item, vendor: value, reference: '' }; // reset reference when vendor changes
+        }
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
   };
+  
+  const uniqueVendors = Array.from(new Set(rruOptions.map(o => o.vendor)));
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col gap-2">
@@ -288,16 +367,71 @@ export function RRUEquipmentToggle({
           <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
             {rruItems.map((item, index) => (
               <div key={item.id} className="flex items-end gap-4">
-                {/* Référence */}
+                {/* Marque */}
+                <div className="flex flex-col flex-1 max-w-[120px]">
+                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Marque:</label>}
+                  <select
+                    value={item.vendor || ''}
+                    onChange={(e) => updateRruItem(item.id, 'vendor', e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Sélectionner</option>
+                    {uniqueVendors.map(vendor => (
+                      <option key={vendor} value={vendor}>{vendor}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Modèle */}
                 <div className="flex flex-col flex-1">
                   {index === 0 && <label className="text-xs text-slate-400 mb-1">Modèle:</label>}
-                  <input
-                    type="text"
+                  <select
                     value={item.reference}
                     onChange={(e) => updateRruItem(item.id, 'reference', e.target.value)}
-                    placeholder="Ex: RRU-001"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 placeholder-slate-500"
-                  />
+                    disabled={!item.vendor}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                  >
+                    <option value="">Sélectionner une référence</option>
+                    {rruOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                      const isSelectedElsewhere = rruItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
+                      return (
+                        <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
+                          {opt.reference} {isSelectedElsewhere ? '(Déjà sélectionné)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Quantité */}
+                <div className="flex flex-col">
+                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Qté:</label>}
+                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={item.quantity || 1}
+                      onChange={(e) => updateRruItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                      className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <div className="flex flex-col border-l border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => updateRruItem(item.id, 'quantity', (item.quantity || 1) + 1)}
+                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateRruItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
+                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -338,6 +472,7 @@ export interface TDEquipmentToggleProps {
   setTdReference: (val: string) => void;
   tgbtReference: string;
   setTgbtReference: (val: string) => void;
+  tdOptions: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
 }
 
 export function TDEquipmentToggle({
@@ -348,8 +483,28 @@ export function TDEquipmentToggle({
   tdReference,
   setTdReference,
   tgbtReference,
-  setTgbtReference
+  setTgbtReference,
+  tdOptions
 }: TDEquipmentToggleProps) {
+
+  React.useEffect(() => {
+    if (hasTdEquipment) {
+      if (tdType === 'tetraphase') {
+        const opt = tdOptions.find(o => o.reference === '68237');
+        if (opt && tdReference !== opt.id) setTdReference(opt.id);
+      } else {
+        const opt = tdOptions.find(o => o.reference === '68236');
+        if (opt && tdReference !== opt.id) setTdReference(opt.id);
+      }
+    }
+  }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference]);
+
+  const filteredTdOptions = tdOptions.filter(opt => {
+    if (tdType === 'tetraphase') return opt.reference === '68237';
+    if (tdType === 'monophase') return opt.reference === '68236';
+    return true;
+  });
+
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col space-y-3">
@@ -398,13 +553,18 @@ export function TDEquipmentToggle({
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex flex-col flex-1">
                 <label className="text-xs text-slate-400 mb-1">Référence TD:</label>
-                <input
-                  type="text"
+                <select
                   value={tdReference}
                   onChange={(e) => setTdReference(e.target.value)}
-                  placeholder="Ex: TD-123"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 placeholder-slate-500"
-                />
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="">Sélectionner une référence</option>
+                  {filteredTdOptions.map(opt => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.vendor} - {opt.name} ({opt.reference})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {tdType === 'monophase' && (
@@ -526,17 +686,13 @@ export interface BoitierLovageEquipmentToggleProps {
   setHasBoitierLovage: (val: boolean) => void;
   boitierLovageReference: string;
   setBoitierLovageReference: (val: string) => void;
-  gpsReference: string;
-  setGpsReference: (val: string) => void;
 }
 
 export function BoitierLovageEquipmentToggle({
   hasBoitierLovage,
   setHasBoitierLovage,
   boitierLovageReference,
-  setBoitierLovageReference,
-  gpsReference,
-  setGpsReference
+  setBoitierLovageReference
 }: BoitierLovageEquipmentToggleProps) {
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
@@ -573,15 +729,51 @@ export function BoitierLovageEquipmentToggle({
                 />
               </div>
             </div>
-            
-            {/* Embedded GPS Equipment */}
-            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-3">
-                <Activity className="w-3 h-3 text-blue-400" />
-                <span className="text-xs font-semibold text-slate-300">Équipement GPS (Inclus)</span>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-slate-400 mb-1">Réf. GPS:</label>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface GPSEquipmentToggleProps {
+  hasGps: boolean;
+  setHasGps: (val: boolean) => void;
+  gpsReference: string;
+  setGpsReference: (val: string) => void;
+}
+
+export function GPSEquipmentToggle({
+  hasGps,
+  setHasGps,
+  gpsReference,
+  setGpsReference
+}: GPSEquipmentToggleProps) {
+  return (
+    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasGps}
+                onChange={(e) => setHasGps(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasGps ? 'bg-blue-500' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasGps ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Activity className="w-4 h-4 text-blue-400" />
+            Présence GPS
+          </label>
+        </div>
+
+        {hasGps && (
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <label className="text-xs text-slate-400 shrink-0">Réf. GPS:</label>
                 <input
                   type="text"
                   value={gpsReference}
