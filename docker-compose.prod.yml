@@ -24,8 +24,7 @@ services:
       - POSTGRES_USER=ndc_user
       - POSTGRES_PASSWORD=ndc_password
       - POSTGRES_DB=ndc_db
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgis://ndc_user:ndc_password@db:5432/ndc_db
       # The production allowed hosts should be passed or managed in settings
       - ALLOWED_HOSTS=api-ndc.heliosys.io,localhost,127.0.0.1
       - CORS_ALLOWED_ORIGINS=https://ndc.heliosys.io,http://localhost:5178
