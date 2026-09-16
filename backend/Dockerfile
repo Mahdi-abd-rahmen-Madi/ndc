@@ -30,4 +30,4 @@ EXPOSE 8000
 
 # Start server
 # Using uvicorn worker for ASGI
-CMD ["gunicorn", "api.asgi:application", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "asgi:application", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
