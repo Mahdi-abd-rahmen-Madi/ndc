@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   db:
-    # Using Postgres 18 with PostGIS
-    image: postgis/postgis:18-3.5
+    # Using Postgres 16 with PostGIS
+    image: postgis/postgis:16-3.4
     container_name: ndc_postgis_prod
     environment:
       POSTGRES_USER: ndc_user
