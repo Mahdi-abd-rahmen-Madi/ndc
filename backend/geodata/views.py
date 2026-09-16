@@ -2135,9 +2135,13 @@ def get_matching_catalogue_pdf(request):
     
     if not matching_files:
         return Response({'error': 'No matching file found for criteria', 'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}}, status=404)
+    config_mode = request.GET.get('config_mode', 'reference')
     
-    # Sort matching files: prioritize 'reelles' over 'agiles' if both exist
-    matching_files.sort(key=lambda x: 0 if 'reelles' in x.lower() else 1)
+    # Sort matching files based on config_mode
+    if config_mode == 'agile':
+        matching_files.sort(key=lambda x: 0 if 'agiles' in x.lower() else 1)
+    else:
+        matching_files.sort(key=lambda x: 0 if 'reelles' in x.lower() else 1)
     
     # Return the first match
     matched_file = matching_files[0]

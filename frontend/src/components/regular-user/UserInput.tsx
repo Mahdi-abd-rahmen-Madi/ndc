@@ -239,7 +239,7 @@ export default function UserInput({
               <div className="flex flex-col space-y-2">
                 <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
                   <ArrowUpToLine className="w-3.5 h-3.5 text-emerald-400" />
-                  Hauteur (H)
+                  Hauteur bâtiment
                 </label>
                 <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
                   <input

@@ -369,7 +369,7 @@ export default function ResultsPanel({
             {selectedAddress && (
               <p className="text-slate-400 text-sm flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-indigo-400" />
-                {selectedAddress.name}, {selectedAddress.city}
+                <span className="font-semibold text-slate-300">Adresse:</span> {selectedAddress.name}, {selectedAddress.city}
               </p>
             )}
           </div>
@@ -399,17 +399,7 @@ export default function ResultsPanel({
               </div>
             </div>
 
-            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-emerald-500/30 transition-all duration-300">
-              <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 shrink-0 group-hover:bg-emerald-500/20 group-hover:scale-110 transition-all">
-                <Mountain className="w-5 h-5" />
-              </div>
-              <div className="pr-2">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Terrain</p>
-                <p className="text-base font-bold text-white leading-none">
-                  Type {lookupResult.detected_terrain_type || 'IIIa'}
-                </p>
-              </div>
-            </div>
+
           </div>
         </div>
       )}

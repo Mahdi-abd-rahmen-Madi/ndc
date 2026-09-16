@@ -92,16 +92,16 @@ export default function SectorConfigurator({
               3. Hauteur du mât (h)
             </span>
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-            <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-end gap-6 mt-2">
+            <div className="flex flex-col gap-1.5 min-w-[220px]">
               <label className="text-xs text-slate-400 pl-1 mb-1">Standard</label>
-              <div className="flex gap-2 h-full">
+              <div className="flex gap-2 h-10">
                 {recommendedMastHeights.map(h => (
                   <button
                     key={h}
                     type="button"
                     onClick={() => updateSector(index, { selectedHeight: h })}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
                       sectorData.selectedHeight === h
                         ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 shadow-inner'
                         : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-transparent'
@@ -113,9 +113,9 @@ export default function SectorConfigurator({
               </div>
             </div>
             
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 min-w-[160px]">
               <label className="text-xs text-slate-400 pl-1 mb-1">Personnalisé</label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 h-10">
                 <input
                   type="number"
                   min="0"
@@ -124,7 +124,7 @@ export default function SectorConfigurator({
                   placeholder="Ex: 3.5"
                   value={sectorData.selectedHeight || ''}
                   onChange={(e) => updateSector(index, { selectedHeight: Number(e.target.value) })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-2 px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 transition-colors"
+                  className="w-full h-full bg-slate-800 border border-slate-700 rounded-lg px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 transition-colors"
                 />
                 <span className="text-slate-400 text-sm font-medium">m</span>
               </div>

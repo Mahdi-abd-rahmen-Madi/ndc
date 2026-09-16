@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
-import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,FileText, AlertTriangle, Eye, Download, CheckCircle2 } from 'lucide-react';
+import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,FileText, AlertTriangle, Eye, Download, CheckCircle2, Settings, RefreshCw } from 'lucide-react';
 
 export interface EquipmentItem {
   id: string;
@@ -652,7 +652,8 @@ export default function RegularUserView({
                montage: actualMontage,
                terrain_type: g.sector.lookupResult?.detected_terrain_type || 'IIIa',
                region: g.sector.lookupResult?.detected_region || '1',
-               height: height.toString()
+               height: height.toString(),
+               config_mode: g.sector.configMode || 'reference'
              });
              
              if (eq.item_id) {
@@ -675,7 +676,43 @@ export default function RegularUserView({
           client_name: clientName,
           address: selectedAddress?.label || selectedAddress?.name || '',
           etancheite: etancheite,
-          dalle_thickness_m: dalleThickness ? parseFloat(String(dalleThickness)) / 100 : null
+          dalle_thickness_m: dalleThickness ? parseFloat(String(dalleThickness)) / 100 : null,
+          environment: {
+            terrain_type: activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa',
+            region: activeSectors[0]?.lookupResult?.detected_region || '1',
+            building_height_m: selectedBuildingHeight,
+            plot_height_m: 0.6
+          },
+          structure: {
+            mast_height_m: activeSectors[0]?.selectedHeight,
+            mat_principal: "CH 88.9x3",
+            nombre_secteurs: activeSectors.length
+          },
+          fh_equipment: {
+            enabled: hasFhEquipment,
+            diameter_mm: hasFhEquipment ? fhDiameter : null,
+            reference: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.reference || null) : null,
+            quantity: hasFhEquipment ? fhQuantity : null,
+            weight_kg: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.weight || null) : null
+          },
+          rrh_equipment: {
+            enabled: hasRrhEquipment,
+            items: hasRrhEquipment ? rrhItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
+          },
+          rru_equipment: {
+            enabled: hasRruEquipment,
+            items: hasRruEquipment ? rruItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
+          },
+          td_equipment: {
+            enabled: hasTdEquipment,
+            type: hasTdEquipment ? tdType : null,
+            reference: hasTdEquipment ? tdReference : null,
+            tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
+          },
+          gps: { enabled: hasGps, quantity: 1, reference: hasGps ? gpsReference : null },
+          boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
+          coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
+          coffrets_hybride: { enabled: false, quantity: null, reference: null }
         };
         
         const res = await fetch(`${apiBaseUrl}/api/calculations/generate_site_ndc/`, {
@@ -874,6 +911,25 @@ export default function RegularUserView({
     }
   };
 
+  const getMontageDisplayLabel = (sector: any) => {
+    if (sector.configMode === 'agile') {
+      if (sector.selectedMontage4G === 'custom') {
+        return 'Dimensions Personnalisées';
+      }
+      if (sector.ant4gConfig) {
+        return `${sector.ant4gConfig.height} x ${sector.ant4gConfig.width} x ${sector.ant4gConfig.thickness} mm`;
+      }
+      return `Dimensions (Montage ${sector.selectedMontage4G})`;
+    }
+    
+    if (sector.selectedMontage4G?.toLowerCase() === 'custom') {
+      return `Montage (${sector.selectedVendor4G || 'Ericsson'})`;
+    }
+    return `Montage ${sector.selectedMontage4G}`;
+  };
+
+  const isLocked = isGeneratingSiteNdc || !!ndcPdfUrl;
+
   return (
     <div className="flex flex-col w-full h-screen bg-slate-950 text-white font-sans overflow-hidden selection:bg-indigo-500/30">
       {isProfileModalOpen && (
@@ -904,7 +960,7 @@ export default function RegularUserView({
                   <li>Épaisseur de l'étanchéité : <span className="text-white font-medium">{etancheite || 'Non spécifié'} cm</span></li>
                   {activeSectors.map((sector, idx) => (
                     <li key={`std-${idx}`}>
-                      Secteur {idx + 1} (Standard) : <span className="text-white font-medium">Montage {sector.selectedMontage4G?.toLowerCase() === 'custom' ? (sector.configMode === 'reference' ? (sector.selectedVendor4G || 'Ericsson') : sector.ant4gConfig?.model || sector.ant5gConfig?.model || 'Personnalisé') : sector.selectedMontage4G}</span>
+                      Secteur {idx + 1} (Standard) : <span className="text-white font-medium">{getMontageDisplayLabel(sector)}</span>
                     </li>
                   ))}
                   {hasFhEquipment && fhQuantity > 0 && (
@@ -1036,6 +1092,7 @@ export default function RegularUserView({
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+            <fieldset disabled={isLocked} className={`space-y-6 border-none p-0 m-0 w-full ${isLocked ? "pointer-events-none opacity-60 transition-opacity duration-300" : ""}`}>
             <UserInput
               siteType={siteType}
               foundationType={foundationType}
@@ -1130,7 +1187,7 @@ export default function RegularUserView({
                 coffretOptions={config?.coffret_references || []}
               />
             </div>
-
+            </fieldset>
 
           </div>
         </div>
@@ -1309,10 +1366,7 @@ export default function RegularUserView({
                             <span className="text-slate-400">Région de Vent</span>
                             <span className="text-white font-medium">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span>
                           </div>
-                          <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                            <span className="text-slate-400">Terrain</span>
-                            <span className="text-white font-medium">Type {activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa'}</span>
-                          </div>
+
                           <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
                             <span className="text-slate-400">Épaisseur de la dalle</span>
                             <span className="text-white font-medium">{dalleThickness || 'Non spécifié'} cm</span>
@@ -1325,7 +1379,7 @@ export default function RegularUserView({
                           {activeSectors.map((sector, idx) => (
                             <div key={`std-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-700/30">
                               <span className="text-slate-400">Secteur {idx + 1} (Standard)</span>
-                              <span className="text-white font-medium">Montage {sector.selectedMontage4G?.toLowerCase() === 'custom' ? (sector.configMode === 'reference' ? (sector.selectedVendor4G || 'Ericsson') : sector.ant4gConfig?.model || sector.ant5gConfig?.model || 'Personnalisé') : sector.selectedMontage4G}</span>
+                              <span className="text-white font-medium">{getMontageDisplayLabel(sector)}</span>
                             </div>
                           ))}
                           
@@ -1392,29 +1446,53 @@ export default function RegularUserView({
                   {/* GENERATE GLOBAL NDC BUTTON */}
                   <div className="mt-8 pt-6 border-t border-slate-800">
                     {!ndcPdfUrl ? (
-                      <button
-                        onClick={handleGenerateSiteNdc}
-                        disabled={isGeneratingSiteNdc}
-                        className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg transition-all text-lg ${
-                          isFullyStandard() 
-                            ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' 
-                            : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
-                        }`}
-                      >
-                        {isGeneratingSiteNdc ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            {siteNdcPollingMsg || 'Génération en cours...'}
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="w-5 h-5" />
-                            {isFullyStandard() 
-                              ? 'Générer la Note de Calcul Standard (Instantané)' 
-                              : 'Lancer Calcul Robot (Analyse Requise)'}
-                          </>
+                      <div className="flex flex-col gap-4">
+                        <button
+                          onClick={handleGenerateSiteNdc}
+                          disabled={isGeneratingSiteNdc}
+                          className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg transition-all text-lg ${
+                            isFullyStandard() 
+                              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' 
+                              : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
+                          } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
+                        >
+                          {isGeneratingSiteNdc ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              {siteNdcPollingMsg || 'Génération en cours...'}
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="w-5 h-5" />
+                              {isFullyStandard() 
+                                ? 'Générer la Note de Calcul Standard (Instantané)' 
+                                : 'Lancer Calcul Robot (Analyse Requise)'}
+                            </>
+                          )}
+                        </button>
+
+                        {isGeneratingSiteNdc && (
+                          <div className="w-full mt-2 animate-fadeIn">
+                            <style>
+                              {`
+                                @keyframes indeterminateProgress {
+                                  0% { transform: translateX(-100%); }
+                                  100% { transform: translateX(400%); }
+                                }
+                              `}
+                            </style>
+                            <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden relative shadow-inner">
+                              <div 
+                                className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-600'}`}
+                                style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
+                              ></div>
+                            </div>
+                            <p className="text-center text-xs text-slate-400 mt-3 animate-pulse font-medium">
+                              {isFullyStandard() ? 'Assemblage des documents en cours...' : 'Nos serveurs calculent votre structure, cela peut prendre 1 à 2 minutes...'}
+                            </p>
+                          </div>
                         )}
-                      </button>
+                      </div>
                     ) : (
                       <div className="flex flex-col gap-4">
                         <div className="flex gap-4">
@@ -1438,31 +1516,42 @@ export default function RegularUserView({
                           ) : (
                             <>
                               <button
-                                onClick={handleGenerateSiteNdc}
-                                disabled={isGeneratingSiteNdc}
+                                onClick={() => setShowPdfPreview(!showPdfPreview)}
                                 className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-700"
                               >
-                                {isGeneratingSiteNdc ? (
-                                  <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    {siteNdcPollingMsg || 'Génération en cours...'}
-                                  </>
-                                ) : (
-                                  <>
-                                    <FileText className="w-5 h-5" />
-                                    Relancer Calcul Robot
-                                  </>
-                                )}
+                                <Eye className="w-5 h-5" />
+                                {showPdfPreview ? 'Fermer la Note' : 'Ouvrir la Note'}
                               </button>
                               <button
-                                onClick={() => setShowPdfPreview(!showPdfPreview)}
+                                onClick={handleDownloadPdf}
                                 className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20 transition-all text-lg"
                               >
-                                <FileText className="w-5 h-5" />
-                                {showPdfPreview ? 'Fermer la Note de Calcul' : `Ouvrir la Note de Calcul (${sectors.length} secteur${sectors.length > 1 ? 's' : ''})`}
+                                <Download className="w-5 h-5" />
+                                Télécharger ({sectors.length} secteur{sectors.length > 1 ? 's' : ''})
                               </button>
                             </>
                           )}
+                        </div>
+                        
+                        <div className="flex gap-4 border-t border-slate-800 pt-4 mt-2">
+                          <button
+                            onClick={() => {
+                              setNdcPdfUrl(null);
+                              setShowPdfPreview(false);
+                              setSiteNdcError(null);
+                            }}
+                            className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-slate-700"
+                          >
+                            <Settings className="w-4 h-4" />
+                            Modifier les paramètres
+                          </button>
+                          <button
+                            onClick={() => window.location.reload()}
+                            className="flex-1 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-rose-500/20"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            Nouveau Calcul
+                          </button>
                         </div>
                         {showPdfPreview && ndcPdfUrl && (
                           <div className="w-full h-[75vh] min-h-[600px] border border-slate-700 rounded-xl overflow-hidden bg-white mt-4">

@@ -374,6 +374,23 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         if os.path.exists(cat_abs_path):
                             merger.append(cat_abs_path)
                 
+                has_any_eq = False
+                for eq_key in ['fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre']:
+                    eq = request.data.get(eq_key, {})
+                    if eq.get('enabled'):
+                        has_any_eq = True
+                        break
+                        
+                if has_any_eq:
+                    from geodata.ndc_generator import generate_auxiliary_pdfs
+                    class DummyJob:
+                        input_data = request.data
+                        id = 'fast'
+                    aux_paths = generate_auxiliary_pdfs(DummyJob())
+                    for aux in aux_paths:
+                        if os.path.exists(aux):
+                            merger.append(aux)
+                
                 output_filename = f"SITE_NDC_FAST_{uuid.uuid4().hex[:8]}.pdf"
                 outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
                 os.makedirs(outdir, exist_ok=True)
