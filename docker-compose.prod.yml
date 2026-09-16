@@ -29,7 +29,7 @@ services:
       - ALLOWED_HOSTS=api-ndc.heliosys.io,localhost,127.0.0.1
       - CORS_ALLOWED_ORIGINS=https://ndc.heliosys.io,http://localhost:5178
     ports:
-      - "127.0.0.1:8008:8000"
+      - "8008:8000"
     depends_on:
       - db
     restart: unless-stopped
@@ -45,7 +45,7 @@ services:
         - VITE_WORKER_URL=https://api-ndc.heliosys.io
     container_name: ndc_frontend_prod
     ports:
-      - "127.0.0.1:5178:80"
+      - "5178:80"
     depends_on:
       - backend
     restart: unless-stopped
