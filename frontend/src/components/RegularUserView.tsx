@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
-import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon, Activity, Radio, FileText, AlertTriangle, Eye, Download, CheckCircle2 } from 'lucide-react';
+import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,FileText, AlertTriangle, Eye, Download, CheckCircle2 } from 'lucide-react';
 
 export interface EquipmentItem {
   id: string;
@@ -20,7 +20,7 @@ import AddressSearchSection from './regular-user/AddressSearchSection';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, GenericEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
@@ -61,19 +61,6 @@ const defaultSectorData = (id: number): SectorData => ({
 });
 
 // Helper to generate a hash for a sector's calculation inputs
-const getCalculationHash = (s: SectorData) => {
-  return JSON.stringify({
-    selectedHeight: s.selectedHeight,
-    selectedMontage4G: s.selectedMontage4G,
-    selectedMontage5G: s.selectedMontage5G,
-    ant4gConfig: s.ant4gConfig,
-    ant5gConfig: s.ant5gConfig,
-    matPrincipal: s.matPrincipal,
-    plotMetallique: s.plotMetallique,
-    brasDeDeport: s.brasDeDeport,
-    matSecondaire: s.matSecondaire
-  });
-};
 
 const getCatalogueHash = (s: SectorData) => {
   return `${s.selectedHeight}-${s.selectedMontage4G}-${s.selectedMontage5G}`;
@@ -138,8 +125,7 @@ export default function RegularUserView({
 
   // Status State
   const [calculating, setCalculating] = useState(false);
-  const [pdfGenerating, setPdfGenerating] = useState(false);
-  const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
+      const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
   const [showPdfPreview, setShowPdfPreview] = useState<boolean>(false);
 
   // Photo Upload State
@@ -427,22 +413,7 @@ export default function RegularUserView({
     return opt ? `${opt.vendor} ${opt.name} (${opt.reference})` : id;
   };
 
-  const handleTriggerCalculation = async (sector: SectorData) => {
-    if (!siteImageUrl) {
-      alert("Veuillez uploader une photo du site avant de lancer le calcul.");
-      return;
-    }
-    if (!clientLogoUrl) {
-      alert("Veuillez configurer votre logo client dans les paramètres du profil (bouton Profil en haut à droite) avant de générer le document.");
-      return;
-    }
-    if (!siteName.trim() || !clientName.trim()) {
-      alert("Veuillez renseigner le nom du site et du client dans le panneau de gauche.");
-      return;
-    }
-    confirmAndCalculate(sector);
-  };
-
+  
   const confirmAndCalculate = async (sector: SectorData) => {
     setCalculating(true);
     
@@ -475,11 +446,6 @@ export default function RegularUserView({
           plot_metallique: sector.plotMetallique,
           bras_de_deport: sector.brasDeDeport,
           mat_secondaire: sector.matSecondaire,
-          material_name: sector.materialName || '',
-          plot_section: sector.plotSection || '',
-          bras_section: sector.brasSection || '',
-          mast_5g_section: sector.mast5gSection || '',
-          mast_section: sector.mastSection || '',
           nombre_secteurs: nombreSecteurs
         },
         antenna_4g: {
@@ -581,60 +547,7 @@ export default function RegularUserView({
     }
   };
 
-  const handleDownloadPdfWrap = async (sector: SectorData, groupIndices: number[]) => {
-    if (!sector.lookupResult) return;
-
-    let miniMapImage: string | null = null;
-    if (miniMapRef.current) {
-      try {
-        const canvas = miniMapRef.current.getCanvas();
-        miniMapImage = canvas.toDataURL('image/png');
-      } catch (e) {
-        console.warn('Could not capture minimap');
-      }
-    }
-
-    generateAndDownloadPdf({
-      siteType,
-      foundationType,
-      ancrageInfo,
-      selectedAddress,
-      selectedCoords,
-      lookupResult: sector.lookupResult,
-      selectedBuildingHeight,
-      selectedHeight: sector.selectedHeight,
-      selectedMontage: sector.selectedMontage4G === sector.selectedMontage5G ? sector.selectedMontage4G : 'custom',
-      ant4gModel: sector.ant4gConfig.model,
-      ant4gHeight: sector.ant4gConfig.height,
-      ant4gWidth: sector.ant4gConfig.width,
-      ant4gThickness: sector.ant4gConfig.thickness,
-      ant4gWeight: sector.ant4gConfig.weight,
-      ant5gModel: sector.ant5gConfig.model,
-      ant5gHeight: sector.ant5gConfig.height,
-      ant5gWidth: sector.ant5gConfig.width,
-      ant5gThickness: sector.ant5gConfig.thickness,
-      ant5gWeight: sector.ant5gConfig.weight,
-      hasFhEquipment,
-      fhDiameter,
-      fhReference,
-      fhQuantity,
-      hasRrhEquipment,
-      rrhItems: rrhItems.map(item => ({ ...item, reference: resolveRrh(item.reference) })),
-      hasRruEquipment,
-      rruItems: rruItems.map(item => ({ ...item, reference: resolveRru(item.reference) })),
-      hasTdEquipment,
-      tdType,
-      tdReference: resolveTd(tdReference),
-      tgbtReference,
-      hasGps, gpsQuantity: 1, gpsReference,
-      hasBoitierLovage, boitierLovageQuantity: 1, boitierLovageReference,
-      hasCoffret, coffretReference,
-      coffretOptions: config?.coffret_references || [],
-      miniMapImage,
-      nombreSecteurs: groupIndices.length
-    }, setPdfGenerating);
-  };
-
+  
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (configLoading) {
@@ -661,13 +574,13 @@ export default function RegularUserView({
       if (sector.selectedMontage4G !== sector.selectedMontage5G) return false;
       
       // Check if mast height is standard
-      const hFloat = parseFloat(sector.selectedHeight);
-      if (isNaN(hFloat) || !config?.recommended_mast_heights?.includes(hFloat)) return false;
+      const hFloat = sector.selectedHeight;
+      if (typeof hFloat !== 'number' || isNaN(hFloat) || !config?.recommended_mast_heights?.includes(hFloat)) return false;
       
       // Check if building height is standard (only matters for roof sites)
-      if (siteType === 'toit_terrasse') {
-        const bHeight = parseFloat(selectedBuildingHeight);
-        if (isNaN(bHeight) || !config?.precalculated_building_heights?.includes(bHeight)) return false;
+      if (foundationType === 'metallique') {
+        const bHeight = selectedBuildingHeight;
+        if (typeof bHeight !== 'number' || isNaN(bHeight) || !config?.precalculated_building_heights?.includes(bHeight)) return false;
       }
       
       const eq = sector.lookupResult.equipment[0];
@@ -726,7 +639,7 @@ export default function RegularUserView({
         for (const g of uniqueGroups) {
           const eq = g.sector.lookupResult?.equipment[0];
           if (eq) {
-             const height = siteType === 'toit_terrasse' 
+             const height = foundationType === 'metallique' 
                ? (selectedBuildingHeight || eq.building_height || 15)
                : g.sector.selectedHeight;
                
@@ -762,7 +675,7 @@ export default function RegularUserView({
           client_name: clientName,
           address: selectedAddress?.label || selectedAddress?.name || '',
           etancheite: etancheite,
-          dalle_thickness_m: dalleThickness ? parseFloat(dalleThickness) / 100 : null
+          dalle_thickness_m: dalleThickness ? parseFloat(String(dalleThickness)) / 100 : null
         };
         
         const res = await fetch(`${apiBaseUrl}/api/calculations/generate_site_ndc/`, {
@@ -1007,10 +920,10 @@ export default function RegularUserView({
                     <li>Équipement TD : <span className="text-white font-medium">{config?.td_references?.find(r => r.id === tdReference)?.reference || 'Sélectionné'}</span></li>
                   )}
                   {hasBoitierLovage && (
-                    <li>Boîtier de lovage : <span className="text-white font-medium">{config?.boitier_lovage_references?.find(r => r.id === boitierLovageReference)?.reference || 'Sélectionné'}</span></li>
+                    <li>Boîtier de lovage : <span className="text-white font-medium">{config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || 'Sélectionné'}</span></li>
                   )}
                   {hasCoffret && (
-                    <li>Coffret : <span className="text-white font-medium">{config?.coffret_references?.find(r => r.id === coffretReference)?.reference || 'Sélectionné'}</span></li>
+                    <li>Coffret : <span className="text-white font-medium">{config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || 'Sélectionné'}</span></li>
                   )}
                 </ul>
               </div>
@@ -1112,7 +1025,7 @@ export default function RegularUserView({
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-full md:w-[480px] lg:w-[550px] flex flex-col bg-slate-900 border-r border-slate-800 shadow-2xl z-10 shrink-0">
+        <div className="w-full lg:w-[55%] flex flex-col bg-slate-900 border-r border-slate-800 shadow-2xl z-10 shrink-0">
           <div className="p-5 border-b border-slate-800 bg-slate-900/80 sticky top-0 z-10">
             <AddressSearchSection
               onAddressSelect={onAddressSelect}
@@ -1164,7 +1077,7 @@ export default function RegularUserView({
             })}
 
             {/* Global Equipment Toggles */}
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <FHEquipmentToggle
                 hasFhEquipment={hasFhEquipment}
                 setHasFhEquipment={setHasFhEquipment}
@@ -1175,6 +1088,17 @@ export default function RegularUserView({
                 fhQuantity={fhQuantity}
                 setFhQuantity={setFhQuantity}
                 fhOptions={config?.fh_references || []}
+              />
+              <TDEquipmentToggle
+                hasTdEquipment={hasTdEquipment}
+                setHasTdEquipment={setHasTdEquipment}
+                tdType={tdType}
+                setTdType={setTdType}
+                tdReference={tdReference}
+                setTdReference={setTdReference}
+                tgbtReference={tgbtReference}
+                setTgbtReference={setTgbtReference}
+                tdOptions={config?.td_references || []}
               />
               <RRHEquipmentToggle
                 hasRrhEquipment={hasRrhEquipment}
@@ -1189,17 +1113,6 @@ export default function RegularUserView({
                 rruItems={rruItems}
                 setRruItems={setRruItems}
                 rruOptions={config?.rru_references || []}
-              />
-              <TDEquipmentToggle
-                hasTdEquipment={hasTdEquipment}
-                setHasTdEquipment={setHasTdEquipment}
-                tdType={tdType}
-                setTdType={setTdType}
-                tdReference={tdReference}
-                setTdReference={setTdReference}
-                tgbtReference={tgbtReference}
-                setTgbtReference={setTgbtReference}
-                tdOptions={config?.td_references || []}
               />
               <BoitierLovageEquipmentToggle
                 hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
@@ -1310,7 +1223,7 @@ export default function RegularUserView({
                   )}
 
                   {/* Per-group calculations */}
-                  {uniqueGroups.map((group, groupIdx) => (
+                  {uniqueGroups.map((group) => (
                     <div key={group.hash} className="relative">
                       {/* Show per-group label only when multiple groups exist */}
                       {uniqueGroups.length > 1 && (
@@ -1552,7 +1465,7 @@ export default function RegularUserView({
                           )}
                         </div>
                         {showPdfPreview && ndcPdfUrl && (
-                          <div className="w-full h-[800px] border border-slate-700 rounded-xl overflow-hidden bg-white mt-2">
+                          <div className="w-full h-[75vh] min-h-[600px] border border-slate-700 rounded-xl overflow-hidden bg-white mt-4">
                             <iframe
                               src={ndcPdfUrl}
                               className="w-full h-full"

@@ -33,6 +33,7 @@ export interface CatalogueConfig {
   td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
   rru_references: { id: string; vendor: string; reference: string }[];
   rrh_references: { id: string; vendor: string; reference: string }[];
+  boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
 }
 
 export interface DocumentInfo {

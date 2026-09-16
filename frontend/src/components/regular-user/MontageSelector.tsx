@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Settings, Info, Radio, SignalHigh } from 'lucide-react';
+import { Settings, Radio, SignalHigh } from 'lucide-react';
 import { CatalogueConfig, AntennaConfigState } from './types';
 
 interface MontageSelectorProps {
@@ -256,11 +256,9 @@ export default function MontageSelector({
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 {renderDimension('Hauteur', ant4gConfig.height, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, height: val })))}
                 {renderDimension('Largeur', ant4gConfig.width, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, width: val })))}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 {renderDimension('Épaisseur', ant4gConfig.thickness, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, thickness: val })))}
                 {renderDimension('Poids', ant4gConfig.weight, 'Kg', (val) => setAnt4gConfig(prev => ({ ...prev, weight: val })))}
               </div>
@@ -317,11 +315,9 @@ export default function MontageSelector({
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-4 gap-2">
                 {renderDimension('Hauteur', ant5gConfig.height, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, height: val })))}
                 {renderDimension('Largeur', ant5gConfig.width, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, width: val })))}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 {renderDimension('Épaisseur', ant5gConfig.thickness, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, thickness: val })))}
                 {renderDimension('Poids', ant5gConfig.weight, 'Kg', (val) => setAnt5gConfig(prev => ({ ...prev, weight: val })))}
               </div>

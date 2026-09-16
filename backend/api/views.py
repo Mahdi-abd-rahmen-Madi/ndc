@@ -316,7 +316,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         Expects a list of job IDs in the request body, and optionally a photo_url.
         """
         try:
-            from geodata.ndc_generator import generate_ndc_pdf
+            from geodata.ndc_generator import generate_ndc_pdf, generate_auxiliary_pdfs
             import os
             from django.conf import settings
             import uuid
@@ -410,6 +410,15 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     if os.path.exists(abs_path):
                         temp_pdfs.append(abs_path)
                         merger.append(abs_path)
+    
+            # Generate and append auxiliary equipment PDFs if enabled
+            if job_ids:
+                first_job = CalculationJob.objects.get(id=job_ids[0])
+                aux_pdf_paths = generate_auxiliary_pdfs(first_job)
+                for aux_path in aux_pdf_paths:
+                    if os.path.exists(aux_path):
+                        temp_pdfs.append(aux_path)
+                        merger.append(aux_path)
     
             output_filename = f"SITE_NDC_{uuid.uuid4().hex[:8]}.pdf"
             outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')

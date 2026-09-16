@@ -385,3 +385,172 @@ def generate_ndc_pdf_task(job_id, photo_url_or_path):
     except CalculationJob.DoesNotExist:
         print(f"Job {job_id} not found for PDF generation")
         return None
+
+def generate_auxiliary_pdfs(job):
+    """
+    Generate auxiliary PDFs (TD, FH, RRH, RRU) based on job.input_data.
+    Returns a list of absolute paths to the generated PDFs.
+    """
+    input_data = job.input_data if job else {}
+    generated_pdfs = []
+
+    # Prepare common context
+    context = {}
+    
+    # Static context that was extracted previously...
+    env = input_data.get('environment', {})
+    structure_data = input_data.get('structure', {})
+
+    # Helper for parsing dimensions
+    import re
+    def parse_dimensions(section_str):
+        if section_str:
+            match = re.search(r'(\d+)\s*[xX]\s*(\d+(\.\d+)?)', section_str)
+            if match:
+                return match.group(1), match.group(2)
+        return None, None
+
+    # Mât Principal
+    mat_principal_str = structure_data.get('mat_principal') or ''
+    diam, epaisseur = parse_dimensions(mat_principal_str)
+    context['mat_diam'] = diam or '[DIAM]'
+    context['mat_epaisseur'] = epaisseur or '[EPAISSEUR]'
+    
+    mast_height_m = structure_data.get('mast_height_m') or structure_data.get('hauteur_mat_m')
+    try:
+        context['mat_longueur'] = int(float(mast_height_m) * 1000) if mast_height_m else '[LONGUEUR]'
+        context['mat_longueur_m'] = float(mast_height_m) if mast_height_m else '[LONGUEUR_M]'
+    except (ValueError, TypeError):
+        context['mat_longueur'] = '[LONGUEUR]'
+        context['mat_longueur_m'] = '[LONGUEUR_M]'
+    context['mat_section'] = mat_principal_str or '[MAT_SECTION]'
+
+    # Plot
+    plot_str = structure_data.get('plot_metallique') or ''
+    context['plot_section'] = plot_str or '[PLOT_SECTION]'
+    context['plot_longueur_m'] = env.get('plot_height_m') or '[PLOT_HEIGHT_M]'
+
+    # Wind
+    region_data = env.get('region')
+    if isinstance(region_data, dict):
+        region_num = region_data.get('number')
+        region_name = region_data.get('name')
+    else:
+        try:
+            region_num = int(str(region_data).replace('Region ', '').strip())
+            region_name = f"Region {region_num}"
+        except (ValueError, TypeError):
+            region_num = None
+            region_name = str(region_data) if region_data else '[REGION_VENT]'
+
+    context['region'] = region_name
+    context['terrain_type'] = env.get('terrain_type') or '[CATEGORIE_TERRAIN]'
+    context['building_height'] = env.get('building_height_m') or '[HAUTEUR_BATIMENT]'
+    
+    vb_map = {1: 22, 2: 24, 3: 26, 4: 28}
+    vb = vb_map.get(region_num)
+    context['vb_m_s'] = vb if vb is not None else '[Vb]'
+
+    try:
+        h_bat = float(env.get('building_height_m') or 0)
+        h_plot = float(env.get('plot_height_m') or 0)
+        h_mat = float(mast_height_m or 0)
+        z_total = h_bat + h_plot + h_mat
+    except (ValueError, TypeError):
+        z_total = 0
+
+    if vb is not None and z_total > 0:
+        terrain_type_str = str(env.get('terrain_type') or 'IIIa')
+        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
+        context['vm_z'] = wind['vm']
+        context['iv_z'] = wind['iv_z']
+        context['qp_z'] = wind['qp_dan']
+        context['cr_z'] = wind['cr_z']
+        context['kr_z'] = wind['kr']
+    else:
+        context['vm_z'] = '[Vm]'
+        context['iv_z'] = '[Iv(z)]'
+        context['qp_z'] = '[qp]'
+        context['cr_z'] = '[cr(z)]'
+        context['kr_z'] = '[kr]'
+
+    # Client Logo
+    site_info = input_data.get('site', {})
+    client_logo_url = site_info.get('client_logo_url')
+    if client_logo_url:
+        from urllib.parse import urlparse, unquote
+        client_logo_url = unquote(client_logo_url)
+        parsed_url = urlparse(client_logo_url)
+        path = parsed_url.path
+        if path.startswith(settings.MEDIA_URL):
+            relative_path = path[len(settings.MEDIA_URL):]
+            client_logo_abs = os.path.join(settings.MEDIA_ROOT, relative_path)
+            if os.path.exists(client_logo_abs):
+                context['client_logo_abs'] = client_logo_abs
+    else:
+        context['client_logo_abs'] = None
+        
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')
+    context['logo_abs'] = logo_path if os.path.exists(logo_path) else None
+
+    # Common function to render template
+    def _render_and_save(template_name, equipment_context):
+        from django.template.loader import render_to_string
+        from weasyprint import HTML
+        import uuid
+        import os
+        from django.conf import settings
+        
+        ctx = context.copy()
+        ctx.update(equipment_context)
+        html_string = render_to_string(f'ndc/{template_name}.html', ctx)
+        output_filename = f"{template_name.upper()}_{job.id if job else 'preview'}_{uuid.uuid4().hex[:8]}.pdf"
+        outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+        os.makedirs(outdir, exist_ok=True)
+        pdf_path = os.path.join(outdir, output_filename)
+        html = HTML(string=html_string, base_url=f"file://{settings.MEDIA_ROOT}")
+        html.write_pdf(pdf_path)
+        return pdf_path
+
+    # Check for TD
+    td_eq = input_data.get('td_equipment', {})
+    if td_eq.get('enabled'):
+        generated_pdfs.append(_render_and_save('td', {
+            'eq_qty': 1,
+            'eq_dims': '[TD_DIMS]',
+            'eq_weight': '[TD_WEIGHT]'
+        }))
+
+    # Check for FH
+    fh_eq = input_data.get('fh_equipment', {})
+    if fh_eq.get('enabled'):
+        diameter = fh_eq.get('diameter_mm')
+        generated_pdfs.append(_render_and_save('fh', {
+            'eq_qty': fh_eq.get('quantity') or 1,
+            'eq_dims': f"Ø{diameter}" if diameter else '[FH_DIMS]',
+            'eq_weight': fh_eq.get('weight_kg') or '[FH_WEIGHT]'
+        }))
+
+    # Check for RRH
+    rrh_eq = input_data.get('rrh_equipment', {})
+    if rrh_eq.get('enabled'):
+        items = rrh_eq.get('items', [])
+        qty = sum(item.get('quantity', 1) for item in items) if items else 1
+        generated_pdfs.append(_render_and_save('rrh', {
+            'eq_qty': qty,
+            'eq_dims': '[RRH_DIMS]',
+            'eq_weight': '[RRH_WEIGHT]'
+        }))
+
+    # Check for RRU
+    rru_eq = input_data.get('rru_equipment', {})
+    if rru_eq.get('enabled'):
+        items = rru_eq.get('items', [])
+        qty = sum(item.get('quantity', 1) for item in items) if items else 1
+        generated_pdfs.append(_render_and_save('rru', {
+            'eq_qty': qty,
+            'eq_dims': '[RRU_DIMS]',
+            'eq_weight': '[RRU_WEIGHT]'
+        }))
+
+    return generated_pdfs

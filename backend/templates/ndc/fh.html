@@ -1,0 +1,100 @@
+{% extends 'ndc/aux_base.html' %}
+
+{% block content %}
+<h1 id="etude-fh">ÉTUDE FH</h1>
+
+<h2>Description</h2>
+<p>
+    Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
+    Ajout d’un mât en tube {{ mat_diam }} mm, d’épaisseur {{ mat_epaisseur }} mm et de longueur {{ mat_longueur }} mm supportant une antenne FH. Le mât sera fixé sur un plot métallique {{ plot_section }} mm ancrés dans la dalle existante en respectant la norme du DTU.
+</p>
+
+<h2>Equipements considérés :</h2>
+<table>
+    <thead>
+        <tr class="bg-green">
+            <th>Désignation</th>
+            <th>Quantité</th>
+            <th>Dimensions (mm)</th>
+            <th>Poids (kg)</th>
+            <th>État</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Antenne FH</td>
+            <td class="text-center">{{ eq_qty|default:"1" }}</td>
+            <td class="text-center">{{ eq_dims|default:"N/A" }}</td>
+            <td class="text-center">{{ eq_weight|default:"N/A" }}</td>
+            <td class="text-center">Projet</td>
+        </tr>
+    </tbody>
+</table>
+
+<h2>Hypothèse de vent</h2>
+<p>
+    Région <strong>{{ region }}</strong><br>
+    Catégorie de terrain : <strong>{{ terrain_type }}</strong><br>
+    Hauteur : <strong>{{ building_height }}</strong> m<br>
+    Vitesse de référence du vent : V<sub>b</sub> = <strong>{{ vb_m_s }}</strong> m/s
+</p>
+<p>
+    <strong>Vitesse moyenne du vent à la hauteur z</strong><br>
+    V<sub>m</sub> = c<sub>r</sub>(z) . c<sub>0</sub>(z) . V<sub>b</sub><br>
+    k<sub>r</sub> = 0.19.(z<sub>0</sub>/z<sub>0,II</sub>)<sup>0.07</sup> = <strong>{{ kr_z }}</strong><br>
+    c<sub>r</sub>(z) = k<sub>r</sub> ⋅ ln(z/z<sub>0</sub>) = <strong>{{ cr_z }}</strong><br>
+    V<sub>m</sub> = {{ cr_z }} x {{ vb_m_s }} = <strong>{{ vm_z }}</strong> m/s<br>
+    I<sub>v</sub>(z) = 1/ln(z/z<sub>0</sub>) = <strong>{{ iv_z }}</strong>
+</p>
+<p>
+    <strong>Pression dynamique de pointe à la hauteur z</strong><br>
+    q<sub>p</sub> = <strong>{{ qp_z }}</strong> daN/m²
+</p>
+
+<h2>Les forces exercées par le vent :</h2>
+<p>
+    Mât : F<sub>w</sub> = 1 * 1 * 0.088 * {{ qp_z }} = <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
+    FH : F<sub>w,Frontale</sub> = 1 * {{ cx_front|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_front|default:"N/A" }}</strong> daN<br>
+    FH : F<sub>w,Latéral</sub> = 1 * {{ cx_lat|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_lat|default:"N/A" }}</strong> daN
+</p>
+
+<h2>Calcul de chute</h2>
+<p>Pas de point d’ancrage sur le mât</p>
+
+<h2>Modélisation en 3D</h2>
+<p>Géométrie des pièces<br>
+Tableau des valeurs de chargements<br>
+PP : Poids propre<br>
+PE : Poids équipements<br>
+Tableau des combinaisons<br>
+Vérification à l’ELU et à l’ELS<br>
+Vérification de mat principal {{ mat_section }} mm<br>
+Vérification de plot {{ plot_section }} mm<br>
+Assemblage Mat/Plot métallique</p>
+
+<h2>CONCLUSION</h2>
+<p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de vent, types d’antennes…). On peut assurer la bonne tenue de la structure du FH.</p>
+
+<table>
+    <thead>
+        <tr class="bg-green">
+            <th>Section</th>
+            <th>Longueur (m)</th>
+            <th>Type de barre</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ mat_section }}</td>
+            <td class="text-center">{{ mat_longueur_m }}</td>
+            <td class="text-center">Mat principal</td>
+        </tr>
+        <tr>
+            <td>{{ plot_section }}</td>
+            <td class="text-center">{{ plot_longueur_m }}</td>
+            <td class="text-center">Plot</td>
+        </tr>
+    </tbody>
+</table>
+
+{% endblock %}

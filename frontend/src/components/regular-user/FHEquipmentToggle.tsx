@@ -18,8 +18,7 @@ interface FHEquipmentToggleProps {
 export default function FHEquipmentToggle({
   hasFhEquipment,
   setHasFhEquipment,
-  fhDiameter,
-  setFhDiameter,
+    setFhDiameter,
   fhReference,
   setFhReference,
   fhQuantity,
@@ -209,77 +208,79 @@ export function RRHEquipmentToggle({
 
         {hasRrhEquipment && (
           <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
-            {rrhItems.map((item, index) => (
-              <div key={item.id} className="flex items-end gap-4">
-                {/* Marque */}
-                <div className="flex flex-col flex-1 max-w-[120px]">
-                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Marque:</label>}
-                  <select
-                    value={item.vendor || ''}
-                    onChange={(e) => updateRrhItem(item.id, 'vendor', e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500"
-                  >
-                    <option value="">Sélectionner</option>
-                    {uniqueVendors.map(vendor => (
-                      <option key={vendor} value={vendor}>{vendor}</option>
-                    ))}
-                  </select>
-                </div>
+            {rrhItems.map((item) => (
+              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
+                <div className="flex gap-3">
+                  {/* Marque */}
+                  <div className="flex flex-col flex-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
+                    <select
+                      value={item.vendor || ''}
+                      onChange={(e) => updateRrhItem(item.id, 'vendor', e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-rose-500"
+                    >
+                      <option value="">Sélectionner</option>
+                      {uniqueVendors.map(vendor => (
+                        <option key={vendor} value={vendor}>{vendor}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Modèle */}
-                <div className="flex flex-col flex-1">
-                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Modèle:</label>}
-                  <select
-                    value={item.reference}
-                    onChange={(e) => updateRrhItem(item.id, 'reference', e.target.value)}
-                    disabled={!item.vendor}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-rose-500 disabled:opacity-50"
-                  >
-                    <option value="">Sélectionner une référence</option>
-                    {rrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
-                      const isSelectedElsewhere = rrhItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
-                      return (
-                        <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
-                          {opt.reference} {isSelectedElsewhere ? '(Déjà sélectionné)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {/* Quantité */}
-                <div className="flex flex-col">
-                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Qté:</label>}
-                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={item.quantity || 1}
-                      onChange={(e) => updateRrhItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                      className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <div className="flex flex-col border-l border-slate-700">
-                      <button
-                        type="button"
-                        onClick={() => updateRrhItem(item.id, 'quantity', (item.quantity || 1) + 1)}
-                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
-                      >
-                        <ChevronUp className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateRrhItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
-                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-                      >
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                    </div>
+                  {/* Modèle */}
+                  <div className="flex flex-col flex-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
+                    <select
+                      value={item.reference}
+                      onChange={(e) => updateRrhItem(item.id, 'reference', e.target.value)}
+                      disabled={!item.vendor}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-rose-500 disabled:opacity-50"
+                    >
+                      <option value="">Sélectionner</option>
+                      {rrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                        const isSelectedElsewhere = rrhItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
+                        return (
+                          <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
+                            {opt.reference} {isSelectedElsewhere ? '(Déjà utilisé)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-col justify-end h-[36px]">
+                <div className="flex items-center justify-between border-t border-slate-800 pt-2">
+                  {/* Quantité */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
+                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden h-7">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.quantity || 1}
+                        onChange={(e) => updateRrhItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <div className="flex flex-col border-l border-slate-700 w-5">
+                        <button
+                          type="button"
+                          onClick={() => updateRrhItem(item.id, 'quantity', (item.quantity || 1) + 1)}
+                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                        >
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateRrhItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
+                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
                   <button
                     type="button"
                     onClick={() => removeRrhRow(item.id)}
@@ -365,77 +366,79 @@ export function RRUEquipmentToggle({
 
         {hasRruEquipment && (
           <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
-            {rruItems.map((item, index) => (
-              <div key={item.id} className="flex items-end gap-4">
-                {/* Marque */}
-                <div className="flex flex-col flex-1 max-w-[120px]">
-                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Marque:</label>}
-                  <select
-                    value={item.vendor || ''}
-                    onChange={(e) => updateRruItem(item.id, 'vendor', e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="">Sélectionner</option>
-                    {uniqueVendors.map(vendor => (
-                      <option key={vendor} value={vendor}>{vendor}</option>
-                    ))}
-                  </select>
-                </div>
+            {rruItems.map((item) => (
+              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
+                <div className="flex gap-3">
+                  {/* Marque */}
+                  <div className="flex flex-col flex-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
+                    <select
+                      value={item.vendor || ''}
+                      onChange={(e) => updateRruItem(item.id, 'vendor', e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="">Sélectionner</option>
+                      {uniqueVendors.map(vendor => (
+                        <option key={vendor} value={vendor}>{vendor}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Modèle */}
-                <div className="flex flex-col flex-1">
-                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Modèle:</label>}
-                  <select
-                    value={item.reference}
-                    onChange={(e) => updateRruItem(item.id, 'reference', e.target.value)}
-                    disabled={!item.vendor}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-                  >
-                    <option value="">Sélectionner une référence</option>
-                    {rruOptions.filter(o => o.vendor === item.vendor).map(opt => {
-                      const isSelectedElsewhere = rruItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
-                      return (
-                        <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
-                          {opt.reference} {isSelectedElsewhere ? '(Déjà sélectionné)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {/* Quantité */}
-                <div className="flex flex-col">
-                  {index === 0 && <label className="text-xs text-slate-400 mb-1">Qté:</label>}
-                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={item.quantity || 1}
-                      onChange={(e) => updateRruItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                      className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <div className="flex flex-col border-l border-slate-700">
-                      <button
-                        type="button"
-                        onClick={() => updateRruItem(item.id, 'quantity', (item.quantity || 1) + 1)}
-                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
-                      >
-                        <ChevronUp className="w-3 h-3" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateRruItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
-                        className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-                      >
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                    </div>
+                  {/* Modèle */}
+                  <div className="flex flex-col flex-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
+                    <select
+                      value={item.reference}
+                      onChange={(e) => updateRruItem(item.id, 'reference', e.target.value)}
+                      disabled={!item.vendor}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+                    >
+                      <option value="">Sélectionner</option>
+                      {rruOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                        const isSelectedElsewhere = rruItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
+                        return (
+                          <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
+                            {opt.reference} {isSelectedElsewhere ? '(Déjà utilisé)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-col justify-end h-[36px]">
+                <div className="flex items-center justify-between border-t border-slate-800 pt-2">
+                  {/* Quantité */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
+                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden h-7">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={item.quantity || 1}
+                        onChange={(e) => updateRruItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <div className="flex flex-col border-l border-slate-700 w-5">
+                        <button
+                          type="button"
+                          onClick={() => updateRruItem(item.id, 'quantity', (item.quantity || 1) + 1)}
+                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                        >
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateRruItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
+                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
                   <button
                     type="button"
                     onClick={() => removeRruRow(item.id)}
