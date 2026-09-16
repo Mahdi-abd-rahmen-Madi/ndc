@@ -20,6 +20,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ndc_backend_prod
+    env_file:
+      - .env
     environment:
       - POSTGRES_USER=ndc_user
       - POSTGRES_PASSWORD=ndc_password
