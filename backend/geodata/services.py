@@ -30,11 +30,11 @@ class TerrainClassificationService:
     
     def __init__(self):
         self.land_use_data = None
-        self.land_use_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'OS_FRANCE.fgb')
+        self.land_use_file = os.path.join(settings.BASE_DIR, 'data', 'OS_FRANCE.fgb')
         self.wind_coeff_data = None
-        self.wind_coeff_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
+        self.wind_coeff_file = os.path.join(settings.BASE_DIR, 'data', 'ec1_windCoeff.geojson')
         self.coastline_data = None
-        self.coastline_file = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline.geojson')
+        self.coastline_file = os.path.join(settings.BASE_DIR, 'data', 'france_coastline.geojson')
         self.cache_timeout = 3600  # 1 hour cache
         self._thread_local = threading.local()
         self._performance_metrics = {

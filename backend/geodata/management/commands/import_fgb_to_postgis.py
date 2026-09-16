@@ -11,7 +11,7 @@ class Command(BaseCommand):
     help = 'Import OS_FRANCE.fgb into PostGIS'
 
     def handle(self, *args, **options):
-        fgb_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'OS_FRANCE.fgb')
+        fgb_path = os.path.join(settings.BASE_DIR, 'data', 'OS_FRANCE.fgb')
         
         if not os.path.exists(fgb_path):
             # Try without backend/ prefix if we're already inside backend/

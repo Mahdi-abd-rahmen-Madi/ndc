@@ -259,7 +259,7 @@ class AddressGenerationService:
         if filename is None:
             filename = f"addresses_test_{int(time.time())}.csv"
         
-        filepath = os.path.join(settings.BASE_DIR, 'backend', 'data', filename)
+        filepath = os.path.join(settings.BASE_DIR, 'data', filename)
         
         fieldnames = [
             'search_term', 'label', 'name', 'postcode', 'city', 'context',

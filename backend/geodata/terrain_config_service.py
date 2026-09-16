@@ -15,7 +15,7 @@ class TerrainConfigService:
     """Service for managing terrain classification configuration."""
     
     def __init__(self):
-        self.config_file = os.path.join(settings.BASE_DIR, 'backend', 'geodata', 'terrain_config.json')
+        self.config_file = os.path.join(settings.BASE_DIR, 'geodata', 'terrain_config.json')
         self._config = None
         self.cache_timeout = 1800  # 30 minutes cache
         

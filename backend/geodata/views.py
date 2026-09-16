@@ -1416,7 +1416,7 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
             import os
             
             # Load the actual GeoJSON file
-            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
+            geojson_path = os.path.join(settings.BASE_DIR, 'data', 'ec1_windCoeff.geojson')
             
             with open(geojson_path, 'r') as f:
                 data = json.load(f)
@@ -1497,7 +1497,7 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
             from django.conf import settings
             import os
             
-            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline.geojson')
+            geojson_path = os.path.join(settings.BASE_DIR, 'data', 'france_coastline.geojson')
             
             if not os.path.exists(geojson_path):
                 return Response(
@@ -1523,7 +1523,7 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
             from django.conf import settings
             import os
             
-            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'france_coastline_buffer_1km.geojson')
+            geojson_path = os.path.join(settings.BASE_DIR, 'data', 'france_coastline_buffer_1km.geojson')
             
             if not os.path.exists(geojson_path):
                 return Response(
@@ -1647,7 +1647,7 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
                 )
             
             # Load the actual GeoJSON file
-            geojson_path = os.path.join(settings.BASE_DIR, 'backend', 'data', 'ec1_windCoeff.geojson')
+            geojson_path = os.path.join(settings.BASE_DIR, 'data', 'ec1_windCoeff.geojson')
             
             with open(geojson_path, 'r') as f:
                 data = json.load(f)
