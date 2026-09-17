@@ -193,8 +193,8 @@ export default function UserInput({
             </div>
           )}
 
-          <div className="flex-1 w-full flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 flex flex-col">
+          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex flex-col">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2 h-6">
                 Nom du site
               </label>
@@ -206,7 +206,7 @@ export default function UserInput({
                 className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
-            <div className="flex-1 flex flex-col">
+            <div className="flex flex-col">
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2 h-6">
                 Client
               </label>
@@ -214,9 +214,23 @@ export default function UserInput({
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
-                placeholder="Ex: Orange"
+                placeholder="Ex: Mairie de Paris"
                 className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2 h-6">
+                Opérateur
+              </label>
+              <select
+                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              >
+                <option value="">Sélectionner</option>
+                <option value="orange">Orange</option>
+                <option value="free">Free</option>
+                <option value="bouygues">Bouygues</option>
+                <option value="sfr">SFR</option>
+              </select>
             </div>
           </div>
         </div>

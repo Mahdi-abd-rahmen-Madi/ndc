@@ -73,12 +73,12 @@ export default function MontageSelector({
     }
   });
 
-  const unique4GRefs = Array.from(unique4GMap.values());
-  const unique5GRefs = Array.from(unique5GMap.values());
+  const unique4GRefs = Array.from(unique4GMap.values()).filter(r => r.name.toUpperCase().includes(selectedVendor4G.toUpperCase()));
+  const unique5GRefs = Array.from(unique5GMap.values()).filter(r => r.name.toUpperCase().includes(selectedVendor5G.toUpperCase()));
 
   useEffect(() => {
     if (configMode === 'reference' && unique4GRefs.length > 0 && unique5GRefs.length > 0) {
-      const current4G = realWorldReferences.find(r => r.id === selectedReference4G);
+      const current4G = unique4GRefs.find(r => r.id === selectedReference4G);
       if (!current4G) {
         const fallback4G = unique4GRefs[0];
         setSelectedReference4G(fallback4G.id);
@@ -86,7 +86,7 @@ export default function MontageSelector({
         handleMontage4GChange(fallback4G.montageId);
       }
       
-      const current5G = realWorldReferences.find(r => r.id === selectedReference5G);
+      const current5G = unique5GRefs.find(r => r.id === selectedReference5G);
       if (!current5G) {
         const fallback5G = unique5GRefs[0];
         setSelectedReference5G(fallback5G.id);
@@ -99,8 +99,8 @@ export default function MontageSelector({
   const handleConfigModeChange = (mode: 'agile' | 'reference') => {
     setConfigMode(mode);
     if (mode === 'reference') {
-      const ref4G = realWorldReferences.find(r => r.id === selectedReference4G) || unique4GRefs[0];
-      const ref5G = realWorldReferences.find(r => r.id === selectedReference5G) || unique5GRefs[0];
+      const ref4G = unique4GRefs.find(r => r.id === selectedReference4G) || unique4GRefs[0];
+      const ref5G = unique5GRefs.find(r => r.id === selectedReference5G) || unique5GRefs[0];
       
       if (ref4G) {
         setSelectedReference4G(ref4G.id);
@@ -237,8 +237,8 @@ export default function MontageSelector({
                     onChange={(e) => setSelectedVendor4G?.(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
-                    <option value="Ericsson">Ericsson</option>
-                    <option value="Huawei" disabled>Huawei (Indisponible)</option>
+                    <option value="Huawei">Huawei</option>
+                    <option value="CommScope">CommScope</option>
                   </select>
                   <select
                     value={selectedReference4G}
@@ -297,7 +297,7 @@ export default function MontageSelector({
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
                     <option value="Ericsson">Ericsson</option>
-                    <option value="Huawei" disabled>Huawei (Indisponible)</option>
+                    <option value="Huawei">Huawei</option>
                   </select>
                   <select
                     value={selectedReference5G}

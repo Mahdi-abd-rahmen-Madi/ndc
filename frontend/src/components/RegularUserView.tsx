@@ -45,7 +45,7 @@ const defaultSectorData = (id: number): SectorData => ({
   selectedMontage4G: '',
   selectedMontage5G: '',
   configMode: 'agile',
-  selectedVendor4G: 'Ericsson',
+  selectedVendor4G: 'Huawei',
   selectedVendor5G: 'Ericsson',
   selectedReference4G: 'ref-huawei-standard',
   selectedReference5G: 'ref-huawei-standard',

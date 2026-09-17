@@ -485,54 +485,8 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         if needs_save:
             config.save()
 
-        # Dynamically build real_world_references from AntennaEquipment
-        from django.db.models import Q
-        real_refs_qs = AntennaEquipment.objects.filter(is_deleted=False).filter(
-            Q(reference_4g__isnull=False) & ~Q(reference_4g='') |
-            Q(reference_5g__isnull=False) & ~Q(reference_5g='')
-        )
-        
-        real_world_references_dict = {}
-
-        for eq in real_refs_qs:
-            name = f"{eq.reference_4g or ''} + {eq.reference_5g or ''}".strip(' +') or eq.name
-            
-            spec4g = eq.specifications.filter(antenna_type='4G').first()
-            spec5g = eq.specifications.filter(antenna_type='5G').first()
-            
-            h4 = float(spec4g.height_mm) if spec4g else 0
-            h5 = float(spec5g.height_mm) if spec5g else 0
-
-            ref = {
-                "id": f"ref-{eq.item_id or eq.id}",
-                "name": name,
-                "montageId": eq.sub_elements or "Custom",
-                "ant4g": {
-                    "model": eq.reference_4g or "",
-                    "height": h4,
-                    "width": float(spec4g.width_mm) if spec4g else 0,
-                    "thickness": float(spec4g.thickness_mm) if spec4g else 0,
-                    "weight": float(spec4g.weight_dan) if spec4g else 0,
-                },
-                "ant5g": {
-                    "model": eq.reference_5g or "",
-                    "height": h5,
-                    "width": float(spec5g.width_mm) if spec5g else 0,
-                    "thickness": float(spec5g.thickness_mm) if spec5g else 0,
-                    "weight": float(spec5g.weight_dan) if spec5g else 0,
-                }
-            }
-            
-            if name in real_world_references_dict:
-                existing_ref = real_world_references_dict[name]
-                # If existing has 0 dimensions but new one has actual dimensions, overwrite
-                if (existing_ref["ant4g"]["height"] == 0 and h4 > 0) or (existing_ref["ant5g"]["height"] == 0 and h5 > 0):
-                    real_world_references_dict[name] = ref
-            else:
-                real_world_references_dict[name] = ref
-
-        # Use only dynamically fetched references (ignore old hardcoded database entries)
-        final_refs = list(real_world_references_dict.values())
+        # Use the single source of truth from CatalogueConfig
+        final_refs = config.real_world_references
 
         return Response({
             'precalculated_building_heights': config.precalculated_building_heights,
