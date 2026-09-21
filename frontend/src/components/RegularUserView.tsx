@@ -66,6 +66,63 @@ const getCatalogueHash = (s: SectorData) => {
   return `${s.selectedHeight}-${s.selectedMontage4G}-${s.selectedMontage5G}`;
 };
 
+
+interface AccordionStepProps {
+  step: number;
+  title: string;
+  activeStep: number;
+  setActiveStep: (step: number) => void;
+  isCompleted: boolean;
+  children: React.ReactNode;
+  summary?: React.ReactNode;
+  hideContinue?: boolean;
+}
+
+function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, children, summary, hideContinue }: AccordionStepProps) {
+  const isOpen = activeStep === step;
+  
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg mb-4">
+      <div 
+        className={`p-4 flex items-center justify-between cursor-pointer ${isOpen ? 'bg-indigo-900/20 border-b border-slate-800' : 'hover:bg-slate-800/50'}`}
+        onClick={() => setActiveStep(step)}
+      >
+        <div className="flex items-center gap-3">
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${isCompleted && !isOpen ? 'bg-emerald-500/20 text-emerald-400' : isOpen ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+            {isCompleted && !isOpen ? <CheckCircle2 className="w-5 h-5" /> : step}
+          </div>
+          <div>
+            <h3 className={`font-bold ${isOpen ? 'text-white' : 'text-slate-300'}`}>{title}</h3>
+            {!isOpen && isCompleted && summary && (
+              <div className="text-xs text-slate-500 mt-1">{summary}</div>
+            )}
+          </div>
+        </div>
+        {!isOpen && (
+          <button className="text-xs text-indigo-400 hover:text-indigo-300 px-3 py-1 bg-indigo-500/10 rounded-md" onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}>
+            Modifier
+          </button>
+        )}
+      </div>
+      {isOpen && (
+        <div className="p-5">
+          {children}
+          {!hideContinue && (
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setActiveStep(step + 1)}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+              >
+                Continuer
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function RegularUserView({
   apiBaseUrl,
   initialMontage,
@@ -93,6 +150,7 @@ export default function RegularUserView({
       initialFoundationType === 'encastre' ? 'Mât encastré' :
         'Fixation sur plot métallique';
 
+  const [activeStep, setActiveStep] = useState<number>(1);
   const [sectors, setSectors] = useState<SectorData[]>(
     Array.from({ length: 3 }, (_, i) => defaultSectorData(i))
   );
@@ -103,6 +161,8 @@ export default function RegularUserView({
   const [dalleThickness, setDalleThickness] = useState<number | string>('');
   const [etancheite, setEtancheite] = useState<number | string>('');
   const [plotHeight, setPlotHeight] = useState<number>(0.5);
+  const [hasChauffageAuSol, setHasChauffageAuSol] = useState<boolean>(false);
+  const [fausseDalleThickness, setFausseDalleThickness] = useState<number | string>('');
 
   const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
   const [fhDiameter, setFhDiameter] = useState<number>(300);
@@ -117,6 +177,7 @@ export default function RegularUserView({
   const [tdReference, setTdReference] = useState<string>('');
   const [tgbtReference, setTgbtReference] = useState<string>('');
   const [gpsReference, setGpsReference] = useState<string>('');
+  const [gpsMarque, setGpsMarque] = useState<string>('NOKIA');
   const [hasBoitierLovage, setHasBoitierLovage] = useState<boolean>(false);
   const [hasGps, setHasGps] = useState<boolean>(false);
   const [boitierLovageReference, setBoitierLovageReference] = useState<string>('');
@@ -483,7 +544,7 @@ export default function RegularUserView({
           reference: hasTdEquipment ? resolveTd(tdReference) : null,
           tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
         },
-        gps: { enabled: hasGps, quantity: 1, reference: hasGps ? gpsReference : null },
+        gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
         boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
         coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
         coffrets_hybride: { enabled: false, quantity: null, reference: null },
@@ -709,7 +770,7 @@ export default function RegularUserView({
             reference: hasTdEquipment ? tdReference : null,
             tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
           },
-          gps: { enabled: hasGps, quantity: 1, reference: hasGps ? gpsReference : null },
+          gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
           coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
           coffrets_hybride: { enabled: false, quantity: null, reference: null }
@@ -821,7 +882,7 @@ export default function RegularUserView({
             reference: hasTdEquipment ? tdReference : null,
             tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
           },
-          gps: { enabled: hasGps, quantity: 1, reference: hasGps ? gpsReference : null },
+          gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
           coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
           coffrets_hybride: { enabled: false, quantity: null, reference: null },
@@ -1082,113 +1143,167 @@ export default function RegularUserView({
 
       <div className="flex-1 flex overflow-hidden">
         <div className="w-full lg:w-[55%] flex flex-col bg-slate-900 border-r border-slate-800 shadow-2xl z-10 shrink-0">
-          <div className="p-5 border-b border-slate-800 bg-slate-900/80 sticky top-0 z-10">
-            <AddressSearchSection
-              onAddressSelect={onAddressSelect}
-              selectedAddress={selectedAddress}
-              showMap={showMap}
-              setShowMap={setShowMap}
-            />
-          </div>
+          <div className="flex-1 overflow-y-auto p-5 pb-64 custom-scrollbar">
+            <div className={`border-none p-0 m-0 w-full ${isLocked ? "pointer-events-none opacity-60 transition-opacity duration-300" : ""}`}>
+              
+              <AccordionStep
+                step={1}
+                title="Localisation"
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                isCompleted={!!selectedAddress}
+                summary={selectedAddress ? <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {selectedAddress.label}</span> : "Non renseigné"}
+              >
+                <AddressSearchSection
+                  onAddressSelect={(addr) => {
+                     onAddressSelect(addr);
+                     setActiveStep(2);
+                  }}
+                  selectedAddress={selectedAddress}
+                  showMap={showMap}
+                  setShowMap={setShowMap}
+                />
+              </AccordionStep>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
-            <fieldset disabled={isLocked} className={`space-y-6 border-none p-0 m-0 w-full ${isLocked ? "pointer-events-none opacity-60 transition-opacity duration-300" : ""}`}>
-            <UserInput
-              siteType={siteType}
-              foundationType={foundationType}
-              selectedBuildingHeight={selectedBuildingHeight}
-              setSelectedBuildingHeight={setSelectedBuildingHeight}
-              nombreSecteurs={nombreSecteurs}
-              setNombreSecteurs={setNombreSecteurs}
-              dalleThickness={dalleThickness}
-              setDalleThickness={setDalleThickness}
-              etancheite={etancheite}
-              setEtancheite={setEtancheite}
-              plotHeight={plotHeight}
-              setPlotHeight={setPlotHeight}
-              similarityMode={similarityMode}
-              setSimilarityMode={setSimilarityMode}
-              apiBaseUrl={apiBaseUrl}
-              siteImageUrl={siteImageUrl}
-              onSiteImageUploaded={setSiteImageUrl}
-              siteName={siteName}
-              setSiteName={setSiteName}
-              clientName={clientName}
-              setClientName={setClientName}
-            />
+              <AccordionStep
+                step={2}
+                title="Informations du Projet"
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                isCompleted={!!siteName || !!clientName}
+                summary={`Site: ${siteName || 'N/A'} | Client: ${clientName || 'N/A'}`}
+                hideContinue={foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')}
+              >
+                <UserInput
+                  siteType={siteType}
+                  foundationType={foundationType}
+                  selectedBuildingHeight={selectedBuildingHeight}
+                  setSelectedBuildingHeight={setSelectedBuildingHeight}
+                  nombreSecteurs={nombreSecteurs}
+                  setNombreSecteurs={setNombreSecteurs}
+                  dalleThickness={dalleThickness}
+                  setDalleThickness={setDalleThickness}
+                  etancheite={etancheite}
+                  setEtancheite={setEtancheite}
+                  plotHeight={plotHeight}
+                  setPlotHeight={setPlotHeight}
+                  similarityMode={similarityMode}
+                  setSimilarityMode={setSimilarityMode}
+                  apiBaseUrl={apiBaseUrl}
+                  siteImageUrl={siteImageUrl}
+                  onSiteImageUploaded={setSiteImageUrl}
+                  siteName={siteName}
+                  setSiteName={setSiteName}
+                  clientName={clientName}
+                  setClientName={setClientName}
+                  hasChauffageAuSol={hasChauffageAuSol}
+                  setHasChauffageAuSol={setHasChauffageAuSol}
+                  fausseDalleThickness={fausseDalleThickness}
+                  setFausseDalleThickness={setFausseDalleThickness}
+                />
+              </AccordionStep>
 
-            {activeSectors.map((sector, idx) => {
-              const isCollapsed = (idx === 1 && similarityMode === 'all_similar') ||
-                (idx === 2 && similarityMode === 'all_similar');
-              return (
-                <Fragment key={sector.id}>
-                  <SectorConfigurator
-                    index={idx}
-                    sectorData={sector}
-                    updateSector={updateSector}
-                    config={config}
-                    collapsed={isCollapsed}
+              <AccordionStep
+                step={3}
+                title="Configuration des Secteurs"
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                isCompleted={sectors[0].selectedMontage4G !== ''}
+                summary={`${nombreSecteurs} secteur(s) configuré(s)`}
+              >
+                <div className="space-y-6">
+                  {activeSectors.map((sector, idx) => {
+                    const isCollapsed = (idx === 1 && similarityMode === 'all_similar') ||
+                      (idx === 2 && similarityMode === 'all_similar');
+                    return (
+                      <Fragment key={sector.id}>
+                        <SectorConfigurator
+                          index={idx}
+                          sectorData={sector}
+                          updateSector={updateSector}
+                          config={config}
+                          collapsed={isCollapsed}
+                        />
+                      </Fragment>
+                    );
+                  })}
+                </div>
+              </AccordionStep>
+
+              <AccordionStep
+                step={4}
+                title="Équipements Additionnels"
+                activeStep={activeStep}
+                setActiveStep={setActiveStep}
+                isCompleted={hasFhEquipment || hasRrhEquipment || hasRruEquipment || hasTdEquipment || hasGps || hasBoitierLovage || hasCoffret}
+                summary={[
+                  hasFhEquipment ? 'FH' : null,
+                  hasRrhEquipment ? 'RRH' : null,
+                  hasRruEquipment ? 'RRU' : null,
+                  hasTdEquipment ? 'TD' : null,
+                  hasGps ? 'GPS' : null,
+                  hasBoitierLovage ? 'Lovage' : null,
+                  hasCoffret ? 'Fibre' : null
+                ].filter(Boolean).join(', ') || 'Aucun équipement additionnel'}
+                hideContinue={true}
+              >
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <FHEquipmentToggle
+                    hasFhEquipment={hasFhEquipment}
+                    setHasFhEquipment={setHasFhEquipment}
+                    fhDiameter={fhDiameter}
+                    setFhDiameter={setFhDiameter}
+                    fhReference={fhReference}
+                    setFhReference={setFhReference}
+                    fhQuantity={fhQuantity}
+                    setFhQuantity={setFhQuantity}
+                    fhOptions={config?.fh_references || []}
                   />
-                </Fragment>
-              );
-            })}
+                  <TDEquipmentToggle
+                    hasTdEquipment={hasTdEquipment}
+                    setHasTdEquipment={setHasTdEquipment}
+                    tdType={tdType}
+                    setTdType={setTdType}
+                    tdReference={tdReference}
+                    setTdReference={setTdReference}
+                    tgbtReference={tgbtReference}
+                    setTgbtReference={setTgbtReference}
+                    tdOptions={config?.td_references || []}
+                  />
+                  <RRHEquipmentToggle
+                    hasRrhEquipment={hasRrhEquipment}
+                    setHasRrhEquipment={setHasRrhEquipment}
+                    rrhItems={rrhItems}
+                    setRrhItems={setRrhItems}
+                    rrhOptions={config?.rrh_references || []}
+                  />
+                  <RRUEquipmentToggle
+                    hasRruEquipment={hasRruEquipment}
+                    setHasRruEquipment={setHasRruEquipment}
+                    rruItems={rruItems}
+                    setRruItems={setRruItems}
+                    rruOptions={config?.rru_references || []}
+                  />
+                  <BoitierLovageEquipmentToggle
+                    hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
+                    boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
+                  />
+                  <GPSEquipmentToggle
+                    hasGps={hasGps} setHasGps={setHasGps}
+                    gpsReference={gpsReference} setGpsReference={setGpsReference}
+                    gpsMarque={gpsMarque} setGpsMarque={setGpsMarque}
+                  />
+                  <CoffretEquipmentToggle
+                    hasCoffret={hasCoffret}
+                    setHasCoffret={setHasCoffret}
+                    coffretReference={coffretReference}
+                    setCoffretReference={setCoffretReference}
+                    coffretOptions={config?.coffret_references || []}
+                  />
+                </div>
+              </AccordionStep>
 
-            {/* Global Equipment Toggles */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <FHEquipmentToggle
-                hasFhEquipment={hasFhEquipment}
-                setHasFhEquipment={setHasFhEquipment}
-                fhDiameter={fhDiameter}
-                setFhDiameter={setFhDiameter}
-                fhReference={fhReference}
-                setFhReference={setFhReference}
-                fhQuantity={fhQuantity}
-                setFhQuantity={setFhQuantity}
-                fhOptions={config?.fh_references || []}
-              />
-              <TDEquipmentToggle
-                hasTdEquipment={hasTdEquipment}
-                setHasTdEquipment={setHasTdEquipment}
-                tdType={tdType}
-                setTdType={setTdType}
-                tdReference={tdReference}
-                setTdReference={setTdReference}
-                tgbtReference={tgbtReference}
-                setTgbtReference={setTgbtReference}
-                tdOptions={config?.td_references || []}
-              />
-              <RRHEquipmentToggle
-                hasRrhEquipment={hasRrhEquipment}
-                setHasRrhEquipment={setHasRrhEquipment}
-                rrhItems={rrhItems}
-                setRrhItems={setRrhItems}
-                rrhOptions={config?.rrh_references || []}
-              />
-              <RRUEquipmentToggle
-                hasRruEquipment={hasRruEquipment}
-                setHasRruEquipment={setHasRruEquipment}
-                rruItems={rruItems}
-                setRruItems={setRruItems}
-                rruOptions={config?.rru_references || []}
-              />
-              <BoitierLovageEquipmentToggle
-                hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
-                boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
-              />
-              <GPSEquipmentToggle
-                hasGps={hasGps} setHasGps={setHasGps}
-                gpsReference={gpsReference} setGpsReference={setGpsReference}
-              />
-              <CoffretEquipmentToggle
-                hasCoffret={hasCoffret}
-                setHasCoffret={setHasCoffret}
-                coffretReference={coffretReference}
-                setCoffretReference={setCoffretReference}
-                coffretOptions={config?.coffret_references || []}
-              />
             </div>
-            </fieldset>
-
           </div>
         </div>
 
@@ -1326,7 +1441,7 @@ export default function RegularUserView({
                             td: tdType === 'monophase'
                               ? { type: 'TD Monophasé', référence: resolveTd(tdReference) || 'N/A', tgbt: tgbtReference || 'N/A' }
                               : { type: 'TD Tétraphasé', référence: resolveTd(tdReference) || 'N/A' },
-                            gps: { référence: gpsReference || 'N/A' },
+                            gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
                             boitier_lovage: { référence: boitierLovageReference || 'N/A' },
                             coffrets_fibre: { référence: coffretReference || 'N/A' },
                             coffrets_hybride: { référence: 'N/A', quantité: 0 }
@@ -1421,7 +1536,9 @@ export default function RegularUserView({
                           {hasGps && (
                             <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
                               <span className="text-slate-400">GPS</span>
-                              <span className="text-white font-medium">{gpsReference || 'Sélectionné'}</span>
+                              <span className="text-white font-medium">
+                                {gpsMarque ? `${gpsMarque} - ` : ''}{gpsReference || 'Sélectionné'}
+                              </span>
                             </div>
                           )}
                           

@@ -129,7 +129,7 @@ export default function UserProfileModal({
                 onChange={handleLogoUpload}
                 disabled={isLogoUploading}
               />
-              <div className={`w-full py-4 px-4 bg-slate-800/50 border-2 border-dashed ${logoUploadError ? 'border-red-500/50' : clientLogoUrl ? 'border-emerald-500/50' : 'border-slate-700'} rounded-xl flex flex-col items-center justify-center gap-2 transition-all hover:border-indigo-500 hover:bg-slate-800 group`}>
+              <div className={`w-full py-4 px-4 bg-slate-800/50 border-2 border-dashed ${logoUploadError ? 'border-red-500/50' : clientLogoUrl ? 'border-emerald-500/50' : 'border-slate-700'} rounded-xl flex flex-col items-center justify-center gap-2 hover:border-indigo-500 hover:bg-slate-800 group`}>
                 {isLogoUploading ? (
                   <>
                     <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />

@@ -110,7 +110,7 @@ export default function HeightRequestModal({
             <button 
               type="submit"
               disabled={isSubmittingRequest}
-              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg flex items-center gap-2 transition-all disabled:opacity-50"
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg flex items-center gap-2 disabled:opacity-50"
             >
               {isSubmittingRequest ? (
                 <>

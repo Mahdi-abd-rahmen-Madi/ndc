@@ -25,7 +25,7 @@ export default function PdfPreviewModal({ previewPdfUrl, conversionError, onClos
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400 transition-all"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-800 text-slate-400 border border-slate-700 hover:text-white hover:bg-rose-500/20 hover:border-rose-500/50 hover:text-rose-400"
             title="Fermer l'aperçu"
           >
             ✕

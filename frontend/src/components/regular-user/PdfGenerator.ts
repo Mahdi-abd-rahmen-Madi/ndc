@@ -79,6 +79,7 @@ interface PdfGeneratorOptions {
   tdReference: string;
   tgbtReference: string;
   hasGps: boolean;
+  gpsMarque?: string;
   gpsQuantity: number;
   gpsReference: string;
   hasBoitierLovage: boolean;
@@ -127,7 +128,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       tdType,
       tdReference,
       tgbtReference,
-      hasGps, gpsQuantity, gpsReference,
+      hasGps, gpsMarque, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
       hasCoffret, coffretReference, coffretOptions,
       miniMapImage,
@@ -305,7 +306,8 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         lineY += 8;
       }
       if (hasGps) {
-        doc.text(`• GPS : Référence ${gpsReference || 'Standard'} - Qté: ${gpsQuantity}`, 28, lineY);
+        const marqueStr = gpsMarque ? `${gpsMarque} - ` : '';
+        doc.text(`• GPS : ${marqueStr}Référence ${gpsReference || 'Standard'} - Qté: ${gpsQuantity}`, 28, lineY);
         lineY += 8;
       }
       if (hasBoitierLovage) {

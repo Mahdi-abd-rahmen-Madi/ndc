@@ -707,7 +707,7 @@ export default function NDCPortailTest() {
             <button 
               onClick={handleLaunchTest} 
               disabled={loading}
-              className={`px-6 py-3 rounded-lg font-semibold text-white shadow-md transition-all
+              className={`px-6 py-3 rounded-lg font-semibold text-white shadow-md
                 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark active:scale-95'}`}
             >
               {loading ? (

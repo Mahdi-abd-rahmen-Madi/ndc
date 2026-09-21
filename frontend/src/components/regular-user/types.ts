@@ -17,6 +17,7 @@ export interface MontageConfig {
 export interface RealWorldReference {
   id: string;
   name: string;
+  operator?: string;
   montageId: string;
   ant4g: { model: string; height: number; width: number; thickness: number; weight: number; };
   ant5g: { model: string; height: number; width: number; thickness: number; weight: number; };

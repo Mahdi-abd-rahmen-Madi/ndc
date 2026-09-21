@@ -375,8 +375,8 @@ export default function ResultsPanel({
           </div>
           {/* Consolidated Classification Section on Right */}
           <div className="flex flex-wrap items-center justify-end gap-3 ml-6">
-            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-indigo-500/30 transition-all duration-300">
-              <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 shrink-0 group-hover:bg-indigo-500/20 group-hover:scale-110 transition-all">
+            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-indigo-500/30 duration-300">
+              <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 shrink-0 group-hover:bg-indigo-500/20 group-hover:scale-110">
                 <Layers className="w-5 h-5" />
               </div>
               <div className="pr-2">
@@ -387,8 +387,8 @@ export default function ResultsPanel({
               </div>
             </div>
 
-            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-blue-500/30 transition-all duration-300">
-              <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 shrink-0 group-hover:bg-blue-500/20 group-hover:scale-110 transition-all">
+            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-blue-500/30 duration-300">
+              <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 shrink-0 group-hover:bg-blue-500/20 group-hover:scale-110">
                 <Wind className="w-5 h-5" />
               </div>
               <div className="pr-2">
@@ -415,7 +415,7 @@ export default function ResultsPanel({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sectors.map((sector, idx) => (
-                  <div key={sector.id} className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 border-l-indigo-500 hover:border-indigo-500/30 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
+                  <div key={sector.id} className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 border-l-indigo-500 hover:border-indigo-500/30 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 duration-300">
                     <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
                       <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
@@ -490,7 +490,7 @@ export default function ResultsPanel({
                   const showMontage = !isA1Montage;
 
                   return (
-                    <div key={idx} className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/40 transition-all duration-300 group">
+                    <div key={idx} className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/40 duration-300 group">
                       <div className="p-6">
                         <div className="flex justify-between items-start mb-5">
                           <div>
@@ -636,10 +636,10 @@ export default function ResultsPanel({
                 const otherFields = config.fields.filter(f => !f.label.toLowerCase().includes('quantit'));
 
                 const renderCard = (keyId: string, qValue: any, itemValues: any, indexLabel?: string) => (
-                  <div key={keyId} className={`group relative bg-slate-800/40 backdrop-blur-md rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:bg-slate-800/80 transition-all duration-300`}>
+                  <div key={keyId} className={`group relative bg-slate-800/40 backdrop-blur-md rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:bg-slate-800/80 duration-300`}>
                     <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
                       <div className="flex items-center gap-2">
-                        <div className={`p-1.5 bg-${colorClass}-500/10 rounded-lg text-${colorClass}-400 group-hover:bg-${colorClass}-500/20 group-hover:scale-110 transition-all shadow-inner`}>
+                        <div className={`p-1.5 bg-${colorClass}-500/10 rounded-lg text-${colorClass}-400 group-hover:bg-${colorClass}-500/20 group-hover:scale-110 shadow-inner`}>
                           <IconComponent className="w-3.5 h-3.5" />
                         </div>
                         <h4 className="text-[11px] font-extrabold text-white tracking-tight truncate max-w-[120px]" title={config.name}>

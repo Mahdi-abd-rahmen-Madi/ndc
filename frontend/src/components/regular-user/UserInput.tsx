@@ -25,6 +25,10 @@ interface UserInputProps {
   setSiteName: (val: string) => void;
   clientName: string;
   setClientName: (val: string) => void;
+  hasChauffageAuSol?: boolean;
+  setHasChauffageAuSol?: (val: boolean) => void;
+  fausseDalleThickness?: number | string;
+  setFausseDalleThickness?: (val: number | string) => void;
 }
 
 export default function UserInput({
@@ -45,7 +49,11 @@ export default function UserInput({
   siteName,
   setSiteName,
   clientName,
-  setClientName
+  setClientName,
+  hasChauffageAuSol = false,
+  setHasChauffageAuSol,
+  fausseDalleThickness = '',
+  setFausseDalleThickness
 }: UserInputProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -118,17 +126,17 @@ export default function UserInput({
   return (
     <div className="flex flex-col gap-4">
       {/* 1. Informations du Projet */}
-      <div className="p-5 bg-slate-900/50 border border-slate-800/80 rounded-2xl relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-300">
+      <div className="p-5 bg-slate-900/50 border border-slate-800/80 rounded-2xl relative overflow-hidden group hover:border-indigo-500/30 duration-300">
         <div className="absolute right-0 top-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full -z-10 group-hover:bg-indigo-500/10 transition-colors"></div>
         <h3 className="text-sm font-bold text-white mb-5 flex items-center gap-2">
           <MapPin className="w-4 h-4 text-indigo-400" />
           Informations du Projet
         </h3>
 
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex flex-col gap-6">
           {/* Photo Upload */}
           {onSiteImageUploaded && (
-            <div className="w-full lg:w-[40%] flex flex-col">
+            <div className="w-full flex flex-col">
               <label className="text-xs font-semibold text-slate-300 flex items-center justify-between mb-2 h-6">
                 <span className="flex items-center gap-1.5">
                   <Camera className="w-3.5 h-3.5 text-indigo-400" />
@@ -165,7 +173,7 @@ export default function UserInput({
                     disabled={isUploading}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
                   />
-                  <div className={`w-full py-2.5 px-3 bg-slate-800/50 border ${uploadError ? 'border-red-500/50' : (uploadSuccess || siteImageUrl) ? 'border-emerald-500/50' : 'border-slate-700 border-dashed'} rounded-xl text-sm flex items-center justify-center gap-2 transition-all group-hover/upload:border-indigo-500/50 group-hover/upload:bg-slate-800`}>
+                  <div className={`w-full py-2.5 px-3 bg-slate-800/50 border ${uploadError ? 'border-red-500/50' : (uploadSuccess || siteImageUrl) ? 'border-emerald-500/50' : 'border-slate-700 border-dashed'} rounded-xl text-sm flex items-center justify-center gap-2 group-hover/upload:border-indigo-500/50 group-hover/upload:bg-slate-800`}>
                     {isUploading ? (
                       <>
                         <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
@@ -203,7 +211,7 @@ export default function UserInput({
                 value={siteName}
                 onChange={(e) => setSiteName(e.target.value)}
                 placeholder="Ex: TOWER_PARIS_01"
-                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             <div className="flex flex-col">
@@ -215,7 +223,7 @@ export default function UserInput({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Ex: Mairie de Paris"
-                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
             </div>
             <div className="flex flex-col">
@@ -223,13 +231,14 @@ export default function UserInput({
                 Opérateur
               </label>
               <select
-                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                defaultValue="bouygues"
               >
-                <option value="">Sélectionner</option>
-                <option value="orange">Orange</option>
-                <option value="free">Free</option>
+                <option value="" disabled>Sélectionner</option>
+                <option value="orange" disabled className="text-slate-500">Orange</option>
+                <option value="free" disabled className="text-slate-500">Free</option>
                 <option value="bouygues">Bouygues</option>
-                <option value="sfr">SFR</option>
+                <option value="sfr" disabled className="text-slate-500">SFR</option>
               </select>
             </div>
           </div>
@@ -237,7 +246,7 @@ export default function UserInput({
       </div>
 
       {/* 2. Paramètres & Configuration */}
-      <div className="p-5 bg-slate-900/50 border border-slate-800/80 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
+      <div className="p-5 bg-slate-900/50 border border-slate-800/80 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 duration-300">
         <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10 group-hover:bg-emerald-500/10 transition-colors"></div>
 
         <div className="flex flex-col gap-6">
@@ -248,14 +257,28 @@ export default function UserInput({
               Paramètres Techniques
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {dalleThickness !== '' && Number(dalleThickness) < 12 && foundationType !== 'encastre' && (
+              <div className="mb-6 text-sm font-medium text-white leading-snug flex items-start gap-3 bg-red-600/90 shadow-[0_0_15px_rgba(220,38,38,0.4)] p-4 rounded-xl border border-red-400 transition-all duration-300 relative overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-400"></div>
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-100 mt-0.5" />
+                <div className="flex flex-col gap-1">
+                  <strong className="text-red-50 text-xs uppercase tracking-wider">⚠️ Action requise : Épaisseur dalle trop faible</strong>
+                  <span>
+                    L'épaisseur saisie semble <b>trop faible</b> pour une dalle de structure portante. Veillez à indiquer uniquement l'épaisseur du béton armé de structure. 
+                    <span className="block mt-1 text-red-100">Une valeur insuffisante entraînera un résultat défavorable sur la note de calcul.</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 items-start">
               {/* Hauteur Bâtiment */}
               <div className="flex flex-col space-y-2">
                 <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
                   <ArrowUpToLine className="w-3.5 h-3.5 text-emerald-400" />
                   Hauteur bâtiment
                 </label>
-                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
+                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
                   <input
                     type="number"
                     min="0"
@@ -276,10 +299,11 @@ export default function UserInput({
                     <FileStack className="w-3.5 h-3.5 text-emerald-400" />
                     Épaisseur dalle
                   </label>
-                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
+                  <div className={`flex bg-slate-800 border ${dalleThickness !== '' && Number(dalleThickness) < 12 ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-slate-700'} rounded-lg overflow-hidden focus-within:ring-2 ${dalleThickness !== '' && Number(dalleThickness) < 12 ? 'focus-within:ring-red-500' : 'focus-within:ring-emerald-500'}`}>
                     <input
                       type="number"
                       min="0"
+                      max="35"
                       step="1"
                       value={dalleThickness}
                       onChange={(e) => setDalleThickness(e.target.value === '' ? '' : Number(e.target.value))}
@@ -297,13 +321,53 @@ export default function UserInput({
                     <Layers className="w-3.5 h-3.5 text-emerald-400" />
                     Etanchéité
                   </label>
-                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
+                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
                     <input
                       type="number"
                       min="0"
                       step="1"
                       value={etancheite}
                       onChange={(e) => setEtancheite?.(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-white focus:ring-0"
+                    />
+                    <div className="px-3 flex items-center bg-slate-800/50 border-l border-slate-700 text-slate-400 text-xs font-semibold">cm</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Chauffage au sol Toggle */}
+              {foundationType !== 'encastre' && (
+                <div className="flex flex-col space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
+                    <Settings2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Chauffage au sol
+                  </label>
+                  <div className="flex items-center h-[38px]">
+                    <button
+                      type="button"
+                      onClick={() => setHasChauffageAuSol?.(!hasChauffageAuSol)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${hasChauffageAuSol ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasChauffageAuSol ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Epaisseur Fausse Dalle */}
+              {foundationType !== 'encastre' && hasChauffageAuSol && (
+                <div className="flex flex-col space-y-2 animate-fadeIn">
+                  <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
+                    <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                    Epaisseur fausse dalle
+                  </label>
+                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={fausseDalleThickness}
+                      onChange={(e) => setFausseDalleThickness?.(e.target.value === '' ? '' : Number(e.target.value))}
                       className="w-full bg-transparent border-none py-2 px-3 text-sm text-white focus:ring-0"
                     />
                     <div className="px-3 flex items-center bg-slate-800/50 border-l border-slate-700 text-slate-400 text-xs font-semibold">cm</div>
@@ -330,7 +394,7 @@ export default function UserInput({
                       key={num}
                       type="button"
                       onClick={() => setNombreSecteurs(num)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all border ${nombreSecteurs === num
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${nombreSecteurs === num
                         ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
                         : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
                         }`}
@@ -349,7 +413,7 @@ export default function UserInput({
                       type="button"
                       title="Copier le Secteur 1 sur les autres secteurs et les masquer"
                       onClick={() => setSimilarityMode('all_similar')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border text-center ${similarityMode === 'all_similar'
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center ${similarityMode === 'all_similar'
                         ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
                         : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
                         }`}
@@ -361,7 +425,7 @@ export default function UserInput({
                       type="button"
                       title="Garder tous les secteurs indépendants et éditables"
                       onClick={() => setSimilarityMode('all_different')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all border text-center ${similarityMode === 'all_different'
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center ${similarityMode === 'all_different'
                         ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
                         : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
                         }`}

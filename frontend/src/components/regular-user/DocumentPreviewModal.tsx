@@ -56,7 +56,7 @@ export default function DocumentPreviewModal({
               href={previewDoc.originalUrl || previewDoc.url} 
               target="_blank" 
               rel="noreferrer"
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20"
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-900/20"
             >
               <ExternalLink className="w-5 h-5" /> Télécharger / Ouvrir le fichier original
             </a>

@@ -177,7 +177,7 @@ export default function MontageSelector({
         {/* Segmented Control */}
         <div className="relative flex p-1 bg-slate-950 rounded-lg mb-5 border border-slate-800/80">
           <div 
-            className="absolute inset-y-1 bg-indigo-600 rounded-md transition-all duration-300 ease-out"
+            className="absolute inset-y-1 bg-indigo-600 rounded-md duration-300 ease-out"
             style={{ 
               width: 'calc(50% - 4px)', 
               left: configMode === 'agile' ? '4px' : 'calc(50%)' 
@@ -186,7 +186,7 @@ export default function MontageSelector({
           <button
             type="button"
             onClick={() => handleConfigModeChange('agile')}
-            className={`relative flex-1 py-2 rounded-md text-xs font-semibold transition-all z-10 ${
+            className={`relative flex-1 py-2 rounded-md text-xs font-semibold z-10 ${
               configMode === 'agile' ? 'text-white' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -195,7 +195,7 @@ export default function MontageSelector({
           <button
             type="button"
             onClick={() => handleConfigModeChange('reference')}
-            className={`relative flex-1 py-2 rounded-md text-xs font-semibold transition-all z-10 ${
+            className={`relative flex-1 py-2 rounded-md text-xs font-semibold z-10 ${
               configMode === 'reference' ? 'text-white' : 'text-slate-400 hover:text-white'
             }`}
           >

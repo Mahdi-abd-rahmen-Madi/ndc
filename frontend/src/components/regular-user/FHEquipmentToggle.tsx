@@ -1,4 +1,5 @@
 import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { CustomSelect } from '../ui/CustomSelect';
 import React from 'react';
 import type { EquipmentItem } from '../RegularUserView';
 
@@ -58,7 +59,7 @@ export default function FHEquipmentToggle({
         </div>
 
         {hasFhEquipment && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
             
             {/* Row 1: Quantité & Référence */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -96,20 +97,22 @@ export default function FHEquipmentToggle({
               {/* Référence */}
               <div className="flex flex-col flex-1">
                 <label className="text-xs text-slate-400 mb-1">Référence:</label>
-                <select
+                <CustomSelect
                   value={fhReference}
-                  onChange={handleReferenceChange}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Sélectionner...</option>
-                  {vendors.map(vendor => (
-                    <optgroup key={vendor} label={vendor}>
-                      {fhOptions.filter(o => o.vendor === vendor).map(ref => (
-                        <option key={ref.id} value={ref.id}>{ref.name}</option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                  onChange={(val) => {
+                    setFhReference(val);
+                    const ref = fhOptions.find(r => r.id === val);
+                    if (ref) {
+                      setFhQuantity(1);
+                    }
+                  }}
+                  className="focus:ring-2 focus:ring-indigo-500"
+                  groups={vendors.map(vendor => ({
+                    label: vendor,
+                    options: fhOptions.filter(o => o.vendor === vendor).map(ref => ({ value: ref.id, label: ref.name }))
+                  }))}
+                  placeholder="Sélectionner..."
+                />
               </div>
             </div>
 
@@ -207,44 +210,36 @@ export function RRHEquipmentToggle({
         </label>
 
         {hasRrhEquipment && (
-          <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
+          <div className="flex flex-col gap-3  mt-2 border-t border-slate-800/50 pt-3">
             {rrhItems.map((item) => (
               <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1">
                     <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
-                    <select
+                    <CustomSelect
                       value={item.vendor || ''}
-                      onChange={(e) => updateRrhItem(item.id, 'vendor', e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-rose-500"
-                    >
-                      <option value="">Sélectionner</option>
-                      {uniqueVendors.map(vendor => (
-                        <option key={vendor} value={vendor}>{vendor}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => updateRrhItem(item.id, 'vendor', val)}
+                      className="focus:ring-2 focus:ring-rose-500"
+                      options={uniqueVendors.map(vendor => ({ value: vendor, label: vendor }))}
+                      placeholder="Sélectionner"
+                    />
                   </div>
 
                   {/* Modèle */}
                   <div className="flex flex-col flex-1">
                     <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
-                    <select
+                    <CustomSelect
                       value={item.reference}
-                      onChange={(e) => updateRrhItem(item.id, 'reference', e.target.value)}
+                      onChange={(val) => updateRrhItem(item.id, 'reference', val)}
                       disabled={!item.vendor}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-rose-500 disabled:opacity-50"
-                    >
-                      <option value="">Sélectionner</option>
-                      {rrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                      className="focus:ring-2 focus:ring-rose-500"
+                      options={rrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
                         const isSelectedElsewhere = rrhItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
-                        return (
-                          <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
-                            {opt.reference} {isSelectedElsewhere ? '(Déjà utilisé)' : ''}
-                          </option>
-                        );
+                        return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
                       })}
-                    </select>
+                      placeholder="Sélectionner"
+                    />
                   </div>
                 </div>
 
@@ -365,44 +360,36 @@ export function RRUEquipmentToggle({
         </label>
 
         {hasRruEquipment && (
-          <div className="flex flex-col gap-3 animate-fadeIn mt-2 border-t border-slate-800/50 pt-3">
+          <div className="flex flex-col gap-3  mt-2 border-t border-slate-800/50 pt-3">
             {rruItems.map((item) => (
               <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1">
                     <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
-                    <select
+                    <CustomSelect
                       value={item.vendor || ''}
-                      onChange={(e) => updateRruItem(item.id, 'vendor', e.target.value)}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">Sélectionner</option>
-                      {uniqueVendors.map(vendor => (
-                        <option key={vendor} value={vendor}>{vendor}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => updateRruItem(item.id, 'vendor', val)}
+                      className="focus:ring-2 focus:ring-emerald-500"
+                      options={uniqueVendors.map(vendor => ({ value: vendor, label: vendor }))}
+                      placeholder="Sélectionner"
+                    />
                   </div>
 
                   {/* Modèle */}
                   <div className="flex flex-col flex-1">
                     <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
-                    <select
+                    <CustomSelect
                       value={item.reference}
-                      onChange={(e) => updateRruItem(item.id, 'reference', e.target.value)}
+                      onChange={(val) => updateRruItem(item.id, 'reference', val)}
                       disabled={!item.vendor}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2 text-sm text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-                    >
-                      <option value="">Sélectionner</option>
-                      {rruOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                      className="focus:ring-2 focus:ring-emerald-500"
+                      options={rruOptions.filter(o => o.vendor === item.vendor).map(opt => {
                         const isSelectedElsewhere = rruItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
-                        return (
-                          <option key={opt.id} value={opt.id} disabled={isSelectedElsewhere}>
-                            {opt.reference} {isSelectedElsewhere ? '(Déjà utilisé)' : ''}
-                          </option>
-                        );
+                        return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
                       })}
-                    </select>
+                      placeholder="Sélectionner"
+                    />
                   </div>
                 </div>
 
@@ -529,7 +516,7 @@ export function TDEquipmentToggle({
         </div>
 
         {hasTdEquipment && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
             {/* TD Type */}
             <div className="flex gap-4">
               <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
@@ -556,22 +543,20 @@ export function TDEquipmentToggle({
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex flex-col flex-1">
                 <label className="text-xs text-slate-400 mb-1">Référence TD:</label>
-                <select
+                <CustomSelect
                   value={tdReference}
-                  onChange={(e) => setTdReference(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="">Sélectionner une référence</option>
-                  {filteredTdOptions.map(opt => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.vendor} - {opt.name} ({opt.reference})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setTdReference(val)}
+                  className="focus:ring-2 focus:ring-amber-500"
+                  options={filteredTdOptions.map(opt => ({
+                    value: opt.id,
+                    label: `${opt.vendor} - ${opt.name} (${opt.reference})`
+                  }))}
+                  placeholder="Sélectionner une référence"
+                />
               </div>
 
               {tdType === 'monophase' && (
-                <div className="flex flex-col flex-1 animate-fadeIn">
+                <div className="flex flex-col flex-1 ">
                   <label className="text-xs text-slate-400 mb-1">Référence TGBT:</label>
                   <input
                     type="text"
@@ -632,7 +617,7 @@ export function GenericEquipmentToggle({
         </label>
 
         {enabled && (
-          <div className="flex flex-col md:flex-row md:items-center gap-4 animate-fadeIn flex-1 justify-end mt-3 md:mt-0">
+          <div className="flex flex-col md:flex-row md:items-center gap-4  flex-1 justify-end mt-3 md:mt-0">
             {/* Quantité */}
             {quantity !== undefined && setQuantity !== undefined && (
               <div className="flex flex-col">
@@ -718,7 +703,7 @@ export function BoitierLovageEquipmentToggle({
         </div>
 
         {hasBoitierLovage && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
             {/* Boitier Lovage Reference */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex items-center gap-2 flex-1">
@@ -744,13 +729,17 @@ export interface GPSEquipmentToggleProps {
   setHasGps: (val: boolean) => void;
   gpsReference: string;
   setGpsReference: (val: string) => void;
+  gpsMarque?: string;
+  setGpsMarque?: (val: string) => void;
 }
 
 export function GPSEquipmentToggle({
   hasGps,
   setHasGps,
   gpsReference,
-  setGpsReference
+  setGpsReference,
+  gpsMarque = 'NOKIA',
+  setGpsMarque
 }: GPSEquipmentToggleProps) {
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
@@ -773,16 +762,31 @@ export function GPSEquipmentToggle({
         </div>
 
         {hasGps && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 animate-fadeIn">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-xs text-slate-400 shrink-0">Réf. GPS:</label>
-                <input
-                  type="text"
+          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
+            <div className="flex gap-3">
+              <div className="flex flex-col flex-1">
+                <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
+                <CustomSelect
+                  value={gpsMarque}
+                  onChange={(val) => setGpsMarque?.(val)}
+                  className="focus:ring-2 focus:ring-blue-500"
+                  options={[{ value: 'NOKIA', label: 'NOKIA' }]}
+                  placeholder="Sélectionner"
+                />
+              </div>
+
+              <div className="flex flex-col flex-1">
+                <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
+                <CustomSelect
                   value={gpsReference}
-                  onChange={(e) => setGpsReference(e.target.value)}
-                  placeholder="Référence GPS"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-blue-500 placeholder-slate-500"
+                  onChange={(val) => setGpsReference(val)}
+                  disabled={!gpsMarque}
+                  className="focus:ring-2 focus:ring-blue-500"
+                  options={[
+                    { value: '471605A.102', label: '471605A.102' },
+                    { value: '474074A.101', label: '474074A.101' }
+                  ]}
+                  placeholder="Sélectionner"
                 />
               </div>
             </div>
@@ -835,35 +839,31 @@ export function CoffretEquipmentToggle({
         </div>
 
         {hasCoffret && (
-          <div className="flex flex-col gap-4 pt-3 border-t border-slate-800/80 animate-fadeIn">
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-800/80 ">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex items-center gap-2 flex-1">
                 <label className="text-xs text-slate-400 shrink-0 w-16 md:w-auto">Type:</label>
-                <select
+                <CustomSelect
                   value={mainSelectValue}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     if (val === 'HTTA' && httaOptions.length > 0) {
                       setCoffretReference(httaOptions[0].id);
                     } else {
                       setCoffretReference(val);
                     }
                   }}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-fuchsia-500"
-                >
-                  <option value="">Sélectionner...</option>
-                  {otherOptions.map(ref => (
-                    <option key={ref.id} value={ref.id}>{ref.name.replace(/\s*\([^)]*\)/g, '').trim()}</option>
-                  ))}
-                  {httaOptions.length > 0 && (
-                    <option value="HTTA">Coffrets HTTA</option>
-                  )}
-                </select>
+                  className="focus:ring-2 focus:ring-fuchsia-500"
+                  options={[
+                    ...otherOptions.map(ref => ({ value: ref.id, label: ref.name.replace(/\s*\([^)]*\)/g, '').trim() })),
+                    ...(httaOptions.length > 0 ? [{ value: 'HTTA', label: 'Coffrets HTTA' }] : [])
+                  ]}
+                  placeholder="Sélectionner..."
+                />
               </div>
             </div>
 
             {isHttaSelected && httaOptions.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 animate-fadeIn bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 mt-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2  bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 mt-4">
                 <label className="text-xs font-medium text-slate-300 shrink-0 sm:w-24">Référence HTTA:</label>
                 <select
                   value={coffretReference === 'HTTA' ? httaOptions[0].id : coffretReference}
@@ -898,7 +898,7 @@ export function CoffretEquipmentToggle({
               }
 
               return (
-                <div className="space-y-2 mt-4 animate-fadeIn bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
+                <div className="space-y-2 mt-4  bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
