@@ -46,6 +46,9 @@ jobs:
             # Build and deploy the Docker containers
             docker compose -f docker-compose.prod.yml up -d --build
             
+            # Automatically apply any pending database schema migrations
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+            
             # Prune unused images to save space
             docker image prune -f
           EOF

@@ -1,0 +1,841 @@
+[
+{
+  "model": "geodata.catalogueconfig",
+  "pk": 1,
+  "fields": {
+    "precalculated_building_heights": [
+      10,
+      15,
+      20,
+      25,
+      30,
+      35,
+      40,
+      45
+    ],
+    "recommended_mast_heights": [
+      3,
+      4
+    ],
+    "fh_weight_options": [
+      20,
+      25,
+      30,
+      35,
+      40,
+      45,
+      50,
+      55,
+      60,
+      65,
+      70
+    ],
+    "standard_montages": [
+      {
+        "id": "A1",
+        "name": "Montage A1",
+        "ant4g": {
+          "width": 470,
+          "height": 2100,
+          "weight": 45,
+          "thickness": 210
+        },
+        "ant5g": {
+          "width": 500,
+          "height": 1010,
+          "weight": 50,
+          "thickness": 250
+        },
+        "abbreviation": "A1a / A1b"
+      },
+      {
+        "id": "A2",
+        "name": "Montage A2",
+        "ant4g": {
+          "width": 500,
+          "height": 2800,
+          "weight": 60,
+          "thickness": 250
+        },
+        "ant5g": {
+          "width": 500,
+          "height": 1010,
+          "weight": 50,
+          "thickness": 240
+        },
+        "abbreviation": "A2a / A2b"
+      },
+      {
+        "id": "A3",
+        "name": "Montage A3",
+        "ant4g": {
+          "width": 500,
+          "height": 2100,
+          "weight": 50,
+          "thickness": 250
+        },
+        "ant5g": {
+          "width": 500,
+          "height": 1000,
+          "weight": 50,
+          "thickness": 240
+        },
+        "abbreviation": "A3a / A3b"
+      },
+      {
+        "id": "A4",
+        "name": "Montage A4",
+        "ant4g": {
+          "width": 469,
+          "height": 1509,
+          "weight": 34,
+          "thickness": 206
+        },
+        "ant5g": {
+          "width": 395,
+          "height": 730,
+          "weight": 28,
+          "thickness": 180
+        },
+        "abbreviation": "A4a / A4b"
+      },
+      {
+        "id": "A5",
+        "name": "Montage A5",
+        "ant4g": {
+          "width": 540,
+          "height": 2800,
+          "weight": 110,
+          "thickness": 240
+        },
+        "ant5g": {
+          "width": 500,
+          "height": 1000,
+          "weight": 50,
+          "thickness": 240
+        },
+        "abbreviation": "A5a / A5b"
+      },
+      {
+        "id": "A6",
+        "name": "Montage A6",
+        "ant4g": {
+          "width": 369,
+          "height": 2688,
+          "weight": 33.5,
+          "thickness": 166
+        },
+        "ant5g": {
+          "width": 450,
+          "height": 750,
+          "weight": 45,
+          "thickness": 240
+        },
+        "abbreviation": "A6a / A6b"
+      },
+      {
+        "id": "A7",
+        "name": "Montage A7",
+        "ant4g": {
+          "width": 469,
+          "height": 2249,
+          "weight": 45,
+          "thickness": 206
+        },
+        "ant5g": {
+          "width": 395,
+          "height": 730,
+          "weight": 28.5,
+          "thickness": 180
+        },
+        "abbreviation": "A7a / A7b"
+      },
+      {
+        "id": "A8",
+        "name": "Montage A8",
+        "ant4g": {
+          "width": 469,
+          "height": 2769,
+          "weight": 51,
+          "thickness": 206
+        },
+        "ant5g": {
+          "width": 430,
+          "height": 750,
+          "weight": 45,
+          "thickness": 240
+        },
+        "abbreviation": "A8a / A8b"
+      },
+      {
+        "id": "A9",
+        "name": "Montage A9",
+        "ant4g": {
+          "width": 500,
+          "height": 1500,
+          "weight": 45,
+          "thickness": 250
+        },
+        "ant5g": {
+          "width": 500,
+          "height": 1000,
+          "weight": 50,
+          "thickness": 240
+        },
+        "abbreviation": "A9"
+      }
+    ],
+    "real_world_references": [
+      {
+        "id": "4G_COM_RRZZV4-65D-R8N43",
+        "name": "COMMSCOPE RRZZV4-65D-R8N43",
+        "ant4g": {
+          "model": "RRZZV4-65D-R8N43",
+          "width": 430,
+          "height": 2769,
+          "weight": 49.5,
+          "thickness": 197
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AOC4518R30v06",
+        "name": "HUAWEI AOC4518R30v06",
+        "ant4g": {
+          "model": "AOC4518R30v06",
+          "width": 469,
+          "height": 2695,
+          "weight": 39.5,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AOC4518R27v06",
+        "name": "HUAWEI AOC4518R27v06",
+        "ant4g": {
+          "model": "AOC4518R27v06",
+          "width": 469,
+          "height": 2009,
+          "weight": 34.5,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_COM_RRZZHHTT-65B-R7N43",
+        "name": "COMMSCOPE RRZZHHTT-65B-R7N43",
+        "ant4g": {
+          "model": "RRZZHHTT-65B-R7N43",
+          "width": 430,
+          "height": 2100,
+          "weight": 37.5,
+          "thickness": 197
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_COM_RRZZHHTT-65A-R7N43",
+        "name": "COMMSCOPE RRZZHHTT-65A-R7N43",
+        "ant4g": {
+          "model": "RRZZHHTT-65A-R7N43",
+          "width": 430,
+          "height": 1599,
+          "weight": 33.2,
+          "thickness": 197
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AO6240PA04v06",
+        "name": "HUAWEI AO6240PA04v06",
+        "ant4g": {
+          "model": "AO6240PA04v06",
+          "width": 469,
+          "height": 2550,
+          "weight": 44.7,
+          "thickness": 229
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AO6240PA01v06",
+        "name": "HUAWEI AO6240PA01v06",
+        "ant4g": {
+          "model": "AO6240PA01v06",
+          "width": 469,
+          "height": 2009,
+          "weight": 37.9,
+          "thickness": 229
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AO6240PA03v06",
+        "name": "HUAWEI AO6240PA03v06",
+        "ant4g": {
+          "model": "AO6240PA03v06",
+          "width": 469,
+          "height": 1509,
+          "weight": 31.5,
+          "thickness": 229
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_A104518R1v07",
+        "name": "HUAWEI A104518R1v07",
+        "ant4g": {
+          "model": "A104518R1v07",
+          "width": 469,
+          "height": 2695,
+          "weight": 49.5,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_COM_RRZZV6-65D-R10F",
+        "name": "COMMSCOPE RRZZV6-65D-R10F",
+        "ant4g": {
+          "model": "RRZZV6-65D-R10F",
+          "width": 498,
+          "height": 2688,
+          "weight": 46.1,
+          "thickness": 197
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AOC4518R19v09",
+        "name": "HUAWEI AOC4518R19v09",
+        "ant4g": {
+          "model": "AOC4518R19v09",
+          "width": 469,
+          "height": 2695,
+          "weight": 46.2,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_COM_RRZZVV-65D-R6N47V6",
+        "name": "COMMSCOPE RRZZVV-65D-R6N47V6",
+        "ant4g": {
+          "model": "RRZZVV-65D-R6N47V6",
+          "width": 468,
+          "height": 2769,
+          "weight": 38.5,
+          "thickness": 228
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_COM_RRZZVV-65B-R6N47V6",
+        "name": "COMMSCOPE RRZZVV-65B-R6N47V6",
+        "ant4g": {
+          "model": "RRZZVV-65B-R6N47V6",
+          "width": 468,
+          "height": 2100,
+          "weight": 40.2,
+          "thickness": 228
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "4G_HUA_AOC4518R07v07_A4",
+        "name": "HUAWEI AOC4518R07v07 / A4",
+        "ant4g": {
+          "model": "AOC4518R07v07",
+          "width": 469,
+          "height": 1509,
+          "weight": 34.0,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "AAU5636w",
+          "width": 395,
+          "height": 730,
+          "weight": 28.0,
+          "thickness": 180
+        },
+        "operator": "bouygues",
+        "montageId": "A4"
+      },
+      {
+        "id": "4G_COM_RRZZHTTVV65CR10V3_A7",
+        "name": "COMMSCOPE RRZZHTTVV65CR10V3 / A7",
+        "ant4g": {
+          "model": "RRZZHTTVV65CR10V3",
+          "width": 469,
+          "height": 2249,
+          "weight": 45.0,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "A7"
+      },
+      {
+        "id": "4G_HUA_A104518R04v06_A7",
+        "name": "HUAWEI A104518R04v06 / A7",
+        "ant4g": {
+          "model": "A104518R04v06",
+          "width": 469,
+          "height": 2249,
+          "weight": 45.0,
+          "thickness": 206
+        },
+        "ant5g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "operator": "bouygues",
+        "montageId": "A7"
+      },
+      {
+        "id": "5G_HUA_AAU5339w",
+        "name": "HUAWEI AAU5339w",
+        "ant4g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "ant5g": {
+          "model": "AAU5339w",
+          "width": 395,
+          "height": 699,
+          "weight": 24,
+          "thickness": 160
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "5G_HUA_AAU5639w",
+        "name": "HUAWEI AAU5639w",
+        "ant4g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "ant5g": {
+          "model": "AAU5639w",
+          "width": 395,
+          "height": 730,
+          "weight": 27,
+          "thickness": 160
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "5G_ERI_AIR6419",
+        "name": "ERICSSON AIR6419 B78Y",
+        "ant4g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "ant5g": {
+          "model": "AIR6419 B78Y",
+          "width": 408,
+          "height": 717,
+          "weight": 22,
+          "thickness": 155
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "5G_ERI_AIR3258",
+        "name": "ERICSSON AIR3258 B78V",
+        "ant4g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "ant5g": {
+          "model": "AIR3258 B78V",
+          "width": 408,
+          "height": 717,
+          "weight": 28,
+          "thickness": 189
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "5G_ERI_AIR6449",
+        "name": "ERICSSON AIR6449 B78M",
+        "ant4g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "ant5g": {
+          "model": "AIR6449 B78M",
+          "width": 403,
+          "height": 778,
+          "weight": 37.5,
+          "thickness": 268
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      },
+      {
+        "id": "5G_ERI_AIR6488",
+        "name": "ERICSSON AIR6488 B78H",
+        "ant4g": {
+          "model": "",
+          "width": 0,
+          "height": 0,
+          "weight": 0,
+          "thickness": 0
+        },
+        "ant5g": {
+          "model": "AIR6488 B78H",
+          "width": 400,
+          "height": 819,
+          "weight": 44,
+          "thickness": 220
+        },
+        "operator": "bouygues",
+        "montageId": "Custom"
+      }
+    ],
+    "coffret_references": [
+      {
+        "id": "HDB24MKII",
+        "name": "Coffrets hybride (400x350x150, 4kg)"
+      },
+      {
+        "id": "622191062",
+        "name": "Coffret PANAMA (215x360x111mm, 2.8kg)"
+      },
+      {
+        "id": "TRANS_FO",
+        "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)"
+      },
+      {
+        "id": "SLHDU056-12-00",
+        "name": "Coffrets HTTA 1 (300x400x150mm, 5.8kg)"
+      },
+      {
+        "id": "SLHDU056-12-2+4",
+        "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)"
+      },
+      {
+        "id": "SLHDU056-12-3+3",
+        "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)"
+      },
+      {
+        "id": "SLHDU005-12",
+        "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)"
+      }
+    ],
+    "fh_references": [
+      {
+        "id": "fh_ericsson_60",
+        "name": "BFZ 622 32/3S03H",
+        "vendor": "ERICSSON",
+        "weight": 7.6,
+        "diameter": 600,
+        "reference": "BFZ 622 32/3S03H"
+      },
+      {
+        "id": "fh_ericsson_90",
+        "name": "BFZ 622 33/3S03H",
+        "vendor": "ERICSSON",
+        "weight": 17,
+        "diameter": 900,
+        "reference": "BFZ 622 33/3S03H"
+      },
+      {
+        "id": "fh_ericsson_120",
+        "name": "BFZ 622 34/3S03H",
+        "vendor": "ERICSSON",
+        "weight": 32,
+        "diameter": 1200,
+        "reference": "BFZ 622 34/3S03H"
+      }
+    ],
+    "td_references": [
+      {
+        "id": "td_mono_free",
+        "name": "TD mono",
+        "vendor": "FREE",
+        "weight": 60,
+        "reference": "68236",
+        "dimensions": "1055x850x350mm"
+      },
+      {
+        "id": "td_tri_free",
+        "name": "TD triphasé",
+        "vendor": "FREE",
+        "weight": 60,
+        "reference": "68237",
+        "dimensions": "1055x850x350mm"
+      }
+    ],
+    "rru_references": [
+      {
+        "id": "rru_eri_2460",
+        "vendor": "ERICSSON",
+        "reference": "Radio 2460"
+      },
+      {
+        "id": "rru_eri_4499",
+        "vendor": "ERICSSON",
+        "reference": "Radio 4499"
+      },
+      {
+        "id": "rru_eri_4415",
+        "vendor": "ERICSSON",
+        "reference": "Radio 4415"
+      },
+      {
+        "id": "rru_eri_4486",
+        "vendor": "ERICSSON",
+        "reference": "Radio 4486"
+      },
+      {
+        "id": "rru_eri_4020",
+        "vendor": "ERICSSON",
+        "reference": "Radio 4020"
+      },
+      {
+        "id": "rru_eri_4490",
+        "vendor": "ERICSSON",
+        "reference": "Radio 4490"
+      },
+      {
+        "id": "rru_eri_4471",
+        "vendor": "ERICSSON",
+        "reference": "Radio 4471"
+      },
+      {
+        "id": "rru_hua_5512t",
+        "vendor": "HUAWEI",
+        "reference": "RRU5512t"
+      },
+      {
+        "id": "rru_hua_5916s",
+        "vendor": "HUAWEI",
+        "reference": "RRU5916s"
+      },
+      {
+        "id": "rru_hua_5502n",
+        "vendor": "HUAWEI",
+        "reference": "RRU5502N"
+      },
+      {
+        "id": "rru_hua_5827",
+        "vendor": "HUAWEI",
+        "reference": "RRU5827"
+      },
+      {
+        "id": "rru_hua_5304w",
+        "vendor": "HUAWEI",
+        "reference": "RRU5304w"
+      },
+      {
+        "id": "rru_hua_5519et",
+        "vendor": "HUAWEI",
+        "reference": "RRU5519et"
+      },
+      {
+        "id": "rru_hua_5301",
+        "vendor": "HUAWEI",
+        "reference": "RRU5301"
+      }
+    ],
+    "rrh_references": [
+      {
+        "id": "rrh_nok_ahpd",
+        "vendor": "NOKIA",
+        "reference": "RRH AHPD"
+      },
+      {
+        "id": "rrh_nok_arpa",
+        "vendor": "NOKIA",
+        "reference": "RRH ARPA"
+      },
+      {
+        "id": "rrh_nok_ahda",
+        "vendor": "NOKIA",
+        "reference": "RRH AHDA"
+      },
+      {
+        "id": "rrh_nok_arda",
+        "vendor": "NOKIA",
+        "reference": "RRH ARDA"
+      },
+      {
+        "id": "rrh_nok_aera",
+        "vendor": "NOKIA",
+        "reference": "RRH AERA"
+      },
+      {
+        "id": "rrh_nok_arga",
+        "vendor": "NOKIA",
+        "reference": "RRH ARGA"
+      },
+      {
+        "id": "rrh_nok_ahhb",
+        "vendor": "NOKIA",
+        "reference": "RRH AHHB"
+      },
+      {
+        "id": "rrh_nok_ahpmdb",
+        "vendor": "NOKIA",
+        "reference": "RRH AHPMDB"
+      },
+      {
+        "id": "rrh_nok_ahpmd",
+        "vendor": "NOKIA",
+        "reference": "RRH AHPMD"
+      },
+      {
+        "id": "rrh_nok_ahegc",
+        "vendor": "NOKIA",
+        "reference": "RRH AHEGC"
+      },
+      {
+        "id": "rrh_nok_ahegha",
+        "vendor": "NOKIA",
+        "reference": "RRH AHEGHA"
+      },
+      {
+        "id": "rrh_nok_3500_azqj",
+        "vendor": "NOKIA",
+        "reference": "RRH 3500 AZQJ"
+      }
+    ],
+    "updated_at": "2026-09-21T10:50:44.752Z"
+  }
+}
+]
