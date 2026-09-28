@@ -319,7 +319,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (hasCoffret) {
         const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
-        const refName = refObj ? refObj.name : (coffretReference || 'Standard');
+        const refName = refObj ? `${refObj.name.replace(/\s*\([^)]*\)/g, '').trim()} - Réf: ${refObj.id}` : (coffretReference || 'Standard');
         doc.text(`• Coffrets fibre / hybride : ${refName}`, 28, lineY);
         lineY += 8;
       }
