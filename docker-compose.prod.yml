@@ -41,6 +41,29 @@ services:
     networks:
       - ndc_network
 
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ndc_worker_prod
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=ndc_user
+      - POSTGRES_PASSWORD=ndc_password
+      - POSTGRES_DB=ndc_db
+      - DATABASE_URL=postgis://ndc_user:ndc_password@db:5432/ndc_db
+      - ALLOWED_HOSTS=api-ndc.heliosys.io,localhost,127.0.0.1
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/media:/app/media
+    depends_on:
+      - db
+    command: python manage.py qcluster
+    restart: unless-stopped
+    networks:
+      - ndc_network
+
   frontend:
     build:
       context: ./frontend
