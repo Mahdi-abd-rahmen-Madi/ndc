@@ -1,2 +1,12 @@
-<h2>Vérification mât principal supérieur Ø {{ var_43 }} mm</h2>
-<p><em>[Détails de la vérification à insérer ici]</em></p>
+<h2>Vérification mât principal supérieur Ø {{ mat_4g_diam }}mm</h2>
+<h3>Section : TRON {{ mat_4g_diam }}x{{ mat_4g_epaisseur }}</h3>
+
+{% if note_de_calcul_images %}
+<div style="margin-top: 5mm;">
+    {% for img in note_de_calcul_images %}
+        <img src="file://{{ img }}" style="width: 100%; margin-bottom: 5mm;" alt="Page Note de calcul">
+    {% endfor %}
+</div>
+{% else %}
+<p><em>[Note de calcul introuvable]</em></p>
+{% endif %}

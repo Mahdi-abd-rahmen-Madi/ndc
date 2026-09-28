@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Settings, Radio, SignalHigh } from 'lucide-react';
 import { CatalogueConfig, AntennaConfigState } from './types';
 
@@ -22,6 +22,7 @@ interface MontageSelectorProps {
   selectedVendor5G?: string;
   setSelectedVendor4G?: (vendor: string) => void;
   setSelectedVendor5G?: (vendor: string) => void;
+  operator?: string;
 }
 
 export default function MontageSelector({
@@ -43,13 +44,15 @@ export default function MontageSelector({
   selectedVendor4G = 'Ericsson',
   selectedVendor5G = 'Ericsson',
   setSelectedVendor4G,
-  setSelectedVendor5G
+  setSelectedVendor5G,
+  operator = 'bouygues'
 }: MontageSelectorProps) {
   const montages = config?.standard_montages || [];
   const realWorldReferences = (config?.real_world_references || []).filter(r => 
     !r.ant4g.model.toLowerCase().includes('agile') &&
     !r.ant5g.model.toLowerCase().includes('agile') &&
-    !r.name.toLowerCase().includes('agile')
+    !r.name.toLowerCase().includes('agile') &&
+    r.operator?.toLowerCase() === operator.toLowerCase()
   );
 
   // Create maps for unique references, preferring ones that have actual dimensions (height > 0)
@@ -72,6 +75,30 @@ export default function MontageSelector({
       }
     }
   });
+
+  const availableVendors4G = useMemo(() => {
+    return Array.from(new Set(Array.from(unique4GMap.values()).map(r => {
+      const v = r.name.split(' ')[0];
+      return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+    }))).sort();
+  }, [unique4GMap]);
+
+  const availableVendors5G = useMemo(() => {
+    return Array.from(new Set(Array.from(unique5GMap.values()).map(r => {
+      const v = r.name.split(' ')[0];
+      return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+    }))).sort();
+  }, [unique5GMap]);
+
+  // Handle vendor fallback if selected vendor isn't available for this operator
+  useEffect(() => {
+    if (availableVendors4G.length > 0 && !availableVendors4G.map(v => v.toUpperCase()).includes(selectedVendor4G.toUpperCase())) {
+      setSelectedVendor4G?.(availableVendors4G[0]);
+    }
+    if (availableVendors5G.length > 0 && !availableVendors5G.map(v => v.toUpperCase()).includes(selectedVendor5G.toUpperCase())) {
+      setSelectedVendor5G?.(availableVendors5G[0]);
+    }
+  }, [availableVendors4G, availableVendors5G, selectedVendor4G, selectedVendor5G, setSelectedVendor4G, setSelectedVendor5G]);
 
   const unique4GRefs = Array.from(unique4GMap.values()).filter(r => r.name.toUpperCase().includes(selectedVendor4G.toUpperCase()));
   const unique5GRefs = Array.from(unique5GMap.values()).filter(r => r.name.toUpperCase().includes(selectedVendor5G.toUpperCase()));
@@ -237,8 +264,9 @@ export default function MontageSelector({
                     onChange={(e) => setSelectedVendor4G?.(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
-                    <option value="Huawei">Huawei</option>
-                    <option value="CommScope">CommScope</option>
+                    {availableVendors4G.map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
                   </select>
                   <select
                     value={selectedReference4G}
@@ -296,8 +324,9 @@ export default function MontageSelector({
                     onChange={(e) => setSelectedVendor5G?.(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
                   >
-                    <option value="Ericsson">Ericsson</option>
-                    <option value="Huawei">Huawei</option>
+                    {availableVendors5G.map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
                   </select>
                   <select
                     value={selectedReference5G}

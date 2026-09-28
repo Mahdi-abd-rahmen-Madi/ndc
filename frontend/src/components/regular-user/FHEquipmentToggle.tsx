@@ -19,7 +19,7 @@ interface FHEquipmentToggleProps {
 export default function FHEquipmentToggle({
   hasFhEquipment,
   setHasFhEquipment,
-    setFhDiameter,
+  setFhDiameter,
   fhReference,
   setFhReference,
   fhQuantity,
@@ -27,17 +27,22 @@ export default function FHEquipmentToggle({
   fhOptions = []
 }: FHEquipmentToggleProps) {
 
-  const handleReferenceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setFhReference(val);
-    const ref = fhOptions.find(r => r.id === val);
-    if (ref) {
-      setFhDiameter(ref.diameter);
-    }
-  };
-
   const selectedRef = fhOptions.find(r => r.id === fhReference);
   const vendors = Array.from(new Set(fhOptions.map(o => o.vendor)));
+  const [selectedVendor, setSelectedVendor] = React.useState(selectedRef?.vendor || '');
+
+  React.useEffect(() => {
+    if (selectedRef && selectedRef.vendor !== selectedVendor) {
+      setSelectedVendor(selectedRef.vendor);
+    }
+  }, [selectedRef]);
+
+  const handleVendorChange = (vendor: string) => {
+    setSelectedVendor(vendor);
+    setFhReference('');
+    setFhDiameter(0);
+  };
+
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col space-y-3">
@@ -61,7 +66,7 @@ export default function FHEquipmentToggle({
         {hasFhEquipment && (
           <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
             
-            {/* Row 1: Quantité & Référence */}
+            {/* Row 1: Quantité & Marque & Modèle */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               {/* Quantité */}
               <div className="flex flex-col">
@@ -94,23 +99,33 @@ export default function FHEquipmentToggle({
                 </div>
               </div>
 
-              {/* Référence */}
+              {/* Marque */}
               <div className="flex flex-col flex-1">
-                <label className="text-xs text-slate-400 mb-1">Référence:</label>
+                <label className="text-xs text-slate-400 mb-1">Marque:</label>
+                <CustomSelect
+                  value={selectedVendor}
+                  onChange={handleVendorChange}
+                  className="focus:ring-2 focus:ring-indigo-500"
+                  options={vendors.map(v => ({ value: v, label: v }))}
+                  placeholder="Sélectionner..."
+                />
+              </div>
+
+              {/* Modèle */}
+              <div className="flex flex-col flex-1">
+                <label className="text-xs text-slate-400 mb-1">Modèle:</label>
                 <CustomSelect
                   value={fhReference}
                   onChange={(val) => {
                     setFhReference(val);
                     const ref = fhOptions.find(r => r.id === val);
                     if (ref) {
-                      setFhQuantity(1);
+                      setFhDiameter(ref.diameter);
                     }
                   }}
+                  disabled={!selectedVendor}
                   className="focus:ring-2 focus:ring-indigo-500"
-                  groups={vendors.map(vendor => ({
-                    label: vendor,
-                    options: fhOptions.filter(o => o.vendor === vendor).map(ref => ({ value: ref.id, label: ref.name }))
-                  }))}
+                  options={fhOptions.filter(o => o.vendor === selectedVendor).map(ref => ({ value: ref.id, label: ref.name }))}
                   placeholder="Sélectionner..."
                 />
               </div>
@@ -129,18 +144,6 @@ export default function FHEquipmentToggle({
                       className="bg-slate-800/50 border border-slate-700/50 rounded-lg py-1.5 px-3 text-sm text-slate-300 w-24 cursor-not-allowed"
                     />
                     <span className="absolute right-3 top-1.5 text-slate-500 text-sm pointer-events-none">mm</span>
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-slate-400 mb-1">Poids:</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={selectedRef.weight}
-                      disabled
-                      className="bg-slate-800/50 border border-slate-700/50 rounded-lg py-1.5 px-3 text-sm text-slate-300 w-24 cursor-not-allowed"
-                    />
-                    <span className="absolute right-3 top-1.5 text-slate-500 text-sm pointer-events-none">kg</span>
                   </div>
                 </div>
               </div>
@@ -308,7 +311,9 @@ export interface RRUEquipmentToggleProps {
   setHasRruEquipment: (val: boolean) => void;
   rruItems: EquipmentItem[];
   setRruItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
-  rruOptions: { id: string; vendor: string; reference: string }[];
+  rruOptions: { id: string; vendor: string; reference: string; operator?: string }[];
+  isRfmMode?: boolean;
+  operator?: string;
 }
 
 export function RRUEquipmentToggle({
@@ -316,7 +321,9 @@ export function RRUEquipmentToggle({
   setHasRruEquipment,
   rruItems,
   setRruItems,
-  rruOptions
+  rruOptions,
+  isRfmMode = false,
+  operator = 'bouygues'
 }: RRUEquipmentToggleProps) {
   const addRruRow = () => {
     setRruItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
@@ -340,7 +347,18 @@ export function RRUEquipmentToggle({
     }));
   };
   
-  const uniqueVendors = Array.from(new Set(rruOptions.map(o => o.vendor)));
+  
+  const rfmModels = [
+    { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
+    { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
+    { id: 'ARHA', vendor: 'NOKIA', reference: 'ARHA' },
+    { id: 'AREA', vendor: 'NOKIA', reference: 'AREA' },
+    { id: 'ARPA', vendor: 'NOKIA', reference: 'ARPA' },
+  ];
+  
+  const filteredRruOptions = rruOptions.filter(o => !o.operator || o.operator.toLowerCase() === operator.toLowerCase() || (o.operator === 'bouygues' && operator.toLowerCase() === 'bouygues'));
+  const actualOptions = isRfmMode ? rfmModels : filteredRruOptions;
+  const uniqueVendors = Array.from(new Set(actualOptions.map(o => o.vendor)));
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col gap-2">
@@ -356,7 +374,7 @@ export function RRUEquipmentToggle({
             <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
           </div>
           <Activity className="w-4 h-4 text-emerald-400" />
-          Présence équipement RRU
+          Présence équipement {isRfmMode ? 'RFM' : 'RRU'}
         </label>
 
         {hasRruEquipment && (
@@ -384,7 +402,7 @@ export function RRUEquipmentToggle({
                       onChange={(val) => updateRruItem(item.id, 'reference', val)}
                       disabled={!item.vendor}
                       className="focus:ring-2 focus:ring-emerald-500"
-                      options={rruOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                      options={actualOptions.filter(o => o.vendor === item.vendor).map(opt => {
                         const isSelectedElsewhere = rruItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
                         return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
                       })}
@@ -392,6 +410,27 @@ export function RRUEquipmentToggle({
                     />
                   </div>
                 </div>
+
+                {isRfmMode && item.reference && (
+                  <div className="grid grid-cols-4 gap-2 bg-slate-800/30 p-2 rounded-lg border border-slate-700/50">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Hauteur</span>
+                      <span className="text-xs text-slate-300">133 mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Largeur</span>
+                      <span className="text-xs text-slate-300">447 mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Profondeur</span>
+                      <span className="text-xs text-slate-300">560 mm</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Poids</span>
+                      <span className="text-xs text-slate-300">25 kg</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between border-t border-slate-800 pt-2">
                   {/* Quantité */}
@@ -783,13 +822,30 @@ export function GPSEquipmentToggle({
                   disabled={!gpsMarque}
                   className="focus:ring-2 focus:ring-blue-500"
                   options={[
-                    { value: '471605A.102', label: '471605A.102' },
-                    { value: '474074A.101', label: '474074A.101' }
+                    { value: 'FYGC 474074A', label: 'FYGC 474074A' },
+                    { value: 'FYGB 472748A', label: 'FYGB 472748A' }
                   ]}
                   placeholder="Sélectionner"
                 />
               </div>
             </div>
+            
+            {gpsReference && (
+              <div className="grid grid-cols-3 gap-2 bg-slate-800/30 p-2 rounded-lg border border-slate-700/50 mt-1">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold">Diamètre</span>
+                  <span className="text-xs text-slate-300">95 mm</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold">Hauteur</span>
+                  <span className="text-xs text-slate-300">72.5 mm</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold">Poids</span>
+                  <span className="text-xs text-slate-300">154 g</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

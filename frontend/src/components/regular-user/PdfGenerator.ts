@@ -90,6 +90,7 @@ interface PdfGeneratorOptions {
   coffretOptions: { id: string; name: string }[];
   miniMapImage: string | null;
   nombreSecteurs: number;
+  operator?: string;
 }
 
 export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGenerating: (val: boolean) => void) => {
@@ -132,7 +133,8 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
       hasCoffret, coffretReference, coffretOptions,
       miniMapImage,
-      nombreSecteurs
+      nombreSecteurs,
+      operator
     } = options;
 
     const doc = new jsPDF();
@@ -294,7 +296,8 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (hasRruEquipment && rruItems) {
         rruItems.forEach((item, index) => {
-          doc.text(`• RRU ${rruItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
+          const prefix = operator === 'free' ? 'RFM' : 'RRU';
+          doc.text(`• ${prefix} ${rruItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
           lineY += 8;
         });
       }

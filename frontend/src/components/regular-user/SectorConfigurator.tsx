@@ -9,6 +9,7 @@ interface SectorConfiguratorProps {
   updateSector: (index: number, updates: Partial<SectorData>) => void;
   config: CatalogueConfig | null;
   collapsed?: boolean;
+  operator?: string;
 }
 
 export default function SectorConfigurator({
@@ -16,7 +17,8 @@ export default function SectorConfigurator({
   sectorData,
   updateSector,
   config,
-  collapsed
+  collapsed,
+  operator = 'bouygues'
 }: SectorConfiguratorProps) {
   const recommendedMastHeights = config?.recommended_mast_heights || [3, 4];
 
@@ -154,6 +156,7 @@ export default function SectorConfigurator({
           selectedVendor5G={sectorData.selectedVendor5G}
           setSelectedVendor4G={(vendor) => updateSector(index, { selectedVendor4G: vendor })}
           setSelectedVendor5G={(vendor) => updateSector(index, { selectedVendor5G: vendor })}
+          operator={operator}
         />
 
       </div>

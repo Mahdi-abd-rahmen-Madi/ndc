@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import UserProfile, Role, EngineerProfile
+from .models import UserProfile, Role, EngineerProfile, CalculationJob
 
 
 @admin.register(Role)
@@ -53,3 +53,10 @@ class UserProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(CalculationJob)
+class CalculationJobAdmin(admin.ModelAdmin):
+    list_display = ('id', 'status', 'user', 'screenshot', 'verification_screenshot', 'note_de_calcul', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at', 'updated_at')
+    search_fields = ('id', 'input_hash', 'user__username')
+    readonly_fields = ('created_at', 'updated_at')

@@ -127,7 +127,7 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
     # Helper for regex extraction
     def parse_dimensions(section_str):
         if section_str:
-            match = re.search(r'(\d+)\s*[xX]\s*(\d+)', section_str)
+            match = re.search(r'(\d+)\s*[xX]\s*(\d+(\.\d+)?)', section_str)
             if match:
                 return match.group(1), match.group(2)
         return None, None
@@ -337,7 +337,79 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
                 
     if not screenshot_found:
         context['robot_screenshot_abs'] = None
+
+    # Verification Screenshot Path
+    verification_screenshot_found = False
+    
+    if job:
+        # 1. Try to read from worker share folder
+        worker_verification_screenshot_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_verification_view.jpg"
+        if os.path.exists(worker_verification_screenshot_path):
+            context['verification_screenshot_abs'] = worker_verification_screenshot_path
+            verification_screenshot_found = True
+        # 2. Fallback to django uploaded screenshot
+        elif hasattr(job, 'verification_screenshot') and job.verification_screenshot:
+            verification_screenshot_path = job.verification_screenshot.path
+            if os.path.exists(verification_screenshot_path):
+                context['verification_screenshot_abs'] = verification_screenshot_path
+                verification_screenshot_found = True
+                
+    if not verification_screenshot_found:
+        context['verification_screenshot_abs'] = None
         
+    # Note de Calcul (RTF) Path
+    note_de_calcul_found = False
+    
+    if job:
+        # 1. Try to read from worker share folder first
+        worker_ndc_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_note_de_calcul.rtf"
+        if os.path.exists(worker_ndc_path):
+            context['note_de_calcul_abs'] = worker_ndc_path
+            note_de_calcul_found = True
+        # 2. Fallback to django uploaded file
+        elif hasattr(job, 'note_de_calcul') and job.note_de_calcul:
+            ndc_path = job.note_de_calcul.path
+            if os.path.exists(ndc_path):
+                context['note_de_calcul_abs'] = ndc_path
+                note_de_calcul_found = True
+                
+    if not note_de_calcul_found:
+        context['note_de_calcul_abs'] = None
+
+    # Convert RTF to Images (for embedding directly in the HTML template)
+    context['note_de_calcul_images'] = []
+    if context.get('note_de_calcul_abs'):
+        import subprocess
+        import tempfile
+        rtf_path = context['note_de_calcul_abs']
+        # Use LibreOffice to convert RTF → PDF
+        convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul')
+        os.makedirs(convert_dir, exist_ok=True)
+        try:
+            subprocess.run([
+                'soffice', '--headless', '--convert-to', 'pdf',
+                '--outdir', convert_dir, rtf_path
+            ], timeout=30, check=True, capture_output=True)
+            # The output PDF has the same basename with .pdf extension
+            rtf_basename = os.path.splitext(os.path.basename(rtf_path))[0]
+            pdf_output = os.path.join(convert_dir, f"{rtf_basename}.pdf")
+            if os.path.exists(pdf_output):
+                # Convert PDF to images using PyMuPDF
+                import fitz
+                doc = fitz.open(pdf_output)
+                for page_num in range(len(doc)):
+                    page = doc.load_page(page_num)
+                    # Higher resolution (e.g. 2x zoom)
+                    zoom = 2.0
+                    mat = fitz.Matrix(zoom, zoom)
+                    pix = page.get_pixmap(matrix=mat)
+                    img_path = os.path.join(convert_dir, f"{rtf_basename}_page_{page_num+1}.png")
+                    pix.save(img_path)
+                    context['note_de_calcul_images'].append(img_path)
+                doc.close()
+        except Exception as e:
+            print(f"Warning: Failed to convert RTF to Images: {e}")
+    
     # Combinaisons Image Path
     combinaisons_path = os.path.join(settings.MEDIA_ROOT, 'combinaisons', 'table.png')
     if os.path.exists(combinaisons_path):

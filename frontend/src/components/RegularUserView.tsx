@@ -198,6 +198,7 @@ export default function RegularUserView({
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [siteName, setSiteName] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
+  const [operator, setOperator] = useState<string>('bouygues');
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
 
   // Map State
@@ -749,6 +750,20 @@ export default function RegularUserView({
             mat_principal: "CH 88.9x3",
             nombre_secteurs: activeSectors.length
           },
+          antenna_4g: {
+            model: activeSectors[0]?.ant4gConfig?.model,
+            hauteur_mm: activeSectors[0]?.ant4gConfig?.height,
+            largeur_mm: activeSectors[0]?.ant4gConfig?.width,
+            epaisseur_mm: activeSectors[0]?.ant4gConfig?.thickness,
+            poids_kg: activeSectors[0]?.ant4gConfig?.weight
+          },
+          antenna_5g: {
+            model: activeSectors[0]?.ant5gConfig?.model,
+            hauteur_mm: activeSectors[0]?.ant5gConfig?.height,
+            largeur_mm: activeSectors[0]?.ant5gConfig?.width,
+            epaisseur_mm: activeSectors[0]?.ant5gConfig?.thickness,
+            poids_kg: activeSectors[0]?.ant5gConfig?.weight
+          },
           fh_equipment: {
             enabled: hasFhEquipment,
             diameter_mm: hasFhEquipment ? fhDiameter : null,
@@ -1200,6 +1215,8 @@ export default function RegularUserView({
                   setHasChauffageAuSol={setHasChauffageAuSol}
                   fausseDalleThickness={fausseDalleThickness}
                   setFausseDalleThickness={setFausseDalleThickness}
+                  operator={operator}
+                  setOperator={setOperator}
                 />
               </AccordionStep>
 
@@ -1223,6 +1240,7 @@ export default function RegularUserView({
                           updateSector={updateSector}
                           config={config}
                           collapsed={isCollapsed}
+                          operator={operator}
                         />
                       </Fragment>
                     );
@@ -1283,6 +1301,8 @@ export default function RegularUserView({
                     rruItems={rruItems}
                     setRruItems={setRruItems}
                     rruOptions={config?.rru_references || []}
+                    isRfmMode={operator === 'free'}
+                    operator={operator}
                   />
                   <BoitierLovageEquipmentToggle
                     hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}

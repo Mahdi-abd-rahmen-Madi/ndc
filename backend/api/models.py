@@ -73,6 +73,8 @@ class CalculationJob(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING', verbose_name=_("Status"))
     result_data = models.JSONField(null=True, blank=True, verbose_name=_("Result Data"))
     screenshot = models.ImageField(upload_to='screenshots/', null=True, blank=True, verbose_name=_("Screenshot"))
+    verification_screenshot = models.ImageField(upload_to='screenshots/verification/', null=True, blank=True, verbose_name=_("Verification Screenshot"))
+    note_de_calcul = models.FileField(upload_to='notes_de_calcul/', null=True, blank=True, verbose_name=_("Note de Calcul"))
     error_message = models.TextField(blank=True, null=True, verbose_name=_("Error Message"))
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))

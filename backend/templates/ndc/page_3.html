@@ -3,7 +3,35 @@
 <p>Vérification d’un nouveau mât en tube Ø {{ mat_4g_diam }} mm, d’épaisseur {{ mat_4g_epaisseur }} mm et de longueur {{ mat_4g_longueur }} mm fixé sur un nouveau plot métallique par une platine et contre platine de dimensions 350 x 350 x 10 mm et 4 boulons M14.</p>
 <p>Vérification des mâts d’antennes 5G en tube Ø {{ mat_5g_diam }} mm, d’épaisseur {{ mat_5g_epaisseur }} mm, de longueur {{ mat_5g_longueur }} mm porté par deux déport {{ bras_deport_diam }} mm, d’épaisseur {{ bras_deport_epaisseur }} mm et de longueur {{ bras_deport_longueur }} mm.</p>
 <p>Pour accès aux antennes, une échelle type Söll est prévue et points d’ancrage jusqu’à la HSA, selon la norme NF EN 795.</p>
+<p>Ce mât sera fixé sur un plot métallique d'une hauteur de {{ plot_height_m }} m.</p>
 
+<p style="text-decoration: underline;">Equipements considérés :</p>
+<table>
+    <tr>
+        <th>Désignation</th>
+        <th>Quantité</th>
+        <th>Dimensions</th>
+        <th>Poids</th>
+    </tr>
+    <tr>
+        <td>Antenne 4G</td>
+        <td style="text-align: center;">{{ nombre_secteurs }}</td>
+        <td style="text-align: center;">{{ ant_4g_dims }}</td>
+        <td style="text-align: center;">{{ ant_4g_weight }}</td>
+    </tr>
+    <tr>
+        <td>Antenne 5G</td>
+        <td style="text-align: center;">{{ nombre_secteurs }}</td>
+        <td style="text-align: center;">{{ ant_5g_dims }}</td>
+        <td style="text-align: center;">{{ ant_5g_weight }}</td>
+    </tr>
+    <tr>
+        <td>Echelle</td>
+        <td style="text-align: center;">1</td>
+        <td style="text-align: center;">-</td>
+        <td style="text-align: center;">15</td>
+    </tr>
+</table>
 <h3>HYPOTHESES DE VENT</h3>
 <p>Région de vent : {{ region_vent }}</p>
 <p>Catégorie de terrain : {{ categorie_terrain }} &nbsp;|&nbsp; Hauteur totale z : {{ z_total }} m</p>

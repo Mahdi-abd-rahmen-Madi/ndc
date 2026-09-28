@@ -29,6 +29,8 @@ interface UserInputProps {
   setHasChauffageAuSol?: (val: boolean) => void;
   fausseDalleThickness?: number | string;
   setFausseDalleThickness?: (val: number | string) => void;
+  operator?: string;
+  setOperator?: (val: string) => void;
 }
 
 export default function UserInput({
@@ -53,7 +55,9 @@ export default function UserInput({
   hasChauffageAuSol = false,
   setHasChauffageAuSol,
   fausseDalleThickness = '',
-  setFausseDalleThickness
+  setFausseDalleThickness,
+  operator,
+  setOperator
 }: UserInputProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -232,11 +236,12 @@ export default function UserInput({
               </label>
               <select
                 className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                defaultValue="bouygues"
+                value={operator || 'bouygues'}
+                onChange={(e) => setOperator && setOperator(e.target.value)}
               >
                 <option value="" disabled>Sélectionner</option>
-                <option value="orange" disabled className="text-slate-500">Orange</option>
-                <option value="free" disabled className="text-slate-500">Free</option>
+                <option value="orange">Orange</option>
+                <option value="free">Free</option>
                 <option value="bouygues">Bouygues</option>
                 <option value="sfr" disabled className="text-slate-500">SFR</option>
               </select>
