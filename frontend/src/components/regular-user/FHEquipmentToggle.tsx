@@ -928,7 +928,7 @@ export function CoffretEquipmentToggle({
                 >
                   {httaOptions.map(ref => (
                     <option key={ref.id} value={ref.id}>
-                      {ref.name.replace(/\s*\([^)]*\)/g, '').trim()}
+                      {ref.id}
                     </option>
                   ))}
                 </select>
@@ -995,15 +995,17 @@ export function CoffretEquipmentToggle({
                       />
                     </div>
                   </div>
-                  <div className="mt-2">
-                    <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Référence</label>
-                    <input
-                      type="text"
-                      value={actualRef}
-                      disabled
-                      className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
-                    />
-                  </div>
+                  {!isHttaSelected && (
+                    <div className="mt-2">
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Référence</label>
+                      <input
+                        type="text"
+                        value={actualRef}
+                        disabled
+                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })()}
