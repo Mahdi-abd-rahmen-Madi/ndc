@@ -14,4 +14,5 @@ urlpatterns = [
     path('worker/control/', views.WorkerControlView.as_view(), name='worker-control'),
     path('auth/login/', views.LoginView.as_view(), name='login'),
     path('auth/register/', views.RegisterView.as_view(), name='register'),
+    path('downloads/<str:client_id>/<str:filename>', views.download_note_de_calcul, name='download-ndc'),
 ]

@@ -55,6 +55,29 @@ class UserProfile(models.Model):
         return f"{self.user.username}'s Profile"
 
 
+class ClientSubscription(models.Model):
+    """Client subscription for tracking calculation quotas"""
+    TIER_CHOICES = [
+        ('BASIC', 'Basic'),
+        ('PRO', 'Pro'),
+        ('ENTERPRISE', 'Enterprise'),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription', verbose_name=_("User"))
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES, default='BASIC', verbose_name=_("Tier"))
+    monthly_quota = models.IntegerField(default=50, verbose_name=_("Monthly Quota"))
+    used_quota = models.IntegerField(default=0, verbose_name=_("Used Quota"))
+    billing_cycle_reset = models.DateField(null=True, blank=True, verbose_name=_("Billing Cycle Reset"))
+
+    class Meta:
+        verbose_name = _("Client Subscription")
+        verbose_name_plural = _("Client Subscriptions")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.tier} ({self.used_quota}/{self.monthly_quota})"
+
+
+
 class CalculationJob(models.Model):
     """
     Stores calculation jobs sent to the Windows Server via APS.
@@ -65,6 +88,7 @@ class CalculationJob(models.Model):
         ('PROCESSING', 'Processing'),
         ('COMPLETED', 'Completed'),
         ('FAILED', 'Failed'),
+        ('REJECTED', 'Rejected'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='calculation_jobs', verbose_name=_("User"))
@@ -76,6 +100,7 @@ class CalculationJob(models.Model):
     verification_screenshot = models.ImageField(upload_to='screenshots/verification/', null=True, blank=True, verbose_name=_("Verification Screenshot"))
     note_de_calcul = models.FileField(upload_to='notes_de_calcul/', null=True, blank=True, verbose_name=_("Note de Calcul"))
     error_message = models.TextField(blank=True, null=True, verbose_name=_("Error Message"))
+    credits_consumed = models.IntegerField(default=1, verbose_name=_("Credits Consumed"))
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))

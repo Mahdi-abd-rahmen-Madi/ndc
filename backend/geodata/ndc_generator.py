@@ -90,13 +90,14 @@ def calculate_wind_params(terrain_type: str, z_total: float, vb: float) -> dict:
         'z_used': round(z_used, 2),
     }
 
-def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False):
+def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False, start_page=1):
     """
     Generates a PDF from HTML templates using WeasyPrint based on job calculation results.
     """
     context = {}
     context['is_subsequent_sector'] = is_subsequent_sector
     context['is_cover_only'] = is_cover_only
+    context['start_page'] = start_page
     
     result_data = job.result_data if job else {}
     input_data = job.input_data if job else {}
@@ -403,8 +404,31 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
                     zoom = 2.0
                     mat = fitz.Matrix(zoom, zoom)
                     pix = page.get_pixmap(matrix=mat)
+                    
+                    # Convert fitz pixmap to PIL Image to crop white space
+                    from PIL import Image, ImageChops
+                    mode = "RGBA" if pix.alpha else "RGB"
+                    img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                    
+                    # Trim white space
+                    bg = Image.new(img.mode, img.size, (255, 255, 255) if not pix.alpha else (255, 255, 255, 255))
+                    diff = ImageChops.difference(img, bg)
+                    diff = ImageChops.add(diff, diff, 2.0, -100)
+                    bbox = diff.getbbox()
+                    
+                    if bbox:
+                        # Add a small padding of 20 pixels
+                        pad = 20
+                        bbox = (
+                            max(0, bbox[0] - pad),
+                            max(0, bbox[1] - pad),
+                            min(img.width, bbox[2] + pad),
+                            min(img.height, bbox[3] + pad)
+                        )
+                        img = img.crop(bbox)
+                    
                     img_path = os.path.join(convert_dir, f"{rtf_basename}_page_{page_num+1}.png")
-                    pix.save(img_path)
+                    img.save(img_path)
                     context['note_de_calcul_images'].append(img_path)
                 doc.close()
         except Exception as e:
@@ -458,7 +482,7 @@ def generate_ndc_pdf_task(job_id, photo_url_or_path):
         print(f"Job {job_id} not found for PDF generation")
         return None
 
-def generate_auxiliary_pdfs(job):
+def generate_auxiliary_pdfs(job, start_page=1):
     """
     Generate auxiliary PDFs (TD, FH, RRH, RRU) based on job.input_data.
     Returns a list of absolute paths to the generated PDFs.
@@ -468,6 +492,7 @@ def generate_auxiliary_pdfs(job):
 
     # Prepare common context
     context = {}
+    context['start_page'] = start_page
     
     # Static context that was extracted previously...
     env = input_data.get('environment', {})
@@ -565,7 +590,6 @@ def generate_auxiliary_pdfs(job):
     logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')
     context['logo_abs'] = logo_path if os.path.exists(logo_path) else None
 
-    # Common function to render template
     def _render_and_save(template_name, equipment_context):
         from django.template.loader import render_to_string
         from weasyprint import HTML
@@ -582,6 +606,15 @@ def generate_auxiliary_pdfs(job):
         pdf_path = os.path.join(outdir, output_filename)
         html = HTML(string=html_string, base_url=f"file://{settings.MEDIA_ROOT}")
         html.write_pdf(pdf_path)
+
+        if os.path.exists(pdf_path):
+            try:
+                from pypdf import PdfReader
+                reader = PdfReader(pdf_path)
+                context['start_page'] += len(reader.pages)
+            except Exception:
+                context['start_page'] += 1
+
         return pdf_path
 
     # Check for TD

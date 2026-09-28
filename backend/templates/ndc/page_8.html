@@ -1,12 +1,20 @@
 <h2>Vérification mât principal supérieur Ø {{ mat_4g_diam }}mm</h2>
 <h3>Section : TRON {{ mat_4g_diam }}x{{ mat_4g_epaisseur }}</h3>
 
-{% if note_de_calcul_images %}
-<div style="margin-top: 5mm;">
-    {% for img in note_de_calcul_images %}
-        <img src="file://{{ img }}" style="width: 100%; margin-bottom: 5mm;" alt="Page Note de calcul">
-    {% endfor %}
+<div style="text-align: center; margin-top: 5mm;">
+    {% if note_de_calcul_images %}
+        {% for img in note_de_calcul_images %}
+            {% if forloop.first %}
+            <img src="file://{{ img }}" style="width: 100%; max-height: 180mm; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul">
+            {% else %}
+            <img src="file://{{ img }}" style="width: 100%; max-height: 240mm; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul">
+            {% endif %}
+            
+            {% if not forloop.last %}
+            <div class="page-break"></div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p><em>[Note de calcul introuvable]</em></p>
+    {% endif %}
 </div>
-{% else %}
-<p><em>[Note de calcul introuvable]</em></p>
-{% endif %}

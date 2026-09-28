@@ -177,6 +177,17 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         
         input_data = payload_serializer.validated_data
         
+        # Check quota if authenticated user has a subscription
+        user = request.user if request.user.is_authenticated else None
+        if user and hasattr(user, 'subscription'):
+            if user.subscription.used_quota >= user.subscription.monthly_quota:
+                return Response(
+                    {"error": "Monthly calculation quota exceeded. Please upgrade your plan."},
+                    status=status.HTTP_402_PAYMENT_REQUIRED
+                )
+            # Embed client_id in input_data
+            input_data['client_id'] = f"client_{user.id}"
+
         # Hash the input data to identify identical calculation requests
         # Sort keys to ensure consistent hashing
 
@@ -255,6 +266,11 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             error_message = request.data.get('error_message')
             job_status = request.data.get('status', 'COMPLETED')
         
+        if job_status == 'COMPLETED' and job.status != 'COMPLETED':
+            if job.user and hasattr(job.user, 'subscription'):
+                job.user.subscription.used_quota += job.credits_consumed
+                job.user.subscription.save()
+
         job.status = job_status
         job.result_data = result_data
         job.error_message = error_message
@@ -408,7 +424,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     class DummyJob:
                         input_data = preview_data
                         id = 'fast'
-                    aux_paths = generate_auxiliary_pdfs(DummyJob())
+                    aux_paths = generate_auxiliary_pdfs(DummyJob(), start_page=len(merger.pages) + 1)
                     for aux in aux_paths:
                         if os.path.exists(aux):
                             merger.append(aux)
@@ -430,6 +446,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
     
             temp_pdfs = []
             merger = PdfWriter()
+            total_pages = 0
 
             for i, job_id in enumerate(job_ids):
                 job = CalculationJob.objects.get(id=job_id)
@@ -440,7 +457,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 if not job_photo_url and job.input_data and job.input_data.get('site_image_url'):
                     job_photo_url = job.input_data.get('site_image_url')
                     
-                pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent)
+                pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent, start_page=total_pages + 1)
                 
                 # Convert relative URL back to absolute file path
                 if pdf_url.startswith(settings.MEDIA_URL):
@@ -449,11 +466,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     if os.path.exists(abs_path):
                         temp_pdfs.append(abs_path)
                         merger.append(abs_path)
+                        from pypdf import PdfReader
+                        reader = PdfReader(abs_path)
+                        total_pages += len(reader.pages)
     
             # Generate and append auxiliary equipment PDFs if enabled
             if job_ids:
                 first_job = CalculationJob.objects.get(id=job_ids[0])
-                aux_pdf_paths = generate_auxiliary_pdfs(first_job)
+                aux_pdf_paths = generate_auxiliary_pdfs(first_job, start_page=total_pages + 1)
                 for aux_path in aux_pdf_paths:
                     if os.path.exists(aux_path):
                         temp_pdfs.append(aux_path)
@@ -510,3 +530,17 @@ class WorkerControlView(APIView):
             
         cache.set('worker_last_seen', time.time(), timeout=3600)
         return Response({'status': 'ok'})
+
+from django.http import HttpResponse, HttpResponseForbidden
+
+def download_note_de_calcul(request, client_id, filename):
+    # 1. Verify user owns this client_id
+    if not request.user.is_authenticated or f"client_{request.user.id}" != client_id:
+        return HttpResponseForbidden("Unauthorized")
+        
+    # 2. Instruct Caddy to serve the file
+    response = HttpResponse()
+    # The header tells Caddy to fetch the file from the local root
+    response['X-Accel-Redirect'] = f"/{client_id}/{filename}"
+    response['Content-Type'] = "application/rtf"
+    return response

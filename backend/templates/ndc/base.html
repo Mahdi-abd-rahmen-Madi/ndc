@@ -147,7 +147,7 @@
         }
     </style>
 </head>
-<body>
+<body {% if start_page %}style="counter-reset: page {{ start_page }};"{% endif %}>
     <div class="header-logo">
         {% if logo_abs %}
             <img src="file://{{ logo_abs }}" alt="COMETA">
