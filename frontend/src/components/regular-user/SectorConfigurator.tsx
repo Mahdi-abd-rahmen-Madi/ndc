@@ -24,7 +24,7 @@ export default function SectorConfigurator({
 
   const handleMontage4GChange = (val: string) => {
     const updates: Partial<SectorData> = { selectedMontage4G: val };
-    
+
     if (val !== 'custom') {
       const spec = config?.standard_montages.find(m => m.id === val);
       if (spec) {
@@ -36,7 +36,7 @@ export default function SectorConfigurator({
 
   const handleMontage5GChange = (val: string) => {
     const updates: Partial<SectorData> = { selectedMontage5G: val };
-    
+
     if (val !== 'custom') {
       const spec = config?.standard_montages.find(m => m.id === val);
       if (spec) {
@@ -73,7 +73,7 @@ export default function SectorConfigurator({
   return (
     <div className="bg-slate-900/60 border border-slate-700/80 rounded-xl p-5 mb-6 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full pointer-events-none"></div>
-      
+
       <div className="flex items-center justify-between mb-5 border-b border-slate-700/50 pb-3">
         <h3 className="text-lg font-bold text-white flex items-center gap-2">
           <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-sm">
@@ -87,11 +87,11 @@ export default function SectorConfigurator({
         {/* Hauteur du Mât */}
         <div className="flex flex-col space-y-2 p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
           <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full -z-10 group-hover:bg-emerald-500/10 transition-colors"></div>
-          
+
           <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
               <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-400" />
-              3. Hauteur du mât (h)
+              3. Hauteur du mât :
             </span>
           </label>
           <div className="flex flex-wrap items-end gap-6 mt-2">
@@ -103,18 +103,17 @@ export default function SectorConfigurator({
                     key={h}
                     type="button"
                     onClick={() => updateSector(index, { selectedHeight: h })}
-                    className={`flex-1 rounded-lg text-sm font-medium transition-colors ${
-                      sectorData.selectedHeight === h
+                    className={`flex-1 rounded-lg text-sm font-medium transition-colors ${sectorData.selectedHeight === h
                         ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 shadow-inner'
                         : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-transparent'
-                    }`}
+                      }`}
                   >
                     {h}m
                   </button>
                 ))}
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-1.5 min-w-[160px]">
               <label className="text-xs text-slate-400 pl-1 mb-1">Personnalisé</label>
               <div className="flex items-center gap-2 h-10">

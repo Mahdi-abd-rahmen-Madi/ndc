@@ -205,9 +205,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
-    doc.text(`• Hauteur du bâtiment (H): ${selectedBuildingHeight} m`, 25, yPos);
+    doc.text(`• Hauteur du bâtiment: ${selectedBuildingHeight} m`, 25, yPos);
     yPos += 6;
-    doc.text(`• Hauteur du mât (h): ${selectedHeight} m`, 25, yPos);
+    doc.text(`• Hauteur du mât : ${selectedHeight} m`, 25, yPos);
     yPos += 6;
     doc.text(`• Type de montage: ${selectedMontage}`, 25, yPos);
     yPos += 6;
