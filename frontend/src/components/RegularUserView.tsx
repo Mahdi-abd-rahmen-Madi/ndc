@@ -1304,10 +1304,12 @@ export default function RegularUserView({
                     isRfmMode={operator === 'free'}
                     operator={operator}
                   />
+                  {/* Temporarily hidden
                   <BoitierLovageEquipmentToggle
                     hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
                     boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
                   />
+                  */}
                   <GPSEquipmentToggle
                     hasGps={hasGps} setHasGps={setHasGps}
                     gpsReference={gpsReference} setGpsReference={setGpsReference}

@@ -303,7 +303,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (hasTdEquipment) {
         const tdStr = tdType === 'monophase'
-          ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - Réf TGBT ${tgbtReference || 'N/A'}`
+          ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - TGBT 300x255x160mm`
           : `• TD Tétraphasé : Référence ${tdReference || 'N/A'}`;
         doc.text(tdStr, 28, lineY);
         lineY += 8;

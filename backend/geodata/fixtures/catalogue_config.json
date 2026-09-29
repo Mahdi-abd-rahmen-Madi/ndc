@@ -1758,19 +1758,51 @@
     "td_references": [
       {
         "id": "td_mono_free",
-        "name": "TD mono",
-        "vendor": "FREE",
-        "weight": 60,
+        "name": "68236",
+        "vendor": "",
+        "weight": 64.75,
         "reference": "68236",
-        "dimensions": "1055x850x350mm"
+        "dimensions": "1055x850x350mm + TGBT 300x255x160mm"
       },
       {
         "id": "td_tri_free",
-        "name": "TD triphasé",
-        "vendor": "FREE",
+        "name": "68237",
+        "vendor": "",
         "weight": 60,
         "reference": "68237",
         "dimensions": "1055x850x350mm"
+      },
+      {
+        "id": "td_5g",
+        "name": "TD 5G",
+        "vendor": "",
+        "weight": 64.75,
+        "reference": "68236",
+        "dimensions": "1055x850x350mm + TGBT 300x255x160mm"
+      },
+      {
+        "id": "td_3g_4g",
+        "name": "TD 3G/4G",
+        "vendor": "",
+        "weight": 54.75,
+        "reference": "68236",
+        "dimensions": "536x300x747mm + TGBT 300x255x160mm"
+      },
+      {
+        "id": "mini_td_700",
+        "name": "Mini TD radio 700",
+        "vendor": "",
+        "weight": 12.75,
+        "reference": "68236",
+        "dimensions": "430x330x200mm + TGBT 300x255x160mm"
+      },
+      {
+        "id": "mini_td_5g",
+        "name": "Mini TD 5G",
+        "vendor": "",
+        "weight": 19.75,
+        "reference": "68236",
+        "dimensions": "530x430x200mm + TGBT 300x255x160mm"
       }
     ],
     "rru_references": [

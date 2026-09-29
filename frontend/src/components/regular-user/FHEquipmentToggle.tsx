@@ -588,7 +588,7 @@ export function TDEquipmentToggle({
                   className="focus:ring-2 focus:ring-amber-500"
                   options={filteredTdOptions.map(opt => ({
                     value: opt.id,
-                    label: `${opt.vendor} - ${opt.name} (${opt.reference})`
+                    label: opt.vendor ? `${opt.vendor} - ${opt.name} (${opt.reference})` : `${opt.name} (${opt.reference})`
                   }))}
                   placeholder="Sélectionner une référence"
                 />
@@ -596,14 +596,10 @@ export function TDEquipmentToggle({
 
               {tdType === 'monophase' && (
                 <div className="flex flex-col flex-1 ">
-                  <label className="text-xs text-slate-400 mb-1">Référence TGBT:</label>
-                  <input
-                    type="text"
-                    value={tgbtReference}
-                    onChange={(e) => setTgbtReference(e.target.value)}
-                    placeholder="Ex: TGBT-456"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-amber-500 placeholder-slate-500"
-                  />
+                  <label className="text-xs text-slate-400 mb-1">Dimensions TGBT:</label>
+                  <div className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white flex items-center h-[34px]">
+                    300x255x160mm (4.75kg)
+                  </div>
                 </div>
               )}
             </div>
