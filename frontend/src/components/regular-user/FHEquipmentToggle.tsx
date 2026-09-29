@@ -518,12 +518,13 @@ export function TDEquipmentToggle({
 
   React.useEffect(() => {
     if (hasTdEquipment) {
-      if (tdType === 'tetraphase') {
-        const opt = tdOptions.find(o => o.reference === '68237');
-        if (opt && tdReference !== opt.id) setTdReference(opt.id);
-      } else {
-        const opt = tdOptions.find(o => o.reference === '68236');
-        if (opt && tdReference !== opt.id) setTdReference(opt.id);
+      const validOptions = tdOptions.filter(o => 
+        tdType === 'tetraphase' ? o.reference === '68237' : o.reference === '68236'
+      );
+      if (!validOptions.some(o => o.id === tdReference)) {
+        if (validOptions.length > 0) {
+          setTdReference(validOptions[0].id);
+        }
       }
     }
   }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference]);
