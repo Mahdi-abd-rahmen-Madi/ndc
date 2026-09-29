@@ -579,26 +579,74 @@ export function TDEquipmentToggle({
             </div>
 
             {/* References */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex flex-col flex-1">
-                <label className="text-xs text-slate-400 mb-1">Référence TD:</label>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col w-full md:w-1/2">
+                <label className="text-xs text-slate-400 mb-1">Équipement:</label>
                 <CustomSelect
                   value={tdReference}
                   onChange={(val) => setTdReference(val)}
                   className="focus:ring-2 focus:ring-amber-500"
                   options={filteredTdOptions.map(opt => ({
                     value: opt.id,
-                    label: opt.vendor ? `${opt.vendor} - ${opt.name} (${opt.reference})` : `${opt.name} (${opt.reference})`
+                    label: opt.vendor ? `${opt.vendor} - ${opt.name}` : opt.name
                   }))}
-                  placeholder="Sélectionner une référence"
+                  placeholder="Sélectionner un équipement"
                 />
               </div>
 
               {tdType === 'monophase' && (
-                <div className="flex flex-col flex-1 ">
-                  <label className="text-xs text-slate-400 mb-1">Dimensions TGBT:</label>
-                  <div className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white flex items-center h-[34px]">
-                    300x255x160mm (4.75kg)
+                <div className="flex flex-col flex-1 mt-2">
+                  <label className="text-xs text-slate-400 mb-2">TGBT:</label>
+                  <div className="space-y-2 bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
+                        <input
+                          type="text"
+                          value="300"
+                          disabled
+                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
+                        <input
+                          type="text"
+                          value="255"
+                          disabled
+                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
+                        <input
+                          type="text"
+                          value="160"
+                          disabled
+                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
+                        <input
+                          type="text"
+                          value="4.75"
+                          disabled
+                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Référence</label>
+                      <input
+                        type="text"
+                        value="68236"
+                        disabled
+                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
