@@ -2045,62 +2045,62 @@
         {
           "id": "rrh_nok_ahpd",
           "vendor": "NOKIA",
-          "reference": "RRH AHPD"
+          "reference": "AHPD"
         },
         {
           "id": "rrh_nok_arpa",
           "vendor": "NOKIA",
-          "reference": "RRH ARPA"
+          "reference": "ARPA"
         },
         {
           "id": "rrh_nok_ahda",
           "vendor": "NOKIA",
-          "reference": "RRH AHDA"
+          "reference": "AHDA"
         },
         {
           "id": "rrh_nok_arda",
           "vendor": "NOKIA",
-          "reference": "RRH ARDA"
+          "reference": "ARDA"
         },
         {
           "id": "rrh_nok_aera",
           "vendor": "NOKIA",
-          "reference": "RRH AERA"
+          "reference": "AERA"
         },
         {
           "id": "rrh_nok_arga",
           "vendor": "NOKIA",
-          "reference": "RRH ARGA"
+          "reference": "ARGA"
         },
         {
           "id": "rrh_nok_ahhb",
           "vendor": "NOKIA",
-          "reference": "RRH AHHB"
+          "reference": "AHHB"
         },
         {
           "id": "rrh_nok_ahpmdb",
           "vendor": "NOKIA",
-          "reference": "RRH AHPMDB"
+          "reference": "AHPMDB"
         },
         {
           "id": "rrh_nok_ahpmd",
           "vendor": "NOKIA",
-          "reference": "RRH AHPMD"
+          "reference": "AHPMD"
         },
         {
           "id": "rrh_nok_ahegc",
           "vendor": "NOKIA",
-          "reference": "RRH AHEGC"
+          "reference": "AHEGC"
         },
         {
           "id": "rrh_nok_ahegha",
           "vendor": "NOKIA",
-          "reference": "RRH AHEGHA"
+          "reference": "AHEGHA"
         },
         {
           "id": "rrh_nok_3500_azqj",
           "vendor": "NOKIA",
-          "reference": "RRH 3500 AZQJ"
+          "reference": "3500 AZQJ"
         }
       ],
       "updated_at": "2026-09-28T10:38:50.896Z"
