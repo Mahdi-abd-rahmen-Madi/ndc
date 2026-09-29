@@ -837,9 +837,52 @@ export function BoitierLovageEquipmentToggle({
                 >
                   <option value="" disabled>Sélectionner une référence</option>
                   {options.map((opt, idx) => (
-                    <option key={idx} value={opt.id}>{opt.name || opt.reference} ({opt.reference})</option>
+                    <option key={idx} value={opt.id}>{opt.reference}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+            
+            <div className="space-y-2 bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 mt-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
+                  <input
+                    type="text"
+                    value="225"
+                    disabled
+                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
+                  <input
+                    type="text"
+                    value="175"
+                    disabled
+                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
+                  <input
+                    type="text"
+                    value="100"
+                    disabled
+                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
+                  <input
+                    type="text"
+                    value="0.55"
+                    disabled
+                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                  />
+                </div>
               </div>
             </div>
           </div>
