@@ -181,6 +181,7 @@ export default function RegularUserView({
   const [hasBoitierLovage, setHasBoitierLovage] = useState<boolean>(false);
   const [hasGps, setHasGps] = useState<boolean>(false);
   const [boitierLovageReference, setBoitierLovageReference] = useState<string>('');
+  const [boitierLovageQuantity, setBoitierLovageQuantity] = useState<number>(1);
   const [hasCoffret, setHasCoffret] = useState<boolean>(false);
   const [coffretReference, setCoffretReference] = useState<string>('');
 
@@ -546,7 +547,7 @@ export default function RegularUserView({
           tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
         },
         gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
-        boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
+        boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
         coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
         coffrets_hybride: { enabled: false, quantity: null, reference: null },
         site_image_url: siteImageUrl
@@ -786,7 +787,7 @@ export default function RegularUserView({
             tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
-          boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
+          boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
           coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
           coffrets_hybride: { enabled: false, quantity: null, reference: null }
         };
@@ -898,7 +899,7 @@ export default function RegularUserView({
             tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
-          boitier_lovage: { enabled: hasBoitierLovage, quantity: 1, reference: hasBoitierLovage ? boitierLovageReference : null },
+          boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
           coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
           coffrets_hybride: { enabled: false, quantity: null, reference: null },
           site_image_url: siteImageUrl
@@ -1304,12 +1305,12 @@ export default function RegularUserView({
                     isRfmMode={operator === 'free'}
                     operator={operator}
                   />
-                  {/* Temporarily hidden
                   <BoitierLovageEquipmentToggle
                     hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
                     boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
+                    boitierLovageQuantity={boitierLovageQuantity} setBoitierLovageQuantity={setBoitierLovageQuantity}
+                    boitierOptions={config?.boitier_lovage_references || []}
                   />
-                  */}
                   <GPSEquipmentToggle
                     hasGps={hasGps} setHasGps={setHasGps}
                     gpsReference={gpsReference} setGpsReference={setGpsReference}
@@ -1464,7 +1465,7 @@ export default function RegularUserView({
                               ? { type: 'TD Monophasé', référence: resolveTd(tdReference) || 'N/A', tgbt: tgbtReference || 'N/A' }
                               : { type: 'TD Tétraphasé', référence: resolveTd(tdReference) || 'N/A' },
                             gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
-                            boitier_lovage: { référence: boitierLovageReference || 'N/A' },
+                            boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
                             coffrets_fibre: { référence: coffretReference || 'N/A' },
                             coffrets_hybride: { référence: 'N/A', quantité: 0 }
                           }}

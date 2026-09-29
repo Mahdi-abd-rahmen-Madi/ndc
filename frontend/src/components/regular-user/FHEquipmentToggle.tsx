@@ -709,14 +709,32 @@ export interface BoitierLovageEquipmentToggleProps {
   setHasBoitierLovage: (val: boolean) => void;
   boitierLovageReference: string;
   setBoitierLovageReference: (val: string) => void;
+  boitierLovageQuantity: number;
+  setBoitierLovageQuantity: (val: number) => void;
+  boitierOptions?: any[];
 }
 
 export function BoitierLovageEquipmentToggle({
   hasBoitierLovage,
   setHasBoitierLovage,
   boitierLovageReference,
-  setBoitierLovageReference
+  setBoitierLovageReference,
+  boitierLovageQuantity,
+  setBoitierLovageQuantity,
+  boitierOptions = []
 }: BoitierLovageEquipmentToggleProps) {
+  
+  // Hardcoded option if none provided from backend
+  const options = boitierOptions.length > 0 ? boitierOptions : [
+    { id: 'BLM-515709', name: 'Boîte de dérivation OPTIBOX IP55', reference: 'BLM-515709' }
+  ];
+
+  React.useEffect(() => {
+    if (hasBoitierLovage && !boitierLovageReference) {
+      setBoitierLovageReference(options[0].id);
+    }
+  }, [hasBoitierLovage, boitierLovageReference, options, setBoitierLovageReference]);
+
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
       <div className="flex flex-col space-y-4">
@@ -739,17 +757,49 @@ export function BoitierLovageEquipmentToggle({
 
         {hasBoitierLovage && (
           <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
-            {/* Boitier Lovage Reference */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-xs text-slate-400 shrink-0">Réf. Boitier:</label>
-                <input
-                  type="text"
+              {/* Quantité */}
+              <div className="flex items-center gap-2 shrink-0">
+                <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
+                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden h-7">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={boitierLovageQuantity}
+                    onChange={(e) => setBoitierLovageQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="bg-transparent border-none py-0 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="flex flex-col border-l border-slate-700 w-5">
+                    <button
+                      type="button"
+                      onClick={() => setBoitierLovageQuantity(boitierLovageQuantity + 1)}
+                      className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBoitierLovageQuantity(Math.max(1, boitierLovageQuantity - 1))}
+                      className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col flex-1">
+                <select
                   value={boitierLovageReference}
                   onChange={(e) => setBoitierLovageReference(e.target.value)}
-                  placeholder="Référence Boitier"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500 placeholder-slate-500"
-                />
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg h-7 px-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="" disabled>Sélectionner une référence</option>
+                  {options.map((opt, idx) => (
+                    <option key={idx} value={opt.id}>{opt.name || opt.reference} ({opt.reference})</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
