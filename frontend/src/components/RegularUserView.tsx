@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
-import { Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,FileText, AlertTriangle, Eye, Download, CheckCircle2, Settings, RefreshCw } from 'lucide-react';
+import { 
+  Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,
+  FileText, AlertTriangle, Eye, Download, CheckCircle2, Settings, RefreshCw,
+  Building2, Anchor, Edit3, Sparkles, ShieldCheck, ArrowRight, ChevronRight, Pencil, 
+  Search, Zap, Check
+} from 'lucide-react';
 
 export interface EquipmentItem {
   id: string;
@@ -82,38 +87,61 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, ch
   const isOpen = activeStep === step;
   
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 transition-all duration-200">
+    <div className={`bg-white rounded-2xl border transition-all duration-300 mb-4 overflow-hidden ${
+      isOpen 
+        ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5' 
+        : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm'
+    }`}>
       <div 
-        className={`p-4 flex items-center justify-between cursor-pointer rounded-t-xl transition-colors ${isOpen ? 'bg-violet-50/60 border-b border-slate-200' : 'hover:bg-slate-50'}`}
+        className={`p-4 flex items-center justify-between cursor-pointer transition-all ${
+          isOpen ? 'bg-gradient-to-r from-violet-50/70 via-indigo-50/30 to-white border-b border-violet-100' : 'hover:bg-slate-50/70'
+        }`}
         onClick={() => setActiveStep(step)}
       >
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-colors ${isCompleted && !isOpen ? 'bg-emerald-100 text-emerald-700' : isOpen ? 'bg-violet-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>
-            {isCompleted && !isOpen ? <CheckCircle2 className="w-5 h-5" /> : step}
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className={`flex items-center justify-center w-9 h-9 rounded-xl font-bold text-xs shrink-0 transition-all ${
+            isCompleted && !isOpen 
+              ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-200' 
+              : isOpen 
+                ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300' 
+                : 'bg-slate-100 text-slate-500 border border-slate-200'
+          }`}>
+            {isCompleted && !isOpen ? <Check className="w-5 h-5 text-emerald-700 stroke-[2.5]" /> : step}
           </div>
-          <div>
-            <h3 className={`font-bold transition-colors ${isOpen ? 'text-slate-900' : 'text-slate-700'}`}>{title}</h3>
+          <div className="min-w-0">
+            <h3 className={`font-bold text-sm tracking-tight transition-colors ${isOpen ? 'text-slate-900' : 'text-slate-700'}`}>
+              {title}
+            </h3>
             {!isOpen && isCompleted && summary && (
-              <div className="text-xs text-slate-500 mt-1">{summary}</div>
+              <div className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1 font-medium">
+                {summary}
+              </div>
             )}
           </div>
         </div>
+        
         {!isOpen && (
-          <button className="text-xs font-semibold text-violet-700 hover:text-violet-800 px-3 py-1 bg-violet-50 hover:bg-violet-100 rounded-md border border-violet-100 transition-colors" onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}>
+          <button 
+            className="text-xs font-semibold text-slate-600 hover:text-violet-700 px-3 py-1.5 bg-slate-100/80 hover:bg-violet-50 rounded-xl border border-slate-200/80 hover:border-violet-200 transition-all flex items-center gap-1.5 shadow-2xs shrink-0" 
+            onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}
+          >
+            <Pencil className="w-3 h-3" />
             Modifier
           </button>
         )}
       </div>
+      
       {isOpen && (
-        <div className="p-5">
+        <div className="p-5 animate-fadeIn">
           {children}
           {!hideContinue && (
             <div className="mt-6 flex justify-end">
               <button 
                 onClick={() => setActiveStep(step + 1)}
-                className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium shadow-sm shadow-violet-500/20 transition-all"
+                className="group px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-md shadow-violet-500/20 hover:shadow-violet-500/30 transition-all flex items-center gap-2"
               >
-                Continuer
+                <span>Continuer</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           )}
@@ -1100,42 +1128,55 @@ export default function RegularUserView({
           </div>
         </div>
       )}
-      <header className="h-16 border-b border-slate-200 bg-white/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-10 sticky top-0 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20">
-            <Compass className="w-5 h-5 text-white" />
+      <header className="h-16 border-b border-slate-200/80 bg-white/85 backdrop-blur-md px-5 md:px-8 flex items-center justify-between shrink-0 z-20 sticky top-0 shadow-xs">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/25 ring-1 ring-white/20">
+              <Compass className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none flex items-center gap-1.5">
+                NDC Portail <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Client</span>
+              </h1>
+            </div>
           </div>
-          <h1 className="text-xl font-bold text-slate-900">
-            NDC Portail <span className="font-light text-slate-500">Client</span>
-          </h1>
 
-          <div className="h-6 w-px bg-slate-200 mx-2 hidden sm:block"></div>
+          <div className="h-6 w-px bg-slate-200/80 mx-1 hidden sm:block"></div>
 
-          <div className="hidden sm:flex items-center gap-3 text-sm">
-            <span className="text-slate-500">Site:</span>
-            <span className="text-slate-800 font-medium px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
-              {siteType === 'nouveau' ? 'Neuf' : 'Existant'}
-            </span>
-            <span className="text-slate-500 ml-2">Ancrage:</span>
-            <span className="text-slate-800 font-medium px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
-              {foundationType === 'metallique' ? 'Plot Métallique' :
-                foundationType === 'beton' ? 'Plot Béton' :
-                  foundationType === 'encastre' ? 'Encastré' : foundationType}
-            </span>
-            <button
-              onClick={onResetMontage}
-              className="ml-2 text-xs font-semibold text-violet-600 hover:text-violet-700 underline underline-offset-2 transition-colors"
-            >
-              Modifier
-            </button>
+          <div className="hidden sm:flex items-center gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
+              <Building2 className="w-3.5 h-3.5 text-violet-600" />
+              <span className="text-slate-400 font-normal">Site:</span>
+              <span className="font-semibold text-slate-900">{siteType === 'nouveau' ? 'Neuf' : 'Existant'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
+              <Anchor className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="text-slate-400 font-normal">Ancrage:</span>
+              <span className="font-semibold text-slate-900">
+                {foundationType === 'metallique' ? 'Plot Métallique' :
+                  foundationType === 'beton' ? 'Plot Béton' :
+                    foundationType === 'encastre' ? 'Encastré' : foundationType}
+              </span>
+            </div>
+            {onResetMontage && (
+              <button
+                onClick={onResetMontage}
+                className="flex items-center gap-1 px-2.5 py-1 text-violet-700 hover:text-violet-900 hover:bg-violet-50 rounded-lg transition-colors font-semibold"
+                title="Modifier le type de site ou d'ancrage"
+              >
+                <Edit3 className="w-3 h-3" />
+                <span>Modifier</span>
+              </button>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-slate-600 font-medium">{userEmail}</span>
+            <span className="text-xs text-slate-500 font-medium">{userEmail}</span>
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="text-xs px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors flex items-center gap-1.5 border border-slate-200 font-medium"
+              className="text-xs px-2.5 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 font-medium shadow-2xs"
             >
               {clientLogoUrl ? (
                 <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-300 bg-white shrink-0">
@@ -1146,19 +1187,22 @@ export default function RegularUserView({
                   />
                 </div>
               ) : (
-                <UserIcon className="w-4 h-4 text-slate-500" />
+                <UserIcon className="w-3.5 h-3.5 text-slate-500" />
               )}
               Profil
             </button>
             <button
               onClick={onLogout}
-              className="text-xs px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors font-medium"
+              className="text-xs px-2.5 py-1.5 bg-slate-100/80 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 rounded-xl border border-slate-200 transition-all font-medium shadow-2xs"
             >
               Déconnexion
             </button>
           </div>
-          <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full font-semibold border border-emerald-200 shadow-sm flex items-center gap-1.5 hidden sm:flex">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+          <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full font-semibold border border-emerald-200 shadow-2xs flex items-center gap-1.5 hidden sm:flex">
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </div>
             En Ligne
           </div>
           <NotificationsDropdown
@@ -1174,6 +1218,44 @@ export default function RegularUserView({
       <div className="flex-1 flex overflow-hidden">
         <div className="w-full lg:w-[55%] flex flex-col bg-slate-50/70 border-r border-slate-200 shadow-sm z-10 shrink-0">
           <div className="flex-1 overflow-y-auto p-5 pb-64 custom-scrollbar">
+            {/* Stepper Progress Bar */}
+            <div className="mb-5 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                  Progression du Projet
+                </span>
+                <span className="font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100">
+                  Étape {activeStep} sur 4
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { num: 1, label: 'Localisation' },
+                  { num: 2, label: 'Projet' },
+                  { num: 3, label: 'Secteurs' },
+                  { num: 4, label: 'Équipements' }
+                ].map((s) => (
+                  <div key={s.num} className="flex flex-col gap-1">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        s.num < activeStep 
+                          ? 'bg-emerald-500' 
+                          : s.num === activeStep 
+                            ? 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xs' 
+                            : 'bg-slate-200'
+                      }`}
+                    />
+                    <span className={`text-[10px] text-center truncate ${
+                      s.num === activeStep ? 'font-bold text-violet-700' : s.num < activeStep ? 'font-medium text-emerald-700' : 'text-slate-400'
+                    }`}>
+                      {s.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className={`border-none p-0 m-0 w-full ${isLocked ? "pointer-events-none opacity-60 transition-opacity duration-300" : ""}`}>
               
               <AccordionStep
@@ -1346,9 +1428,19 @@ export default function RegularUserView({
           </div>
         </div>
 
-        <div className="flex-1 bg-slate-100/50 relative flex flex-col min-w-0">
+        <div className="flex-1 bg-gradient-to-br from-slate-50 via-violet-50/20 to-indigo-50/30 relative flex flex-col min-w-0">
           {showMap && (
-            <div className="absolute inset-0 z-10 animate-fadeIn">
+            <div className="absolute inset-0 z-10 animate-fadeIn flex flex-col">
+              <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-white/90 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-md border border-slate-200/80 text-xs text-slate-700">
+                <MapPin className="w-4 h-4 text-violet-600 animate-bounce" />
+                <span className="font-semibold">Cliquez n'importe où sur la carte pour positionner le site</span>
+                <button 
+                  onClick={() => setShowMap(false)}
+                  className="ml-3 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-semibold transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
               <TerrainMap
                 selectedCoordinates={selectedCoords ? { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude } : null}
                 onMapClick={handleMapLocationSelect}
@@ -1357,36 +1449,89 @@ export default function RegularUserView({
           )}
 
           {!showMap && (
-            <div className="absolute inset-0 bg-slate-100/40 overflow-hidden z-0 flex flex-col">
-              <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-violet-100/40 to-transparent pointer-events-none"></div>
+            <div className="absolute inset-0 overflow-y-auto z-0 flex flex-col justify-between p-6 lg:p-10 custom-scrollbar">
+              {/* Ambient Background Decorative Glows */}
+              <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-violet-400/10 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
               {!selectedCoords && (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 relative">
-                  <div className="relative z-10 w-24 h-24 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-lg mb-6 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-violet-500/10 animate-pulse"></div>
-                    <MapPin className="w-10 h-10 text-violet-600 z-10 relative group-hover:scale-110 transition-transform" />
+                <div className="flex-1 flex flex-col justify-center items-center max-w-3xl mx-auto w-full py-6 relative z-10">
+                  {/* Central Glassmorphism Card */}
+                  <div className="w-full bg-white/80 backdrop-blur-md border border-white/80 rounded-3xl p-8 lg:p-10 shadow-xl shadow-slate-200/60 text-center relative overflow-hidden mb-8">
+                    <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600"></div>
+
+                    {/* Animated Pulsing Icon */}
+                    <div className="relative mx-auto w-20 h-20 mb-6 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-2xl bg-violet-500/20 animate-ping opacity-60"></div>
+                      <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 text-white">
+                        <Compass className="w-10 h-10 animate-pulse" />
+                      </div>
+                    </div>
+
+                    <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
+                      Analyse Structurelle <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Télécom</span>
+                    </h2>
+                    <p className="text-slate-600 max-w-lg mx-auto text-sm sm:text-base leading-relaxed mb-8">
+                      Déterminez instantanément la zone de vent Eurocode 1, la rugosité de terrain IGN et générez votre note de calcul certifiée.
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        onClick={() => setShowMap(true)}
+                        className="px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-bold flex items-center gap-2.5 transition-all shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5"
+                      >
+                        <MapIcon className="w-5 h-5" /> Explorer sur la carte
+                      </button>
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100/90 px-3.5 py-3 rounded-xl border border-slate-200">
+                        <Search className="w-4 h-4 text-violet-600" />
+                        <span>Ou saisissez une adresse à gauche</span>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="text-3xl font-bold text-slate-900 mb-4">Analyse Structurelle</h2>
-                  <p className="text-slate-600 max-w-md mx-auto text-lg leading-relaxed">
-                    Commencez par rechercher une adresse à gauche ou sur la carte pour déterminer les classes de vent et de terrain.
-                  </p>
-                  <button
-                    onClick={() => setShowMap(true)}
-                    className="mt-8 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-violet-500/20 hover:shadow-violet-500/30 hover:-translate-y-0.5"
-                  >
-                    <MapIcon className="w-5 h-5" /> Explorer sur la carte
-                  </button>
+
+                  {/* 3 Value Proposition Feature Badges */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                    <div className="bg-white/70 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-violet-300 hover:shadow-sm transition-all group">
+                      <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 mb-1">Eurocode 1 & IGN</h4>
+                      <p className="text-[11px] text-slate-500 leading-normal">
+                        Classification automatique de la rugosité du terrain (II, IIIa, IIIb, IV) et région de vent.
+                      </p>
+                    </div>
+
+                    <div className="bg-white/70 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 hover:shadow-sm transition-all group">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                        <ShieldCheck className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 mb-1">Vérification Dalle & Ancrages</h4>
+                      <p className="text-[11px] text-slate-500 leading-normal">
+                        Validation de la portance de dalle, poinçonnement et dimensionnement des plots béton/métal.
+                      </p>
+                    </div>
+
+                    <div className="bg-white/70 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all group">
+                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 mb-1">Note de Calcul Conforme</h4>
+                      <p className="text-[11px] text-slate-500 leading-normal">
+                        Rapport PDF complet prêt pour validation selon les exigences des opérateurs majeurs.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {selectedCoords && (!sectors[0].selectedMontage4G || !sectors[0].selectedMontage5G) && (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full">
-                  <div className="w-20 h-20 rounded-full bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full relative z-10">
+                  <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
                     <Layers className="w-10 h-10 text-violet-600" />
                   </div>
                   <h3 className="text-2xl font-bold text-slate-900 mb-3">Sélectionner le type de montage</h3>
                   <p className="text-base text-slate-600 max-w-md leading-relaxed">
-                    Choisissez un type de montage dans le menu déroulant à gauche pour récupérer les spécifications de conception.
+                    Choisissez un type de montage dans le panneau de gauche pour récupérer les spécifications de conception.
                   </p>
                 </div>
               )}

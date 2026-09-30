@@ -10,7 +10,7 @@ interface HeightRequestModalProps {
   setRequestFormData: (val: RequestFormData) => void;
   isSubmittingRequest: boolean;
   onSubmitRequest: (e: React.FormEvent) => void;
-  selectedBuildingHeight: number;
+  selectedBuildingHeight: number | string;
   selectedHeight: number;
 }
 
