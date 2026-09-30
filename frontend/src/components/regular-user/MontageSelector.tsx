@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Settings, Radio, SignalHigh } from 'lucide-react';
 import { CatalogueConfig, AntennaConfigState } from './types';
+import { styles } from './styles/MontageSelector.styles';
 
 interface MontageSelectorProps {
   selectedMontage4G: string;
@@ -171,40 +172,40 @@ export default function MontageSelector({
   const renderDimension = (label: string, value: number, unit: string, onChange: (val: number) => void) => {
     if (configMode === 'reference') {
       return (
-        <div className="flex flex-col">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</span>
-          <div className="flex justify-between items-center bg-slate-900/40 border border-slate-700/30 rounded py-1.5 px-2">
-            <span className="text-xs text-white font-mono">{value}</span>
-            <span className="text-[10px] text-slate-500">{unit}</span>
+        <div className={styles.dimensionContainerRef}>
+          <span className={styles.dimensionLabelRef}>{label}</span>
+          <div className={styles.dimensionValueBoxRef}>
+            <span className={styles.dimensionValueRef}>{value}</span>
+            <span className={styles.dimensionUnitRef}>{unit}</span>
           </div>
         </div>
       );
     }
     return (
-      <div className="flex flex-col">
-        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">{label} ({unit})</label>
+      <div className={styles.dimensionContainerInput}>
+        <label className={styles.dimensionLabelInput}>{label} ({unit})</label>
         <input
           type="number"
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
+          className={styles.dimensionInput}
         />
       </div>
     );
   };
 
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-        <label className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
-          <Settings className="w-4 h-4 text-indigo-400" />
+    <div className={styles.mainContainer}>
+      <div className={styles.configContainer}>
+        <label className={styles.configHeader}>
+          <Settings className={styles.configIcon} />
           4. Configuration de l'Antenne
         </label>
 
         {/* Segmented Control */}
-        <div className="relative flex p-1 bg-slate-950 rounded-lg mb-5 border border-slate-800/80">
+        <div className={styles.segmentedControlContainer}>
           <div 
-            className="absolute inset-y-1 bg-indigo-600 rounded-md duration-300 ease-out"
+            className={styles.segmentedControlSlider}
             style={{ 
               width: 'calc(50% - 4px)', 
               left: configMode === 'agile' ? '4px' : 'calc(50%)' 
@@ -213,8 +214,8 @@ export default function MontageSelector({
           <button
             type="button"
             onClick={() => handleConfigModeChange('agile')}
-            className={`relative flex-1 py-2 rounded-md text-xs font-semibold z-10 ${
-              configMode === 'agile' ? 'text-white' : 'text-slate-400 hover:text-white'
+            className={`${styles.segmentedControlButtonBase} ${
+              configMode === 'agile' ? styles.segmentedControlButtonActive : styles.segmentedControlButtonInactive
             }`}
           >
             Dimensions Agiles
@@ -222,8 +223,8 @@ export default function MontageSelector({
           <button
             type="button"
             onClick={() => handleConfigModeChange('reference')}
-            className={`relative flex-1 py-2 rounded-md text-xs font-semibold z-10 ${
-              configMode === 'reference' ? 'text-white' : 'text-slate-400 hover:text-white'
+            className={`${styles.segmentedControlButtonBase} ${
+              configMode === 'reference' ? styles.segmentedControlButtonActive : styles.segmentedControlButtonInactive
             }`}
           >
             Références (Dimensions réelles)
@@ -232,23 +233,23 @@ export default function MontageSelector({
 
 
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={styles.gridContainer}>
           {/* Antenne 4G */}
-          <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/20 hover:from-slate-800/80 hover:to-slate-800/40 transition-colors border border-slate-700/50 rounded-lg p-4">
-            <h4 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-blue-500/20 flex items-center justify-center">
-                <Radio className="w-3.5 h-3.5 text-blue-400" />
+          <div className={styles.antennaContainer}>
+            <h4 className={styles.antennaHeader}>
+              <div className={styles.iconContainer4G}>
+                <Radio className={styles.icon4G} />
               </div>
               Antenne 4G
             </h4>
             
             {/* Dropdown 4G */}
-            <div className="mb-5">
+            <div className={styles.dropdownContainer}>
               {configMode === 'agile' ? (
                 <select
                   value={selectedMontage4G}
                   onChange={(e) => handleMontage4GChange(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
+                  className={styles.selectInput}
                 >
                   {montages.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -258,11 +259,11 @@ export default function MontageSelector({
                   <option value="custom">Sur-mesure (Configuration Manuelle)</option>
                 </select>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className={styles.dropdownCol}>
                   <select
                     value={selectedVendor4G}
                     onChange={(e) => setSelectedVendor4G?.(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
+                    className={styles.selectInput}
                   >
                     {availableVendors4G.map(v => (
                       <option key={v} value={v}>{v}</option>
@@ -271,7 +272,7 @@ export default function MontageSelector({
                   <select
                     value={selectedReference4G}
                     onChange={handleReference4GChange}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors hover:border-slate-600 cursor-pointer"
+                    className={styles.selectInput}
                   >
                     {unique4GRefs.map((ref) => (
                       <option key={ref.id} value={ref.id}>
@@ -283,8 +284,8 @@ export default function MontageSelector({
               )}
             </div>
 
-            <div className="space-y-3">
-              <div className="grid grid-cols-4 gap-2">
+            <div className={styles.dimensionsGridContainer}>
+              <div className={styles.dimensionsGrid}>
                 {renderDimension('Hauteur', ant4gConfig.height, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, height: val })))}
                 {renderDimension('Largeur', ant4gConfig.width, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, width: val })))}
                 {renderDimension('Épaisseur', ant4gConfig.thickness, 'mm', (val) => setAnt4gConfig(prev => ({ ...prev, thickness: val })))}
@@ -294,21 +295,21 @@ export default function MontageSelector({
           </div>
 
           {/* Antenne 5G */}
-          <div className="bg-gradient-to-br from-slate-800/60 to-slate-800/20 hover:from-slate-800/80 hover:to-slate-800/40 transition-colors border border-slate-700/50 rounded-lg p-4">
-            <h4 className="text-sm font-bold text-slate-200 mb-4 flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-purple-500/20 flex items-center justify-center">
-                <SignalHigh className="w-3.5 h-3.5 text-purple-400" />
+          <div className={styles.antennaContainer}>
+            <h4 className={styles.antennaHeader}>
+              <div className={styles.iconContainer5G}>
+                <SignalHigh className={styles.icon5G} />
               </div>
               Antenne 5G
             </h4>
             
             {/* Dropdown 5G */}
-            <div className="mb-5">
+            <div className={styles.dropdownContainer}>
               {configMode === 'agile' ? (
                 <select
                   value={selectedMontage5G}
                   onChange={(e) => handleMontage5GChange(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
+                  className={styles.selectInput}
                 >
                   {montages.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -318,11 +319,11 @@ export default function MontageSelector({
                   <option value="custom">Sur-mesure (Configuration Manuelle)</option>
                 </select>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className={styles.dropdownCol}>
                   <select
                     value={selectedVendor5G}
                     onChange={(e) => setSelectedVendor5G?.(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
+                    className={styles.selectInput}
                   >
                     {availableVendors5G.map(v => (
                       <option key={v} value={v}>{v}</option>
@@ -331,7 +332,7 @@ export default function MontageSelector({
                   <select
                     value={selectedReference5G}
                     onChange={handleReference5GChange}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2 px-3 text-xs text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-colors hover:border-slate-600 cursor-pointer"
+                    className={styles.selectInput}
                   >
                     {unique5GRefs.map((ref) => (
                       <option key={ref.id} value={ref.id}>
@@ -343,8 +344,8 @@ export default function MontageSelector({
               )}
             </div>
 
-            <div className="space-y-3">
-              <div className="grid grid-cols-4 gap-2">
+            <div className={styles.dimensionsGridContainer}>
+              <div className={styles.dimensionsGrid}>
                 {renderDimension('Hauteur', ant5gConfig.height, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, height: val })))}
                 {renderDimension('Largeur', ant5gConfig.width, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, width: val })))}
                 {renderDimension('Épaisseur', ant5gConfig.thickness, 'mm', (val) => setAnt5gConfig(prev => ({ ...prev, thickness: val })))}

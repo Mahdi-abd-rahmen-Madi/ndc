@@ -614,15 +614,15 @@ export default function TerrainMap({
       {/* Zoom guidance overlay */}
       {zoom < 13 && (
         <div className="absolute top-2 left-12 right-2 pointer-events-none z-10 transition-all duration-300">
-          <div className="bg-slate-900/95 border border-slate-800 rounded-xl p-2 px-3 shadow-2xl flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-amber-400 shrink-0">
-              <Search className="w-3.5 h-3.5 text-amber-400" />
+          <div className="bg-white/95 border border-slate-200 rounded-xl p-2 px-3 shadow-lg flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-amber-600 shrink-0">
+              <Search className="w-3.5 h-3.5 text-amber-600" />
               <span className="text-[10px] font-bold uppercase tracking-wider">Zoom requis (Min. 13)</span>
             </div>
-            <p className="text-[10px] text-slate-300 leading-none truncate hidden sm:block">
+            <p className="text-[10px] text-slate-600 leading-none truncate hidden sm:block">
               Zoomer pour sélectionner un emplacement.
             </p>
-            <div className="text-[9px] text-slate-400 bg-slate-950/50 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
+            <div className="text-[9px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
               Zoom : {Math.round(zoom)}/13
             </div>
           </div>
@@ -631,10 +631,10 @@ export default function TerrainMap({
       
       {/* Click warning flash */}
       {showWarning && zoom < 13 && (
-        <div className="absolute inset-0 bg-rose-500/10 border-2 border-rose-500 rounded-xl flex items-center justify-center pointer-events-none z-20 animate-fade-in">
-          <div className="bg-rose-950/95 border border-rose-500/30 rounded-xl p-2 px-4 shadow-2xl text-center">
-            <span className="text-[11px] font-bold text-rose-400 flex items-center justify-center gap-1.5">
-              <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
+        <div className="absolute inset-0 bg-rose-500/10 border-2 border-rose-400 rounded-xl flex items-center justify-center pointer-events-none z-20 animate-fade-in">
+          <div className="bg-white/95 border border-rose-300 rounded-xl p-2 px-4 shadow-xl text-center">
+            <span className="text-[11px] font-bold text-rose-600 flex items-center justify-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
               Clic impossible (Zoom &lt; 13)
             </span>
           </div>

@@ -44,10 +44,10 @@ export default function FHEquipmentToggle({
   };
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
             <div className="relative flex items-center">
               <input
                 type="checkbox"
@@ -55,43 +55,43 @@ export default function FHEquipmentToggle({
                 onChange={(e) => setHasFhEquipment(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasFhEquipment ? 'bg-indigo-500' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Radio className="w-4 h-4 text-indigo-400" />
+            <Radio className="w-4 h-4 text-violet-600" />
             Présence équipement FH
           </label>
         </div>
 
         {hasFhEquipment && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
             
             {/* Row 1: Quantité & Marque & Modèle */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               {/* Quantité */}
               <div className="flex flex-col">
-                <label className="text-xs text-slate-400 mb-1">Quantité:</label>
-                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                <label className="text-xs font-medium text-slate-500 mb-1">Quantité:</label>
+                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden shadow-sm">
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={fhQuantity || 1}
                     onChange={(e) => setFhQuantity(Math.max(1, Number(e.target.value)))}
-                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <div className="flex flex-col border-l border-slate-700">
+                  <div className="flex flex-col border-l border-slate-300">
                     <button
                       type="button"
                       onClick={() => setFhQuantity((fhQuantity || 1) + 1)}
-                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
                     >
                       <ChevronUp className="w-3 h-3" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setFhQuantity(Math.max(1, (fhQuantity || 1) - 1))}
-                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                     >
                       <ChevronDown className="w-3 h-3" />
                     </button>
@@ -101,11 +101,11 @@ export default function FHEquipmentToggle({
 
               {/* Marque */}
               <div className="flex flex-col flex-1">
-                <label className="text-xs text-slate-400 mb-1">Marque:</label>
+                <label className="text-xs font-medium text-slate-500 mb-1">Marque:</label>
                 <CustomSelect
                   value={selectedVendor}
                   onChange={handleVendorChange}
-                  className="focus:ring-2 focus:ring-indigo-500"
+                  className="focus:ring-2 focus:ring-violet-500"
                   options={vendors.map(v => ({ value: v, label: v }))}
                   placeholder="Sélectionner..."
                 />
@@ -113,7 +113,7 @@ export default function FHEquipmentToggle({
 
               {/* Modèle */}
               <div className="flex flex-col flex-1">
-                <label className="text-xs text-slate-400 mb-1">Modèle:</label>
+                <label className="text-xs font-medium text-slate-500 mb-1">Modèle:</label>
                 <CustomSelect
                   value={fhReference}
                   onChange={(val) => {
@@ -124,7 +124,7 @@ export default function FHEquipmentToggle({
                     }
                   }}
                   disabled={!selectedVendor}
-                  className="focus:ring-2 focus:ring-indigo-500"
+                  className="focus:ring-2 focus:ring-violet-500"
                   options={fhOptions.filter(o => o.vendor === selectedVendor).map(ref => ({ value: ref.id, label: ref.name }))}
                   placeholder="Sélectionner..."
                 />
@@ -133,17 +133,17 @@ export default function FHEquipmentToggle({
 
             {/* Row 2: Diamètre & Poids (Visual Only) */}
             {selectedRef && (
-              <div className="flex gap-4 opacity-80">
+              <div className="flex gap-4">
                 <div className="flex flex-col">
-                  <label className="text-xs text-slate-400 mb-1">Diamètre:</label>
+                  <label className="text-xs font-medium text-slate-500 mb-1">Diamètre:</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={selectedRef.diameter}
                       disabled
-                      className="bg-slate-800/50 border border-slate-700/50 rounded-lg py-1.5 px-3 text-sm text-slate-300 w-24 cursor-not-allowed"
+                      className="bg-slate-100 border border-slate-200 rounded-lg py-1.5 px-3 text-sm text-slate-700 w-24 cursor-not-allowed font-medium"
                     />
-                    <span className="absolute right-3 top-1.5 text-slate-500 text-sm pointer-events-none">mm</span>
+                    <span className="absolute right-3 top-1.5 text-slate-400 text-sm pointer-events-none">mm</span>
                   </div>
                 </div>
               </div>
@@ -195,9 +195,9 @@ export function RRHEquipmentToggle({
   
   const uniqueVendors = Array.from(new Set(rrhOptions.map(o => o.vendor)));
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+        <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
           <div className="relative flex items-center">
             <input
               type="checkbox"
@@ -205,17 +205,17 @@ export function RRHEquipmentToggle({
               onChange={(e) => setHasRrhEquipment(e.target.checked)}
               className="sr-only"
             />
-            <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasRrhEquipment ? 'bg-rose-500' : ''}`}></div>
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
+            <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasRrhEquipment ? 'bg-rose-500' : ''}`}></div>
+            <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
           </div>
-          <Activity className="w-4 h-4 text-rose-400" />
+          <Activity className="w-4 h-4 text-rose-500" />
           Présence équipement RRH
         </label>
 
         {hasRrhEquipment && (
-          <div className="flex flex-col gap-3  mt-2 border-t border-slate-800/50 pt-3">
+          <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rrhItems.map((item) => (
-              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
+              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1">
@@ -246,31 +246,31 @@ export function RRHEquipmentToggle({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-800 pt-2">
+                <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                   {/* Quantité */}
                   <div className="flex items-center gap-2">
                     <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
-                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden h-7">
+                    <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
                       <input
                         type="number"
                         min="1"
                         step="1"
                         value={item.quantity || 1}
                         onChange={(e) => updateRrhItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <div className="flex flex-col border-l border-slate-700 w-5">
+                      <div className="flex flex-col border-l border-slate-300 w-5">
                         <button
                           type="button"
                           onClick={() => updateRrhItem(item.id, 'quantity', (item.quantity || 1) + 1)}
-                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
                         >
                           <ChevronUp className="w-3 h-3" />
                         </button>
                         <button
                           type="button"
                           onClick={() => updateRrhItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
-                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                         >
                           <ChevronDown className="w-3 h-3" />
                         </button>
@@ -283,7 +283,7 @@ export function RRHEquipmentToggle({
                     type="button"
                     onClick={() => removeRrhRow(item.id)}
                     disabled={rrhItems.length === 1}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -294,7 +294,7 @@ export function RRHEquipmentToggle({
             <button
               type="button"
               onClick={addRrhRow}
-              className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg border border-slate-700 transition-colors"
+              className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               Ajouter
@@ -347,7 +347,6 @@ export function RRUEquipmentToggle({
     }));
   };
   
-  
   const rfmModels = [
     { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
     { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
@@ -360,9 +359,9 @@ export function RRUEquipmentToggle({
   const actualOptions = isRfmMode ? rfmModels : filteredRruOptions;
   const uniqueVendors = Array.from(new Set(actualOptions.map(o => o.vendor)));
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+        <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
           <div className="relative flex items-center">
             <input
               type="checkbox"
@@ -370,17 +369,17 @@ export function RRUEquipmentToggle({
               onChange={(e) => setHasRruEquipment(e.target.checked)}
               className="sr-only"
             />
-            <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasRruEquipment ? 'bg-emerald-500' : ''}`}></div>
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
+            <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasRruEquipment ? 'bg-emerald-600' : ''}`}></div>
+            <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
           </div>
-          <Activity className="w-4 h-4 text-emerald-400" />
+          <Activity className="w-4 h-4 text-emerald-600" />
           Présence équipement {isRfmMode ? 'RFM' : 'RRU'}
         </label>
 
         {hasRruEquipment && (
-          <div className="flex flex-col gap-3  mt-2 border-t border-slate-800/50 pt-3">
+          <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rruItems.map((item) => (
-              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-900/30 rounded-lg border border-slate-700/50">
+              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1">
@@ -412,51 +411,51 @@ export function RRUEquipmentToggle({
                 </div>
 
                 {isRfmMode && item.reference && (
-                  <div className="grid grid-cols-4 gap-2 bg-slate-800/30 p-2 rounded-lg border border-slate-700/50">
+                  <div className="grid grid-cols-4 gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold">Hauteur</span>
-                      <span className="text-xs text-slate-300">133 mm</span>
+                      <span className="text-xs text-slate-800 font-medium">133 mm</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold">Largeur</span>
-                      <span className="text-xs text-slate-300">447 mm</span>
+                      <span className="text-xs text-slate-800 font-medium">447 mm</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold">Profondeur</span>
-                      <span className="text-xs text-slate-300">560 mm</span>
+                      <span className="text-xs text-slate-800 font-medium">560 mm</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] text-slate-500 uppercase font-semibold">Poids</span>
-                      <span className="text-xs text-slate-300">25 kg</span>
+                      <span className="text-xs text-slate-800 font-medium">25 kg</span>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between border-t border-slate-800 pt-2">
+                <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                   {/* Quantité */}
                   <div className="flex items-center gap-2">
                     <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
-                    <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden h-7">
+                    <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
                       <input
                         type="number"
                         min="1"
                         step="1"
                         value={item.quantity || 1}
                         onChange={(e) => updateRruItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <div className="flex flex-col border-l border-slate-700 w-5">
+                      <div className="flex flex-col border-l border-slate-300 w-5">
                         <button
                           type="button"
                           onClick={() => updateRruItem(item.id, 'quantity', (item.quantity || 1) + 1)}
-                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
                         >
                           <ChevronUp className="w-3 h-3" />
                         </button>
                         <button
                           type="button"
                           onClick={() => updateRruItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
-                          className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                         >
                           <ChevronDown className="w-3 h-3" />
                         </button>
@@ -469,7 +468,7 @@ export function RRUEquipmentToggle({
                     type="button"
                     onClick={() => removeRruRow(item.id)}
                     disabled={rruItems.length === 1}
-                    className="p-1.5 text-slate-500 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-500"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -480,7 +479,7 @@ export function RRUEquipmentToggle({
             <button
               type="button"
               onClick={addRruRow}
-              className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg border border-slate-700 transition-colors"
+              className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               Ajouter
@@ -536,10 +535,10 @@ export function TDEquipmentToggle({
   });
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
             <div className="relative flex items-center">
               <input
                 type="checkbox"
@@ -547,33 +546,33 @@ export function TDEquipmentToggle({
                 onChange={(e) => setHasTdEquipment(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasTdEquipment ? 'bg-amber-500' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasTdEquipment ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasTdEquipment ? 'bg-amber-500' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasTdEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-amber-400" />
+            <Activity className="w-4 h-4 text-amber-500" />
             Présence équipement TD
           </label>
         </div>
 
         {hasTdEquipment && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
             {/* TD Type */}
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-medium">
                 <input
                   type="radio"
                   checked={tdType === 'tetraphase'}
                   onChange={() => setTdType('tetraphase')}
-                  className="text-amber-500 focus:ring-amber-500"
+                  className="text-violet-600 focus:ring-violet-500"
                 />
                 TD Tétraphasé
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-medium">
                 <input
                   type="radio"
                   checked={tdType === 'monophase'}
                   onChange={() => setTdType('monophase')}
-                  className="text-amber-500 focus:ring-amber-500"
+                  className="text-violet-600 focus:ring-violet-500"
                 />
                 TD Monophasé + TGBT
               </label>
@@ -582,11 +581,11 @@ export function TDEquipmentToggle({
             {/* References */}
             <div className="flex flex-col gap-4">
               <div className="flex flex-col w-full md:w-1/2">
-                <label className="text-xs text-slate-400 mb-1">Équipement:</label>
+                <label className="text-xs font-medium text-slate-500 mb-1">Équipement:</label>
                 <CustomSelect
                   value={tdReference}
                   onChange={(val) => setTdReference(val)}
-                  className="focus:ring-2 focus:ring-amber-500"
+                  className="focus:ring-2 focus:ring-violet-500"
                   options={filteredTdOptions.map(opt => ({
                     value: opt.id,
                     label: opt.vendor ? `${opt.vendor} - ${opt.name}` : opt.name
@@ -597,45 +596,45 @@ export function TDEquipmentToggle({
 
               {tdType === 'monophase' && (
                 <div className="flex flex-col flex-1 mt-2">
-                  <label className="text-xs text-slate-400 mb-2">TGBT:</label>
-                  <div className="space-y-2 bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
+                  <label className="text-xs font-medium text-slate-500 mb-2">TGBT:</label>
+                  <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Hauteur (mm)</label>
                         <input
                           type="text"
                           value="300"
                           disabled
-                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
                         <input
                           type="text"
                           value="255"
                           disabled
-                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                         />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Épaisseur (mm)</label>
                         <input
                           type="text"
                           value="160"
                           disabled
-                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
                         <input
                           type="text"
                           value="4.75"
                           disabled
-                          className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                         />
                       </div>
                     </div>
@@ -670,13 +669,13 @@ export function GenericEquipmentToggle({
   setQuantity,
   reference,
   setReference,
-  colorClass = 'indigo',
+  colorClass = 'violet',
   icon: Icon = Activity
 }: GenericEquipmentToggleProps) {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex items-center justify-between gap-4">
-        <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+        <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
           <div className="relative flex items-center">
             <input
               type="checkbox"
@@ -684,40 +683,40 @@ export function GenericEquipmentToggle({
               onChange={(e) => setEnabled(e.target.checked)}
               className="sr-only"
             />
-            <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${enabled ? 'bg-' + colorClass + '-500' : ''}`}></div>
-            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${enabled ? 'transform translate-x-4' : ''}`}></div>
+            <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${enabled ? 'bg-violet-600' : ''}`}></div>
+            <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${enabled ? 'transform translate-x-4' : ''}`}></div>
           </div>
-          <Icon className={`w-4 h-4 text-${colorClass}-400`} />
+          <Icon className="w-4 h-4 text-violet-600" />
           {title}
         </label>
 
         {enabled && (
-          <div className="flex flex-col md:flex-row md:items-center gap-4  flex-1 justify-end mt-3 md:mt-0">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1 justify-end mt-3 md:mt-0">
             {/* Quantité */}
             {quantity !== undefined && setQuantity !== undefined && (
               <div className="flex flex-col">
-                <label className="text-xs text-slate-400 mb-1">Quantité:</label>
-                <div className={`flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-${colorClass}-500`}>
+                <label className="text-xs font-medium text-slate-500 mb-1">Quantité:</label>
+                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-violet-500">
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={quantity || 1}
                     onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <div className="flex flex-col border-l border-slate-700">
+                  <div className="flex flex-col border-l border-slate-300">
                     <button
                       type="button"
                       onClick={() => setQuantity((quantity || 1) + 1)}
-                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
                     >
                       <ChevronUp className="w-3 h-3" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setQuantity(Math.max(1, (quantity || 1) - 1))}
-                      className="px-1.5 flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                      className="px-1.5 flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                     >
                       <ChevronDown className="w-3 h-3" />
                     </button>
@@ -728,13 +727,13 @@ export function GenericEquipmentToggle({
 
             {/* Référence */}
             <div className="flex flex-col flex-1 md:max-w-[200px]">
-              <label className="text-xs text-slate-400 mb-1">Référence:</label>
+              <label className="text-xs font-medium text-slate-500 mb-1">Référence:</label>
               <input
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="Ex: Ref..."
-                className={`w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-${colorClass}-500 placeholder-slate-500`}
+                className="w-full bg-white border border-slate-300 rounded-lg py-1.5 px-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-violet-500 placeholder-slate-400 shadow-sm"
               />
             </div>
           </div>
@@ -776,10 +775,10 @@ export function BoitierLovageEquipmentToggle({
   }, [hasBoitierLovage, boitierLovageReference, options, setBoitierLovageReference]);
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
             <div className="relative flex items-center">
               <input
                 type="checkbox"
@@ -787,41 +786,41 @@ export function BoitierLovageEquipmentToggle({
                 onChange={(e) => setHasBoitierLovage(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasBoitierLovage ? 'bg-purple-500' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasBoitierLovage ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasBoitierLovage ? 'bg-purple-600' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasBoitierLovage ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-purple-400" />
+            <Activity className="w-4 h-4 text-purple-600" />
             Présence Boitiers de lovage
           </label>
         </div>
 
         {hasBoitierLovage && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               {/* Quantité */}
               <div className="flex items-center gap-2 shrink-0">
                 <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
-                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden h-7">
+                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={boitierLovageQuantity}
                     onChange={(e) => setBoitierLovageQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="bg-transparent border-none py-0 px-2 text-sm text-center text-white focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="bg-transparent border-none py-0 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
-                  <div className="flex flex-col border-l border-slate-700 w-5">
+                  <div className="flex flex-col border-l border-slate-300 w-5">
                     <button
                       type="button"
                       onClick={() => setBoitierLovageQuantity(boitierLovageQuantity + 1)}
-                      className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-b border-slate-700"
+                      className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
                     >
                       <ChevronUp className="w-3 h-3" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setBoitierLovageQuantity(Math.max(1, boitierLovageQuantity - 1))}
-                      className="flex-1 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+                      className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                     >
                       <ChevronDown className="w-3 h-3" />
                     </button>
@@ -833,7 +832,7 @@ export function BoitierLovageEquipmentToggle({
                 <select
                   value={boitierLovageReference}
                   onChange={(e) => setBoitierLovageReference(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg h-7 px-2.5 text-sm text-white focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-white border border-slate-300 rounded-lg h-7 px-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
                 >
                   <option value="" disabled>Sélectionner une référence</option>
                   {options.map((opt, idx) => (
@@ -843,44 +842,44 @@ export function BoitierLovageEquipmentToggle({
               </div>
             </div>
             
-            <div className="space-y-2 bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 mt-2">
+            <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Hauteur (mm)</label>
                   <input
                     type="text"
                     value="225"
                     disabled
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
                   <input
                     type="text"
                     value="175"
                     disabled
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Épaisseur (mm)</label>
                   <input
                     type="text"
                     value="100"
                     disabled
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
                   <input
                     type="text"
                     value="0.55"
                     disabled
-                    className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                   />
                 </div>
               </div>
@@ -910,10 +909,10 @@ export function GPSEquipmentToggle({
   setGpsMarque
 }: GPSEquipmentToggleProps) {
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer shrink-0">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
             <div className="relative flex items-center">
               <input
                 type="checkbox"
@@ -921,16 +920,16 @@ export function GPSEquipmentToggle({
                 onChange={(e) => setHasGps(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasGps ? 'bg-blue-500' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasGps ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasGps ? 'bg-blue-600' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasGps ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-blue-400" />
+            <Activity className="w-4 h-4 text-blue-600" />
             Présence GPS
           </label>
         </div>
 
         {hasGps && (
-          <div className="flex flex-col gap-4 pt-2 border-t border-slate-850 ">
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
             <div className="flex gap-3">
               <div className="flex flex-col flex-1">
                 <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
@@ -960,18 +959,18 @@ export function GPSEquipmentToggle({
             </div>
             
             {gpsReference && (
-              <div className="grid grid-cols-3 gap-2 bg-slate-800/30 p-2 rounded-lg border border-slate-700/50 mt-1">
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 mt-1">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">Diamètre</span>
-                  <span className="text-xs text-slate-300">95 mm</span>
+                  <span className="text-xs text-slate-800 font-medium">95 mm</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">Hauteur</span>
-                  <span className="text-xs text-slate-300">72.5 mm</span>
+                  <span className="text-xs text-slate-800 font-medium">72.5 mm</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">Poids</span>
-                  <span className="text-xs text-slate-300">154 g</span>
+                  <span className="text-xs text-slate-800 font-medium">154 g</span>
                 </div>
               </div>
             )}
@@ -1004,10 +1003,10 @@ export function CoffretEquipmentToggle({
   const mainSelectValue = isHttaSelected ? 'HTTA' : coffretReference;
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-white flex items-center gap-2 cursor-pointer">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
             <div className="relative flex items-center">
               <input
                 type="checkbox"
@@ -1015,19 +1014,19 @@ export function CoffretEquipmentToggle({
                 onChange={(e) => setHasCoffret(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-700 rounded-full transition-colors ${hasCoffret ? 'bg-fuchsia-500' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
+              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasCoffret ? 'bg-fuchsia-600' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-fuchsia-400" />
+            <Activity className="w-4 h-4 text-fuchsia-600" />
             Présence Coffrets fibre
           </label>
         </div>
 
         {hasCoffret && (
-          <div className="flex flex-col gap-4 pt-3 border-t border-slate-800/80 ">
+          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="flex items-center gap-2 flex-1">
-                <label className="text-xs text-slate-400 shrink-0 w-16 md:w-auto">Type:</label>
+                <label className="text-xs font-medium text-slate-500 shrink-0 w-16 md:w-auto">Type:</label>
                 <CustomSelect
                   value={mainSelectValue}
                   onChange={(val) => {
@@ -1048,12 +1047,12 @@ export function CoffretEquipmentToggle({
             </div>
 
             {isHttaSelected && httaOptions.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2  bg-slate-800/30 p-3 rounded-lg border border-slate-700/50 mt-4">
-                <label className="text-xs font-medium text-slate-300 shrink-0 sm:w-24">Référence HTTA:</label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                <label className="text-xs font-medium text-slate-700 shrink-0 sm:w-24">Référence HTTA:</label>
                 <select
                   value={coffretReference === 'HTTA' ? httaOptions[0].id : coffretReference}
                   onChange={(e) => setCoffretReference(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white focus:ring-2 focus:ring-fuchsia-500"
+                  className="w-full bg-white border border-slate-300 rounded-lg py-1.5 px-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-fuchsia-500 shadow-sm"
                 >
                   {httaOptions.map(ref => (
                     <option key={ref.id} value={ref.id}>
@@ -1083,55 +1082,55 @@ export function CoffretEquipmentToggle({
               }
 
               return (
-                <div className="space-y-2 mt-4  bg-slate-800/30 p-3 rounded-lg border border-slate-700/50">
+                <div className="space-y-2 mt-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Hauteur (mm)</label>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Hauteur (mm)</label>
                       <input
                         type="text"
                         value={h}
                         disabled
-                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Largeur (mm)</label>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
                       <input
                         type="text"
                         value={w}
                         disabled
-                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                       />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Épaisseur (mm)</label>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Épaisseur (mm)</label>
                       <input
                         type="text"
                         value={t}
                         disabled
-                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Poids (Kg)</label>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
                       <input
                         type="text"
                         value={weight}
                         disabled
-                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                       />
                     </div>
                   </div>
                   {!isHttaSelected && (
                     <div className="mt-2">
-                      <label className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 block">Référence</label>
+                      <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Référence</label>
                       <input
                         type="text"
                         value={actualRef}
                         disabled
-                        className="w-full bg-slate-900 border border-slate-700 rounded py-1.5 px-2 text-xs text-white opacity-70 cursor-not-allowed"
+                        className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                       />
                     </div>
                   )}

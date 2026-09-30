@@ -2,6 +2,7 @@
 import { ArrowDownToLine } from 'lucide-react';
 import { SectorData, CatalogueConfig, AntennaConfigState } from './types';
 import MontageSelector from './MontageSelector';
+import { styles } from './styles/SectorConfigurator.styles';
 
 interface SectorConfiguratorProps {
   index: number;
@@ -56,14 +57,14 @@ export default function SectorConfigurator({
 
   if (collapsed) {
     return (
-      <div className="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 mb-6 flex items-center justify-between opacity-80">
-        <h3 className="text-sm font-bold text-slate-400 flex items-center gap-2">
-          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-800 text-slate-500 text-sm">
+      <div className={styles.collapsedContainer}>
+        <h3 className={styles.collapsedHeader}>
+          <span className={styles.collapsedBadgeNumber}>
             {index + 1}
           </span>
           Secteur {index + 1}
         </h3>
-        <span className="text-xs text-emerald-500/80 font-medium bg-emerald-500/10 px-2 py-1 rounded">
+        <span className={styles.collapsedTag}>
           Identique au Secteur 1
         </span>
       </div>
@@ -71,41 +72,41 @@ export default function SectorConfigurator({
   }
 
   return (
-    <div className="bg-slate-900/60 border border-slate-700/80 rounded-xl p-5 mb-6 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full pointer-events-none"></div>
+    <div className={styles.mainContainer}>
+      <div className={styles.mainDeco}></div>
 
-      <div className="flex items-center justify-between mb-5 border-b border-slate-700/50 pb-3">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-sm">
+      <div className={styles.headerContainer}>
+        <h3 className={styles.headerTitle}>
+          <span className={styles.headerBadgeNumber}>
             {index + 1}
           </span>
           Secteur {index + 1}
         </h3>
       </div>
 
-      <div className="space-y-6">
+      <div className={styles.contentSpace}>
         {/* Hauteur du Mât */}
-        <div className="flex flex-col space-y-2 p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
-          <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-500/5 rounded-bl-full -z-10 group-hover:bg-emerald-500/10 transition-colors"></div>
+        <div className={styles.mastContainer}>
+          <div className={styles.mastDeco}></div>
 
-          <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-400" />
+          <label className={styles.mastLabel}>
+            <span className={styles.mastLabelInner}>
+              <ArrowDownToLine className={styles.mastIcon} />
               3. Hauteur du mât :
             </span>
           </label>
-          <div className="flex flex-wrap items-end gap-6 mt-2">
-            <div className="flex flex-col gap-1.5 min-w-[220px]">
-              <label className="text-xs text-slate-400 pl-1 mb-1">Standard</label>
-              <div className="flex gap-2 h-10">
+          <div className={styles.mastInputsContainer}>
+            <div className={styles.standardCol}>
+              <label className={styles.standardLabel}>Standard</label>
+              <div className={styles.standardButtonsContainer}>
                 {recommendedMastHeights.map(h => (
                   <button
                     key={h}
                     type="button"
                     onClick={() => updateSector(index, { selectedHeight: h })}
-                    className={`flex-1 rounded-lg text-sm font-medium transition-colors ${sectorData.selectedHeight === h
-                        ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 shadow-inner'
-                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border border-transparent'
+                    className={`${styles.standardButtonBase} ${sectorData.selectedHeight === h
+                        ? styles.standardButtonActive
+                        : styles.standardButtonInactive
                       }`}
                   >
                     {h}m
@@ -114,9 +115,9 @@ export default function SectorConfigurator({
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5 min-w-[160px]">
-              <label className="text-xs text-slate-400 pl-1 mb-1">Personnalisé</label>
-              <div className="flex items-center gap-2 h-10">
+            <div className={styles.customCol}>
+              <label className={styles.customLabel}>Personnalisé</label>
+              <div className={styles.customInputContainer}>
                 <input
                   type="number"
                   min="0"
@@ -125,9 +126,9 @@ export default function SectorConfigurator({
                   placeholder="Ex: 3.5"
                   value={sectorData.selectedHeight || ''}
                   onChange={(e) => updateSector(index, { selectedHeight: Number(e.target.value) })}
-                  className="w-full h-full bg-slate-800 border border-slate-700 rounded-lg px-3 text-sm text-white focus:ring-2 focus:ring-emerald-500 transition-colors"
+                  className={styles.customInput}
                 />
-                <span className="text-slate-400 text-sm font-medium">m</span>
+                <span className={styles.customUnit}>m</span>
               </div>
             </div>
           </div>

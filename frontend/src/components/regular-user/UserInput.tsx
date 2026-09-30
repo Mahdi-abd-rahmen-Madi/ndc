@@ -130,10 +130,10 @@ export default function UserInput({
   return (
     <div className="flex flex-col gap-4">
       {/* 1. Informations du Projet */}
-      <div className="p-5 bg-slate-900/50 border border-slate-800/80 rounded-2xl relative overflow-hidden group hover:border-indigo-500/30 duration-300">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-indigo-500/5 rounded-bl-full -z-10 group-hover:bg-indigo-500/10 transition-colors"></div>
-        <h3 className="text-sm font-bold text-white mb-5 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-indigo-400" />
+      <div className="p-5 bg-white border border-slate-200 rounded-2xl relative overflow-hidden group hover:border-violet-300 shadow-sm transition-all duration-300">
+        <div className="absolute right-0 top-0 w-32 h-32 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors"></div>
+        <h3 className="text-sm font-bold text-slate-900 mb-5 flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-violet-600" />
           Informations du Projet
         </h3>
 
@@ -141,10 +141,10 @@ export default function UserInput({
           {/* Photo Upload */}
           {onSiteImageUploaded && (
             <div className="w-full flex flex-col">
-              <label className="text-xs font-semibold text-slate-300 flex items-center justify-between mb-2 h-6">
+              <label className="text-xs font-semibold text-slate-700 flex items-center justify-between mb-2 h-6">
                 <span className="flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-indigo-400" />
-                  Photo du site <span className="text-red-400 ml-1">*</span>
+                  <Camera className="w-3.5 h-3.5 text-violet-600" />
+                  Photo du site <span className="text-red-500 ml-1">*</span>
                 </span>
                 {siteImageUrl && (
                   <button
@@ -153,7 +153,7 @@ export default function UserInput({
                       setUploadSuccess(false);
                       setUploadError(null);
                     }}
-                    className="text-[10px] uppercase font-bold text-red-400 hover:text-red-300 transition-colors bg-red-400/10 px-2 py-1 rounded"
+                    className="text-[10px] uppercase font-bold text-red-600 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 border border-red-200 px-2 py-1 rounded"
                   >
                     Retirer
                   </button>
@@ -161,7 +161,7 @@ export default function UserInput({
               </label>
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 {siteImageUrl && (
-                  <div className="w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center shadow-inner">
+                  <div className="w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center shadow-sm">
                     <img
                       src={siteImageUrl.startsWith('http') || siteImageUrl.startsWith('data:') ? siteImageUrl : `${apiBaseUrl}${siteImageUrl.startsWith('/') ? '' : '/'}${siteImageUrl}`}
                       alt="Site"
@@ -177,26 +177,26 @@ export default function UserInput({
                     disabled={isUploading}
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
                   />
-                  <div className={`w-full py-2.5 px-3 bg-slate-800/50 border ${uploadError ? 'border-red-500/50' : (uploadSuccess || siteImageUrl) ? 'border-emerald-500/50' : 'border-slate-700 border-dashed'} rounded-xl text-sm flex items-center justify-center gap-2 group-hover/upload:border-indigo-500/50 group-hover/upload:bg-slate-800`}>
+                  <div className={`w-full py-2.5 px-3 bg-slate-50 border ${uploadError ? 'border-red-400 bg-red-50/50' : (uploadSuccess || siteImageUrl) ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 border-dashed'} rounded-xl text-sm flex items-center justify-center gap-2 group-hover/upload:border-violet-400 group-hover/upload:bg-violet-50/30 transition-all`}>
                     {isUploading ? (
                       <>
-                        <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
-                        <span className="text-slate-400 text-xs">Upload...</span>
+                        <Loader2 className="w-4 h-4 text-violet-600 animate-spin" />
+                        <span className="text-slate-600 text-xs font-medium">Upload en cours...</span>
                       </>
                     ) : uploadError ? (
                       <>
-                        <AlertCircle className="w-4 h-4 text-red-400" />
-                        <span className="text-red-400 font-medium text-xs truncate">{uploadError}</span>
+                        <AlertCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-red-600 font-medium text-xs truncate">{uploadError}</span>
                       </>
                     ) : (uploadSuccess || siteImageUrl) ? (
                       <>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                        <span className="text-emerald-400 font-medium text-xs">Image OK</span>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span className="text-emerald-700 font-medium text-xs">Image chargée</span>
                       </>
                     ) : (
                       <>
-                        <Camera className="w-4 h-4 text-slate-500 group-hover/upload:text-indigo-400 transition-colors" />
-                        <span className="text-slate-400 text-xs group-hover/upload:text-slate-300 transition-colors">Ajouter image</span>
+                        <Camera className="w-4 h-4 text-slate-400 group-hover/upload:text-violet-600 transition-colors" />
+                        <span className="text-slate-600 text-xs font-medium group-hover/upload:text-violet-700 transition-colors">Ajouter une image</span>
                       </>
                     )}
                   </div>
@@ -207,7 +207,7 @@ export default function UserInput({
 
           <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2 h-6">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
                 Nom du site
               </label>
               <input
@@ -215,11 +215,11 @@ export default function UserInput({
                 value={siteName}
                 onChange={(e) => setSiteName(e.target.value)}
                 placeholder="Ex: TOWER_PARIS_01"
-                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all"
               />
             </div>
             <div className="flex flex-col">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2 h-6">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
                 Client
               </label>
               <input
@@ -227,15 +227,15 @@ export default function UserInput({
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="Ex: Mairie de Paris"
-                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all"
               />
             </div>
             <div className="flex flex-col">
-              <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5 mb-2 h-6">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
                 Opérateur
               </label>
               <select
-                className="w-full bg-slate-800/80 border border-slate-700/80 rounded-lg py-2.5 px-3 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm text-slate-900 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all cursor-pointer"
                 value={operator || 'bouygues'}
                 onChange={(e) => setOperator && setOperator(e.target.value)}
               >
@@ -243,7 +243,7 @@ export default function UserInput({
                 <option value="orange">Orange</option>
                 <option value="free">Free</option>
                 <option value="bouygues">Bouygues</option>
-                <option value="sfr" disabled className="text-slate-500">SFR</option>
+                <option value="sfr" disabled className="text-slate-400">SFR</option>
               </select>
             </div>
           </div>
@@ -251,26 +251,26 @@ export default function UserInput({
       </div>
 
       {/* 2. Paramètres & Configuration */}
-      <div className="p-5 bg-slate-900/50 border border-slate-800/80 rounded-2xl relative overflow-hidden group hover:border-emerald-500/30 duration-300">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10 group-hover:bg-emerald-500/10 transition-colors"></div>
+      <div className="p-5 bg-white border border-slate-200 rounded-2xl relative overflow-hidden group hover:border-violet-300 shadow-sm transition-all duration-300">
+        <div className="absolute right-0 top-0 w-32 h-32 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors"></div>
 
         <div className="flex flex-col gap-6">
           {/* Paramètres Techniques */}
           <div>
-            <h3 className="text-sm font-bold text-white mb-5 flex items-center gap-2">
-              <Settings2 className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-bold text-slate-900 mb-5 flex items-center gap-2">
+              <Settings2 className="w-4 h-4 text-violet-600" />
               Paramètres Techniques
             </h3>
 
             {dalleThickness !== '' && Number(dalleThickness) < 12 && foundationType !== 'encastre' && (
-              <div className="mb-6 text-sm font-medium text-white leading-snug flex items-start gap-3 bg-red-600/90 shadow-[0_0_15px_rgba(220,38,38,0.4)] p-4 rounded-xl border border-red-400 transition-all duration-300 relative overflow-hidden animate-in fade-in slide-in-from-top-2">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-400"></div>
-                <AlertCircle className="w-5 h-5 shrink-0 text-red-100 mt-0.5" />
+              <div className="mb-6 text-sm font-medium text-red-900 leading-snug flex items-start gap-3 bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm transition-all duration-300 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
                 <div className="flex flex-col gap-1">
-                  <strong className="text-red-50 text-xs uppercase tracking-wider">⚠️ Action requise : Épaisseur dalle trop faible</strong>
+                  <strong className="text-red-700 text-xs uppercase tracking-wider">⚠️ Action requise : Épaisseur dalle trop faible</strong>
                   <span>
                     L'épaisseur saisie semble <b>trop faible</b> pour une dalle de structure portante. Veillez à indiquer uniquement l'épaisseur du béton armé de structure. 
-                    <span className="block mt-1 text-red-100">Une valeur insuffisante entraînera un résultat défavorable sur la note de calcul.</span>
+                    <span className="block mt-1 text-red-700">Une valeur insuffisante entraînera un résultat défavorable sur la note de calcul.</span>
                   </span>
                 </div>
               </div>
@@ -279,11 +279,11 @@ export default function UserInput({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 items-start">
               {/* Hauteur Bâtiment */}
               <div className="flex flex-col space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
-                  <ArrowUpToLine className="w-3.5 h-3.5 text-emerald-400" />
+                <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                  <ArrowUpToLine className="w-3.5 h-3.5 text-violet-600" />
                   Hauteur bâtiment
                 </label>
-                <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
+                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500 shadow-sm">
                   <input
                     type="number"
                     min="0"
@@ -291,20 +291,20 @@ export default function UserInput({
                     step="0.5"
                     value={selectedBuildingHeight}
                     onChange={(e) => setSelectedBuildingHeight(Number(e.target.value))}
-                    className="w-full bg-transparent border-none py-2 px-3 text-sm text-white focus:ring-0"
+                    className="w-full bg-transparent border-none py-2 px-3 text-sm text-slate-900 focus:ring-0"
                   />
-                  <div className="px-3 flex items-center bg-slate-800/50 border-l border-slate-700 text-slate-400 text-xs font-semibold">m</div>
+                  <div className="px-3 flex items-center bg-slate-100 border-l border-slate-300 text-slate-600 text-xs font-semibold">m</div>
                 </div>
               </div>
 
               {/* Dalle */}
               {foundationType !== 'encastre' && (
                 <div className="flex flex-col space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
-                    <FileStack className="w-3.5 h-3.5 text-emerald-400" />
+                  <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                    <FileStack className="w-3.5 h-3.5 text-violet-600" />
                     Épaisseur dalle
                   </label>
-                  <div className={`flex bg-slate-800 border ${dalleThickness !== '' && Number(dalleThickness) < 12 ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-slate-700'} rounded-lg overflow-hidden focus-within:ring-2 ${dalleThickness !== '' && Number(dalleThickness) < 12 ? 'focus-within:ring-red-500' : 'focus-within:ring-emerald-500'}`}>
+                  <div className={`flex bg-white border ${dalleThickness !== '' && Number(dalleThickness) < 12 ? 'border-red-400 focus-within:border-red-500' : 'border-slate-300 focus-within:border-violet-500'} rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 shadow-sm`}>
                     <input
                       type="number"
                       min="0"
@@ -312,9 +312,9 @@ export default function UserInput({
                       step="1"
                       value={dalleThickness}
                       onChange={(e) => setDalleThickness(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-white focus:ring-0"
+                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-slate-900 focus:ring-0"
                     />
-                    <div className="px-3 flex items-center bg-slate-800/50 border-l border-slate-700 text-slate-400 text-xs font-semibold">cm</div>
+                    <div className="px-3 flex items-center bg-slate-100 border-l border-slate-300 text-slate-600 text-xs font-semibold">cm</div>
                   </div>
                 </div>
               )}
@@ -322,20 +322,20 @@ export default function UserInput({
               {/* Etancheite */}
               {foundationType !== 'encastre' && (
                 <div className="flex flex-col space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
-                    <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                    <Layers className="w-3.5 h-3.5 text-violet-600" />
                     Etanchéité
                   </label>
-                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
+                  <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500 shadow-sm">
                     <input
                       type="number"
                       min="0"
                       step="1"
                       value={etancheite}
                       onChange={(e) => setEtancheite?.(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-white focus:ring-0"
+                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-slate-900 focus:ring-0"
                     />
-                    <div className="px-3 flex items-center bg-slate-800/50 border-l border-slate-700 text-slate-400 text-xs font-semibold">cm</div>
+                    <div className="px-3 flex items-center bg-slate-100 border-l border-slate-300 text-slate-600 text-xs font-semibold">cm</div>
                   </div>
                 </div>
               )}
@@ -343,17 +343,17 @@ export default function UserInput({
               {/* Chauffage au sol Toggle */}
               {foundationType !== 'encastre' && (
                 <div className="flex flex-col space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
-                    <Settings2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                    <Settings2 className="w-3.5 h-3.5 text-violet-600" />
                     Chauffage au sol
                   </label>
                   <div className="flex items-center h-[38px]">
                     <button
                       type="button"
                       onClick={() => setHasChauffageAuSol?.(!hasChauffageAuSol)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${hasChauffageAuSol ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 ${hasChauffageAuSol ? 'bg-violet-600' : 'bg-slate-300'}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hasChauffageAuSol ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${hasChauffageAuSol ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
                 </div>
@@ -362,20 +362,20 @@ export default function UserInput({
               {/* Epaisseur Fausse Dalle */}
               {foundationType !== 'encastre' && hasChauffageAuSol && (
                 <div className="flex flex-col space-y-2 animate-fadeIn">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1.5 tracking-wider">
-                    <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                    <Layers className="w-3.5 h-3.5 text-violet-600" />
                     Epaisseur fausse dalle
                   </label>
-                  <div className="flex bg-slate-800 border border-slate-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500">
+                  <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500 shadow-sm">
                     <input
                       type="number"
                       min="0"
                       step="1"
                       value={fausseDalleThickness}
                       onChange={(e) => setFausseDalleThickness?.(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-white focus:ring-0"
+                      className="w-full bg-transparent border-none py-2 px-3 text-sm text-slate-900 focus:ring-0"
                     />
-                    <div className="px-3 flex items-center bg-slate-800/50 border-l border-slate-700 text-slate-400 text-xs font-semibold">cm</div>
+                    <div className="px-3 flex items-center bg-slate-100 border-l border-slate-300 text-slate-600 text-xs font-semibold">cm</div>
                   </div>
                 </div>
               )}
@@ -384,9 +384,9 @@ export default function UserInput({
           </div>
 
           {/* Configuration des Secteurs */}
-          <div className="pt-6 border-t border-slate-800/50 mt-2">
-            <h3 className="text-sm font-bold text-white mb-5 flex items-center gap-2">
-              <GitMerge className="w-4 h-4 text-indigo-400" />
+          <div className="pt-6 border-t border-slate-200 mt-2">
+            <h3 className="text-sm font-bold text-slate-900 mb-5 flex items-center gap-2">
+              <GitMerge className="w-4 h-4 text-violet-600" />
               Configuration des Secteurs
             </h3>
 
@@ -399,9 +399,9 @@ export default function UserInput({
                       key={num}
                       type="button"
                       onClick={() => setNombreSecteurs(num)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${nombreSecteurs === num
-                        ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
-                        : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${nombreSecteurs === num
+                        ? 'bg-violet-100 text-violet-800 border-violet-300 shadow-sm'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                         }`}
                     >
                       {num}
@@ -418,9 +418,9 @@ export default function UserInput({
                       type="button"
                       title="Copier le Secteur 1 sur les autres secteurs et les masquer"
                       onClick={() => setSimilarityMode('all_similar')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center ${similarityMode === 'all_similar'
-                        ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
-                        : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center transition-all ${similarityMode === 'all_similar'
+                        ? 'bg-violet-100 text-violet-800 border-violet-300 shadow-sm'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                         }`}
                     >
                       Identiques
@@ -430,9 +430,9 @@ export default function UserInput({
                       type="button"
                       title="Garder tous les secteurs indépendants et éditables"
                       onClick={() => setSimilarityMode('all_different')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center ${similarityMode === 'all_different'
-                        ? 'bg-indigo-600/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
-                        : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center transition-all ${similarityMode === 'all_different'
+                        ? 'bg-violet-100 text-violet-800 border-violet-300 shadow-sm'
+                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                         }`}
                     >
                       Non-identiques

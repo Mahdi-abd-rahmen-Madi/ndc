@@ -82,24 +82,24 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, ch
   const isOpen = activeStep === step;
   
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg mb-4">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 transition-all duration-200">
       <div 
-        className={`p-4 flex items-center justify-between cursor-pointer ${isOpen ? 'bg-indigo-900/20 border-b border-slate-800' : 'hover:bg-slate-800/50'}`}
+        className={`p-4 flex items-center justify-between cursor-pointer rounded-t-xl transition-colors ${isOpen ? 'bg-violet-50/60 border-b border-slate-200' : 'hover:bg-slate-50'}`}
         onClick={() => setActiveStep(step)}
       >
         <div className="flex items-center gap-3">
-          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${isCompleted && !isOpen ? 'bg-emerald-500/20 text-emerald-400' : isOpen ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-colors ${isCompleted && !isOpen ? 'bg-emerald-100 text-emerald-700' : isOpen ? 'bg-violet-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'}`}>
             {isCompleted && !isOpen ? <CheckCircle2 className="w-5 h-5" /> : step}
           </div>
           <div>
-            <h3 className={`font-bold ${isOpen ? 'text-white' : 'text-slate-300'}`}>{title}</h3>
+            <h3 className={`font-bold transition-colors ${isOpen ? 'text-slate-900' : 'text-slate-700'}`}>{title}</h3>
             {!isOpen && isCompleted && summary && (
               <div className="text-xs text-slate-500 mt-1">{summary}</div>
             )}
           </div>
         </div>
         {!isOpen && (
-          <button className="text-xs text-indigo-400 hover:text-indigo-300 px-3 py-1 bg-indigo-500/10 rounded-md" onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}>
+          <button className="text-xs font-semibold text-violet-700 hover:text-violet-800 px-3 py-1 bg-violet-50 hover:bg-violet-100 rounded-md border border-violet-100 transition-colors" onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}>
             Modifier
           </button>
         )}
@@ -111,7 +111,7 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, ch
             <div className="mt-6 flex justify-end">
               <button 
                 onClick={() => setActiveStep(step + 1)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+                className="px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium shadow-sm shadow-violet-500/20 transition-all"
               >
                 Continuer
               </button>
@@ -1008,7 +1008,7 @@ export default function RegularUserView({
   const isLocked = isGeneratingSiteNdc || !!ndcPdfUrl;
 
   return (
-    <div className="flex flex-col w-full h-screen bg-slate-950 text-white font-sans overflow-hidden selection:bg-indigo-500/30">
+    <div className="flex flex-col w-full h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden selection:bg-violet-500/20">
       {isProfileModalOpen && (
         <UserProfileModal
           onClose={() => setIsProfileModalOpen(false)}
@@ -1019,66 +1019,66 @@ export default function RegularUserView({
       )}
       
       {showConfirmationModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <FileText className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-violet-600" />
                 Confirmation de Génération
               </h2>
             </div>
-            <div className="p-6 text-slate-300 space-y-4">
-              <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-                <p className="font-semibold text-white mb-2">Vous avez sélectionné :</p>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-slate-300">
-                  <li>Région de Vent : <span className="text-white font-medium">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span></li>
-                  <li>Terrain : <span className="text-white font-medium">Type {activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa'}</span></li>
-                  <li>Épaisseur de la dalle : <span className="text-white font-medium">{dalleThickness || 'Non spécifié'} cm</span></li>
-                  <li>Épaisseur de l'étanchéité : <span className="text-white font-medium">{etancheite || 'Non spécifié'} cm</span></li>
+            <div className="p-6 text-slate-700 space-y-4">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <p className="font-semibold text-slate-900 mb-2">Vous avez sélectionné :</p>
+                <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600">
+                  <li>Région de Vent : <span className="text-slate-900 font-semibold">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span></li>
+                  <li>Terrain : <span className="text-slate-900 font-semibold">Type {activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa'}</span></li>
+                  <li>Épaisseur de la dalle : <span className="text-slate-900 font-semibold">{dalleThickness || 'Non spécifié'} cm</span></li>
+                  <li>Épaisseur de l'étanchéité : <span className="text-slate-900 font-semibold">{etancheite || 'Non spécifié'} cm</span></li>
                   {activeSectors.map((sector, idx) => (
                     <li key={`std-${idx}`}>
-                      Secteur {idx + 1} (Standard) : <span className="text-white font-medium">{getMontageDisplayLabel(sector)}</span>
+                      Secteur {idx + 1} (Standard) : <span className="text-slate-900 font-semibold">{getMontageDisplayLabel(sector)}</span>
                     </li>
                   ))}
                   {hasFhEquipment && fhQuantity > 0 && (
-                    <li>Équipement FH : <span className="text-white font-medium">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span></li>
+                    <li>Équipement FH : <span className="text-slate-900 font-semibold">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span></li>
                   )}
                   {hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => (
-                    <li key={`rrh-${idx}`}>Équipement RRH : <span className="text-white font-medium">{item.quantity}x {item.reference}</span></li>
+                    <li key={`rrh-${idx}`}>Équipement RRH : <span className="text-slate-900 font-semibold">{item.quantity}x {item.reference}</span></li>
                   ))}
                   {hasRruEquipment && rruItems.length > 0 && rruItems.map((item, idx) => (
-                    <li key={`rru-${idx}`}>Équipement RRU : <span className="text-white font-medium">{item.quantity}x {item.reference}</span></li>
+                    <li key={`rru-${idx}`}>Équipement RRU : <span className="text-slate-900 font-semibold">{item.quantity}x {item.reference}</span></li>
                   ))}
                   {hasTdEquipment && (
-                    <li>Équipement TD : <span className="text-white font-medium">{config?.td_references?.find(r => r.id === tdReference)?.reference || 'Sélectionné'}</span></li>
+                    <li>Équipement TD : <span className="text-slate-900 font-semibold">{config?.td_references?.find(r => r.id === tdReference)?.reference || 'Sélectionné'}</span></li>
                   )}
                   {hasBoitierLovage && (
-                    <li>Boîtier de lovage : <span className="text-white font-medium">{config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || 'Sélectionné'}</span></li>
+                    <li>Boîtier de lovage : <span className="text-slate-900 font-semibold">{config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || 'Sélectionné'}</span></li>
                   )}
                   {hasCoffret && (
-                    <li>Coffret : <span className="text-white font-medium">{config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || 'Sélectionné'}</span></li>
+                    <li>Coffret : <span className="text-slate-900 font-semibold">{config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || 'Sélectionné'}</span></li>
                   )}
                 </ul>
               </div>
               
-              <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl flex gap-3">
-                <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
-                <p className="text-sm text-amber-200/90 leading-relaxed">
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800">
+                <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-900 leading-relaxed">
                   En cliquant sur Valider, vous acceptez que nous n'assumons aucune responsabilité en cas de mauvaise utilisation de cette note de calcul ou de non-respect des hypothèses structurelles.
                 </p>
               </div>
             </div>
             
-            <div className="p-4 border-t border-slate-800 bg-slate-800/20 flex justify-end gap-3">
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
               <button
                 onClick={() => setShowConfirmationModal(false)}
-                className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors font-medium"
+                className="px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors font-medium"
               >
                 Annuler
               </button>
               <button
                 onClick={confirmGenerateSiteNdc}
-                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
+                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2"
               >
                 Confirmer et Générer
               </button>
@@ -1086,31 +1086,31 @@ export default function RegularUserView({
           </div>
         </div>
       )}
-      <header className="h-16 border-b border-slate-800 bg-slate-900/50 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-10 sticky top-0">
+      <header className="h-16 border-b border-slate-200 bg-white/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-10 sticky top-0 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20">
             <Compass className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-            NDC Portail <span className="font-light">Client</span>
+          <h1 className="text-xl font-bold text-slate-900">
+            NDC Portail <span className="font-light text-slate-500">Client</span>
           </h1>
 
-          <div className="h-6 w-px bg-slate-700 mx-2 hidden sm:block"></div>
+          <div className="h-6 w-px bg-slate-200 mx-2 hidden sm:block"></div>
 
           <div className="hidden sm:flex items-center gap-3 text-sm">
-            <span className="text-slate-400">Site:</span>
-            <span className="text-slate-200 font-medium px-2 py-0.5 bg-slate-800 rounded-md border border-slate-700">
+            <span className="text-slate-500">Site:</span>
+            <span className="text-slate-800 font-medium px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
               {siteType === 'nouveau' ? 'Neuf' : 'Existant'}
             </span>
-            <span className="text-slate-400 ml-2">Ancrage:</span>
-            <span className="text-slate-200 font-medium px-2 py-0.5 bg-slate-800 rounded-md border border-slate-700">
+            <span className="text-slate-500 ml-2">Ancrage:</span>
+            <span className="text-slate-800 font-medium px-2 py-0.5 bg-slate-100 rounded-md border border-slate-200">
               {foundationType === 'metallique' ? 'Plot Métallique' :
                 foundationType === 'beton' ? 'Plot Béton' :
                   foundationType === 'encastre' ? 'Encastré' : foundationType}
             </span>
             <button
               onClick={onResetMontage}
-              className="ml-2 text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2 transition-colors"
+              className="ml-2 text-xs font-semibold text-violet-600 hover:text-violet-700 underline underline-offset-2 transition-colors"
             >
               Modifier
             </button>
@@ -1118,13 +1118,13 @@ export default function RegularUserView({
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-slate-400">{userEmail}</span>
+            <span className="text-xs text-slate-600 font-medium">{userEmail}</span>
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors flex items-center gap-1.5"
+              className="text-xs px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors flex items-center gap-1.5 border border-slate-200 font-medium"
             >
               {clientLogoUrl ? (
-                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-600 bg-slate-700 shrink-0">
+                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-300 bg-white shrink-0">
                   <img
                     src={clientLogoUrl.startsWith('http') || clientLogoUrl.startsWith('data:') ? clientLogoUrl : `${apiBaseUrl}${clientLogoUrl.startsWith('/') ? '' : '/'}${clientLogoUrl}`}
                     alt="Profile"
@@ -1132,19 +1132,19 @@ export default function RegularUserView({
                   />
                 </div>
               ) : (
-                <UserIcon className="w-4 h-4 text-slate-400" />
+                <UserIcon className="w-4 h-4 text-slate-500" />
               )}
               Profil
             </button>
             <button
               onClick={onLogout}
-              className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors"
+              className="text-xs px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition-colors font-medium"
             >
               Déconnexion
             </button>
           </div>
-          <div className="text-xs text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-full font-medium border border-emerald-400/20 shadow-sm flex items-center gap-1.5 hidden sm:flex">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+          <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full font-semibold border border-emerald-200 shadow-sm flex items-center gap-1.5 hidden sm:flex">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
             En Ligne
           </div>
           <NotificationsDropdown
@@ -1158,7 +1158,7 @@ export default function RegularUserView({
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-full lg:w-[55%] flex flex-col bg-slate-900 border-r border-slate-800 shadow-2xl z-10 shrink-0">
+        <div className="w-full lg:w-[55%] flex flex-col bg-slate-50/70 border-r border-slate-200 shadow-sm z-10 shrink-0">
           <div className="flex-1 overflow-y-auto p-5 pb-64 custom-scrollbar">
             <div className={`border-none p-0 m-0 w-full ${isLocked ? "pointer-events-none opacity-60 transition-opacity duration-300" : ""}`}>
               
@@ -1168,7 +1168,7 @@ export default function RegularUserView({
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
                 isCompleted={!!selectedAddress}
-                summary={selectedAddress ? <span className="flex items-center gap-1"><MapPin className="w-3 h-3"/> {selectedAddress.label}</span> : "Non renseigné"}
+                summary={selectedAddress ? <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-violet-600"/> {selectedAddress.label}</span> : "Non renseigné"}
               >
                 <AddressSearchSection
                   onAddressSelect={(addr) => {
@@ -1330,7 +1330,7 @@ export default function RegularUserView({
           </div>
         </div>
 
-        <div className="flex-1 bg-slate-950 relative flex flex-col min-w-0">
+        <div className="flex-1 bg-slate-100/50 relative flex flex-col min-w-0">
           {showMap && (
             <div className="absolute inset-0 z-10 animate-fadeIn">
               <TerrainMap
@@ -1341,23 +1341,22 @@ export default function RegularUserView({
           )}
 
           {!showMap && (
-            <div className="absolute inset-0 bg-slate-950 overflow-hidden z-0 flex flex-col">
-              <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-indigo-900/20 to-transparent pointer-events-none"></div>
+            <div className="absolute inset-0 bg-slate-100/40 overflow-hidden z-0 flex flex-col">
+              <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-violet-100/40 to-transparent pointer-events-none"></div>
 
               {!selectedCoords && (
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 relative">
-                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
-                  <div className="relative z-10 w-24 h-24 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center shadow-2xl mb-6 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-indigo-500/20 animate-pulse"></div>
-                    <MapPin className="w-10 h-10 text-indigo-400 z-10 relative group-hover:scale-110 transition-transform" />
+                  <div className="relative z-10 w-24 h-24 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-lg mb-6 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-violet-500/10 animate-pulse"></div>
+                    <MapPin className="w-10 h-10 text-violet-600 z-10 relative group-hover:scale-110 transition-transform" />
                   </div>
-                  <h2 className="text-3xl font-bold text-white mb-4">Analyse Structurelle</h2>
-                  <p className="text-slate-400 max-w-md mx-auto text-lg leading-relaxed">
+                  <h2 className="text-3xl font-bold text-slate-900 mb-4">Analyse Structurelle</h2>
+                  <p className="text-slate-600 max-w-md mx-auto text-lg leading-relaxed">
                     Commencez par rechercher une adresse à gauche ou sur la carte pour déterminer les classes de vent et de terrain.
                   </p>
                   <button
                     onClick={() => setShowMap(true)}
-                    className="mt-8 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/20 hover:shadow-indigo-500/40 hover:-translate-y-1"
+                    className="mt-8 px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shadow-violet-500/20 hover:shadow-violet-500/30 hover:-translate-y-0.5"
                   >
                     <MapIcon className="w-5 h-5" /> Explorer sur la carte
                   </button>
@@ -1366,11 +1365,11 @@ export default function RegularUserView({
 
               {selectedCoords && (!sectors[0].selectedMontage4G || !sectors[0].selectedMontage5G) && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full">
-                  <div className="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-indigo-400 mb-6 shadow-2xl">
-                    <Layers className="w-10 h-10 text-indigo-400" />
+                  <div className="w-20 h-20 rounded-full bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
+                    <Layers className="w-10 h-10 text-violet-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-3">Sélectionner le type de montage</h3>
-                  <p className="text-base text-slate-400 max-w-md leading-relaxed">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-3">Sélectionner le type de montage</h3>
+                  <p className="text-base text-slate-600 max-w-md leading-relaxed">
                     Choisissez un type de montage dans le menu déroulant à gauche pour récupérer les spécifications de conception.
                   </p>
                 </div>
@@ -1379,21 +1378,21 @@ export default function RegularUserView({
               {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && anyLoading && (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full">
                   <div className="relative">
-                    <div className="w-20 h-20 border-4 border-slate-800 rounded-full"></div>
-                    <div className="w-20 h-20 border-4 border-indigo-500 rounded-full border-t-transparent animate-spin absolute inset-0"></div>
+                    <div className="w-20 h-20 border-4 border-slate-200 rounded-full"></div>
+                    <div className="w-20 h-20 border-4 border-violet-600 rounded-full border-t-transparent animate-spin absolute inset-0"></div>
                   </div>
-                  <h3 className="text-xl font-bold text-white mt-6 mb-2">Analyse en cours...</h3>
-                  <p className="text-sm text-slate-400">Classification du terrain et récupération du profil structurel Eurocode.</p>
+                  <h3 className="text-xl font-bold text-slate-900 mt-6 mb-2">Analyse en cours...</h3>
+                  <p className="text-sm text-slate-600">Classification du terrain et récupération du profil structurel Eurocode.</p>
                 </div>
               )}
 
               {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && !anyLoading && anyError && (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-rose-400 h-full">
-                  <div className="w-20 h-20 rounded-full bg-rose-500/10 flex items-center justify-center mb-6">
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-rose-600 h-full">
+                  <div className="w-20 h-20 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center mb-6">
                     <AlertCircle className="w-10 h-10" />
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">Erreur de catalogue</h3>
-                  <p className="text-sm text-slate-400">{anyError}</p>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">Erreur de catalogue</h3>
+                  <p className="text-sm text-slate-600">{anyError}</p>
                 </div>
               )}
 
@@ -1423,10 +1422,10 @@ export default function RegularUserView({
                       {/* Show per-group label only when multiple groups exist */}
                       {uniqueGroups.length > 1 && (
                         <div className="flex items-center gap-3 mb-4">
-                          <h3 className="text-lg font-bold text-white">
+                          <h3 className="text-lg font-bold text-slate-900">
                             Calculs - Secteur{group.indices.length > 1 ? 's' : ''} {group.indices.map(i => i + 1).join(', ')}
                           </h3>
-                          <div className="h-px flex-1 bg-slate-800"></div>
+                          <div className="h-px flex-1 bg-slate-200"></div>
                         </div>
                       )}
 
@@ -1486,97 +1485,97 @@ export default function RegularUserView({
                   
                   {/* Résumé de Configuration & Disclaimer */}
                   {!ndcPdfUrl && uniqueGroups.length > 0 && (
-                    <div className="mt-8 bg-slate-900/60 backdrop-blur-md rounded-2xl p-6 border border-slate-700/60 shadow-xl">
+                    <div className="mt-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                       <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400">
+                        <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600">
                           <FileText className="w-6 h-6" />
                         </div>
-                        <h3 className="text-xl font-bold text-white">Confirmation de Génération</h3>
+                        <h3 className="text-xl font-bold text-slate-900">Confirmation de Génération</h3>
                       </div>
                       
-                      <div className="bg-slate-800/40 rounded-xl p-5 border border-slate-700/50 mb-4">
-                        <p className="font-semibold text-white mb-3 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 mb-4">
+                        <p className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                           Vous avez sélectionné :
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-slate-300">
-                          <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                            <span className="text-slate-400">Région de Vent</span>
-                            <span className="text-white font-medium">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-slate-700">
+                          <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                            <span className="text-slate-500">Région de Vent</span>
+                            <span className="text-slate-900 font-semibold">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span>
                           </div>
 
-                          <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                            <span className="text-slate-400">Épaisseur de la dalle</span>
-                            <span className="text-white font-medium">{dalleThickness || 'Non spécifié'} cm</span>
+                          <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                            <span className="text-slate-500">Épaisseur de la dalle</span>
+                            <span className="text-slate-900 font-semibold">{dalleThickness || 'Non spécifié'} cm</span>
                           </div>
-                          <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                            <span className="text-slate-400">Épaisseur de l'étanchéité</span>
-                            <span className="text-white font-medium">{etancheite || 'Non spécifié'} cm</span>
+                          <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                            <span className="text-slate-500">Épaisseur de l'étanchéité</span>
+                            <span className="text-slate-900 font-semibold">{etancheite || 'Non spécifié'} cm</span>
                           </div>
                           
                           {activeSectors.map((sector, idx) => (
-                            <div key={`std-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Secteur {idx + 1} (Standard)</span>
-                              <span className="text-white font-medium">{getMontageDisplayLabel(sector)}</span>
+                            <div key={`std-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Secteur {idx + 1} (Standard)</span>
+                              <span className="text-slate-900 font-semibold">{getMontageDisplayLabel(sector)}</span>
                             </div>
                           ))}
                           
                           {hasFhEquipment && fhQuantity > 0 && (
-                            <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Équipement FH</span>
-                              <span className="text-white font-medium">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span>
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Équipement FH</span>
+                              <span className="text-slate-900 font-semibold">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span>
                             </div>
                           )}
                           
                           {hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => (
-                            <div key={`rrh-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Équipement RRH</span>
-                              <span className="text-white font-medium">{item.quantity}x {resolveRrh(item.reference) || 'Sélectionné'}</span>
+                            <div key={`rrh-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Équipement RRH</span>
+                              <span className="text-slate-900 font-semibold">{item.quantity}x {resolveRrh(item.reference) || 'Sélectionné'}</span>
                             </div>
                           ))}
                           
                           {hasRruEquipment && rruItems.length > 0 && rruItems.map((item, idx) => (
-                            <div key={`rru-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Équipement RRU</span>
-                              <span className="text-white font-medium">{item.quantity}x {resolveRru(item.reference) || 'Sélectionné'}</span>
+                            <div key={`rru-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Équipement RRU</span>
+                              <span className="text-slate-900 font-semibold">{item.quantity}x {resolveRru(item.reference) || 'Sélectionné'}</span>
                             </div>
                           ))}
                           
                           {hasTdEquipment && (
-                            <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Équipement TD</span>
-                              <span className="text-white font-medium">{resolveTd(tdReference) || 'Sélectionné'}</span>
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Équipement TD</span>
+                              <span className="text-slate-900 font-semibold">{resolveTd(tdReference) || 'Sélectionné'}</span>
                             </div>
                           )}
                           
                           {hasBoitierLovage && (
-                            <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Boîtier de Lovage</span>
-                              <span className="text-white font-medium">{boitierLovageReference || 'Sélectionné'}</span>
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Boîtier de Lovage</span>
+                              <span className="text-slate-900 font-semibold">{boitierLovageReference || 'Sélectionné'}</span>
                             </div>
                           )}
                           
                           {hasGps && (
-                            <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">GPS</span>
-                              <span className="text-white font-medium">
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">GPS</span>
+                              <span className="text-slate-900 font-semibold">
                                 {gpsMarque ? `${gpsMarque} - ` : ''}{gpsReference || 'Sélectionné'}
                               </span>
                             </div>
                           )}
                           
                           {hasCoffret && (
-                            <div className="flex justify-between items-center py-1 border-b border-slate-700/30">
-                              <span className="text-slate-400">Coffret</span>
-                              <span className="text-white font-medium">{coffretReference || 'Sélectionné'}</span>
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Coffret</span>
+                              <span className="text-slate-900 font-semibold">{coffretReference || 'Sélectionné'}</span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex gap-4 items-start">
-                        <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                        <p className="text-sm text-amber-200/80 leading-relaxed">
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-4 items-start">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-sm text-amber-900 leading-relaxed">
                           En cliquant sur Valider, vous acceptez que nous n'assumons aucune responsabilité en cas de mauvaise utilisation de cette note de calcul ou de non-respect des hypothèses structurelles.
                         </p>
                       </div>
@@ -1584,16 +1583,16 @@ export default function RegularUserView({
                   )}
 
                   {/* GENERATE GLOBAL NDC BUTTON */}
-                  <div className="mt-8 pt-6 border-t border-slate-800">
+                  <div className="mt-8 pt-6 border-t border-slate-200">
                     {!ndcPdfUrl ? (
                       <div className="flex flex-col gap-4">
                         <button
                           onClick={handleGenerateSiteNdc}
                           disabled={isGeneratingSiteNdc}
-                          className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg transition-all text-lg ${
+                          className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all text-lg ${
                             isFullyStandard() 
-                              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' 
-                              : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
+                              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' 
+                              : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
                           } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
                         >
                           {isGeneratingSiteNdc ? (
@@ -1621,13 +1620,13 @@ export default function RegularUserView({
                                 }
                               `}
                             </style>
-                            <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden relative shadow-inner">
+                            <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
                               <div 
-                                className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-indigo-600 via-purple-500 to-indigo-600'}`}
+                                className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
                                 style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
                               ></div>
                             </div>
-                            <p className="text-center text-xs text-slate-400 mt-3 animate-pulse font-medium">
+                            <p className="text-center text-xs text-slate-500 mt-3 animate-pulse font-medium">
                               {isFullyStandard() ? 'Assemblage des documents en cours...' : 'Nos serveurs calculent votre structure, cela peut prendre 1 à 2 minutes...'}
                             </p>
                           </div>
@@ -1640,14 +1639,14 @@ export default function RegularUserView({
                             <>
                               <button
                                 onClick={() => setShowPdfPreview(!showPdfPreview)}
-                                className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-700"
+                                className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-200 shadow-sm"
                               >
                                 <Eye className="w-5 h-5" />
                                 {showPdfPreview ? 'Masquer l\'Aperçu' : 'Aperçu'}
                               </button>
                               <button
                                 onClick={handleDownloadPdf}
-                                className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20 transition-all text-lg"
+                                className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md shadow-emerald-500/20 transition-all text-lg"
                               >
                                 <Download className="w-5 h-5" />
                                 Télécharger ({sectors.length} secteur{sectors.length > 1 ? 's' : ''})
@@ -1657,14 +1656,14 @@ export default function RegularUserView({
                             <>
                               <button
                                 onClick={() => setShowPdfPreview(!showPdfPreview)}
-                                className="flex-1 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-700"
+                                className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-200 shadow-sm"
                               >
                                 <Eye className="w-5 h-5" />
                                 {showPdfPreview ? 'Fermer la Note' : 'Ouvrir la Note'}
                               </button>
                               <button
                                 onClick={handleDownloadPdf}
-                                className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-emerald-500/20 transition-all text-lg"
+                                className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md shadow-emerald-500/20 transition-all text-lg"
                               >
                                 <Download className="w-5 h-5" />
                                 Télécharger ({sectors.length} secteur{sectors.length > 1 ? 's' : ''})
@@ -1673,28 +1672,28 @@ export default function RegularUserView({
                           )}
                         </div>
                         
-                        <div className="flex gap-4 border-t border-slate-800 pt-4 mt-2">
+                        <div className="flex gap-4 border-t border-slate-200 pt-4 mt-2">
                           <button
                             onClick={() => {
                               setNdcPdfUrl(null);
                               setShowPdfPreview(false);
                               setSiteNdcError(null);
                             }}
-                            className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-slate-700"
+                            className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-slate-200 shadow-sm"
                           >
                             <Settings className="w-4 h-4" />
                             Modifier les paramètres
                           </button>
                           <button
                             onClick={() => window.location.reload()}
-                            className="flex-1 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-rose-500/20"
+                            className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-rose-200"
                           >
                             <RefreshCw className="w-4 h-4" />
                             Nouveau Calcul
                           </button>
                         </div>
                         {showPdfPreview && ndcPdfUrl && (
-                          <div className="w-full h-[75vh] min-h-[600px] border border-slate-700 rounded-xl overflow-hidden bg-white mt-4">
+                          <div className="w-full h-[75vh] min-h-[600px] border border-slate-200 rounded-xl overflow-hidden bg-white mt-4 shadow-md">
                             <iframe
                               src={ndcPdfUrl}
                               className="w-full h-full"
@@ -1705,7 +1704,7 @@ export default function RegularUserView({
                       </div>
                     )}
                     {siteNdcError && (
-                      <p className="text-rose-400 text-sm text-center mt-3">{siteNdcError}</p>
+                      <p className="text-rose-600 text-sm text-center mt-3">{siteNdcError}</p>
                     )}
                   </div>
                 </div>

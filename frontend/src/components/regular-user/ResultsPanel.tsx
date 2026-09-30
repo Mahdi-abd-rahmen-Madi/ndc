@@ -341,10 +341,10 @@ export default function ResultsPanel({
 
   if (!lookupResult) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8 h-full min-h-[400px]">
-        <MapPin className="w-16 h-16 mb-4 opacity-20" />
-        <h3 className="text-xl font-bold text-slate-400 mb-2">Aucun résultat</h3>
-        <p className="text-sm text-center max-w-sm">
+      <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8 h-full min-h-[400px]">
+        <MapPin className="w-16 h-16 mb-4 opacity-30 text-slate-300" />
+        <h3 className="text-xl font-bold text-slate-700 mb-2">Aucun résultat</h3>
+        <p className="text-sm text-slate-500 text-center max-w-sm">
           Remplissez les critères de recherche à gauche pour obtenir la classification environnementale et le profil structurel.
         </p>
       </div>
@@ -355,45 +355,45 @@ export default function ResultsPanel({
     <div className="flex flex-col">
       {/* Header Results with Classification on Right — shown only once */}
       {!hideAnalysisHeader && (
-        <div className="flex items-start justify-between mb-8 pb-6 border-b border-slate-800">
+        <div className="flex items-start justify-between mb-8 pb-6 border-b border-slate-200">
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
               Configuration du site
               {isSearching && (
                 <span className="flex h-3 w-3 relative ml-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-600"></span>
                 </span>
               )}
             </h2>
             {selectedAddress && (
-              <p className="text-slate-400 text-sm flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-indigo-400" />
-                <span className="font-semibold text-slate-300">Adresse:</span> {selectedAddress.name}, {selectedAddress.city}
+              <p className="text-slate-500 text-sm flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-violet-600" />
+                <span className="font-semibold text-slate-700">Adresse:</span> {selectedAddress.name}, {selectedAddress.city}
               </p>
             )}
           </div>
           {/* Consolidated Classification Section on Right */}
           <div className="flex flex-wrap items-center justify-end gap-3 ml-6">
-            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-indigo-500/30 duration-300">
-              <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 shrink-0 group-hover:bg-indigo-500/20 group-hover:scale-110">
+            <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-violet-300 duration-300">
+              <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600 shrink-0 group-hover:bg-violet-100 group-hover:scale-110 transition-transform">
                 <Layers className="w-5 h-5" />
               </div>
               <div className="pr-2">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Secteurs</p>
-                <p className="text-base font-bold text-white leading-none">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Secteurs</p>
+                <p className="text-base font-bold text-slate-900 leading-none">
                   {nombreSecteurs}
                 </p>
               </div>
             </div>
 
-            <div className="group relative bg-slate-800/40 backdrop-blur-md rounded-2xl p-3.5 border border-slate-700/60 shadow-lg flex items-center gap-4 hover:bg-slate-800/80 hover:border-blue-500/30 duration-300">
-              <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 shrink-0 group-hover:bg-blue-500/20 group-hover:scale-110">
+            <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-300 duration-300">
+              <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 shrink-0 group-hover:bg-blue-100 group-hover:scale-110 transition-transform">
                 <Wind className="w-5 h-5" />
               </div>
               <div className="pr-2">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-0.5">Région de Vent</p>
-                <p className="text-base font-bold text-white leading-none">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Région de Vent</p>
+                <p className="text-base font-bold text-slate-900 leading-none">
                   {lookupResult.detected_region ? `Région ${lookupResult.detected_region}` : 'N/A'}
                 </p>
               </div>
@@ -409,19 +409,19 @@ export default function ResultsPanel({
           {/* Configuration Antennes par Secteur */}
           {sectors && sectors.length > 0 && (
             <div className="mb-8 animate-slide-in">
-              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Radio className="w-4 h-4 text-violet-600" />
                 Configuration Antennes par Secteur
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sectors.map((sector, idx) => (
-                  <div key={sector.id} className="bg-slate-900/50 backdrop-blur-sm rounded-xl p-4 border border-slate-800 border-l-4 border-l-indigo-500 hover:border-indigo-500/30 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/5 duration-300">
-                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-                      <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                  <div key={sector.id} className="bg-white rounded-xl p-4 border border-slate-200 border-l-4 border-l-violet-600 shadow-sm hover:border-violet-300 hover:scale-[1.01] hover:shadow-md duration-300">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                      <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-violet-600 animate-pulse"></span>
                         Secteur {idx + 1}
                       </h4>
-                      <span className="text-[10px] text-slate-400 px-2 py-0.5 bg-slate-900 rounded-full border border-slate-800">
+                      <span className="text-[10px] font-medium text-slate-600 px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200">
                         h mât: {sector.selectedHeight}m
                       </span>
                     </div>
@@ -429,36 +429,36 @@ export default function ResultsPanel({
                     <div className="space-y-4">
                       {/* 4G Antenna */}
                       <div>
-                        <div className="flex items-center justify-between text-xs font-semibold text-blue-400 mb-1">
+                        <div className="flex items-center justify-between text-xs font-semibold text-blue-600 mb-1">
                           <span>Antenne 4G</span>
                           <span className="text-[10px] text-slate-500 truncate max-w-[120px]">{sector.ant4gConfig.model || 'Standard'}</span>
                         </div>
-                        <div className="bg-slate-950/40 rounded p-2 text-xs space-y-1">
+                        <div className="bg-slate-50 rounded p-2 text-xs space-y-1 border border-slate-100">
                           <div className="flex justify-between">
                             <span className="text-slate-500">Dimensions:</span>
-                            <span className="text-slate-300 font-medium">{sector.ant4gConfig.height}×{sector.ant4gConfig.width}×{sector.ant4gConfig.thickness} mm</span>
+                            <span className="text-slate-800 font-medium">{sector.ant4gConfig.height}×{sector.ant4gConfig.width}×{sector.ant4gConfig.thickness} mm</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-slate-500">Poids:</span>
-                            <span className="text-slate-300 font-medium">{sector.ant4gConfig.weight} daN</span>
+                            <span className="text-slate-800 font-medium">{sector.ant4gConfig.weight} daN</span>
                           </div>
                         </div>
                       </div>
 
                       {/* 5G Antenna */}
                       <div>
-                        <div className="flex items-center justify-between text-xs font-semibold text-purple-400 mb-1">
+                        <div className="flex items-center justify-between text-xs font-semibold text-violet-600 mb-1">
                           <span>Antenne 5G</span>
                           <span className="text-[10px] text-slate-500 truncate max-w-[120px]">{sector.ant5gConfig.model || 'Standard'}</span>
                         </div>
-                        <div className="bg-slate-950/40 rounded p-2 text-xs space-y-1">
+                        <div className="bg-slate-50 rounded p-2 text-xs space-y-1 border border-slate-100">
                           <div className="flex justify-between">
                             <span className="text-slate-500">Dimensions:</span>
-                            <span className="text-slate-300 font-medium">{sector.ant5gConfig.height}×{sector.ant5gConfig.width}×{sector.ant5gConfig.thickness} mm</span>
+                            <span className="text-slate-800 font-medium">{sector.ant5gConfig.height}×{sector.ant5gConfig.width}×{sector.ant5gConfig.thickness} mm</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-slate-500">Poids:</span>
-                            <span className="text-slate-300 font-medium">{sector.ant5gConfig.weight} daN</span>
+                            <span className="text-slate-800 font-medium">{sector.ant5gConfig.weight} daN</span>
                           </div>
                         </div>
                       </div>
@@ -472,7 +472,7 @@ export default function ResultsPanel({
           {/* Profil Structurel Recommandé (Hidden internally per request) */}
           {lookupResult.equipment.length > 0 && (
             <div className="hidden mb-8 animate-slide-in">
-              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
                 Profil Structurel Recommandé
               </h3>
               <div className="space-y-4">
@@ -490,30 +490,30 @@ export default function ResultsPanel({
                   const showMontage = !isA1Montage;
 
                   return (
-                    <div key={idx} className="bg-slate-900/60 backdrop-blur-md border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl hover:shadow-emerald-900/20 hover:border-emerald-500/40 duration-300 group">
+                    <div key={idx} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-emerald-500/40 duration-300 group">
                       <div className="p-6">
                         <div className="flex justify-between items-start mb-5">
                           <div>
                             <div className="flex items-center gap-3 mb-2">
-                              <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:bg-emerald-500/20 transition-colors shadow-inner">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                              <div className="p-2 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                               </div>
-                              <h4 className="text-xl font-extrabold text-white tracking-tight">{displayName}</h4>
+                              <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">{displayName}</h4>
                             </div>
                             {showMontage && rawMontage && (
                               <div className="flex items-center gap-2 ml-12">
                                 <Layers className="w-4 h-4 text-slate-500" />
-                                <p className="text-sm text-slate-400 font-medium">Montage: <span className="text-slate-300">{rawMontage}</span></p>
+                                <p className="text-sm text-slate-500 font-medium">Montage: <span className="text-slate-800">{rawMontage}</span></p>
                               </div>
                             )}
                           </div>
                           <div className="flex flex-col gap-2 items-end">
-                            <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
+                            <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full border border-emerald-200 flex items-center gap-1.5 shadow-sm">
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               Section Validée
                             </span>
                             {(eq.reference_4g || eq.reference_5g) && (
-                              <span className="px-3 py-1.5 bg-indigo-500/10 text-indigo-400 text-xs font-bold rounded-full border border-indigo-500/20 flex items-center gap-1.5 shadow-sm">
+                              <span className="px-3 py-1.5 bg-violet-50 text-violet-700 text-xs font-bold rounded-full border border-violet-200 flex items-center gap-1.5 shadow-sm">
                                 <Activity className="w-3.5 h-3.5" />
                                 Dimensions Réelles
                               </span>
@@ -521,13 +521,13 @@ export default function ResultsPanel({
                           </div>
                         </div>
 
-                        <div className={`bg-slate-950/40 rounded-xl p-5 border border-slate-800/50 ${(eq.reference_4g || eq.reference_5g) ? 'mb-4' : ''}`}>
+                        <div className={`bg-slate-50 rounded-xl p-5 border border-slate-200 ${(eq.reference_4g || eq.reference_5g) ? 'mb-4' : ''}`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <Settings className="w-4 h-4 text-slate-400" />
-                            <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spécification Matériau</p>
+                            <Settings className="w-4 h-4 text-slate-500" />
+                            <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Spécification Matériau</p>
                           </div>
                           {!(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                            <p className="text-emerald-300/90 font-medium whitespace-pre-line leading-relaxed text-sm">
+                            <p className="text-emerald-800 font-medium whitespace-pre-line leading-relaxed text-sm">
                               {details.material}
                             </p>
                           )}
@@ -535,33 +535,33 @@ export default function ResultsPanel({
                           {(firstEquipmentDetails?.matPrincipal || matPrincipal || firstEquipmentDetails?.plotMetallique || plotMetallique || firstEquipmentDetails?.brasDeDeport || brasDeDeport || firstEquipmentDetails?.matSecondaire || matSecondaire) && (
                             <div className="space-y-2.5 text-xs pt-2">
                               {(firstEquipmentDetails?.matPrincipal || matPrincipal) && (
-                                <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                                  <span className="text-slate-400 font-medium">Mât Principal:</span>
-                                  <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
+                                <div className="flex justify-between items-center py-0.5 border-b border-slate-200 last:border-0">
+                                  <span className="text-slate-500 font-medium">Mât Principal:</span>
+                                  <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matPrincipal || matPrincipal}>
                                     {firstEquipmentDetails?.matPrincipal || matPrincipal}
                                   </span>
                                 </div>
                               )}
                               {(firstEquipmentDetails?.plotMetallique || plotMetallique) && (
-                                <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                                  <span className="text-slate-400 font-medium">Plot Métallique:</span>
-                                  <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
+                                <div className="flex justify-between items-center py-0.5 border-b border-slate-200 last:border-0">
+                                  <span className="text-slate-500 font-medium">Plot Métallique:</span>
+                                  <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.plotMetallique || plotMetallique}>
                                     {firstEquipmentDetails?.plotMetallique || plotMetallique}
                                   </span>
                                 </div>
                               )}
                               {(firstEquipmentDetails?.brasDeDeport || brasDeDeport) && (
-                                <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                                  <span className="text-slate-400 font-medium">Bras de déport:</span>
-                                  <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
+                                <div className="flex justify-between items-center py-0.5 border-b border-slate-200 last:border-0">
+                                  <span className="text-slate-500 font-medium">Bras de déport:</span>
+                                  <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.brasDeDeport || brasDeDeport}>
                                     {firstEquipmentDetails?.brasDeDeport || brasDeDeport}
                                   </span>
                                 </div>
                               )}
                               {(firstEquipmentDetails?.matSecondaire || matSecondaire) && (
-                                <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                                  <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
-                                  <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
+                                <div className="flex justify-between items-center py-0.5 border-b border-slate-200 last:border-0">
+                                  <span className="text-slate-500 font-medium">Mât antenne 5G:</span>
+                                  <span className="text-slate-800 font-semibold bg-white px-2 py-0.5 rounded border border-slate-200 text-right max-w-[60%] truncate" title={firstEquipmentDetails?.matSecondaire || matSecondaire}>
                                     {firstEquipmentDetails?.matSecondaire || matSecondaire}
                                   </span>
                                 </div>
@@ -571,28 +571,28 @@ export default function ResultsPanel({
                         </div>
 
                         {(eq.reference_4g || eq.reference_5g) && (
-                          <div className="bg-indigo-950/20 rounded-xl p-5 border border-indigo-500/20">
+                          <div className="bg-violet-50/50 rounded-xl p-5 border border-violet-100">
                             <div className="flex items-center gap-2 mb-4">
-                              <Radio className="w-4 h-4 text-indigo-400" />
-                              <p className="text-xs text-indigo-400 uppercase tracking-wider font-semibold">Références Équipement</p>
+                              <Radio className="w-4 h-4 text-violet-600" />
+                              <p className="text-xs text-violet-700 uppercase tracking-wider font-semibold">Références Équipement</p>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                               {eq.reference_4g && (
-                                <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-blue-500/30 transition-colors">
+                                <div className="bg-white rounded-lg p-3 border border-slate-200 hover:border-blue-300 transition-colors shadow-sm">
                                   <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
-                                    <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></span>
+                                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                                     Modèle 4G
                                   </p>
-                                  <p className="text-sm font-bold text-slate-200">{eq.reference_4g}</p>
+                                  <p className="text-sm font-bold text-slate-800">{eq.reference_4g}</p>
                                 </div>
                               )}
                               {eq.reference_5g && (
-                                <div className="bg-slate-950/50 rounded-lg p-3 border border-slate-800/50 hover:border-purple-500/30 transition-colors">
+                                <div className="bg-white rounded-lg p-3 border border-slate-200 hover:border-violet-300 transition-colors shadow-sm">
                                   <p className="text-[10px] text-slate-500 uppercase flex items-center gap-1.5 mb-1.5 font-semibold">
-                                    <span className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></span>
+                                    <span className="w-2 h-2 rounded-full bg-violet-500"></span>
                                     Modèle 5G
                                   </p>
-                                  <p className="text-sm font-bold text-slate-200">{eq.reference_5g}</p>
+                                  <p className="text-sm font-bold text-slate-800">{eq.reference_5g}</p>
                                 </div>
                               )}
                             </div>
@@ -609,8 +609,8 @@ export default function ResultsPanel({
 
           {/* Equipment Configuration */}
           <div className="mb-8">
-            <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Radio className="w-4 h-4 text-indigo-400" />
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Radio className="w-4 h-4 text-violet-600" />
               Configuration Équipements
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -623,32 +623,32 @@ export default function ResultsPanel({
 
                 // Premium color accent borders
                 const accentBorderClasses: Record<string, string> = {
-                  blue: 'border-l-blue-500 hover:border-blue-500/30',
-                  purple: 'border-l-purple-500 hover:border-purple-500/30',
-                  amber: 'border-l-amber-500 hover:border-amber-500/30',
-                  rose: 'border-l-rose-500 hover:border-rose-500/30',
-                  emerald: 'border-l-emerald-500 hover:border-emerald-500/30',
+                  blue: 'border-l-blue-500 hover:border-blue-400',
+                  purple: 'border-l-purple-500 hover:border-purple-400',
+                  amber: 'border-l-amber-500 hover:border-amber-400',
+                  rose: 'border-l-rose-500 hover:border-rose-400',
+                  emerald: 'border-l-emerald-500 hover:border-emerald-400',
                 };
-                const accentBorder = accentBorderClasses[colorClass] || 'border-l-indigo-500 hover:border-indigo-500/30';
+                const accentBorder = accentBorderClasses[colorClass] || 'border-l-violet-600 hover:border-violet-400';
 
                 // Extract Quantité field if it exists
                 const quantiteField = config.fields.find(f => f.label.toLowerCase().includes('quantit'));
                 const otherFields = config.fields.filter(f => !f.label.toLowerCase().includes('quantit'));
 
                 const renderCard = (keyId: string, qValue: any, itemValues: any, indexLabel?: string) => (
-                  <div key={keyId} className={`group relative bg-slate-800/40 backdrop-blur-md rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:bg-slate-800/80 duration-300`}>
-                    <div className="flex items-center justify-between border-b border-slate-700/50 pb-2">
+                  <div key={keyId} className={`group relative bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:shadow-md duration-300`}>
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <div className="flex items-center gap-2">
-                        <div className={`p-1.5 bg-${colorClass}-500/10 rounded-lg text-${colorClass}-400 group-hover:bg-${colorClass}-500/20 group-hover:scale-110 shadow-inner`}>
+                        <div className={`p-1.5 bg-${colorClass}-50 rounded-lg text-${colorClass}-600 group-hover:bg-${colorClass}-100 group-hover:scale-110 shadow-inner transition-transform`}>
                           <IconComponent className="w-3.5 h-3.5" />
                         </div>
-                        <h4 className="text-[11px] font-extrabold text-white tracking-tight truncate max-w-[120px]" title={config.name}>
+                        <h4 className="text-[11px] font-bold text-slate-900 tracking-tight truncate max-w-[120px]" title={config.name}>
                           {config.name} {indexLabel || ''}
                         </h4>
                       </div>
                       {qValue !== null && (
-                        <div className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700 shadow-sm flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-slate-300">x{qValue}</span>
+                        <div className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shadow-sm flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-slate-700">x{qValue}</span>
                         </div>
                       )}
                     </div>
@@ -658,15 +658,15 @@ export default function ResultsPanel({
                           itemValues?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
                           field.value;
                         return (
-                          <div key={idx} className="flex justify-between items-center bg-slate-950/20 rounded p-1.5 border border-slate-800/30 hover:border-slate-700 transition-colors">
-                            <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">{field.label}</span>
-                            <span className="text-xs font-bold text-slate-200 text-right max-w-[65%] truncate" title={String(val)}>
+                          <div key={idx} className="flex justify-between items-center bg-slate-50 rounded p-1.5 border border-slate-100 hover:border-slate-200 transition-colors">
+                            <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">{field.label}</span>
+                            <span className="text-xs font-bold text-slate-800 text-right max-w-[65%] truncate" title={String(val)}>
                               {val}
                             </span>
                           </div>
                         );
                       }) : (
-                        <div className="flex items-center justify-center h-full text-slate-500 text-[10px] italic">
+                        <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic">
                           Aucun paramètre
                         </div>
                       )}
@@ -701,51 +701,50 @@ export default function ResultsPanel({
           {/* Actions & Fallbacks */}
           <div>
             {lookupResult.equipment.length === 0 && (
-              <div className="hidden bg-slate-800/30 border border-slate-700 border-dashed rounded-xl p-8 text-center flex flex-col items-center">
-                <div className="p-4 bg-slate-800 rounded-full mb-4 relative">
+              <div className="hidden bg-slate-50 border border-slate-300 border-dashed rounded-xl p-8 text-center flex flex-col items-center">
+                <div className="p-4 bg-slate-100 rounded-full mb-4 relative">
                   <span className="absolute -top-1 -right-1 flex h-4 w-4">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500 text-[10px] font-bold flex items-center justify-center text-white">!</span>
                   </span>
                   <FileText className="w-8 h-8 text-slate-500" />
                 </div>
-                <h4 className="text-lg font-bold text-white mb-2">Configuration Hors Catalogue</h4>
-                <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
+                <h4 className="text-lg font-bold text-slate-900 mb-2">Configuration Hors Catalogue</h4>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6 leading-relaxed">
                   Les paramètres saisis nécessitent une note de calcul spécifique. À titre indicatif, voici la recommandation standard jusqu'à 4m.
                 </p>
 
                 {/* Recommended configuration based on 3-4m values */}
                 <div className={`w-full max-w-2xl mx-auto text-left mb-6 ${(mastHeight || 0) > 4 ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-                  <div className="flex items-center gap-2 mb-4 text-emerald-400">
+                  <div className="flex items-center gap-2 mb-4 text-emerald-600">
                     <CheckCircle2 className="w-5 h-5" />
-                    <h3 className="font-bold">Configuration Validée {((mastHeight || 0) > 4) && <span className="text-sm font-normal text-slate-400">(Recommandée uniquement pour 3m et 4m)</span>}</h3>
+                    <h3 className="font-bold">Configuration Validée {((mastHeight || 0) > 4) && <span className="text-sm font-normal text-slate-500">(Recommandée uniquement pour 3m et 4m)</span>}</h3>
                   </div>
-                  <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-xl p-6 relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
-                    <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full -z-10 group-hover:bg-emerald-500/10 transition-colors"></div>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 relative overflow-hidden group hover:border-emerald-300 transition-colors">
                     <div className="flex flex-col gap-2 items-end absolute top-4 right-4">
-                      <span className="px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full border border-emerald-500/20 flex items-center gap-1.5 shadow-sm">
+                      <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full border border-emerald-200 flex items-center gap-1.5 shadow-sm">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Section Validée
                       </span>
                     </div>
 
-                    <div className="bg-slate-950/40 rounded-xl p-5 border border-slate-800/50 mt-8">
+                    <div className="bg-white rounded-xl p-5 border border-slate-200 mt-8">
                       <div className="flex items-center gap-2 mb-3">
-                        <Settings className="w-4 h-4 text-slate-400" />
-                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Spécification Matériau</p>
+                        <Settings className="w-4 h-4 text-slate-500" />
+                        <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Spécification Matériau</p>
                       </div>
                       <div className="space-y-2.5 text-xs pt-2">
-                        <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                          <span className="text-slate-400 font-medium">Plot Métallique:</span>
-                          <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right">TCAR 150x5</span>
+                        <div className="flex justify-between items-center py-0.5 border-b border-slate-100 last:border-0">
+                          <span className="text-slate-500 font-medium">Plot Métallique:</span>
+                          <span className="text-slate-800 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-right">TCAR 150x5</span>
                         </div>
-                        <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                          <span className="text-slate-400 font-medium">Bras de déport:</span>
-                          <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right">TCAR 50x5</span>
+                        <div className="flex justify-between items-center py-0.5 border-b border-slate-100 last:border-0">
+                          <span className="text-slate-500 font-medium">Bras de déport:</span>
+                          <span className="text-slate-800 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-right">TCAR 50x5</span>
                         </div>
-                        <div className="flex justify-between items-center py-0.5 border-b border-slate-800/40 last:border-0">
-                          <span className="text-slate-400 font-medium">Mât antenne 5G:</span>
-                          <span className="text-slate-200 font-semibold bg-slate-950/30 px-2 py-0.5 rounded border border-slate-800/30 text-right">TRON 76x5</span>
+                        <div className="flex justify-between items-center py-0.5 border-b border-slate-100 last:border-0">
+                          <span className="text-slate-500 font-medium">Mât antenne 5G:</span>
+                          <span className="text-slate-800 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200 text-right">TRON 76x5</span>
                         </div>
                       </div>
                     </div>
@@ -763,8 +762,8 @@ export default function ResultsPanel({
           />
 
           {conversionError && (
-            <div className="mt-4 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-center">
-              <p className="text-sm text-rose-400">
+            <div className="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-center">
+              <p className="text-sm text-rose-600">
                 Impossible de prévisualiser ce document. Veuillez le télécharger.
               </p>
             </div>

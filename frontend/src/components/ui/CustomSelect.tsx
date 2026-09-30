@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+import { styles } from './styles/CustomSelect.styles';
 
 interface Option {
   value: string;
@@ -50,7 +51,7 @@ export function CustomSelect({ value, onChange, options = [], groups = [], place
   const renderOption = (opt: Option) => (
     <div
       key={opt.value}
-      className={`px-3 py-2 text-sm flex items-center justify-between ${opt.disabled ? 'opacity-50 cursor-not-allowed bg-slate-800' : 'cursor-pointer hover:bg-slate-700'} ${opt.value === value ? 'bg-indigo-900/40 text-indigo-200' : 'text-slate-200'}`}
+      className={`${styles.optionBase} ${opt.disabled ? styles.optionDisabled : styles.optionEnabled} ${opt.value === value ? styles.optionSelected : ''}`}
       onClick={() => {
         if (!opt.disabled) {
           onChange(opt.value);
@@ -58,33 +59,33 @@ export function CustomSelect({ value, onChange, options = [], groups = [], place
         }
       }}
     >
-      <span className="truncate">{opt.label}</span>
-      {opt.value === value && <Check className="w-4 h-4 text-indigo-400 shrink-0 ml-2" />}
+      <span className={styles.optionLabel}>{opt.label}</span>
+      {opt.value === value && <Check className={styles.optionCheckIcon} />}
     </div>
   );
 
   return (
-    <div className={`relative ${className}`} ref={containerRef}>
+    <div className={`${styles.selectContainer} ${className}`} ref={containerRef}>
       <div 
-        className={`w-full bg-slate-800 border border-slate-700 rounded-lg py-1.5 px-2.5 text-sm text-white flex items-center justify-between cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-slate-600'}`}
+        className={`${styles.triggerBase} ${disabled ? styles.triggerDisabled : styles.triggerEnabled}`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
-        <span className="truncate mr-2">
+        <span className={styles.triggerValue}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconOpen : ''}`} />
       </div>
       
       {isOpen && !disabled && (
-        <div className="absolute z-[100] top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-slate-800 border border-slate-700 rounded-lg shadow-xl custom-scrollbar">
+        <div className={styles.dropdownMenu}>
           {options.length === 0 && groups.length === 0 ? (
-            <div className="p-3 text-xs text-slate-400 text-center">Aucune option</div>
+            <div className={styles.emptyState}>Aucune option</div>
           ) : (
-            <div className="py-1">
+            <div className={styles.listContainer}>
               {options.map(renderOption)}
               {groups.map(group => (
-                <div key={group.label} className="mt-2 first:mt-0">
-                  <div className="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-800/80 sticky top-0">
+                <div key={group.label} className={styles.groupContainer}>
+                  <div className={styles.groupLabel}>
                     {group.label}
                   </div>
                   {group.options.map(renderOption)}
