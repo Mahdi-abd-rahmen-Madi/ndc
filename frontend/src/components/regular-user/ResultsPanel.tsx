@@ -34,6 +34,9 @@ interface ResultsPanelProps {
   recommendedMast5gSection?: string;
   hideAnalysisHeader?: boolean;
   headerOnly?: boolean;
+  showSectorsCount?: boolean;
+  showSectorsConfig?: boolean;
+  showEquipmentConfig?: boolean;
 }
 
 export default function ResultsPanel({
@@ -63,7 +66,10 @@ export default function ResultsPanel({
   recommendedBrasSection = 'TCAR 50x5',
   recommendedMast5gSection = 'TRON 76x5',
   hideAnalysisHeader = false,
-  headerOnly = false
+  headerOnly = false,
+  showSectorsCount = true,
+  showSectorsConfig = true,
+  showEquipmentConfig = true
 }: ResultsPanelProps) {
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -375,17 +381,19 @@ export default function ResultsPanel({
           </div>
           {/* Consolidated Classification Section on Right */}
           <div className="flex flex-wrap items-center justify-end gap-3 ml-6">
-            <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-violet-300 duration-300">
-              <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600 shrink-0 group-hover:bg-violet-100 group-hover:scale-110 transition-transform">
-                <Layers className="w-5 h-5" />
+            {showSectorsCount && (
+              <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-violet-300 duration-300">
+                <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600 shrink-0 group-hover:bg-violet-100 group-hover:scale-110 transition-transform">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div className="pr-2">
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Secteurs</p>
+                  <p className="text-base font-bold text-slate-900 leading-none">
+                    {nombreSecteurs}
+                  </p>
+                </div>
               </div>
-              <div className="pr-2">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Secteurs</p>
-                <p className="text-base font-bold text-slate-900 leading-none">
-                  {nombreSecteurs}
-                </p>
-              </div>
-            </div>
+            )}
 
             <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-300 duration-300">
               <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 shrink-0 group-hover:bg-blue-100 group-hover:scale-110 transition-transform">
@@ -407,7 +415,7 @@ export default function ResultsPanel({
       {!headerOnly && (
         <>
           {/* Configuration Antennes par Secteur */}
-          {sectors && sectors.length > 0 && (
+          {showSectorsConfig && sectors && sectors.length > 0 && (
             <div className="mb-8 animate-slide-in">
               <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Radio className="w-4 h-4 text-violet-600" />
@@ -608,8 +616,9 @@ export default function ResultsPanel({
           )}
 
           {/* Equipment Configuration */}
-          <div className="mb-8">
-            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+          {showEquipmentConfig && (
+            <div className="mb-8">
+              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Radio className="w-4 h-4 text-violet-600" />
               Configuration Équipements
             </h3>
@@ -697,6 +706,7 @@ export default function ResultsPanel({
               })}
             </div>
           </div>
+          )}
 
           {/* Actions & Fallbacks */}
           <div>

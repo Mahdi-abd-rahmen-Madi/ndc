@@ -112,16 +112,18 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
     if not job and preview_data:
         site_info = preview_data.get('site', {})
 
+    active_data = input_data if job else (preview_data or {})
+    
     context['site_address'] = site_info.get('address') or '[ADRESSE_DU_SITE]'
     context['site_name'] = site_info.get('name') or '[NOM_DU_SITE]'
-    context['client_name'] = site_info.get('client') or '[CLIENT]'
+    context['code_site'] = site_info.get('code_site') or active_data.get('code_site') or '[CODE_SITE]'
+    context['client_name'] = site_info.get('client') or active_data.get('client_name') or '[CLIENT]'
     context['current_date'] = datetime.now().strftime("%d/%m/%Y")
     
     # -----------------------------
     # Page 3 Variables Mapping
     # -----------------------------
-    active_data = input_data if job else (preview_data or {})
-    
+
     import re
     structure_data = active_data.get('structure', {})
 

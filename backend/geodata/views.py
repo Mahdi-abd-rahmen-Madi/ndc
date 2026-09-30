@@ -1231,7 +1231,16 @@ class GeocodingSearchViewSet(viewsets.ViewSet):
                     ]
             else:
                 # Direct search using geocoding API
-                addresses = address_service.search_addresses(query, limit)
+                # Fetch more results initially because we'll filter out generic types
+                raw_addresses = address_service.search_addresses(query, limit=15)
+                
+                # Filter to only allow exact locations ('housenumber')
+                exact_types = ['housenumber']
+                addresses = [addr for addr in raw_addresses if addr.get('properties', {}).get('type') in exact_types]
+                
+                # Limit to the requested amount after filtering
+                addresses = addresses[:limit]
+                
                 # Convert to frontend format
                 formatted_addresses = []
                 for addr in addresses:

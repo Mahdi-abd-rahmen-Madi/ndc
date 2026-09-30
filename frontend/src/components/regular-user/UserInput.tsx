@@ -6,8 +6,8 @@ import { SimilarityMode } from './types';
 interface UserInputProps {
   siteType?: string | null;
   foundationType?: string | null;
-  selectedBuildingHeight: number;
-  setSelectedBuildingHeight: (val: number) => void;
+  selectedBuildingHeight: number | string;
+  setSelectedBuildingHeight: (val: number | string) => void;
   nombreSecteurs: number;
   setNombreSecteurs: (val: number) => void;
   dalleThickness: number | string;
@@ -31,6 +31,8 @@ interface UserInputProps {
   setFausseDalleThickness?: (val: number | string) => void;
   operator?: string;
   setOperator?: (val: string) => void;
+  codeSite: string;
+  setCodeSite: (val: string) => void;
 }
 
 export default function UserInput({
@@ -57,7 +59,9 @@ export default function UserInput({
   fausseDalleThickness = '',
   setFausseDalleThickness,
   operator,
-  setOperator
+  setOperator,
+  codeSite,
+  setCodeSite
 }: UserInputProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -205,7 +209,7 @@ export default function UserInput({
             </div>
           )}
 
-          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex flex-col">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
                 Nom du site
@@ -215,6 +219,18 @@ export default function UserInput({
                 value={siteName}
                 onChange={(e) => setSiteName(e.target.value)}
                 placeholder="Ex: TOWER_PARIS_01"
+                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
+                Code site
+              </label>
+              <input
+                type="text"
+                value={codeSite}
+                onChange={(e) => setCodeSite(e.target.value)}
+                placeholder="Ex: 75001"
                 className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all"
               />
             </div>
@@ -290,7 +306,7 @@ export default function UserInput({
                     max="150"
                     step="0.5"
                     value={selectedBuildingHeight}
-                    onChange={(e) => setSelectedBuildingHeight(Number(e.target.value))}
+                    onChange={(e) => setSelectedBuildingHeight(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full bg-transparent border-none py-2 px-3 text-sm text-slate-900 focus:ring-0"
                   />
                   <div className="px-3 flex items-center bg-slate-100 border-l border-slate-300 text-slate-600 text-xs font-semibold">m</div>

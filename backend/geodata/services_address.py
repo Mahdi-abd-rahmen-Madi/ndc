@@ -218,7 +218,7 @@ class AddressGenerationService:
             params = {
                 'lon': longitude,
                 'lat': latitude,
-                'limit': 1
+                'limit': 10
             }
             
             # The base url is ending in /search, so we replace it with /reverse
@@ -230,6 +230,15 @@ class AddressGenerationService:
             features = data.get('features', [])
             
             if features:
+                exact_types = ['housenumber']
+                # find the first exact match
+                for feature in features:
+                    if feature.get('properties', {}).get('type') in exact_types:
+                        cache.set(cache_key, feature, self.cache_timeout)
+                        time.sleep(self.request_delay)
+                        return feature
+                
+                # fallback to first if no exact match found
                 address = features[0]
                 cache.set(cache_key, address, self.cache_timeout)
                 time.sleep(self.request_delay)

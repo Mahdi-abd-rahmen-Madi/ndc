@@ -140,7 +140,7 @@ export default function RegularUserView({
   // Core State
   const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number>(15);
+  const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number | string>('');
   const [nombreSecteurs, setNombreSecteurs] = useState<number>(3);
 
   const siteType = initialSiteType || 'nouveau';
@@ -198,6 +198,7 @@ export default function RegularUserView({
   const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [siteName, setSiteName] = useState<string>('');
+  const [codeSite, setCodeSite] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
   const [operator, setOperator] = useState<string>('bouygues');
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
@@ -349,9 +350,9 @@ export default function RegularUserView({
 
       try {
         const precalculatedHeights = config?.precalculated_building_heights || [10, 15, 20, 25, 30, 35, 40, 45];
-        let queryHeight = selectedBuildingHeight;
-        if (!precalculatedHeights.includes(selectedBuildingHeight)) {
-          const validHeights = precalculatedHeights.filter(h => h >= selectedBuildingHeight);
+        let queryHeight = Number(selectedBuildingHeight) || 0;
+        if (!precalculatedHeights.includes(queryHeight)) {
+          const validHeights = precalculatedHeights.filter(h => h >= queryHeight);
           queryHeight = validHeights.length > 0 ? validHeights[0] : precalculatedHeights[precalculatedHeights.length - 1];
         }
 
@@ -487,6 +488,7 @@ export default function RegularUserView({
           type: siteType,
           address: selectedAddress?.label || '',
           name: siteName,
+          code_site: codeSite,
           client: clientName,
           client_logo_url: clientLogoUrl,
           ancrage: foundationType,
@@ -496,7 +498,7 @@ export default function RegularUserView({
         environment: {
           region: sector.lookupResult?.detected_region || 'N/A',
           terrain_type: sector.lookupResult?.detected_terrain_type ?? 0,
-          building_height_m: selectedBuildingHeight,
+          building_height_m: Number(selectedBuildingHeight) || 0,
           dalle_thickness_m: dalleThickness === '' ? null : Number(dalleThickness) / 100,
           etancheite: etancheite === '' ? null : Number(etancheite),
           plot_height_m: plotHeight
@@ -642,7 +644,7 @@ export default function RegularUserView({
       
       // Check if building height is standard (only matters for roof sites)
       if (foundationType === 'metallique') {
-        const bHeight = selectedBuildingHeight;
+        const bHeight = Number(selectedBuildingHeight) || 0;
         if (typeof bHeight !== 'number' || isNaN(bHeight) || !config?.precalculated_building_heights?.includes(bHeight)) return false;
       }
       
@@ -703,7 +705,7 @@ export default function RegularUserView({
           const eq = g.sector.lookupResult?.equipment[0];
           if (eq) {
              const height = foundationType === 'metallique' 
-               ? (selectedBuildingHeight || eq.building_height || 15)
+               ? (Number(selectedBuildingHeight) || eq.building_height || 15)
                : g.sector.selectedHeight;
                
              let actualMontage = g.sector.selectedMontage4G;
@@ -736,6 +738,7 @@ export default function RegularUserView({
           catalogue_pdf_urls: catalogueUrls,
           photo_url: siteImageUrl,
           site_name: siteName,
+          code_site: codeSite,
           client_name: clientName,
           address: selectedAddress?.label || selectedAddress?.name || '',
           etancheite: etancheite,
@@ -743,7 +746,7 @@ export default function RegularUserView({
           environment: {
             terrain_type: activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa',
             region: activeSectors[0]?.lookupResult?.detected_region || '1',
-            building_height_m: selectedBuildingHeight,
+            building_height_m: Number(selectedBuildingHeight) || 0,
             plot_height_m: 0.6
           },
           structure: {
@@ -834,6 +837,7 @@ export default function RegularUserView({
             type: siteType,
             address: selectedAddress?.label || '',
             name: siteName,
+            code_site: codeSite,
             client: clientName,
             client_logo_url: clientLogoUrl,
             ancrage: foundationType,
@@ -843,7 +847,7 @@ export default function RegularUserView({
           environment: {
             region: sector.lookupResult?.detected_region || 'N/A',
             terrain_type: sector.lookupResult?.detected_terrain_type ?? 0,
-            building_height_m: selectedBuildingHeight,
+            building_height_m: Number(selectedBuildingHeight) || 0,
             dalle_thickness_m: dalleThickness === '' ? null : Number(dalleThickness) / 100,
             etancheite: etancheite === '' ? null : Number(etancheite),
             plot_height_m: plotHeight
@@ -1006,6 +1010,16 @@ export default function RegularUserView({
   };
 
   const isLocked = isGeneratingSiteNdc || !!ndcPdfUrl;
+
+  const missingRequirements = [];
+  if (!siteName.trim()) missingRequirements.push('Nom du site');
+  if (!clientName.trim()) missingRequirements.push('Nom du client');
+  if (!siteImageUrl) missingRequirements.push('Photo du site');
+  if (selectedBuildingHeight === '') missingRequirements.push('Hauteur bâtiment');
+  if (foundationType !== 'encastre') {
+    if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
+  }
+  const canGenerate = missingRequirements.length === 0;
 
   return (
     <div className="flex flex-col w-full h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden selection:bg-violet-500/20">
@@ -1210,6 +1224,8 @@ export default function RegularUserView({
                   onSiteImageUploaded={setSiteImageUrl}
                   siteName={siteName}
                   setSiteName={setSiteName}
+                  codeSite={codeSite}
+                  setCodeSite={setCodeSite}
                   clientName={clientName}
                   setClientName={setClientName}
                   hasChauffageAuSol={hasChauffageAuSol}
@@ -1413,11 +1429,12 @@ export default function RegularUserView({
                       equipmentToggles={{}}
                       equipmentValues={{}}
                       ndcPdfUrl={null}
+                      showSectorsCount={activeStep >= 2}
                     />
                   )}
 
                   {/* Per-group calculations */}
-                  {uniqueGroups.map((group) => (
+                  {activeStep >= 3 && uniqueGroups.map((group) => (
                     <div key={group.hash} className="relative">
                       {/* Show per-group label only when multiple groups exist */}
                       {uniqueGroups.length > 1 && (
@@ -1475,16 +1492,18 @@ export default function RegularUserView({
                           clientLogoUrl={clientLogoUrl}
                           ant4gConfig={group.sector.ant4gConfig}
                           ant5gConfig={group.sector.ant5gConfig}
-                          buildingHeight={selectedBuildingHeight}
+                          buildingHeight={Number(selectedBuildingHeight) || 0}
                           mastHeight={group.sector.selectedHeight}
                           plotHeight={plotHeight}
+                          showSectorsConfig={activeStep >= 3}
+                          showEquipmentConfig={activeStep >= 4}
                         />
                       )}
                     </div>
                   ))}
                   
                   {/* Résumé de Configuration & Disclaimer */}
-                  {!ndcPdfUrl && uniqueGroups.length > 0 && (
+                  {!ndcPdfUrl && uniqueGroups.length > 0 && activeStep >= 4 && (
                     <div className="mt-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600">
@@ -1586,29 +1605,39 @@ export default function RegularUserView({
                   <div className="mt-8 pt-6 border-t border-slate-200">
                     {!ndcPdfUrl ? (
                       <div className="flex flex-col gap-4">
+                        {!canGenerate && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-3 items-center text-amber-800">
+                            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                            <p className="text-sm">
+                              Veuillez renseigner les informations obligatoires avant de générer : <span className="font-semibold">{missingRequirements.join(', ')}</span>
+                            </p>
+                          </div>
+                        )}
                         <button
                           onClick={handleGenerateSiteNdc}
-                          disabled={isGeneratingSiteNdc}
-                          className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all text-lg ${
-                            isFullyStandard() 
-                              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' 
-                              : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
-                          } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
-                        >
-                          {isGeneratingSiteNdc ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              {siteNdcPollingMsg || 'Génération en cours...'}
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="w-5 h-5" />
-                              {isFullyStandard() 
-                                ? 'Générer la Note de Calcul Standard (Instantané)' 
-                                : 'Lancer Calcul Robot (Analyse Requise)'}
-                            </>
-                          )}
-                        </button>
+                                disabled={isGeneratingSiteNdc || !canGenerate}
+                                className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all text-lg ${
+                                  !canGenerate 
+                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                    : isFullyStandard() 
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' 
+                                      : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
+                                } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
+                              >
+                                {isGeneratingSiteNdc ? (
+                                  <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    {siteNdcPollingMsg || 'Génération en cours...'}
+                                  </>
+                                ) : (
+                                  <>
+                                    <FileText className="w-5 h-5" />
+                                    {isFullyStandard() 
+                                      ? 'Générer la Note de Calcul Standard (Instantané)' 
+                                      : 'Lancer Calcul Robot (Analyse Requise)'}
+                                  </>
+                                )}
+                              </button>
 
                         {isGeneratingSiteNdc && (
                           <div className="w-full mt-2 animate-fadeIn">
@@ -1703,7 +1732,7 @@ export default function RegularUserView({
                         )}
                       </div>
                     )}
-                    {siteNdcError && (
+                    {siteNdcError && canGenerate && (
                       <p className="text-rose-600 text-sm text-center mt-3">{siteNdcError}</p>
                     )}
                   </div>
