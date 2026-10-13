@@ -1,4 +1,4 @@
-import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings } from 'lucide-react';
+import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings, Server } from 'lucide-react';
 import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
@@ -21,6 +21,7 @@ interface ResultsPanelProps {
   sectors?: SectorData[];
   siteImageUrl?: string | null;
   siteName?: string;
+  codeSite?: string;
   clientName?: string;
   clientLogoUrl?: string | null;
   ant4gConfig?: AntennaConfigState;
@@ -37,6 +38,7 @@ interface ResultsPanelProps {
   showSectorsCount?: boolean;
   showSectorsConfig?: boolean;
   showEquipmentConfig?: boolean;
+  operator?: string;
 }
 
 export default function ResultsPanel({
@@ -44,6 +46,7 @@ export default function ResultsPanel({
   selectedAddress,
   selectedMontage,
   isSearching,
+  operator = 'bouygues',
   matPrincipal,
   plotMetallique,
   brasDeDeport,
@@ -54,6 +57,7 @@ export default function ResultsPanel({
   sectors = [],
   siteImageUrl = null,
   siteName = '',
+  codeSite = '',
   clientName = '',
   clientLogoUrl = null,
   ant4gConfig,
@@ -76,6 +80,108 @@ export default function ResultsPanel({
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [conversionError, setConversionError] = useState(false);
   const enabledConfigs = getEnabledConfigs(equipmentToggles);
+  const aerialConfigs = enabledConfigs.filter(c => {
+    if (c.zone !== 'aerienne') return false;
+    if (c.id === 'rrh' && operator === 'bouygues') return false;
+    if (c.id === 'baie' && operator !== 'orange') return false;
+    return true;
+  });
+  const techniqueConfigs = enabledConfigs.filter(c => c.zone === 'technique');
+
+  const renderEquipmentItem = (config: EquipmentConfig) => {
+    const IconComponent = config.icon === 'Radio' ? Radio : config.icon === 'Server' ? Server : Activity;
+    const colorClass = config.color === 'blue' ? 'blue' :
+      config.color === 'purple' ? 'purple' :
+        config.color === 'amber' ? 'amber' :
+          config.color === 'rose' ? 'rose' :
+            config.color === 'orange' ? 'orange' : 'emerald';
+
+    const accentBorderClasses: Record<string, string> = {
+      blue: 'border-l-blue-500 hover:border-blue-400',
+      purple: 'border-l-purple-500 hover:border-purple-400',
+      amber: 'border-l-amber-500 hover:border-amber-400',
+      rose: 'border-l-rose-500 hover:border-rose-400',
+      emerald: 'border-l-emerald-500 hover:border-emerald-400',
+      orange: 'border-l-orange-500 hover:border-orange-400',
+    };
+    const accentBorder = accentBorderClasses[colorClass] || 'border-l-violet-600 hover:border-violet-400';
+
+    const quantiteField = config.fields.find(f => f.label.toLowerCase().includes('quantit'));
+    const otherFields = config.fields.filter(f => !f.label.toLowerCase().includes('quantit'));
+
+    const renderCard = (keyId: string, qValue: any, itemValues: any, indexLabel?: string) => {
+      const displayName = config.id === 'rru' && operator === 'free' ? 'RFM' : config.name;
+      return (
+        <div key={keyId} className={`group relative bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:shadow-md duration-300`}>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 bg-${colorClass}-50 rounded-lg text-${colorClass}-600 group-hover:bg-${colorClass}-100 group-hover:scale-110 shadow-inner transition-transform`}>
+                <IconComponent className="w-3.5 h-3.5" />
+              </div>
+              <h4 className="text-[11px] font-bold text-slate-900 tracking-tight truncate max-w-[120px]" title={displayName}>
+                {displayName} {indexLabel || ''}
+              </h4>
+            </div>
+            {qValue !== null && (
+              <div className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shadow-sm flex items-center justify-center">
+                <span className="text-[10px] font-bold text-slate-700">x{qValue}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5 flex-1 justify-center">
+            {otherFields.length > 0 ? otherFields.map((field, idx) => {
+              const val = itemValues?.[field.label.toLowerCase()] ||
+                itemValues?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
+                field.value;
+              return (
+                <div key={idx} className="flex justify-between items-center bg-slate-50 rounded p-1.5 border border-slate-100 hover:border-slate-200 transition-colors">
+                  <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">{field.label}</span>
+                  <span className="text-xs font-bold text-slate-800 text-right max-w-[65%] truncate" title={String(val)}>
+                    {val}
+                  </span>
+                </div>
+              );
+            }) : (
+              <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic">
+                Aucun paramètre
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    if (config.id === 'rrh') {
+      if (operator === 'bouygues') return null;
+      if (equipmentValues.rrhItems && Array.isArray(equipmentValues.rrhItems)) {
+        return equipmentValues.rrhItems.map((item, index) =>
+          renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rrhItems.length > 1 ? `#${index + 1}` : '')
+        );
+      }
+    }
+
+    if (config.id === 'rru' && equipmentValues.rruItems && Array.isArray(equipmentValues.rruItems)) {
+      return equipmentValues.rruItems.map((item, index) =>
+        renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rruItems.length > 1 ? `#${index + 1}` : '')
+      );
+    }
+
+    if (config.id === 'baie') {
+      const types = [];
+      if (equipmentValues.baie?.baieRadio) types.push('Baie radio');
+      if (equipmentValues.baie?.baieEnergie) types.push('Baie énergie');
+      return renderCard(config.id, null, { type: types.join(', ') || 'Sélectionnée' });
+    }
+
+    let quantiteValue = null;
+    if (quantiteField) {
+      quantiteValue = equipmentValues[config.id]?.[quantiteField.label.toLowerCase()] ||
+        equipmentValues[config.id]?.[quantiteField.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
+        quantiteField.value;
+    }
+
+    return renderCard(config.id, quantiteValue, equipmentValues[config.id]);
+  };
 
   // Get first equipment details for preview button
   const firstEquipmentDetails = lookupResult && lookupResult.equipment.length > 0
@@ -201,8 +307,12 @@ export default function ResultsPanel({
 
     try {
       const payload: any = {
+        code_site: codeSite || '',
+        ref_site: codeSite || '',
         site: {
           name: siteName || '',
+          code_site: codeSite || '',
+          ref_site: codeSite || '',
           client: clientName || '',
           address: selectedAddress?.label || selectedAddress?.name || '',
           client_logo_url: clientLogoUrl || '',
@@ -360,67 +470,85 @@ export default function ResultsPanel({
   return (
     <div className="flex flex-col">
       {/* Header Results with Classification on Right — shown only once */}
+      {/* Header Results with Classification on Right — shown only once */}
       {!hideAnalysisHeader && (
-        <div className="flex items-start justify-between mb-8 pb-6 border-b border-slate-200">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-2">
-              Configuration du site
-              {isSearching && (
-                <span className="flex h-3 w-3 relative ml-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-600"></span>
-                </span>
-              )}
-            </h2>
-            {selectedAddress && (
-              <p className="text-slate-500 text-sm flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-violet-600" />
-                <span className="font-semibold text-slate-700">Adresse:</span> {selectedAddress.name}, {selectedAddress.city}
-              </p>
-            )}
-          </div>
-          {/* Consolidated Classification Section on Right */}
-          <div className="flex flex-wrap items-center justify-end gap-3 ml-6">
-            {showSectorsCount && (
-              <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-violet-300 duration-300">
-                <div className="p-2.5 bg-violet-50 rounded-xl text-violet-600 shrink-0 group-hover:bg-violet-100 group-hover:scale-110 transition-transform">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div className="pr-2">
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Secteurs</p>
-                  <p className="text-base font-bold text-slate-900 leading-none">
-                    {nombreSecteurs}
-                  </p>
-                </div>
-              </div>
-            )}
+        <div className="mb-8 p-5 sm:p-6 bg-gradient-to-r from-white via-violet-50/20 to-white rounded-2xl border border-slate-200/90 shadow-sm relative overflow-hidden">
+          {/* Subtle decorative glow */}
+          <div className="absolute -right-8 -top-8 w-40 h-40 bg-violet-400/10 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="group relative bg-white rounded-2xl p-3.5 border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-300 duration-300">
-              <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 shrink-0 group-hover:bg-blue-100 group-hover:scale-110 transition-transform">
-                <Wind className="w-5 h-5" />
+          <div className="relative z-10 flex flex-col gap-4">
+            {/* Top row: Title on left, Metric badges on right */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2.5">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  Configuration du site
+                </h2>
+                {isSearching && (
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-violet-600"></span>
+                  </span>
+                )}
               </div>
-              <div className="pr-2">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-0.5">Région de Vent</p>
-                <p className="text-base font-bold text-slate-900 leading-none">
-                  {lookupResult.detected_region ? `Région ${lookupResult.detected_region}` : 'N/A'}
-                </p>
+
+              {/* Badges grouped cleanly together */}
+              <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                {showSectorsCount && (
+                  <div className="bg-white rounded-xl px-3.5 py-2 border border-slate-200 shadow-2xs flex items-center gap-2.5 hover:border-violet-300 transition-all">
+                    <div className="p-1.5 bg-violet-50 rounded-lg text-violet-600 shrink-0">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider leading-none mb-1">Secteurs</p>
+                      <p className="text-sm font-bold text-slate-900 leading-none">
+                        {nombreSecteurs}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white rounded-xl px-3.5 py-2 border border-slate-200 shadow-2xs flex items-center gap-2.5 hover:border-blue-300 transition-all">
+                  <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 shrink-0">
+                    <Wind className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider leading-none mb-1">Région de Vent</p>
+                    <p className="text-sm font-bold text-slate-900 leading-none">
+                      {lookupResult.detected_region ? `Région ${lookupResult.detected_region}` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-
+            {/* Bottom row: Full address with 100% width, no truncation */}
+            {selectedAddress && (
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50/90 border border-slate-200/80 text-xs text-slate-600 w-full shadow-2xs">
+                <MapPin className="w-4 h-4 text-violet-600 shrink-0" />
+                <span className="font-semibold text-slate-700 shrink-0">Adresse :</span>
+                <span className="text-slate-800 font-medium whitespace-normal break-words sm:whitespace-nowrap sm:overflow-x-auto sm:scrollbar-none">
+                  {selectedAddress.name}, {selectedAddress.city}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {!headerOnly && (
         <>
-          {/* Configuration Antennes par Secteur */}
-          {showSectorsConfig && sectors && sectors.length > 0 && (
+          {/* Aérien : Secteurs & Équipements de mât */}
+          {(showSectorsConfig || aerialConfigs.length > 0) && (
             <div className="mb-8 animate-slide-in">
-              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-violet-600" />
-                Configuration Antennes par Secteur
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-violet-600" />
+                  Aérien
+                </h3>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100 tracking-normal">
+                  Antennes & Mâts
+                </span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sectors.map((sector, idx) => (
                   <div key={sector.id} className="bg-white rounded-xl p-4 border border-slate-200 border-l-4 border-l-violet-600 shadow-sm hover:border-violet-300 hover:scale-[1.01] hover:shadow-md duration-300">
@@ -474,6 +602,16 @@ export default function ResultsPanel({
                   </div>
                 ))}
               </div>
+
+              {/* Aerial equipments */}
+              {aerialConfigs.length > 0 && (
+                <div className={`${showSectorsConfig && sectors && sectors.length > 0 ? 'mt-5 pt-4 border-t border-slate-200/80' : ''}`}>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Équipements Aériens Additionnels</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {aerialConfigs.map(renderEquipmentItem)}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -615,97 +753,22 @@ export default function ResultsPanel({
             </div>
           )}
 
-          {/* Equipment Configuration */}
-          {showEquipmentConfig && (
-            <div className="mb-8">
-              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Radio className="w-4 h-4 text-violet-600" />
-              Configuration Équipements
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {enabledConfigs.map((config: EquipmentConfig) => {
-                const IconComponent = config.icon === 'Radio' ? Radio : Activity;
-                const colorClass = config.color === 'blue' ? 'blue' :
-                  config.color === 'purple' ? 'purple' :
-                    config.color === 'amber' ? 'amber' :
-                      config.color === 'rose' ? 'rose' : 'emerald';
-
-                // Premium color accent borders
-                const accentBorderClasses: Record<string, string> = {
-                  blue: 'border-l-blue-500 hover:border-blue-400',
-                  purple: 'border-l-purple-500 hover:border-purple-400',
-                  amber: 'border-l-amber-500 hover:border-amber-400',
-                  rose: 'border-l-rose-500 hover:border-rose-400',
-                  emerald: 'border-l-emerald-500 hover:border-emerald-400',
-                };
-                const accentBorder = accentBorderClasses[colorClass] || 'border-l-violet-600 hover:border-violet-400';
-
-                // Extract Quantité field if it exists
-                const quantiteField = config.fields.find(f => f.label.toLowerCase().includes('quantit'));
-                const otherFields = config.fields.filter(f => !f.label.toLowerCase().includes('quantit'));
-
-                const renderCard = (keyId: string, qValue: any, itemValues: any, indexLabel?: string) => (
-                  <div key={keyId} className={`group relative bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:shadow-md duration-300`}>
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`p-1.5 bg-${colorClass}-50 rounded-lg text-${colorClass}-600 group-hover:bg-${colorClass}-100 group-hover:scale-110 shadow-inner transition-transform`}>
-                          <IconComponent className="w-3.5 h-3.5" />
-                        </div>
-                        <h4 className="text-[11px] font-bold text-slate-900 tracking-tight truncate max-w-[120px]" title={config.name}>
-                          {config.name} {indexLabel || ''}
-                        </h4>
-                      </div>
-                      {qValue !== null && (
-                        <div className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shadow-sm flex items-center justify-center">
-                          <span className="text-[10px] font-bold text-slate-700">x{qValue}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1.5 flex-1 justify-center">
-                      {otherFields.length > 0 ? otherFields.map((field, idx) => {
-                        const val = itemValues?.[field.label.toLowerCase()] ||
-                          itemValues?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
-                          field.value;
-                        return (
-                          <div key={idx} className="flex justify-between items-center bg-slate-50 rounded p-1.5 border border-slate-100 hover:border-slate-200 transition-colors">
-                            <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">{field.label}</span>
-                            <span className="text-xs font-bold text-slate-800 text-right max-w-[65%] truncate" title={String(val)}>
-                              {val}
-                            </span>
-                          </div>
-                        );
-                      }) : (
-                        <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic">
-                          Aucun paramètre
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-
-                if (config.id === 'rrh' && equipmentValues.rrhItems && Array.isArray(equipmentValues.rrhItems)) {
-                  return equipmentValues.rrhItems.map((item, index) =>
-                    renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rrhItems.length > 1 ? `#${index + 1}` : '')
-                  );
-                }
-
-                if (config.id === 'rru' && equipmentValues.rruItems && Array.isArray(equipmentValues.rruItems)) {
-                  return equipmentValues.rruItems.map((item, index) =>
-                    renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rruItems.length > 1 ? `#${index + 1}` : '')
-                  );
-                }
-
-                let quantiteValue = null;
-                if (quantiteField) {
-                  quantiteValue = equipmentValues[config.id]?.[quantiteField.label.toLowerCase()] ||
-                    equipmentValues[config.id]?.[quantiteField.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
-                    quantiteField.value;
-                }
-
-                return renderCard(config.id, quantiteValue, equipmentValues[config.id]);
-              })}
+          {/* Zone Technique */}
+          {showEquipmentConfig && techniqueConfigs.length > 0 && (
+            <div className="mb-8 animate-slide-in">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-indigo-600" />
+                  Zone Technique
+                </h3>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 tracking-normal">
+                  Local technique & Baies
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {techniqueConfigs.map(renderEquipmentItem)}
+              </div>
             </div>
-          </div>
           )}
 
           {/* Actions & Fallbacks */}

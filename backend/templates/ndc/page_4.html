@@ -13,7 +13,7 @@
 <h2>Tableau des valeurs de chargements</h2>
 <table>
     <tr>
-        <th colspan="6" style="text-align: center; font-size: 14px;">
+        <th colspan="5" style="text-align: center; font-size: 14px;">
             {% if nombre_secteurs > 1 %}
                 SECTEURS ({{ nombre_secteurs }} Secteurs Identiques)
             {% else %}
@@ -26,7 +26,6 @@
         <th>Quantité</th>
         <th>Dimensions [mm]</th>
         <th>Poids [daN]</th>
-        <th>HBA/sol [m]</th>
         <th>État</th>
     </tr>
     <tr>
@@ -34,7 +33,6 @@
         <td>{{ nombre_secteurs }}</td>
         <td>{{ ant_4g_dims }}</td>
         <td>{{ ant_4g_weight }}</td>
-        <td>{{ hauteur_mat_m }}</td>
         <td>Projet</td>
     </tr>
     <tr>
@@ -42,7 +40,6 @@
         <td>{{ nombre_secteurs }}</td>
         <td>{{ ant_5g_dims }}</td>
         <td>{{ ant_5g_weight }}</td>
-        <td>{{ ant_5g_hba }}</td>
         <td>Projet</td>
     </tr>
     <tr>
@@ -50,7 +47,6 @@
         <td>1</td>
         <td>-</td>
         <td>15 (h)</td>
-        <td>-</td>
         <td>Projet</td>
     </tr>
 </table>

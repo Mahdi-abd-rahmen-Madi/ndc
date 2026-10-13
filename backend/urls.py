@@ -45,9 +45,12 @@ def serve_media_custom(request, path):
     response['Content-Disposition'] = f'inline; filename="{os.path.basename(full_path)}"'
     return response
 
+from geodata.views import test_catalogue_equipment_view
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api/geodata/', include('geodata.urls')),
+    path('test-catalogue/', test_catalogue_equipment_view, name='test-catalogue'),
     path('media/<path:path>', serve_media_custom),
 ]

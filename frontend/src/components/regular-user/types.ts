@@ -32,8 +32,8 @@ export interface CatalogueConfig {
   coffret_references: { id: string; name: string }[];
   fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
   td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
-  rru_references: { id: string; vendor: string; reference: string }[];
-  rrh_references: { id: string; vendor: string; reference: string }[];
+  rru_references: { id: string; vendor: string; reference: string; operator?: string }[];
+  rrh_references: { id: string; vendor: string; reference: string; operator?: string }[];
   boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
 }
 
@@ -86,6 +86,13 @@ export interface PreviewDocState {
 export type ConfigMode = 'agile' | 'reference';
 export type SimilarityMode = 'all_similar' | 'all_different' | 'none';
 
+export interface EquipmentItem {
+  id: string;
+  reference: string;
+  quantity: number;
+  vendor?: string;
+}
+
 export interface SectorData {
   id: number;
   selectedHeight: number;
@@ -103,6 +110,20 @@ export interface SectorData {
   plotMetallique: string;
   brasDeDeport: string;
   matSecondaire: string;
+  // Equipment
+  hasFhEquipment?: boolean;
+  fhDiameter?: number;
+  fhReference?: string;
+  fhQuantity?: number;
+  hasRrhEquipment?: boolean;
+  rrhItems?: EquipmentItem[];
+  hasRruEquipment?: boolean;
+  rruItems?: EquipmentItem[];
+  hasCoffret?: boolean;
+  coffretReference?: string;
+  hasBaie?: boolean;
+  baieRadio?: boolean;
+  baieEnergie?: boolean;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
   loading?: boolean;

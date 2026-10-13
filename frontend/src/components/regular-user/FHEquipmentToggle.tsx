@@ -1,6 +1,6 @@
-import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2, Server } from 'lucide-react';
 import { CustomSelect } from '../ui/CustomSelect';
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { EquipmentItem } from '../RegularUserView';
 
 
@@ -59,13 +59,13 @@ export default function FHEquipmentToggle({
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
             <Radio className="w-4 h-4 text-violet-600" />
-            Présence équipement FH
+            présence FH
           </label>
         </div>
 
         {hasFhEquipment && (
           <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
-            
+
             {/* Row 1: Quantité & Marque & Modèle */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               {/* Quantité */}
@@ -161,7 +161,8 @@ export interface RRHEquipmentToggleProps {
   setHasRrhEquipment: (val: boolean) => void;
   rrhItems: EquipmentItem[];
   setRrhItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
-  rrhOptions: { id: string; vendor: string; reference: string }[];
+  rrhOptions: { id: string; vendor: string; reference: string; operator?: string }[];
+  operator?: string;
 }
 
 export function RRHEquipmentToggle({
@@ -169,11 +170,42 @@ export function RRHEquipmentToggle({
   setHasRrhEquipment,
   rrhItems,
   setRrhItems,
-  rrhOptions
+  rrhOptions,
+  operator = 'free'
 }: RRHEquipmentToggleProps) {
+  const filteredRrhOptions = rrhOptions.filter(o =>
+    o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false
+  );
+  const uniqueVendors = Array.from(new Set(filteredRrhOptions.map(o => o.vendor)));
+
   const addRrhRow = () => {
-    setRrhItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
+    setRrhItems(prev => [...prev, {
+      id: crypto.randomUUID(),
+      reference: '',
+      quantity: 1,
+      vendor: uniqueVendors.length === 1 ? uniqueVendors[0] : undefined
+    }]);
   };
+
+  useEffect(() => {
+    setRrhItems(prev => prev.map(item => {
+      let updated = { ...item };
+      if (uniqueVendors.length === 1 && updated.vendor !== uniqueVendors[0]) {
+        updated.vendor = uniqueVendors[0];
+        updated.reference = '';
+      } else if (updated.vendor && !uniqueVendors.includes(updated.vendor)) {
+        updated.vendor = uniqueVendors.length === 1 ? uniqueVendors[0] : undefined;
+        updated.reference = '';
+      }
+      if (updated.reference) {
+        const exists = filteredRrhOptions.some(o => o.id === updated.reference && (!updated.vendor || o.vendor === updated.vendor));
+        if (!exists) {
+          updated.reference = '';
+        }
+      }
+      return updated;
+    }));
+  }, [operator, filteredRrhOptions, uniqueVendors, setRrhItems]);
 
   const removeRrhRow = (id: string) => {
     if (rrhItems.length > 1) {
@@ -192,8 +224,7 @@ export function RRHEquipmentToggle({
       return item;
     }));
   };
-  
-  const uniqueVendors = Array.from(new Set(rrhOptions.map(o => o.vendor)));
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col gap-2">
@@ -209,7 +240,7 @@ export function RRHEquipmentToggle({
             <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
           </div>
           <Activity className="w-4 h-4 text-rose-500" />
-          Présence équipement RRH
+          Présence RRH
         </label>
 
         {hasRrhEquipment && (
@@ -237,7 +268,7 @@ export function RRHEquipmentToggle({
                       onChange={(val) => updateRrhItem(item.id, 'reference', val)}
                       disabled={!item.vendor}
                       className="focus:ring-2 focus:ring-rose-500"
-                      options={rrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
+                      options={filteredRrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
                         const isSelectedElsewhere = rrhItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
                         return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
                       })}
@@ -290,7 +321,7 @@ export function RRHEquipmentToggle({
                 </div>
               </div>
             ))}
-            
+
             <button
               type="button"
               onClick={addRrhRow}
@@ -325,9 +356,50 @@ export function RRUEquipmentToggle({
   isRfmMode = false,
   operator = 'bouygues'
 }: RRUEquipmentToggleProps) {
+  const rfmModels = [
+    { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
+    { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
+    { id: 'ARHA', vendor: 'NOKIA', reference: 'ARHA' },
+    { id: 'AREA', vendor: 'NOKIA', reference: 'AREA' },
+    { id: 'ARPA', vendor: 'NOKIA', reference: 'ARPA' },
+  ];
+
+  const filteredRruOptions = rruOptions.filter(o =>
+    o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : (operator.toLowerCase() === 'bouygues')
+  );
+  const actualOptions = isRfmMode ? rfmModels : filteredRruOptions;
+  const uniqueVendors = Array.from(new Set(actualOptions.map(o => o.vendor)));
+
   const addRruRow = () => {
-    setRruItems(prev => [...prev, { id: crypto.randomUUID(), reference: '', quantity: 1 }]);
+    setRruItems(prev => [...prev, {
+      id: crypto.randomUUID(),
+      reference: '',
+      quantity: 1,
+      vendor: uniqueVendors.length === 1 ? uniqueVendors[0] : undefined
+    }]);
   };
+
+  useEffect(() => {
+    setRruItems(prev => prev.map(item => {
+      let updated = { ...item };
+      // If only 1 vendor available for this operator, auto-select it
+      if (uniqueVendors.length === 1 && updated.vendor !== uniqueVendors[0]) {
+        updated.vendor = uniqueVendors[0];
+        updated.reference = '';
+      } else if (updated.vendor && !uniqueVendors.includes(updated.vendor)) {
+        updated.vendor = uniqueVendors.length === 1 ? uniqueVendors[0] : undefined;
+        updated.reference = '';
+      }
+      // If reference does not belong to vendor, reset reference
+      if (updated.reference) {
+        const exists = actualOptions.some(o => o.id === updated.reference && (!updated.vendor || o.vendor === updated.vendor));
+        if (!exists) {
+          updated.reference = '';
+        }
+      }
+      return updated;
+    }));
+  }, [operator, actualOptions, uniqueVendors, setRruItems]);
 
   const removeRruRow = (id: string) => {
     if (rruItems.length > 1) {
@@ -346,18 +418,6 @@ export function RRUEquipmentToggle({
       return item;
     }));
   };
-  
-  const rfmModels = [
-    { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
-    { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
-    { id: 'ARHA', vendor: 'NOKIA', reference: 'ARHA' },
-    { id: 'AREA', vendor: 'NOKIA', reference: 'AREA' },
-    { id: 'ARPA', vendor: 'NOKIA', reference: 'ARPA' },
-  ];
-  
-  const filteredRruOptions = rruOptions.filter(o => !o.operator || o.operator.toLowerCase() === operator.toLowerCase() || (o.operator === 'bouygues' && operator.toLowerCase() === 'bouygues'));
-  const actualOptions = isRfmMode ? rfmModels : filteredRruOptions;
-  const uniqueVendors = Array.from(new Set(actualOptions.map(o => o.vendor)));
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
       <div className="flex flex-col gap-2">
@@ -373,7 +433,7 @@ export function RRUEquipmentToggle({
             <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
           </div>
           <Activity className="w-4 h-4 text-emerald-600" />
-          Présence équipement {isRfmMode ? 'RFM' : 'RRU'}
+          présence {isRfmMode ? 'RFM' : 'RRU'}
         </label>
 
         {hasRruEquipment && (
@@ -475,7 +535,7 @@ export function RRUEquipmentToggle({
                 </div>
               </div>
             ))}
-            
+
             <button
               type="button"
               onClick={addRruRow}
@@ -517,7 +577,7 @@ export function TDEquipmentToggle({
 
   React.useEffect(() => {
     if (hasTdEquipment) {
-      const validOptions = tdOptions.filter(o => 
+      const validOptions = tdOptions.filter(o =>
         tdType === 'tetraphase' ? o.reference === '68237' : o.reference === '68236'
       );
       if (!validOptions.some(o => o.id === tdReference)) {
@@ -550,7 +610,7 @@ export function TDEquipmentToggle({
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasTdEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
             <Activity className="w-4 h-4 text-amber-500" />
-            Présence équipement TD
+            présence TD
           </label>
         </div>
 
@@ -762,7 +822,7 @@ export function BoitierLovageEquipmentToggle({
   setBoitierLovageQuantity,
   boitierOptions = []
 }: BoitierLovageEquipmentToggleProps) {
-  
+
   // Hardcoded option if none provided from backend
   const options = boitierOptions.length > 0 ? boitierOptions : [
     { id: 'BLM-515709', name: 'Boîte de dérivation OPTIBOX IP55', reference: 'BLM-515709' }
@@ -827,7 +887,7 @@ export function BoitierLovageEquipmentToggle({
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-col flex-1">
                 <select
                   value={boitierLovageReference}
@@ -841,7 +901,7 @@ export function BoitierLovageEquipmentToggle({
                 </select>
               </div>
             </div>
-            
+
             <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -957,7 +1017,7 @@ export function GPSEquipmentToggle({
                 />
               </div>
             </div>
-            
+
             {gpsReference && (
               <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 mt-1">
                 <div className="flex flex-col">
@@ -996,7 +1056,7 @@ export function CoffretEquipmentToggle({
   setCoffretReference,
   coffretOptions
 }: CoffretEquipmentToggleProps) {
-  
+
   const httaOptions = coffretOptions.filter(opt => opt.name.includes('HTTA'));
   const otherOptions = coffretOptions.filter(opt => !opt.name.includes('HTTA'));
   const isHttaSelected = httaOptions.some(opt => opt.id === coffretReference) || coffretReference === 'HTTA';
@@ -1067,7 +1127,7 @@ export function CoffretEquipmentToggle({
               const actualRef = isHttaSelected && coffretReference === 'HTTA' && httaOptions.length > 0 ? httaOptions[0].id : coffretReference;
               const selectedRef = coffretOptions.find(r => r.id === actualRef);
               if (!selectedRef) return null;
-              
+
               let h = '', w = '', t = '', weight = '';
               const match = selectedRef.name.match(/\(([^,]+),\s*([\d.]+)kg\)/i);
               if (match) {
@@ -1137,6 +1197,88 @@ export function CoffretEquipmentToggle({
                 </div>
               );
             })()}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface BaieEquipmentToggleProps {
+  hasBaie: boolean;
+  setHasBaie: (val: boolean) => void;
+  baieRadio: boolean;
+  setBaieRadio: (val: boolean) => void;
+  baieEnergie: boolean;
+  setBaieEnergie: (val: boolean) => void;
+}
+
+export function BaieEquipmentToggle({
+  hasBaie,
+  setHasBaie,
+  baieRadio,
+  setBaieRadio,
+  baieEnergie,
+  setBaieEnergie
+}: BaieEquipmentToggleProps) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-orange-200 transition-all">
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasBaie}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setHasBaie(checked);
+                  if (checked && !baieRadio && !baieEnergie) {
+                    setBaieRadio(true);
+                  }
+                }}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasBaie ? 'bg-orange-500' : ''}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasBaie ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Server className="w-4 h-4 text-orange-500" />
+            présence baie
+          </label>
+        </div>
+
+        {hasBaie && (
+          <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Options de baie</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${
+                baieRadio
+                  ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={baieRadio}
+                  onChange={(e) => setBaieRadio(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                />
+                <span>Baie radio</span>
+              </label>
+
+              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${
+                baieEnergie
+                  ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={baieEnergie}
+                  onChange={(e) => setBaieEnergie(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                />
+                <span>Baie énergie</span>
+              </label>
+            </div>
           </div>
         )}
       </div>

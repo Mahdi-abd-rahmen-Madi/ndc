@@ -224,7 +224,7 @@ export default function UserInput({
             </div>
             <div className="flex flex-col">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
-                Code site
+                Réf. du site
               </label>
               <input
                 type="text"
@@ -259,7 +259,6 @@ export default function UserInput({
                 <option value="orange">Orange</option>
                 <option value="free">Free</option>
                 <option value="bouygues">Bouygues</option>
-                <option value="sfr" disabled className="text-slate-400">SFR</option>
               </select>
             </div>
           </div>
@@ -444,12 +443,9 @@ export default function UserInput({
 
                     <button
                       type="button"
-                      title="Garder tous les secteurs indépendants et éditables"
-                      onClick={() => setSimilarityMode('all_different')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center transition-all ${similarityMode === 'all_different'
-                        ? 'bg-violet-100 text-violet-800 border-violet-300 shadow-sm'
-                        : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
-                        }`}
+                      disabled
+                      title="Fonctionnalité bientôt disponible"
+                      className="flex-1 py-2 px-3 rounded-lg text-xs font-bold border text-center transition-all bg-slate-100/60 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
                     >
                       Non-identiques
                     </button>

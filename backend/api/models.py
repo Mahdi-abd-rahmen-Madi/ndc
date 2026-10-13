@@ -99,6 +99,7 @@ class CalculationJob(models.Model):
     screenshot = models.ImageField(upload_to='screenshots/', null=True, blank=True, verbose_name=_("Screenshot"))
     verification_screenshot = models.ImageField(upload_to='screenshots/verification/', null=True, blank=True, verbose_name=_("Verification Screenshot"))
     note_de_calcul = models.FileField(upload_to='notes_de_calcul/', null=True, blank=True, verbose_name=_("Note de Calcul"))
+    assemblage_note = models.FileField(upload_to='assemblages/', null=True, blank=True, verbose_name=_("Assemblage Note"))
     error_message = models.TextField(blank=True, null=True, verbose_name=_("Error Message"))
     credits_consumed = models.IntegerField(default=1, verbose_name=_("Credits Consumed"))
     

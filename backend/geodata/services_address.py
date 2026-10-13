@@ -89,11 +89,17 @@ class AddressGenerationService:
             params = {
                 'q': query,
                 'limit': limit,
-                'autocomplete': 0
+                'autocomplete': 1
             }
             
-            response = requests.get(self.geocoding_url, params=params, timeout=10)
-            response.raise_for_status()
+            try:
+                response = requests.get(self.geocoding_url, params=params, timeout=5)
+                response.raise_for_status()
+            except Exception as err:
+                logger.warning(f"Primary geocoding URL failed ({err}), falling back to api-adresse.data.gouv.fr")
+                fallback_url = "https://api-adresse.data.gouv.fr/search/"
+                response = requests.get(fallback_url, params=params, timeout=5)
+                response.raise_for_status()
             
             data = response.json()
             addresses = data.get('features', [])
@@ -221,10 +227,16 @@ class AddressGenerationService:
                 'limit': 10
             }
             
-            # The base url is ending in /search, so we replace it with /reverse
-            reverse_url = self.geocoding_url.replace('/search', '/reverse')
-            response = requests.get(reverse_url, params=params, timeout=10)
-            response.raise_for_status()
+            try:
+                # The base url is ending in /search, so we replace it with /reverse
+                reverse_url = self.geocoding_url.replace('/search', '/reverse')
+                response = requests.get(reverse_url, params=params, timeout=5)
+                response.raise_for_status()
+            except Exception as err:
+                logger.warning(f"Primary reverse geocoding failed ({err}), falling back to api-adresse.data.gouv.fr")
+                fallback_url = "https://api-adresse.data.gouv.fr/reverse/"
+                response = requests.get(fallback_url, params=params, timeout=5)
+                response.raise_for_status()
             
             data = response.json()
             features = data.get('features', [])

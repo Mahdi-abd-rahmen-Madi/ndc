@@ -24,6 +24,7 @@ interface MontageSelectorProps {
   setSelectedVendor4G?: (vendor: string) => void;
   setSelectedVendor5G?: (vendor: string) => void;
   operator?: string;
+  children?: React.ReactNode;
 }
 
 export default function MontageSelector({
@@ -46,7 +47,8 @@ export default function MontageSelector({
   selectedVendor5G = 'Ericsson',
   setSelectedVendor4G,
   setSelectedVendor5G,
-  operator = 'bouygues'
+  operator = 'bouygues',
+  children
 }: MontageSelectorProps) {
   const montages = config?.standard_montages || [];
   const realWorldReferences = (config?.real_world_references || []).filter(r => 
@@ -91,38 +93,100 @@ export default function MontageSelector({
     }))).sort();
   }, [unique5GMap]);
 
-  // Handle vendor fallback if selected vendor isn't available for this operator
-  useEffect(() => {
-    if (availableVendors4G.length > 0 && !availableVendors4G.map(v => v.toUpperCase()).includes(selectedVendor4G.toUpperCase())) {
-      setSelectedVendor4G?.(availableVendors4G[0]);
-    }
-    if (availableVendors5G.length > 0 && !availableVendors5G.map(v => v.toUpperCase()).includes(selectedVendor5G.toUpperCase())) {
-      setSelectedVendor5G?.(availableVendors5G[0]);
-    }
-  }, [availableVendors4G, availableVendors5G, selectedVendor4G, selectedVendor5G, setSelectedVendor4G, setSelectedVendor5G]);
+  const unique4GRefs = Array.from(unique4GMap.values()).filter(r => 
+    r.name.toUpperCase().startsWith(selectedVendor4G.toUpperCase()) ||
+    r.name.toUpperCase().includes(selectedVendor4G.toUpperCase())
+  );
+  const unique5GRefs = Array.from(unique5GMap.values()).filter(r => 
+    r.name.toUpperCase().startsWith(selectedVendor5G.toUpperCase()) ||
+    r.name.toUpperCase().includes(selectedVendor5G.toUpperCase())
+  );
 
-  const unique4GRefs = Array.from(unique4GMap.values()).filter(r => r.name.toUpperCase().includes(selectedVendor4G.toUpperCase()));
-  const unique5GRefs = Array.from(unique5GMap.values()).filter(r => r.name.toUpperCase().includes(selectedVendor5G.toUpperCase()));
+  const handleVendor4GChange = (vendor: string) => {
+    setSelectedVendor4G?.(vendor);
+    const vRefs = Array.from(unique4GMap.values()).filter(r => 
+      r.name.toUpperCase().startsWith(vendor.toUpperCase()) ||
+      r.name.toUpperCase().includes(vendor.toUpperCase())
+    );
+    if (vRefs.length > 0) {
+      const firstRef = vRefs[0];
+      setSelectedReference4G(firstRef.id);
+      setAnt4gConfig(firstRef.ant4g);
+      handleMontage4GChange(firstRef.montageId);
+    }
+  };
 
+  const handleVendor5GChange = (vendor: string) => {
+    setSelectedVendor5G?.(vendor);
+    const vRefs = Array.from(unique5GMap.values()).filter(r => 
+      r.name.toUpperCase().startsWith(vendor.toUpperCase()) ||
+      r.name.toUpperCase().includes(vendor.toUpperCase())
+    );
+    if (vRefs.length > 0) {
+      const firstRef = vRefs[0];
+      setSelectedReference5G(firstRef.id);
+      setAnt5gConfig(firstRef.ant5g);
+      handleMontage5GChange(firstRef.montageId);
+    }
+  };
+
+  // Sync 4G vendor and reference when operator or available vendors change
   useEffect(() => {
-    if (configMode === 'reference' && unique4GRefs.length > 0 && unique5GRefs.length > 0) {
-      const current4G = unique4GRefs.find(r => r.id === selectedReference4G);
-      if (!current4G) {
-        const fallback4G = unique4GRefs[0];
-        setSelectedReference4G(fallback4G.id);
-        setAnt4gConfig(fallback4G.ant4g);
-        handleMontage4GChange(fallback4G.montageId);
-      }
-      
-      const current5G = unique5GRefs.find(r => r.id === selectedReference5G);
-      if (!current5G) {
-        const fallback5G = unique5GRefs[0];
-        setSelectedReference5G(fallback5G.id);
-        setAnt5gConfig(fallback5G.ant5g);
-        handleMontage5GChange(fallback5G.montageId);
+    if (availableVendors4G.length === 0) return;
+
+    let targetVendor = selectedVendor4G;
+    const vendorExists = availableVendors4G.some(v => v.toUpperCase() === targetVendor.toUpperCase());
+    if (!vendorExists) {
+      targetVendor = availableVendors4G[0];
+      setSelectedVendor4G?.(targetVendor);
+    }
+
+    const vRefs = Array.from(unique4GMap.values()).filter(r => 
+      r.name.toUpperCase().startsWith(targetVendor.toUpperCase()) ||
+      r.name.toUpperCase().includes(targetVendor.toUpperCase())
+    );
+
+    if (vRefs.length > 0) {
+      const currentRef = vRefs.find(r => r.id === selectedReference4G);
+      if (!currentRef) {
+        const firstRef = vRefs[0];
+        setSelectedReference4G(firstRef.id);
+        if (configMode === 'reference') {
+          setAnt4gConfig(firstRef.ant4g);
+          handleMontage4GChange(firstRef.montageId);
+        }
       }
     }
-  }, [configMode, selectedReference4G, selectedReference5G, unique4GRefs, unique5GRefs]);
+  }, [operator, availableVendors4G, selectedVendor4G, selectedReference4G, configMode, unique4GMap]);
+
+  // Sync 5G vendor and reference when operator or available vendors change
+  useEffect(() => {
+    if (availableVendors5G.length === 0) return;
+
+    let targetVendor = selectedVendor5G;
+    const vendorExists = availableVendors5G.some(v => v.toUpperCase() === targetVendor.toUpperCase());
+    if (!vendorExists) {
+      targetVendor = availableVendors5G[0];
+      setSelectedVendor5G?.(targetVendor);
+    }
+
+    const vRefs = Array.from(unique5GMap.values()).filter(r => 
+      r.name.toUpperCase().startsWith(targetVendor.toUpperCase()) ||
+      r.name.toUpperCase().includes(targetVendor.toUpperCase())
+    );
+
+    if (vRefs.length > 0) {
+      const currentRef = vRefs.find(r => r.id === selectedReference5G);
+      if (!currentRef) {
+        const firstRef = vRefs[0];
+        setSelectedReference5G(firstRef.id);
+        if (configMode === 'reference') {
+          setAnt5gConfig(firstRef.ant5g);
+          handleMontage5GChange(firstRef.montageId);
+        }
+      }
+    }
+  }, [operator, availableVendors5G, selectedVendor5G, selectedReference5G, configMode, unique5GMap]);
 
   const handleConfigModeChange = (mode: 'agile' | 'reference') => {
     setConfigMode(mode);
@@ -262,7 +326,7 @@ export default function MontageSelector({
                 <div className={styles.dropdownCol}>
                   <select
                     value={selectedVendor4G}
-                    onChange={(e) => setSelectedVendor4G?.(e.target.value)}
+                    onChange={(e) => handleVendor4GChange(e.target.value)}
                     className={styles.selectInput}
                   >
                     {availableVendors4G.map(v => (
@@ -322,7 +386,7 @@ export default function MontageSelector({
                 <div className={styles.dropdownCol}>
                   <select
                     value={selectedVendor5G}
-                    onChange={(e) => setSelectedVendor5G?.(e.target.value)}
+                    onChange={(e) => handleVendor5GChange(e.target.value)}
                     className={styles.selectInput}
                   >
                     {availableVendors5G.map(v => (
@@ -354,6 +418,8 @@ export default function MontageSelector({
             </div>
           </div>
         </div>
+
+        {children}
       </div>
     </div>
   );

@@ -253,6 +253,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         if 'note_de_calcul' in request.FILES:
             job.note_de_calcul = request.FILES['note_de_calcul']
+
+        if 'assemblage_note' in request.FILES:
+            job.assemblage_note = request.FILES['assemblage_note']
             
         if 'result_data' in request.POST:
             try:
@@ -319,6 +322,8 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         preview_data = request.data if request.data else {
             'site': {
                 'name': request.GET.get('site_name') or '',
+                'code_site': request.GET.get('code_site') or request.GET.get('ref_site') or '',
+                'ref_site': request.GET.get('code_site') or request.GET.get('ref_site') or '',
                 'client': request.GET.get('client_name') or '',
                 'address': request.GET.get('address') or '',
                 'client_logo_url': request.GET.get('client_logo_url') or ''
@@ -356,7 +361,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 preview_data = dict(request.data)
                 
                 import json
-                for key in ['site', 'environment', 'structure', 'antenna_4g', 'antenna_5g', 'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre']:
+                for key in ['site', 'environment', 'structure', 'antenna_4g', 'antenna_5g', 'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre', 'baie']:
                     val = preview_data.get(key)
                     if isinstance(val, str):
                         try:
@@ -364,12 +369,19 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         except json.JSONDecodeError:
                             pass
 
+                code_val = request.data.get('code_site') or request.data.get('ref_site') or ''
                 if 'site' not in preview_data or not isinstance(preview_data['site'], dict):
                     preview_data['site'] = {
                         'name': request.data.get('site_name', ''),
+                        'code_site': code_val,
+                        'ref_site': code_val,
                         'client': request.data.get('client_name', ''),
                         'address': request.data.get('address', '')
                     }
+                else:
+                    if not preview_data['site'].get('code_site') and code_val:
+                        preview_data['site']['code_site'] = code_val
+                        preview_data['site']['ref_site'] = code_val
                 if 'environment' not in preview_data or not isinstance(preview_data['environment'], dict):
                     preview_data['environment'] = {
                         'etancheite': request.data.get('etancheite'),
@@ -456,6 +468,16 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 job_photo_url = photo_url
                 if not job_photo_url and job.input_data and job.input_data.get('site_image_url'):
                     job_photo_url = job.input_data.get('site_image_url')
+
+                if isinstance(job.input_data, dict):
+                    if 'site' not in job.input_data or not isinstance(job.input_data['site'], dict):
+                        job.input_data['site'] = {}
+                    if not job.input_data['site'].get('code_site') and (request.data.get('code_site') or request.data.get('ref_site')):
+                        c_val = request.data.get('code_site') or request.data.get('ref_site')
+                        job.input_data['site']['code_site'] = c_val
+                        job.input_data['site']['ref_site'] = c_val
+                    if not job.input_data['site'].get('name') and request.data.get('site_name'):
+                        job.input_data['site']['name'] = request.data.get('site_name')
                     
                 pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent, start_page=total_pages + 1)
                 

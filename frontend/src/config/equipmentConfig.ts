@@ -4,6 +4,7 @@ export interface EquipmentConfig {
   enabled: boolean;
   icon: string;
   color: string;
+  zone: 'aerienne' | 'technique';
   fields: {
     label: string;
     value: string | number;
@@ -17,6 +18,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false, // Temporarily disabled
     icon: 'Radio',
     color: 'blue',
+    zone: 'aerienne',
     fields: [
       { label: 'Modèle', value: 'A1' },
     ],
@@ -27,6 +29,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false, // Temporarily disabled
     icon: 'Radio',
     color: 'purple',
+    zone: 'aerienne',
     fields: [
       { label: 'Modèle', value: 'A1' },
     ],
@@ -37,6 +40,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false, // Controlled by toggle
     icon: 'Activity',
     color: 'amber',
+    zone: 'aerienne',
     fields: [
       { label: 'Référence', value: 'N/A' },
       { label: 'Quantité', value: 1 },
@@ -48,6 +52,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false, // Controlled by toggle
     icon: 'Activity',
     color: 'emerald',
+    zone: 'aerienne',
     fields: [
       { label: 'Modèle', value: 'RRU-001' },
     ],
@@ -58,6 +63,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false, // Controlled by toggle
     icon: 'Activity',
     color: 'rose',
+    zone: 'aerienne',
     fields: [
       { label: 'Modèle', value: 'RRH-001' },
     ],
@@ -68,6 +74,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false, // Controlled by toggle
     icon: 'Activity',
     color: 'amber',
+    zone: 'technique',
     fields: [
       { label: 'Type', value: 'N/A' },
       { label: 'Référence', value: 'N/A' },
@@ -80,6 +87,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false,
     icon: 'Activity',
     color: 'blue',
+    zone: 'technique',
     fields: [
       { label: 'Référence', value: 'N/A' },
     ],
@@ -90,6 +98,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false,
     icon: 'Activity',
     color: 'purple',
+    zone: 'technique',
     fields: [
       { label: 'Référence', value: 'N/A' },
     ],
@@ -100,6 +109,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false,
     icon: 'Activity',
     color: 'pink',
+    zone: 'aerienne',
     fields: [
       { label: 'Référence', value: 'N/A' },
     ],
@@ -110,9 +120,21 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false,
     icon: 'Activity',
     color: 'orange',
+    zone: 'aerienne',
     fields: [
       { label: 'Référence', value: 'N/A' },
       { label: 'Quantité', value: 1 },
+    ],
+  },
+  {
+    id: 'baie',
+    name: 'Présence Baie',
+    enabled: false,
+    icon: 'Server',
+    color: 'orange',
+    zone: 'aerienne',
+    fields: [
+      { label: 'Type', value: 'N/A' },
     ],
   },
 ];

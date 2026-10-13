@@ -1,3 +1,21 @@
 <h2>VERIFICATION D’ASSEMBLAGES DE LA STRUCTURE</h2>
 <h3>Assemblage entre tube/tube par platine</h3>
-<p><em>[Détails de l'assemblage à insérer ici]</em></p>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% if assemblage_note_images %}
+        {% for img in assemblage_note_images %}
+            {% if forloop.first %}
+            <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note d'assemblage">
+            {% else %}
+            <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note d'assemblage">
+            {% endif %}
+            
+            {% if not forloop.last %}
+            <div class="page-break"></div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p><em>[Détails de l'assemblage introuvable ou en attente de calcul Robot]</em></p>
+    {% endif %}
+</div>
+

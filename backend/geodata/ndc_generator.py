@@ -1,4 +1,6 @@
 import os
+import re
+import glob
 import math
 import uuid
 import urllib.parse
@@ -90,6 +92,87 @@ def calculate_wind_params(terrain_type: str, z_total: float, vb: float) -> dict:
         'z_used': round(z_used, 2),
     }
 
+
+def sanitize_assemblage_rtf(rtf_text: str) -> str:
+    """
+    Sanitize Autodesk Robot Structural Analysis RTF output:
+    1. Fix Greek & mathematical symbols that use Symbol font (which render as
+       broken symbols, plus signs, or missing glyphs in LibreOffice headless).
+       Convert them to standard Unicode with Arial/sans-serif font.
+    2. Fix corrupted table cell widths (e.g., cellx480 on Gauche, Section, Soudures,
+       and the 3-cell conclusion box cellx480/cellx960/cellx1440) that cause LibreOffice
+       to render narrow 8.5mm columns with vertically wrapped text on an extra page.
+    """
+    # 1. Identify Symbol font index in the font table
+    symbol_font_ids = set(re.findall(r"\\f(\d+)[^}]*?Symbol;", rtf_text, flags=re.IGNORECASE))
+    if not symbol_font_ids:
+        symbol_font_ids = set(re.findall(r"\\f(\d+)[^}]*?\\fcharset2", rtf_text, flags=re.IGNORECASE))
+    if not symbol_font_ids:
+        symbol_font_ids = {'3'}
+
+    # 2. Fix symbols for each Symbol font ID
+    symbol_map = {
+        'g': r'\u947?',   # γ (gamma)
+        'b': r'\u946?',   # β (beta)
+        'p': r'\u960?',   # π (pi)
+        's': r'\u963?',   # σ (sigma)
+        't': r'\u964?',   # τ (tau)
+        'a': r'\u945?',   # α (alpha)
+        'd': r'\u948?',   # δ (delta)
+        'e': r'\u949?',   # ε (epsilon)
+        'h': r'\u951?',   # η (eta)
+        'q': r'\u952?',   # θ (theta)
+        'l': r'\u955?',   # λ (lambda)
+        'm': r'\u956?',   # μ (mu)
+        'r': r'\u961?',   # ρ (rho)
+        'f': r'\u966?',   # φ (phi)
+        'w': r'\u969?',   # ω (omega)
+        'D': r'\u916?',   # Δ (Delta)
+        'S': r'\u931?',   # Σ (Sigma)
+        'W': r'\u937?',   # Ω (Omega)
+        '^': r'\u8869?',  # ⊥ (perpendicular / up tack)
+    }
+
+    for fid in symbol_font_ids:
+        # Radical / square root: \u214\'d6 or \'d6
+        rtf_text = re.sub(
+            rf"\\f{fid}((?:\\(?:fs\d+|insrsid\d+|b|i|sub|super|cf\d+))*)\s*(?:\\u214\\'d6|\\'d6)",
+            r"\\f1\1 \\u8730?",
+            rtf_text
+        )
+
+        def make_repl(f_id):
+            def repl_char(m):
+                flags = m.group(1) or ""
+                char = m.group(2)
+                repl = symbol_map.get(char, char)
+                return rf"\f1{flags} {repl}"
+            return repl_char
+
+        chars_class = "".join(re.escape(c) for c in symbol_map.keys())
+        pattern = rf"\\f{fid}((?:\\(?:fs\d+|insrsid\d+|b|i|sub|super|cf\d+))*)\s+([{chars_class}])"
+        rtf_text = re.sub(pattern, make_repl(fid), rtf_text)
+
+    # 3. Fix 3-cell conclusion box:
+    # Robot erroneously writes: \cellx480 ... \cellx960 ... \cellx1440
+    # Replace with full-width columns: \cellx7000 ... \cellx8200 ... \cellx9360
+    pattern_3cell = r"(\\cellx)480((?:(?!\\cellx).)*?\\cellx)960((?:(?!\\cellx).)*?\\cellx)1440"
+    def repl_3cell(m):
+        return m.group(1) + "7000" + m.group(2) + "8200" + m.group(3) + "9360"
+    rtf_text = re.sub(pattern_3cell, repl_3cell, rtf_text, flags=re.DOTALL)
+
+    # 4. Fix 2-cell spacer rows:
+    pattern_2cell = r"(\\cellx)480((?:(?!\\cellx).)*?\\cellx)960"
+    def repl_2cell(m):
+        return m.group(1) + "8200" + m.group(2) + "9360"
+    rtf_text = re.sub(pattern_2cell, repl_2cell, rtf_text, flags=re.DOTALL)
+
+    # 5. Fix all remaining 1-cell rows with \cellx480 (such as Gauche, Section, Soudures):
+    rtf_text = rtf_text.replace(r"\cellx480", r"\cellx9360")
+
+    return rtf_text
+
+
 def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False, start_page=1):
     """
     Generates a PDF from HTML templates using WeasyPrint based on job calculation results.
@@ -114,9 +197,16 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
 
     active_data = input_data if job else (preview_data or {})
     
-    context['site_address'] = site_info.get('address') or '[ADRESSE_DU_SITE]'
-    context['site_name'] = site_info.get('name') or '[NOM_DU_SITE]'
-    context['code_site'] = site_info.get('code_site') or active_data.get('code_site') or '[CODE_SITE]'
+    context['site_address'] = site_info.get('address') or active_data.get('address') or '[ADRESSE_DU_SITE]'
+    context['site_name'] = site_info.get('name') or active_data.get('site_name') or '[NOM_DU_SITE]'
+    code_site_val = (
+        site_info.get('code_site')
+        or site_info.get('ref_site')
+        or active_data.get('code_site')
+        or active_data.get('ref_site')
+    )
+    context['code_site'] = code_site_val or '[RÉF_DU_SITE]'
+    context['ref_site'] = context['code_site']
     context['client_name'] = site_info.get('client') or active_data.get('client_name') or '[CLIENT]'
     context['current_date'] = datetime.now().strftime("%d/%m/%Y")
     
@@ -435,6 +525,118 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
                 doc.close()
         except Exception as e:
             print(f"Warning: Failed to convert RTF to Images: {e}")
+
+    # Assemblage Note (RTF) Path
+    assemblage_note_found = False
+    
+    if job:
+        # 1. Try to read from worker share folder first
+        worker_assemblage_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_assemblage_note.rtf"
+        if os.path.exists(worker_assemblage_path):
+            context['assemblage_note_abs'] = worker_assemblage_path
+            assemblage_note_found = True
+        # 2. Fallback to django uploaded file
+        elif hasattr(job, 'assemblage_note') and job.assemblage_note:
+            try:
+                assemblage_path = job.assemblage_note.path
+                if os.path.exists(assemblage_path):
+                    context['assemblage_note_abs'] = assemblage_path
+                    assemblage_note_found = True
+            except Exception:
+                pass
+        # 3. Fallback to media/assemblages default path
+        if not assemblage_note_found:
+            fallback_media_path = os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_assemblage_note.rtf')
+            if os.path.exists(fallback_media_path):
+                context['assemblage_note_abs'] = fallback_media_path
+                assemblage_note_found = True
+        # 4. Fallback to worker result_data path if provided
+        if not assemblage_note_found and isinstance(job.result_data, dict):
+            raw_path = job.result_data.get('assemblage_note_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                candidate_paths = [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'assemblages', basename)
+                ]
+                for cp in candidate_paths:
+                    if os.path.exists(cp):
+                        context['assemblage_note_abs'] = cp
+                        assemblage_note_found = True
+                        break
+
+    if not assemblage_note_found:
+        context['assemblage_note_abs'] = None
+
+    # Convert Assemblage RTF to Images (for embedding directly in the HTML template)
+    context['assemblage_note_images'] = []
+    if context.get('assemblage_note_abs'):
+        import subprocess
+        rtf_path = context['assemblage_note_abs']
+        convert_dir = os.path.join(settings.MEDIA_ROOT, 'assemblages')
+        os.makedirs(convert_dir, exist_ok=True)
+        try:
+            rtf_basename = os.path.splitext(os.path.basename(rtf_path))[0]
+            if rtf_path.endswith('.pdf'):
+                pdf_output = rtf_path
+            else:
+                # Sanitize RTF before converting to PDF:
+                # Fixes Symbol font characters (Greek/math) and corrupted \cellx480 widths
+                clean_rtf_path = os.path.join(convert_dir, f"{rtf_basename}_clean.rtf")
+                with open(rtf_path, 'r', encoding='latin1') as rf:
+                    raw_rtf = rf.read()
+                cleaned_rtf = sanitize_assemblage_rtf(raw_rtf)
+                with open(clean_rtf_path, 'w', encoding='latin1') as wf:
+                    wf.write(cleaned_rtf)
+
+                subprocess.run([
+                    'soffice', '--headless', '--convert-to', 'pdf',
+                    '--outdir', convert_dir, clean_rtf_path
+                ], timeout=30, check=True, capture_output=True)
+                pdf_output = os.path.join(convert_dir, f"{rtf_basename}_clean.pdf")
+
+            if os.path.exists(pdf_output):
+                # Clean up any previously generated page images to avoid stale extra pages (e.g., old page 4)
+                for old_img in glob.glob(os.path.join(convert_dir, f"{rtf_basename}_page_*.png")):
+                    try:
+                        os.remove(old_img)
+                    except Exception:
+                        pass
+
+                import fitz
+                doc = fitz.open(pdf_output)
+                for page_num in range(len(doc)):
+                    page = doc.load_page(page_num)
+                    zoom = 2.0
+                    mat = fitz.Matrix(zoom, zoom)
+                    pix = page.get_pixmap(matrix=mat)
+                    
+                    from PIL import Image, ImageChops
+                    mode = "RGBA" if pix.alpha else "RGB"
+                    img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                    
+                    bg = Image.new(img.mode, img.size, (255, 255, 255) if not pix.alpha else (255, 255, 255, 255))
+                    diff = ImageChops.difference(img, bg)
+                    diff = ImageChops.add(diff, diff, 2.0, -100)
+                    bbox = diff.getbbox()
+                    
+                    if bbox:
+                        pad = 20
+                        bbox = (
+                            max(0, bbox[0] - pad),
+                            max(0, bbox[1] - pad),
+                            min(img.width, bbox[2] + pad),
+                            min(img.height, bbox[3] + pad)
+                        )
+                        img = img.crop(bbox)
+                    
+                    img_path = os.path.join(convert_dir, f"{rtf_basename}_page_{page_num+1}.png")
+                    img.save(img_path)
+                    context['assemblage_note_images'].append(img_path)
+                doc.close()
+        except Exception as e:
+            print(f"Warning: Failed to convert Assemblage RTF to Images: {e}")
     
     # Combinaisons Image Path
     combinaisons_path = os.path.join(settings.MEDIA_ROOT, 'combinaisons', 'table.png')

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useAppStore } from './stores/useAppStore';
 import { cn } from './utils/cn';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Database } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import TerrainMap from './components/TerrainMap';
 import CLCLegend from './components/CLCLegend';
@@ -24,6 +25,7 @@ const LoginView = lazy(() => import('./components/LoginView'));
 const NDCPortailTest = lazy(() => import('./components/regular-user/NDCPortailTest'));
 const RegularUserView = lazy(() => import('./components/RegularUserView'));
 const CatalogueManagement = lazy(() => import('./components/CatalogueManagement'));
+const CatalogueTestView = lazy(() => import('./components/CatalogueTestView'));
 
 export default function App() {
   const token = useAppStore((state) => state.token);
@@ -47,6 +49,7 @@ export default function App() {
         <Route path="/portal" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
         <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
         <Route path="/ndc-portail-test" element={<NDCPortailTest />} />
+        <Route path="/test-catalogue" element={<CatalogueTestView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
@@ -305,6 +308,13 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white border border-blue-500 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm mr-2"
             >
               Mode Test NDC
+            </Link>
+            <Link
+              to="/test-catalogue"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white border border-emerald-500 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm mr-2 inline-flex items-center gap-1.5"
+            >
+              <Database className="w-4 h-4" />
+              Test Catalogue
             </Link>
             <Link
               to="/portal"

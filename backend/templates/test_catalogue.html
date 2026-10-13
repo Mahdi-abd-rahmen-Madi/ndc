@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Catalogue - Opérateurs & Équipements</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f5f9;
+            --border-card: #e2e8f0;
+            --border-card-hover: #cbd5e1;
+            
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            
+            --color-orange: #ea580c;
+            --color-orange-bg: #fff7ed;
+            --color-orange-border: #fed7aa;
+            --color-orange-text: #c2410c;
+            
+            --color-bouygues: #0284c7;
+            --color-bouygues-bg: #f0f9ff;
+            --color-bouygues-border: #bae6fd;
+            --color-bouygues-text: #0369a1;
+            
+            --color-free: #e11d48;
+            --color-free-bg: #fff1f2;
+            --color-free-border: #fecdd3;
+            --color-free-text: #be123c;
+            
+            --color-all: #6366f1;
+            --color-all-bg: #f5f3ff;
+            --color-all-border: #ddd6fe;
+            --color-all-text: #6d28d9;
+
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 24px 32px 64px;
+            background-image: 
+                radial-gradient(circle at 12% 10%, rgba(99, 102, 241, 0.04) 0%, transparent 40%),
+                radial-gradient(circle at 88% 18%, rgba(249, 115, 22, 0.04) 0%, transparent 40%),
+                radial-gradient(circle at 50% 90%, rgba(225, 29, 72, 0.03) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Top Header */
+        .header {
+            margin-bottom: 24px;
+            padding: 24px 28px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-title-box h1 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+        }
+
+        .badge-test {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+
+        .header-subtitle {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .source-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            background: #f1f5f9;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn {
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #334155;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+            color: #0f172a;
+            transform: translateY(-1px);
+        }
+
+        /* KPI Cards Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 18px;
+            padding: 20px 22px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            box-shadow: var(--card-shadow);
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--border-card-hover);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .kpi-card.active {
+            border-color: currentColor;
+            box-shadow: 0 0 0 2px currentColor, var(--card-shadow-hover);
+        }
+
+        .kpi-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .kpi-operator-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            text-transform: capitalize;
+        }
+
+        .kpi-total-val {
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .kpi-breakdown {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .kpi-tag {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            color: #334155;
+        }
+
+        /* Specific operator card styling (Light mode) */
+        .kpi-orange {
+            border-left: 4px solid var(--color-orange);
+        }
+        .kpi-orange .kpi-operator-pill {
+            background: var(--color-orange-bg);
+            color: var(--color-orange-text);
+            border: 1px solid var(--color-orange-border);
+        }
+        .kpi-orange .kpi-total-val { color: var(--color-orange); }
+
+        .kpi-bouygues {
+            border-left: 4px solid var(--color-bouygues);
+        }
+        .kpi-bouygues .kpi-operator-pill {
+            background: var(--color-bouygues-bg);
+            color: var(--color-bouygues-text);
+            border: 1px solid var(--color-bouygues-border);
+        }
+        .kpi-bouygues .kpi-total-val { color: var(--color-bouygues); }
+
+        .kpi-free {
+            border-left: 4px solid var(--color-free);
+        }
+        .kpi-free .kpi-operator-pill {
+            background: var(--color-free-bg);
+            color: var(--color-free-text);
+            border: 1px solid var(--color-free-border);
+        }
+        .kpi-free .kpi-total-val { color: var(--color-free); }
+
+        .kpi-all {
+            border-left: 4px solid var(--color-all);
+        }
+        .kpi-all .kpi-operator-pill {
+            background: var(--color-all-bg);
+            color: var(--color-all-text);
+            border: 1px solid var(--color-all-border);
+        }
+        .kpi-all .kpi-total-val { color: var(--color-all); }
+
+        /* Controls Section */
+        .controls-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 22px 26px;
+            margin-bottom: 24px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .search-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .search-input-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px 16px 12px 42px;
+            color: #0f172a;
+            font-family: inherit;
+            font-size: 14px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .search-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .select-filter {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #1e293b;
+            font-family: inherit;
+            font-size: 13.5px;
+            cursor: pointer;
+            min-width: 190px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: border-color 0.2s;
+        }
+
+        .select-filter:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .filter-pills-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 16px;
+        }
+
+        .pills-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pills-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 4px;
+        }
+
+        .filter-pill {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 6px 13px;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-pill:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .filter-pill.active {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+        }
+
+        .pill-count {
+            background: rgba(0, 0, 0, 0.12);
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .filter-pill.active .pill-count {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+
+        /* View switcher tabs */
+        .tabs-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: #0f172a;
+            background: #f1f5f9;
+        }
+
+        .tab-btn.active {
+            color: #4338ca;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            font-weight: 700;
+        }
+
+        /* Table Card */
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .table-header-meta {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: #f8fafc;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            max-height: 680px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13.5px;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 14px 18px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        th:hover {
+            color: #0f172a;
+            background: #f1f5f9;
+        }
+
+        th.sort-active {
+            color: #6366f1;
+        }
+
+        td {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+            color: #1e293b;
+        }
+
+        tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* Table Badges & Tags (Light Mode) */
+        .op-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            text-transform: capitalize;
+        }
+
+        .op-orange {
+            background: var(--color-orange-bg);
+            color: var(--color-orange-text);
+            border: 1px solid var(--color-orange-border);
+        }
+
+        .op-bouygues {
+            background: var(--color-bouygues-bg);
+            color: var(--color-bouygues-text);
+            border: 1px solid var(--color-bouygues-border);
+        }
+
+        .op-free {
+            background: var(--color-free-bg);
+            color: var(--color-free-text);
+            border: 1px solid var(--color-free-border);
+        }
+
+        .op-all {
+            background: var(--color-all-bg);
+            color: var(--color-all-text);
+            border: 1px solid var(--color-all-border);
+        }
+
+        .category-badge {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .vendor-badge {
+            background: #e0e7ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .id-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: #f8fafc;
+            color: #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .id-badge:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        .ref-name {
+            font-weight: 600;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 4px;
+            opacity: 0.4;
+            transition: all 0.2s;
+        }
+
+        tr:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            color: #0f172a;
+            background: #e2e8f0;
+        }
+
+        .specs-text {
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.4;
+            max-width: 420px;
+        }
+
+        /* Grouped View */
+        .operator-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .operator-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .operator-section-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+        }
+
+        /* Matrix Grid View */
+        .matrix-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .matrix-table th, .matrix-table td {
+            padding: 14px 18px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .matrix-table th:first-child, .matrix-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .matrix-cell-val {
+            font-size: 15px;
+            font-weight: 700;
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+
+        .matrix-val-active {
+            background: #e0e7ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+        }
+
+        .matrix-val-zero {
+            color: #cbd5e1;
+        }
+
+        /* JSON Preview View */
+        .json-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-card);
+            border-radius: 18px;
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            color: #1e293b;
+            max-height: 650px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 18px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.25s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: 64px 20px;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .header { padding: 18px; }
+            .search-row { flex-direction: column; align-items: stretch; }
+            .filter-pills-row { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-title-box">
+                <h1>
+                    Catalogue Équipements & Opérateurs
+                    <span class="badge-test" id="test-route-badge">Route de Test</span>
+                </h1>
+                <div class="header-subtitle">
+                    <span>Validation des équipements associés aux opérateurs</span>
+                    <span>•</span>
+                    <span class="source-tag" title="Source JSON Fixture">📁 {{ file_metadata.relative_path }}</span>
+                    <span>•</span>
+                    <span title="Dernière modification du fichier">🕒 Modifié le {{ file_metadata.last_modified }} ({{ file_metadata.file_size_kb }} KB)</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <a href="?format=json" target="_blank" class="btn btn-secondary" id="btn-export-json" title="Consulter la réponse brute en JSON">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    Format JSON
+                </a>
+                <button onclick="window.location.reload()" class="btn btn-primary" id="btn-reload" title="Recharger directement depuis le fichier JSON sur le disque">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    Recharger Fixture
+                </button>
+            </div>
+        </header>
+
+        <!-- KPI Cards Grid -->
+        <section class="kpi-grid">
+            <!-- Orange -->
+            <div class="kpi-card kpi-orange" onclick="filterByOperator('orange')" id="kpi-orange-card" title="Cliquer pour filtrer uniquement Orange">
+                <div class="kpi-card-header">
+                    <span class="kpi-operator-pill">Orange</span>
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Opérateur</span>
+                </div>
+                <div class="kpi-total-val" id="kpi-orange-count">{{ stats_by_operator.orange.total }}</div>
+                <div class="kpi-breakdown">
+                    <span class="kpi-tag">Antennes: <strong>{{ stats_by_operator.orange.antennes }}</strong></span>
+                    <span class="kpi-tag">RRU: <strong>{{ stats_by_operator.orange.rru }}</strong></span>
+                    <span class="kpi-tag">RRH: <strong>{{ stats_by_operator.orange.rrh }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Bouygues -->
+            <div class="kpi-card kpi-bouygues" onclick="filterByOperator('bouygues')" id="kpi-bouygues-card" title="Cliquer pour filtrer uniquement Bouygues">
+                <div class="kpi-card-header">
+                    <span class="kpi-operator-pill">Bouygues</span>
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Opérateur</span>
+                </div>
+                <div class="kpi-total-val" id="kpi-bouygues-count">{{ stats_by_operator.bouygues.total }}</div>
+                <div class="kpi-breakdown">
+                    <span class="kpi-tag">Antennes: <strong>{{ stats_by_operator.bouygues.antennes }}</strong></span>
+                    <span class="kpi-tag">RRU: <strong>{{ stats_by_operator.bouygues.rru }}</strong></span>
+                    <span class="kpi-tag">RRH: <strong>{{ stats_by_operator.bouygues.rrh }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Free -->
+            <div class="kpi-card kpi-free" onclick="filterByOperator('free')" id="kpi-free-card" title="Cliquer pour filtrer uniquement Free">
+                <div class="kpi-card-header">
+                    <span class="kpi-operator-pill">Free</span>
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Opérateur</span>
+                </div>
+                <div class="kpi-total-val" id="kpi-free-count">{{ stats_by_operator.free.total }}</div>
+                <div class="kpi-breakdown">
+                    <span class="kpi-tag">Antennes: <strong>{{ stats_by_operator.free.antennes }}</strong></span>
+                    <span class="kpi-tag">RRH: <strong>{{ stats_by_operator.free.rrh }}</strong></span>
+                    <span class="kpi-tag">TD: <strong>{{ stats_by_operator.free.td }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Tous / Multiopérateur -->
+            <div class="kpi-card kpi-all" onclick="filterByOperator('all')" id="kpi-all-card" title="Cliquer pour filtrer les équipements communs/multiopérateur">
+                <div class="kpi-card-header">
+                    <span class="kpi-operator-pill">Commun / Multiopérateur</span>
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">Général</span>
+                </div>
+                <div class="kpi-total-val" id="kpi-all-count">{{ stats_by_operator.all.total }}</div>
+                <div class="kpi-breakdown">
+                    <span class="kpi-tag">Montages: <strong>{{ stats_by_operator.all.montages }}</strong></span>
+                    <span class="kpi-tag">FH: <strong>{{ stats_by_operator.all.fh }}</strong></span>
+                    <span class="kpi-tag">Coffrets: <strong>{{ stats_by_operator.all.coffrets }}</strong></span>
+                    <span class="kpi-tag">TD: <strong>{{ stats_by_operator.all.td }}</strong></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Controls Section -->
+        <section class="controls-card">
+            <div class="search-row">
+                <div class="search-input-wrap">
+                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="filter-search-input" class="search-input" placeholder="Rechercher par opérateur, référence, modèle, constructeur, ID... (Touche /)" autocomplete="off">
+                </div>
+                <select id="filter-vendor-select" class="select-filter" onchange="applyFilters()">
+                    <option value="">Tous les constructeurs</option>
+                    {% for vendor in vendors_list %}
+                        {% if vendor %}
+                        <option value="{{ vendor }}">{{ vendor }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <button onclick="resetAllFilters()" class="btn btn-secondary" id="btn-reset-filters" title="Réinitialiser tous les filtres">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    Effacer filtres
+                </button>
+            </div>
+
+            <div class="filter-pills-row">
+                <div class="pills-group" id="operator-pills-container">
+                    <span class="pills-label">Opérateur :</span>
+                    <button class="filter-pill active" data-operator="" onclick="setOperatorFilter(this, '')">
+                        Tous <span class="pill-count" id="pill-count-total">{{ total_count }}</span>
+                    </button>
+                    <button class="filter-pill" data-operator="orange" onclick="setOperatorFilter(this, 'orange')">
+                        Orange <span class="pill-count">{{ stats_by_operator.orange.total }}</span>
+                    </button>
+                    <button class="filter-pill" data-operator="bouygues" onclick="setOperatorFilter(this, 'bouygues')">
+                        Bouygues <span class="pill-count">{{ stats_by_operator.bouygues.total }}</span>
+                    </button>
+                    <button class="filter-pill" data-operator="free" onclick="setOperatorFilter(this, 'free')">
+                        Free <span class="pill-count">{{ stats_by_operator.free.total }}</span>
+                    </button>
+                    <button class="filter-pill" data-operator="all" onclick="setOperatorFilter(this, 'all')">
+                        Commun <span class="pill-count">{{ stats_by_operator.all.total }}</span>
+                    </button>
+                </div>
+
+                <div class="pills-group" id="category-pills-container">
+                    <span class="pills-label">Type :</span>
+                    <button class="filter-pill active" data-category="" onclick="setCategoryFilter(this, '')">Toutes</button>
+                    {% for cat, count in stats_by_category.items %}
+                    <button class="filter-pill" data-category="{{ cat }}" onclick="setCategoryFilter(this, '{{ cat }}')">
+                        {{ cat }} <span class="pill-count">{{ count }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('table')" id="tab-btn-table">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                Tableau Détaillé
+            </button>
+            <button class="tab-btn" onclick="switchTab('grouped')" id="tab-btn-grouped">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Vue par Opérateur
+            </button>
+            <button class="tab-btn" onclick="switchTab('matrix')" id="tab-btn-matrix">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                Matrice Synthétique
+            </button>
+            <button class="tab-btn" onclick="switchTab('json')" id="tab-btn-json">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                Aperçu JSON Fixture
+            </button>
+        </nav>
+
+        <!-- VIEW 1: Main Table View -->
+        <main id="view-table" class="view-panel">
+            <div class="table-card">
+                <div class="table-header-meta">
+                    <span id="items-counter-label">Affichage de <strong>{{ total_count }}</strong> équipements sur <strong>{{ total_count }}</strong></span>
+                    <button onclick="exportToCSV()" class="btn btn-secondary" style="padding: 5px 12px; font-size: 12px;" id="btn-export-csv" title="Exporter les données filtrées au format CSV">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Exporter CSV
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table id="equipment-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th onclick="sortTable('operator')" id="th-operator">Opérateur <span>↕</span></th>
+                                <th onclick="sortTable('category')" id="th-category">Catégorie <span>↕</span></th>
+                                <th onclick="sortTable('reference')" id="th-reference">Référence / Nom <span>↕</span></th>
+                                <th onclick="sortTable('vendor')" id="th-vendor">Constructeur <span>↕</span></th>
+                                <th onclick="sortTable('id')" id="th-id">Identifiant Technique (ID) <span>↕</span></th>
+                                <th>Spécifications & Caractéristiques</th>
+                            </tr>
+                        </thead>
+                        <tbody id="equipment-tbody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                    <div id="table-empty-state" class="empty-state" style="display: none;">
+                        <div class="empty-state-icon">🔍</div>
+                        <p style="font-weight: 600; font-size: 16px; margin-bottom: 6px; color: #1e293b;">Aucun équipement trouvé</p>
+                        <p style="font-size: 13px;">Essayez de modifier vos critères de recherche ou de réinitialiser les filtres.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- VIEW 2: Grouped by Operator View -->
+        <div id="view-grouped" class="view-panel" style="display: none;">
+            <div id="grouped-container">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+
+        <!-- VIEW 3: Matrix View -->
+        <div id="view-matrix" class="view-panel" style="display: none;">
+            <div class="matrix-card">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 18px; color: #0f172a;">
+                    Répartition des équipements par Opérateur et par Catégorie
+                </h3>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Catégorie d'équipement</th>
+                            <th>Orange</th>
+                            <th>Bouygues</th>
+                            <th>Free</th>
+                            <th>Commun / Multiopérateur</th>
+                            <th>Total Général</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matrix-tbody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- VIEW 4: Raw JSON View -->
+        <div id="view-json" class="view-panel" style="display: none;">
+            <div class="json-card" id="json-code-viewer">Chargement du JSON brut...</div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="toast-message">Copié dans le presse-papier !</span>
+    </div>
+
+    <!-- Data Injection for High Performance Client-Side Interactivity -->
+    <script id="raw-items-data" type="application/json">
+        {{ items_json|safe }}
+    </script>
+
+    <script>
+        // State
+        const rawItems = JSON.parse(document.getElementById('raw-items-data').textContent);
+        let currentOperator = '';
+        let currentCategory = '';
+        let currentVendor = '';
+        let currentSearchQuery = '';
+        let sortColumn = 'operator';
+        let sortAsc = true;
+
+        // Operator styling helper (Light mode classes)
+        function getOperatorBadgeHtml(operator) {
+            const op = (operator || 'all').toLowerCase();
+            let label = 'Commun';
+            let cls = 'op-all';
+            
+            if (op === 'orange') {
+                label = 'Orange';
+                cls = 'op-orange';
+            } else if (op === 'bouygues') {
+                label = 'Bouygues';
+                cls = 'op-bouygues';
+            } else if (op === 'free') {
+                label = 'Free';
+                cls = 'op-free';
+            }
+            return `<span class="op-badge ${cls}">${label}</span>`;
+        }
+
+        // Render main table
+        function renderTable() {
+            const tbody = document.getElementById('equipment-tbody');
+            const emptyState = document.getElementById('table-empty-state');
+            
+            const filtered = getFilteredItems();
+            
+            // Sort
+            filtered.sort((a, b) => {
+                let valA = (a[sortColumn] || '').toString().toLowerCase();
+                let valB = (b[sortColumn] || '').toString().toLowerCase();
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                tbody.innerHTML = filtered.map((item, idx) => `
+                    <tr>
+                        <td style="color: var(--text-muted); font-size: 12px; font-weight: 500;">${idx + 1}</td>
+                        <td>${getOperatorBadgeHtml(item.operator)}</td>
+                        <td><span class="category-badge">${escapeHtml(item.category)}</span></td>
+                        <td>
+                            <div class="ref-name">
+                                <span>${escapeHtml(item.reference)}</span>
+                                <button class="copy-btn" onclick="copyText('${escapeJsString(item.reference)}', 'Référence copiée !')" title="Copier la référence">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            ${item.vendor ? `<span class="vendor-badge">${escapeHtml(item.vendor)}</span>` : '<span style="color: var(--text-muted);">-</span>'}
+                        </td>
+                        <td>
+                            <span class="id-badge" onclick="copyText('${escapeJsString(item.id)}', 'ID copié !')" title="Cliquer pour copier l'identifiant">
+                                ${escapeHtml(item.id)}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="specs-text">${escapeHtml(item.specs || '-')}</div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update counter
+            document.getElementById('items-counter-label').innerHTML = 
+                `Affichage de <strong>${filtered.length}</strong> équipements sur <strong>${rawItems.length}</strong>`;
+        }
+
+        // Filter Logic
+        function getFilteredItems() {
+            return rawItems.filter(item => {
+                // Operator
+                if (currentOperator) {
+                    const itemOp = (item.operator || 'all').toLowerCase();
+                    if (itemOp !== currentOperator.toLowerCase()) return false;
+                }
+
+                // Category
+                if (currentCategory && item.category !== currentCategory) {
+                    return false;
+                }
+
+                // Vendor
+                if (currentVendor && (item.vendor || '').toLowerCase() !== currentVendor.toLowerCase()) {
+                    return false;
+                }
+
+                // Search query
+                if (currentSearchQuery) {
+                    const q = currentSearchQuery.toLowerCase();
+                    const matchOp = (item.operator || '').toLowerCase().includes(q);
+                    const matchCat = (item.category || '').toLowerCase().includes(q);
+                    const matchRef = (item.reference || '').toLowerCase().includes(q);
+                    const matchId = (item.id || '').toLowerCase().includes(q);
+                    const matchVendor = (item.vendor || '').toLowerCase().includes(q);
+                    const matchSpecs = (item.specs || '').toLowerCase().includes(q);
+                    if (!matchOp && !matchCat && !matchRef && !matchId && !matchVendor && !matchSpecs) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
+
+        // Render Grouped View
+        function renderGroupedView() {
+            const container = document.getElementById('grouped-container');
+            const operators = ['orange', 'bouygues', 'free', 'all'];
+            const opLabels = {
+                'orange': 'Orange',
+                'bouygues': 'Bouygues Telecom',
+                'free': 'Free Mobile',
+                'all': 'Commun / Multiopérateur'
+            };
+
+            const filtered = getFilteredItems();
+
+            container.innerHTML = operators.map(op => {
+                const opItems = filtered.filter(i => (i.operator || 'all').toLowerCase() === op);
+                if (opItems.length === 0) return '';
+
+                // Group by category
+                const catGroups = {};
+                opItems.forEach(i => {
+                    catGroups[i.category] = catGroups[i.category] || [];
+                    catGroups[i.category].push(i);
+                });
+
+                return `
+                    <div class="operator-section kpi-${op}">
+                        <div class="operator-section-header">
+                            <div class="operator-section-title">
+                                ${getOperatorBadgeHtml(op)}
+                                <span>${opLabels[op]}</span>
+                                <span style="font-size: 13px; color: var(--text-muted); font-weight: 600;">(${opItems.length} équipements)</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            ${Object.keys(catGroups).map(cat => `
+                                <div>
+                                    <h4 style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        ${escapeHtml(cat)} (${catGroups[cat].length})
+                                    </h4>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 10px;">
+                                        ${catGroups[cat].map(it => `
+                                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px;">
+                                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                                                    <strong style="color: #0f172a; font-size: 13px;">${escapeHtml(it.reference)}</strong>
+                                                    ${it.vendor ? `<span class="vendor-badge">${escapeHtml(it.vendor)}</span>` : ''}
+                                                </div>
+                                                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; margin-bottom: 6px;">
+                                                    ${escapeHtml(it.id)}
+                                                </div>
+                                                <div style="font-size: 11.5px; color: #475569;">
+                                                    ${escapeHtml(it.specs || '-')}
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Matrix View
+        function renderMatrixView() {
+            const tbody = document.getElementById('matrix-tbody');
+            const categories = Array.from(new Set(rawItems.map(i => i.category))).sort();
+            const operators = ['orange', 'bouygues', 'free', 'all'];
+
+            let html = '';
+            categories.forEach(cat => {
+                let rowTotal = 0;
+                let cellsHtml = operators.map(op => {
+                    const count = rawItems.filter(i => i.category === cat && (i.operator || 'all').toLowerCase() === op).length;
+                    rowTotal += count;
+                    const cellCls = count > 0 ? 'matrix-val-active' : 'matrix-val-zero';
+                    return `<td><span class="matrix-cell-val ${cellCls}">${count}</span></td>`;
+                }).join('');
+
+                html += `
+                    <tr>
+                        <td><strong>${escapeHtml(cat)}</strong></td>
+                        ${cellsHtml}
+                        <td><strong style="color: #0f172a; font-size: 15px;">${rowTotal}</strong></td>
+                    </tr>
+                `;
+            });
+
+            // Total row
+            let grandTotal = 0;
+            const totalsHtml = operators.map(op => {
+                const count = rawItems.filter(i => (i.operator || 'all').toLowerCase() === op).length;
+                grandTotal += count;
+                return `<td><strong style="color: #4338ca; font-size: 16px;">${count}</strong></td>`;
+            }).join('');
+
+            html += `
+                <tr style="background: #eef2ff; font-weight: 800;">
+                    <td>TOTAL GÉNÉRAL</td>
+                    ${totalsHtml}
+                    <td><strong style="color: #3730a3; font-size: 18px;">${grandTotal}</strong></td>
+                </tr>
+            `;
+
+            tbody.innerHTML = html;
+        }
+
+        // Tab Switching
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.view-panel').forEach(panel => panel.style.display = 'none');
+
+            document.getElementById(`tab-btn-${tabId}`).classList.add('active');
+            document.getElementById(`view-${tabId}`).style.display = 'block';
+
+            if (tabId === 'grouped') renderGroupedView();
+            if (tabId === 'matrix') renderMatrixView();
+            if (tabId === 'json') {
+                const viewer = document.getElementById('json-code-viewer');
+                if (viewer.textContent === 'Chargement du JSON brut...') {
+                    viewer.textContent = JSON.stringify(rawItems, null, 2);
+                }
+            }
+        }
+
+        // Filter Actions
+        function setOperatorFilter(el, op) {
+            currentOperator = op;
+            document.querySelectorAll('#operator-pills-container .filter-pill').forEach(p => p.classList.remove('active'));
+            if (el) el.classList.add('active');
+            
+            // Sync KPI cards
+            document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
+            if (op) {
+                const card = document.getElementById(`kpi-${op}-card`);
+                if (card) card.classList.add('active');
+            }
+
+            renderTable();
+            renderGroupedView();
+        }
+
+        function filterByOperator(op) {
+            const pill = document.querySelector(`#operator-pills-container [data-operator="${op}"]`);
+            if (currentOperator === op) {
+                setOperatorFilter(document.querySelector('#operator-pills-container [data-operator=""]'), '');
+            } else {
+                setOperatorFilter(pill, op);
+            }
+        }
+
+        function setCategoryFilter(el, cat) {
+            currentCategory = cat;
+            document.querySelectorAll('#category-pills-container .filter-pill').forEach(p => p.classList.remove('active'));
+            if (el) el.classList.add('active');
+            renderTable();
+            renderGroupedView();
+        }
+
+        function applyFilters() {
+            currentVendor = document.getElementById('filter-vendor-select').value;
+            renderTable();
+            renderGroupedView();
+        }
+
+        function resetAllFilters() {
+            currentOperator = '';
+            currentCategory = '';
+            currentVendor = '';
+            currentSearchQuery = '';
+            document.getElementById('filter-search-input').value = '';
+            document.getElementById('filter-vendor-select').value = '';
+            setOperatorFilter(document.querySelector('#operator-pills-container [data-operator=""]'), '');
+            setCategoryFilter(document.querySelector('#category-pills-container [data-category=""]'), '');
+            renderTable();
+            renderGroupedView();
+            showToast('Filtres réinitialisés');
+        }
+
+        // Sorting
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortAsc = !sortAsc;
+            } else {
+                sortColumn = column;
+                sortAsc = true;
+            }
+
+            document.querySelectorAll('th').forEach(th => th.classList.remove('sort-active'));
+            const activeTh = document.getElementById(`th-${column}`);
+            if (activeTh) {
+                activeTh.classList.add('sort-active');
+                activeTh.querySelector('span').textContent = sortAsc ? '↑' : '↓';
+            }
+
+            renderTable();
+        }
+
+        // CSV Export
+        function exportToCSV() {
+            const filtered = getFilteredItems();
+            const headers = ['Operateur', 'Categorie', 'Reference_Nom', 'Constructeur', 'ID_Technique', 'Specifications'];
+            const rows = filtered.map(it => [
+                it.operator || 'all',
+                it.category,
+                `"${(it.reference || '').replace(/"/g, '""')}"`,
+                it.vendor || '',
+                it.id || '',
+                `"${(it.specs || '').replace(/"/g, '""')}"`
+            ]);
+
+            const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `catalogue_equipements_operateurs_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Fichier CSV téléchargé avec succès !');
+        }
+
+        // Toast Helper
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function copyText(text, msg) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(msg || 'Copié dans le presse-papier !');
+            });
+        }
+
+        // Helpers
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeJsString(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "\\'");
+        }
+
+        // Listeners
+        document.getElementById('filter-search-input').addEventListener('input', (e) => {
+            currentSearchQuery = e.target.value.trim();
+            renderTable();
+            renderGroupedView();
+        });
+
+        // Keyboard shortcut '/' to search
+        window.addEventListener('keydown', (e) => {
+            if (e.key === '/' && document.activeElement !== document.getElementById('filter-search-input')) {
+                e.preventDefault();
+                document.getElementById('filter-search-input').focus();
+            } else if (e.key === 'Escape' && document.activeElement === document.getElementById('filter-search-input')) {
+                document.getElementById('filter-search-input').value = '';
+                currentSearchQuery = '';
+                renderTable();
+                renderGroupedView();
+                document.getElementById('filter-search-input').blur();
+            }
+        });
+
+        // Initial Render
+        renderTable();
+    </script>
+</body>
+</html>

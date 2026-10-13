@@ -1231,15 +1231,14 @@ class GeocodingSearchViewSet(viewsets.ViewSet):
                     ]
             else:
                 # Direct search using geocoding API
-                # Fetch more results initially because we'll filter out generic types
                 raw_addresses = address_service.search_addresses(query, limit=15)
                 
-                # Filter to only allow exact locations ('housenumber')
-                exact_types = ['housenumber']
-                addresses = [addr for addr in raw_addresses if addr.get('properties', {}).get('type') in exact_types]
+                # Prioritize exact locations ('housenumber') first, but keep streets and municipalities
+                exact_addresses = [addr for addr in raw_addresses if addr.get('properties', {}).get('type') == 'housenumber']
+                other_addresses = [addr for addr in raw_addresses if addr.get('properties', {}).get('type') != 'housenumber']
                 
-                # Limit to the requested amount after filtering
-                addresses = addresses[:limit]
+                # Combine prioritizing exact addresses, limited to requested amount
+                addresses = (exact_addresses + other_addresses)[:limit]
                 
                 # Convert to frontend format
                 formatted_addresses = []
@@ -2116,4 +2115,195 @@ def get_matching_catalogue_pdf(request):
         'relative_path': relative_path,
         'criteria': {'montage': montage, 'terrain_type': terrain_type, 'region': region, 'height': height}
     })
+
+
+@csrf_exempt
+def test_catalogue_equipment_view(request):
+    """
+    Route de test pour visualiser les opérateurs et leurs équipements associés
+    chargés dynamiquement depuis geodata/fixtures/catalogue_config.json.
+    Supporte le rendu HTML interactif et l'export JSON (?format=json).
+    """
+    import datetime
+    from collections import Counter
+
+    fixture_path = os.path.join(settings.BASE_DIR, 'geodata', 'fixtures', 'catalogue_config.json')
+    if not os.path.exists(fixture_path):
+        return JsonResponse({'error': f'Fixture file not found: {fixture_path}'}, status=404)
+
+    try:
+        with open(fixture_path, 'r', encoding='utf-8') as f:
+            raw_data = json.load(f)
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to parse JSON: {str(e)}'}, status=500)
+
+    # Extract fields from fixture
+    fields = raw_data[0]['fields'] if isinstance(raw_data, list) and len(raw_data) > 0 and 'fields' in raw_data[0] else raw_data
+
+    file_metadata = {
+        'full_path': fixture_path,
+        'relative_path': 'geodata/fixtures/catalogue_config.json',
+        'file_size_kb': round(os.path.getsize(fixture_path) / 1024, 1),
+        'last_modified': datetime.datetime.fromtimestamp(os.path.getmtime(fixture_path)).strftime('%d/%m/%Y %H:%M:%S'),
+        'updated_at': fields.get('updated_at', '')
+    }
+
+    items = []
+
+    # 1. Real world references (Antennes réelles)
+    for ant in fields.get('real_world_references', []):
+        name = ant.get('name', '')
+        vendor = ant.get('vendor', '')
+        if not vendor and ' ' in name:
+            vendor = name.split(' ')[0]
+        ant4g = ant.get('ant4g', {})
+        ant5g = ant.get('ant5g', {})
+        specs = []
+        if ant4g.get('model'):
+            specs.append(f"4G: {ant4g.get('model')} ({ant4g.get('height')}×{ant4g.get('width')}×{ant4g.get('thickness')}mm, {ant4g.get('weight')}kg)")
+        elif ant4g.get('height') or ant4g.get('width'):
+            specs.append(f"4G: {ant4g.get('height')}×{ant4g.get('width')}×{ant4g.get('thickness')}mm, {ant4g.get('weight')}kg")
+        if ant5g.get('model'):
+            specs.append(f"5G: {ant5g.get('model')} ({ant5g.get('height')}×{ant5g.get('width')}×{ant5g.get('thickness')}mm, {ant5g.get('weight')}kg)")
+        elif ant5g.get('height') or ant5g.get('width'):
+            specs.append(f"5G: {ant5g.get('height')}×{ant5g.get('width')}×{ant5g.get('thickness')}mm, {ant5g.get('weight')}kg")
+
+        items.append({
+            'category': 'Antenne',
+            'operator': (ant.get('operator') or 'all').lower().strip(),
+            'id': ant.get('id', ''),
+            'reference': name,
+            'vendor': vendor,
+            'montage_id': ant.get('montageId', ''),
+            'specs': ' | '.join(specs) if specs else 'Standard',
+            'raw': ant
+        })
+
+    # 2. RRU references
+    for rru in fields.get('rru_references', []):
+        vendor = rru.get('vendor', '')
+        ref = rru.get('reference', '')
+        items.append({
+            'category': 'RRU',
+            'operator': (rru.get('operator') or 'all').lower().strip(),
+            'id': rru.get('id', ''),
+            'reference': ref,
+            'vendor': vendor,
+            'montage_id': '',
+            'specs': f"Vendeur: {vendor}" if vendor else '',
+            'raw': rru
+        })
+
+    # 3. RRH references
+    for rrh in fields.get('rrh_references', []):
+        vendor = rrh.get('vendor', '')
+        ref = rrh.get('reference', '')
+        items.append({
+            'category': 'RRH',
+            'operator': (rrh.get('operator') or 'all').lower().strip(),
+            'id': rrh.get('id', ''),
+            'reference': ref,
+            'vendor': vendor,
+            'montage_id': '',
+            'specs': f"Vendeur: {vendor}" if vendor else '',
+            'raw': rrh
+        })
+
+    # 4. Coffrets references
+    for coff in fields.get('coffret_references', []):
+        items.append({
+            'category': 'Coffret',
+            'operator': (coff.get('operator') or 'all').lower().strip(),
+            'id': coff.get('id', ''),
+            'reference': coff.get('name', ''),
+            'vendor': coff.get('vendor', ''),
+            'montage_id': '',
+            'specs': coff.get('name', ''),
+            'raw': coff
+        })
+
+    # 5. FH references (Faisceaux Hertziens)
+    for fh in fields.get('fh_references', []):
+        items.append({
+            'category': 'FH',
+            'operator': (fh.get('operator') or 'all').lower().strip(),
+            'id': fh.get('id', ''),
+            'reference': fh.get('reference') or fh.get('name', ''),
+            'vendor': fh.get('vendor', ''),
+            'montage_id': '',
+            'specs': f"Diamètre: {fh.get('diameter', 0)} mm | Poids: {fh.get('weight', 0)} kg",
+            'raw': fh
+        })
+
+    # 6. TD references (Tableaux de distribution)
+    for td in fields.get('td_references', []):
+        op = td.get('operator')
+        if not op and 'free' in td.get('id', '').lower():
+            op = 'free'
+        items.append({
+            'category': 'TD',
+            'operator': (op or 'all').lower().strip(),
+            'id': td.get('id', ''),
+            'reference': td.get('name') or td.get('reference', ''),
+            'vendor': td.get('vendor', ''),
+            'montage_id': '',
+            'specs': f"Dim: {td.get('dimensions', 'N/A')} | Poids: {td.get('weight', 0)} kg",
+            'raw': td
+        })
+
+    # 7. Montages standards
+    for m in fields.get('standard_montages', []):
+        items.append({
+            'category': 'Montage Standard',
+            'operator': (m.get('operator') or 'all').lower().strip(),
+            'id': m.get('id', ''),
+            'reference': m.get('name', ''),
+            'vendor': '',
+            'montage_id': m.get('id', ''),
+            'specs': f"Abréviation: {m.get('abbreviation', '')}",
+            'raw': m
+        })
+
+    # Compute statistics
+    operators = ['orange', 'bouygues', 'free', 'all']
+    stats_by_operator = {}
+    for op in operators:
+        op_items = [i for i in items if i['operator'] == op]
+        cat_counts = Counter(i['category'] for i in op_items)
+        stats_by_operator[op] = {
+            'total': len(op_items),
+            'antennes': cat_counts.get('Antenne', 0),
+            'rru': cat_counts.get('RRU', 0),
+            'rrh': cat_counts.get('RRH', 0),
+            'coffrets': cat_counts.get('Coffret', 0),
+            'fh': cat_counts.get('FH', 0),
+            'td': cat_counts.get('TD', 0),
+            'montages': cat_counts.get('Montage Standard', 0),
+            'categories': dict(cat_counts)
+        }
+
+    stats_by_category = Counter(i['category'] for i in items)
+    vendors_list = sorted(list(set(i['vendor'] for i in items if i['vendor'])))
+
+    # Return JSON if requested
+    if request.GET.get('format') == 'json' or 'application/json' in request.META.get('HTTP_ACCEPT', ''):
+        return JsonResponse({
+            'file_metadata': file_metadata,
+            'total_count': len(items),
+            'stats_by_operator': stats_by_operator,
+            'stats_by_category': dict(stats_by_category),
+            'vendors': vendors_list,
+            'items': [{k: v for k, v in it.items() if k != 'raw'} for it in items]
+        }, json_dumps_params={'indent': 2})
+
+    context = {
+        'file_metadata': file_metadata,
+        'total_count': len(items),
+        'items_json': json.dumps([{k: v for k, v in it.items() if k != 'raw'} for it in items]),
+        'stats_by_operator': stats_by_operator,
+        'stats_by_category': dict(stats_by_category),
+        'vendors_list': vendors_list,
+    }
+    return render(request, 'test_catalogue.html', context)
+
 

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
-import { 
+import {
   Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,
-  FileText, AlertTriangle, Eye, Download, CheckCircle2, Settings, RefreshCw,
-  Building2, Anchor, Edit3, Sparkles, ShieldCheck, ArrowRight, ChevronRight, Pencil, 
-  Search, Zap, Check
+  FileText, AlertTriangle, Eye, CheckCircle2, Settings, RefreshCw,
+  Building2, Anchor, Edit3, Sparkles, ArrowRight, ChevronRight, Pencil,
+  Search, Zap, Check, Radio, Activity
 } from 'lucide-react';
 
 export interface EquipmentItem {
@@ -22,10 +22,11 @@ import { useGeocoding } from '../hooks/useGeocoding';
 // Sub-components
 import NotificationsDropdown from './regular-user/NotificationsDropdown';
 import AddressSearchSection from './regular-user/AddressSearchSection';
+import HeroAddressSearch from './regular-user/HeroAddressSearch';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle } from './regular-user/FHEquipmentToggle';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle } from './regular-user/FHEquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
@@ -60,6 +61,19 @@ const defaultSectorData = (id: number): SectorData => ({
   plotMetallique: '',
   brasDeDeport: '',
   matSecondaire: '',
+  hasFhEquipment: false,
+  fhDiameter: 300,
+  fhReference: '',
+  fhQuantity: 1,
+  hasRrhEquipment: false,
+  rrhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
+  hasRruEquipment: false,
+  rruItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
+  hasCoffret: false,
+  coffretReference: '',
+  hasBaie: false,
+  baieRadio: false,
+  baieEnergie: false,
   lookupResult: null,
   loading: false,
   error: null
@@ -78,38 +92,53 @@ interface AccordionStepProps {
   activeStep: number;
   setActiveStep: (step: number) => void;
   isCompleted: boolean;
+  disabled?: boolean;
   children: React.ReactNode;
   summary?: React.ReactNode;
   hideContinue?: boolean;
 }
 
-function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, children, summary, hideContinue }: AccordionStepProps) {
+function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, disabled, children, summary, hideContinue }: AccordionStepProps) {
   const isOpen = activeStep === step;
-  
+
   return (
     <div className={`bg-white rounded-2xl border transition-all duration-300 mb-4 overflow-hidden ${
-      isOpen 
-        ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5' 
-        : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm'
+      disabled
+        ? 'opacity-50 border-slate-200/80 bg-slate-50/50 cursor-not-allowed'
+        : isOpen
+          ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5'
+          : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm'
     }`}>
-      <div 
-        className={`p-4 flex items-center justify-between cursor-pointer transition-all ${
-          isOpen ? 'bg-gradient-to-r from-violet-50/70 via-indigo-50/30 to-white border-b border-violet-100' : 'hover:bg-slate-50/70'
+      <div
+        className={`p-4 flex items-center justify-between transition-all ${
+          disabled
+            ? 'cursor-not-allowed'
+            : isOpen
+              ? 'bg-gradient-to-r from-violet-50/70 via-indigo-50/30 to-white border-b border-violet-100 cursor-pointer'
+              : 'hover:bg-slate-50/70 cursor-pointer'
         }`}
-        onClick={() => setActiveStep(step)}
+        onClick={() => {
+          if (!disabled) {
+            setActiveStep(step);
+          }
+        }}
       >
         <div className="flex items-center gap-3.5 min-w-0">
           <div className={`flex items-center justify-center w-9 h-9 rounded-xl font-bold text-xs shrink-0 transition-all ${
-            isCompleted && !isOpen 
-              ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-200' 
-              : isOpen 
-                ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300' 
-                : 'bg-slate-100 text-slate-500 border border-slate-200'
+            disabled
+              ? 'bg-slate-100 text-slate-400 border border-slate-200'
+              : isCompleted && !isOpen
+                ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-200'
+                : isOpen
+                  ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300'
+                  : 'bg-slate-100 text-slate-500 border border-slate-200'
           }`}>
             {isCompleted && !isOpen ? <Check className="w-5 h-5 text-emerald-700 stroke-[2.5]" /> : step}
           </div>
           <div className="min-w-0">
-            <h3 className={`font-bold text-sm tracking-tight transition-colors ${isOpen ? 'text-slate-900' : 'text-slate-700'}`}>
+            <h3 className={`font-bold text-sm tracking-tight transition-colors ${
+              disabled ? 'text-slate-400' : isOpen ? 'text-slate-900' : 'text-slate-700'
+            }`}>
               {title}
             </h3>
             {!isOpen && isCompleted && summary && (
@@ -117,12 +146,17 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, ch
                 {summary}
               </div>
             )}
+            {!isOpen && disabled && (
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                Localisation précise (bâtiment ou surface) requise
+              </div>
+            )}
           </div>
         </div>
-        
-        {!isOpen && (
-          <button 
-            className="text-xs font-semibold text-slate-600 hover:text-violet-700 px-3 py-1.5 bg-slate-100/80 hover:bg-violet-50 rounded-xl border border-slate-200/80 hover:border-violet-200 transition-all flex items-center gap-1.5 shadow-2xs shrink-0" 
+
+        {!isOpen && !disabled && (
+          <button
+            className="text-xs font-semibold text-slate-600 hover:text-violet-700 px-3 py-1.5 bg-slate-100/80 hover:bg-violet-50 rounded-xl border border-slate-200/80 hover:border-violet-200 transition-all flex items-center gap-1.5 shadow-2xs shrink-0"
             onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}
           >
             <Pencil className="w-3 h-3" />
@@ -130,13 +164,13 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, ch
           </button>
         )}
       </div>
-      
+
       {isOpen && (
         <div className="p-5 animate-fadeIn">
           {children}
           {!hideContinue && (
             <div className="mt-6 flex justify-end">
-              <button 
+              <button
                 onClick={() => setActiveStep(step + 1)}
                 className="group px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-md shadow-violet-500/20 hover:shadow-violet-500/30 transition-all flex items-center gap-2"
               >
@@ -168,6 +202,8 @@ export default function RegularUserView({
   // Core State
   const [selectedAddress, setSelectedAddress] = useState<GeocodingAddress | null>(null);
   const [selectedCoords, setSelectedCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [pendingGenericAddress, setPendingGenericAddress] = useState<GeocodingAddress | null>(null);
+  const [flyToLocation, setFlyToLocation] = useState<{ latitude: number; longitude: number; zoom?: number } | null>(null);
   const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number | string>('');
   const [nombreSecteurs, setNombreSecteurs] = useState<number>(3);
 
@@ -212,10 +248,13 @@ export default function RegularUserView({
   const [boitierLovageQuantity, setBoitierLovageQuantity] = useState<number>(1);
   const [hasCoffret, setHasCoffret] = useState<boolean>(false);
   const [coffretReference, setCoffretReference] = useState<string>('');
+  const [hasBaie, setHasBaie] = useState<boolean>(false);
+  const [baieRadio, setBaieRadio] = useState<boolean>(false);
+  const [baieEnergie, setBaieEnergie] = useState<boolean>(false);
 
   // Status State
   const [calculating, setCalculating] = useState(false);
-      const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
+  const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
   const [showPdfPreview, setShowPdfPreview] = useState<boolean>(false);
 
   // Photo Upload State
@@ -242,6 +281,41 @@ export default function RegularUserView({
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
+
+  // Reset operator-specific equipments when operator changes
+  useEffect(() => {
+    if (operator === 'bouygues') {
+      setHasRrhEquipment(false);
+    }
+    if (operator !== 'orange') {
+      setHasBaie(false);
+      setBaieRadio(false);
+      setBaieEnergie(false);
+    }
+    const defaultRrh = [{
+      id: crypto.randomUUID(),
+      reference: '',
+      quantity: 1,
+      vendor: operator !== 'bouygues' ? 'NOKIA' : undefined
+    }];
+    const defaultRru = [{
+      id: crypto.randomUUID(),
+      reference: '',
+      quantity: 1,
+      vendor: operator === 'free' ? 'NOKIA' : operator === 'orange' ? 'ERICSSON' : undefined
+    }];
+    setRrhItems(defaultRrh);
+    setRruItems(defaultRru);
+    setSectors(prev => prev.map(s => ({
+      ...s,
+      hasRrhEquipment: operator === 'bouygues' ? false : s.hasRrhEquipment,
+      hasBaie: operator === 'orange' ? s.hasBaie : false,
+      baieRadio: operator === 'orange' ? s.baieRadio : false,
+      baieEnergie: operator === 'orange' ? s.baieEnergie : false,
+      rrhItems: defaultRrh,
+      rruItems: defaultRru
+    })));
+  }, [operator]);
 
   // Sync initialMontage from parent or default to first standard montage
   useEffect(() => {
@@ -326,23 +400,53 @@ export default function RegularUserView({
   }, [nombreSecteurs, similarityMode]);
 
   const onAddressSelect = (address: GeocodingAddress) => {
-    setSelectedAddress(address);
-    setSelectedCoords({ latitude: address.latitude, longitude: address.longitude });
-    setSectors(prev => prev.map(s => ({ ...s, lookupResult: null })));
-    setShowMap(false);
+    const isGeneric = !address.type || address.type !== 'housenumber';
+
+    if (isGeneric) {
+      // User picked a generic location (commune, street, locality)
+      setPendingGenericAddress(address);
+      setSelectedAddress(null);
+      setSelectedCoords(null);
+      const zoom = address.type === 'municipality' ? 13 : 15;
+      setFlyToLocation({
+        latitude: address.latitude,
+        longitude: address.longitude,
+        zoom
+      });
+      // Open the map so user can see the area close-up and pick the exact point
+      setShowMap(true);
+      setActiveStep(1);
+    } else {
+      // Exact housenumber picked
+      setPendingGenericAddress(null);
+      setFlyToLocation({
+        latitude: address.latitude,
+        longitude: address.longitude,
+        zoom: 17
+      });
+      setSelectedAddress(address);
+      setSelectedCoords({ latitude: address.latitude, longitude: address.longitude });
+      setSectors(prev => prev.map(s => ({ ...s, lookupResult: null })));
+      setShowMap(false);
+      setActiveStep(2);
+    }
   };
 
   const handleMapLocationSelect = useCallback(async (lat: number, lon: number) => {
     setSelectedCoords({ latitude: lat, longitude: lon });
+    setPendingGenericAddress(null);
+    setFlyToLocation(null);
+
     // Keep placeholder while reverse geocoding
     setSelectedAddress({
       label: `${lat}-${lon}`,
       name: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
       latitude: lat, longitude: lon, city: 'Recherche de l\'adresse...', postcode: '',
-      context: '', type: '', importance: 0, target_terrain: null
+      context: '', type: 'housenumber', importance: 0, target_terrain: null
     });
     setSectors(prev => prev.map(s => ({ ...s, lookupResult: null })));
     setShowMap(false);
+    setActiveStep(2);
 
     try {
       const reverseResult = await reverseGeocode(lat, lon);
@@ -350,10 +454,10 @@ export default function RegularUserView({
         setSelectedAddress(reverseResult);
       } else {
         setSelectedAddress({
-          label: `${lat}-${lon}`,
+          label: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
           name: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
-          latitude: lat, longitude: lon, city: 'Adresse inconnue', postcode: '',
-          context: '', type: '', importance: 0, target_terrain: null
+          latitude: lat, longitude: lon, city: 'Emplacement sélectionné', postcode: '',
+          context: '', type: 'housenumber', importance: 0, target_terrain: null
         });
       }
     } catch (err) {
@@ -491,24 +595,35 @@ export default function RegularUserView({
   const uniqueGroups = Array.from(uniqueGroupsMap.values());
 
   const resolveRru = (id: string) => {
+    if (operator === 'free') {
+      const rfmModels = [
+        { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
+        { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
+        { id: 'ARHA', vendor: 'NOKIA', reference: 'ARHA' },
+        { id: 'AREA', vendor: 'NOKIA', reference: 'AREA' },
+        { id: 'ARPA', vendor: 'NOKIA', reference: 'ARPA' },
+      ];
+      const opt = rfmModels.find(r => r.id === id);
+      return opt ? `${opt.vendor} ${opt.reference}` : id;
+    }
     const opt = config?.rru_references?.find(r => r.id === id);
     return opt ? `${opt.vendor} ${opt.reference}` : id;
   };
-  
+
   const resolveRrh = (id: string) => {
     const opt = config?.rrh_references?.find(r => r.id === id);
     return opt ? `${opt.vendor} ${opt.reference}` : id;
   };
-  
+
   const resolveTd = (id: string) => {
     const opt = config?.td_references?.find(r => r.id === id);
     return opt ? `${opt.vendor} ${opt.name} (${opt.reference})` : id;
   };
 
-  
+
   const confirmAndCalculate = async (sector: SectorData) => {
     setCalculating(true);
-    
+
     try {
       const payload = {
         schema_version: "1.0",
@@ -517,6 +632,7 @@ export default function RegularUserView({
           address: selectedAddress?.label || '',
           name: siteName,
           code_site: codeSite,
+          ref_site: codeSite,
           client: clientName,
           client_logo_url: clientLogoUrl,
           ancrage: foundationType,
@@ -563,8 +679,8 @@ export default function RegularUserView({
           weight_kg: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.weight || null) : null
         },
         rrh_equipment: {
-          enabled: hasRrhEquipment,
-          items: hasRrhEquipment ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
+          enabled: operator !== 'bouygues' && hasRrhEquipment,
+          items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
         },
         rru_equipment: {
           enabled: hasRruEquipment,
@@ -580,12 +696,17 @@ export default function RegularUserView({
         boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
         coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
         coffrets_hybride: { enabled: false, quantity: null, reference: null },
+        baie: {
+          enabled: operator === 'orange' && hasBaie,
+          baie_radio: operator === 'orange' && hasBaie && baieRadio,
+          baie_energie: operator === 'orange' && hasBaie && baieEnergie
+        },
         site_image_url: siteImageUrl
       };
 
       const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Token ${token}`
         },
@@ -640,7 +761,7 @@ export default function RegularUserView({
     }
   };
 
-  
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (configLoading) {
@@ -665,17 +786,17 @@ export default function RegularUserView({
       if (!sector.lookupResult) return false;
       if (sector.selectedMontage4G === 'custom') return false;
       if (sector.selectedMontage4G !== sector.selectedMontage5G) return false;
-      
+
       // Check if mast height is standard
       const hFloat = sector.selectedHeight;
       if (typeof hFloat !== 'number' || isNaN(hFloat) || !config?.recommended_mast_heights?.includes(hFloat)) return false;
-      
+
       // Check if building height is standard (only matters for roof sites)
       if (foundationType === 'metallique') {
         const bHeight = Number(selectedBuildingHeight) || 0;
         if (typeof bHeight !== 'number' || isNaN(bHeight) || !config?.precalculated_building_heights?.includes(bHeight)) return false;
       }
-      
+
       const eq = sector.lookupResult.equipment[0];
       if (eq) {
         // Extract the correct default materials for this specific terrain
@@ -685,7 +806,7 @@ export default function RegularUserView({
         if (sector.plotMetallique && sector.plotMetallique !== details.plotMetallique) return false;
         if (sector.matSecondaire && sector.matSecondaire !== details.matSecondaire) return false;
       }
-      
+
       // Equipements additionnels (FH, RRH, etc.) ne bloquent plus le Fast-Track
       // L'utilisateur joindra leurs notes de calcul manuellement.
     }
@@ -704,17 +825,6 @@ export default function RegularUserView({
     setShowConfirmationModal(true);
   };
 
-  const handleDownloadPdf = () => {
-    if (!ndcPdfUrl) return;
-    const link = document.createElement('a');
-    link.href = ndcPdfUrl;
-    link.download = `NDC_${siteName.replace(/\\s+/g, '_')}.pdf`;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const confirmGenerateSiteNdc = async () => {
     setShowConfirmationModal(false);
     setIsGeneratingSiteNdc(true);
@@ -722,51 +832,52 @@ export default function RegularUserView({
 
     try {
       const token = localStorage.getItem('ndc_auth_token') || '';
-      
+
       // --- FAST TRACK (INSTANT NDC) ---
       if (isFullyStandard()) {
         setSiteNdcPollingMsg('Génération du document Standard (Instantané)...');
-        
+
         // Extract the correct catalogue PDF URLs from the terrain details
         const catalogueUrls = [];
         for (const g of uniqueGroups) {
           const eq = g.sector.lookupResult?.equipment[0];
           if (eq) {
-             const height = foundationType === 'metallique' 
-               ? (Number(selectedBuildingHeight) || eq.building_height || 15)
-               : g.sector.selectedHeight;
-               
-             let actualMontage = g.sector.selectedMontage4G;
-             if (actualMontage === 'Custom' && eq.sub_elements) {
-               actualMontage = eq.sub_elements;
-             }
-             
-             const params = new URLSearchParams({
-               montage: actualMontage,
-               terrain_type: g.sector.lookupResult?.detected_terrain_type || 'IIIa',
-               region: g.sector.lookupResult?.detected_region || '1',
-               height: height.toString(),
-               config_mode: g.sector.configMode || 'reference'
-             });
-             
-             if (eq.item_id) {
-               params.append('item_id', eq.item_id);
-             }
-             
-             const response = await fetch(`${apiBaseUrl}/api/geodata/matching-catalogue-pdf/?${params.toString()}`);
-             if (response.ok) {
-               const data = await response.json();
-               if (data.url) catalogueUrls.push(data.url);
-             }
+            const height = foundationType === 'metallique'
+              ? (Number(selectedBuildingHeight) || eq.building_height || 15)
+              : g.sector.selectedHeight;
+
+            let actualMontage = g.sector.selectedMontage4G;
+            if (actualMontage === 'Custom' && eq.sub_elements) {
+              actualMontage = eq.sub_elements;
+            }
+
+            const params = new URLSearchParams({
+              montage: actualMontage,
+              terrain_type: g.sector.lookupResult?.detected_terrain_type || 'IIIa',
+              region: g.sector.lookupResult?.detected_region || '1',
+              height: height.toString(),
+              config_mode: g.sector.configMode || 'reference'
+            });
+
+            if (eq.item_id) {
+              params.append('item_id', eq.item_id);
+            }
+
+            const response = await fetch(`${apiBaseUrl}/api/geodata/matching-catalogue-pdf/?${params.toString()}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.url) catalogueUrls.push(data.url);
+            }
           }
         }
-        
+
         const payload = {
           fast_track: true,
           catalogue_pdf_urls: catalogueUrls,
           photo_url: siteImageUrl,
           site_name: siteName,
           code_site: codeSite,
+          ref_site: codeSite,
           client_name: clientName,
           address: selectedAddress?.label || selectedAddress?.name || '',
           etancheite: etancheite,
@@ -804,12 +915,12 @@ export default function RegularUserView({
             weight_kg: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.weight || null) : null
           },
           rrh_equipment: {
-            enabled: hasRrhEquipment,
-            items: hasRrhEquipment ? rrhItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
+            enabled: operator !== 'bouygues' && hasRrhEquipment,
+            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
           },
           rru_equipment: {
             enabled: hasRruEquipment,
-            items: hasRruEquipment ? rruItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
+            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
             enabled: hasTdEquipment,
@@ -820,26 +931,31 @@ export default function RegularUserView({
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
           coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
-          coffrets_hybride: { enabled: false, quantity: null, reference: null }
+          coffrets_hybride: { enabled: false, quantity: null, reference: null },
+          baie: {
+            enabled: operator === 'orange' && hasBaie,
+            baie_radio: operator === 'orange' && hasBaie && baieRadio,
+            baie_energie: operator === 'orange' && hasBaie && baieEnergie
+          }
         };
-        
+
         const res = await fetch(`${apiBaseUrl}/api/calculations/generate_site_ndc/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
           body: JSON.stringify(payload)
         });
-        
+
         if (res.ok) {
-           const mergeData = await res.json();
-           if (mergeData.ndc_pdf_url) {
-              const fullUrl = mergeData.ndc_pdf_url.startsWith('http')
-                ? mergeData.ndc_pdf_url
-                : `${window.location.origin}${mergeData.ndc_pdf_url}`;
-              
-              setIsGeneratingSiteNdc(false);
-              setNdcPdfUrl(fullUrl);
-              return; // Done! Bypassed Robot!
-           }
+          const mergeData = await res.json();
+          if (mergeData.ndc_pdf_url) {
+            const fullUrl = mergeData.ndc_pdf_url.startsWith('http')
+              ? mergeData.ndc_pdf_url
+              : `${window.location.origin}${mergeData.ndc_pdf_url}`;
+
+            setIsGeneratingSiteNdc(false);
+            setNdcPdfUrl(fullUrl);
+            return; // Done! Bypassed Robot!
+          }
         }
         // If Fast-Track fails for some reason, fall through to Robot Calculation
         console.warn("Fast-Track failed, falling back to Robot calculation");
@@ -866,6 +982,7 @@ export default function RegularUserView({
             address: selectedAddress?.label || '',
             name: siteName,
             code_site: codeSite,
+            ref_site: codeSite,
             client: clientName,
             client_logo_url: clientLogoUrl,
             ancrage: foundationType,
@@ -917,12 +1034,12 @@ export default function RegularUserView({
             weight_kg: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.weight || null) : null
           },
           rrh_equipment: {
-            enabled: hasRrhEquipment,
-            items: hasRrhEquipment ? rrhItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
+            enabled: operator !== 'bouygues' && hasRrhEquipment,
+            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
           },
           rru_equipment: {
             enabled: hasRruEquipment,
-            items: hasRruEquipment ? rruItems.map(item => ({ reference: item.reference, quantity: item.quantity })) : []
+            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
             enabled: hasTdEquipment,
@@ -934,12 +1051,17 @@ export default function RegularUserView({
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
           coffrets_fibre: { enabled: hasCoffret, quantity: 1, reference: hasCoffret ? coffretReference : null },
           coffrets_hybride: { enabled: false, quantity: null, reference: null },
+          baie: {
+            enabled: operator === 'orange' && hasBaie,
+            baie_radio: operator === 'orange' && hasBaie && baieRadio,
+            baie_energie: operator === 'orange' && hasBaie && baieEnergie
+          },
           site_image_url: siteImageUrl
         };
 
         const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Authorization': `Token ${token}`
           },
@@ -965,14 +1087,14 @@ export default function RegularUserView({
         while (!isCompleted && attempts < 120) {
           await new Promise(r => setTimeout(r, 2000));
           const pollRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/`, {
-             headers: { 'Authorization': `Token ${token}` }
+            headers: { 'Authorization': `Token ${token}` }
           });
           if (pollRes.ok) {
             const jobResult = await pollRes.json();
             if (jobResult.status === 'COMPLETED' || (jobResult.status === 'PENDING' && jobResult.result_data)) {
-               isCompleted = true;
+              isCompleted = true;
             } else if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR') {
-               throw new Error("Calcul échoué sur le serveur pour l'un des secteurs.");
+              throw new Error("Calcul échoué sur le serveur pour l'un des secteurs.");
             }
           }
           attempts++;
@@ -987,11 +1109,19 @@ export default function RegularUserView({
       // Call the merge endpoint
       const mergeRes = await fetch(`${apiBaseUrl}/api/calculations/generate_site_ndc/`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Token ${token}`
         },
-        body: JSON.stringify({ job_ids: jobIds, photo_url: siteImageUrl })
+        body: JSON.stringify({
+          job_ids: jobIds,
+          photo_url: siteImageUrl,
+          site_name: siteName,
+          code_site: codeSite,
+          ref_site: codeSite,
+          client_name: clientName,
+          address: selectedAddress?.label || selectedAddress?.name || ''
+        })
       });
 
       if (!mergeRes.ok) {
@@ -1001,7 +1131,7 @@ export default function RegularUserView({
       }
 
       const mergeData = await mergeRes.json();
-      
+
       if (mergeData.ndc_pdf_url) {
         const fullUrl = mergeData.ndc_pdf_url.startsWith('http')
           ? mergeData.ndc_pdf_url
@@ -1010,7 +1140,7 @@ export default function RegularUserView({
       } else {
         throw new Error('URL de document manquant dans la réponse.');
       }
-      
+
     } catch (e: any) {
       console.error(e);
       setSiteNdcError(e.message || 'Une erreur est survenue.');
@@ -1030,7 +1160,7 @@ export default function RegularUserView({
       }
       return `Dimensions (Montage ${sector.selectedMontage4G})`;
     }
-    
+
     if (sector.selectedMontage4G?.toLowerCase() === 'custom') {
       return `Montage (${sector.selectedVendor4G || 'Ericsson'})`;
     }
@@ -1059,7 +1189,7 @@ export default function RegularUserView({
           apiBaseUrl={apiBaseUrl}
         />
       )}
-      
+
       {showConfirmationModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
@@ -1070,39 +1200,60 @@ export default function RegularUserView({
               </h2>
             </div>
             <div className="p-6 text-slate-700 space-y-4">
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <p className="font-semibold text-slate-900 mb-2">Vous avez sélectionné :</p>
-                <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600">
-                  <li>Région de Vent : <span className="text-slate-900 font-semibold">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span></li>
-                  <li>Terrain : <span className="text-slate-900 font-semibold">Type {activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa'}</span></li>
-                  <li>Épaisseur de la dalle : <span className="text-slate-900 font-semibold">{dalleThickness || 'Non spécifié'} cm</span></li>
-                  <li>Épaisseur de l'étanchéité : <span className="text-slate-900 font-semibold">{etancheite || 'Non spécifié'} cm</span></li>
-                  {activeSectors.map((sector, idx) => (
-                    <li key={`std-${idx}`}>
-                      Secteur {idx + 1} (Standard) : <span className="text-slate-900 font-semibold">{getMontageDisplayLabel(sector)}</span>
-                    </li>
-                  ))}
-                  {hasFhEquipment && fhQuantity > 0 && (
-                    <li>Équipement FH : <span className="text-slate-900 font-semibold">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span></li>
-                  )}
-                  {hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => (
-                    <li key={`rrh-${idx}`}>Équipement RRH : <span className="text-slate-900 font-semibold">{item.quantity}x {item.reference}</span></li>
-                  ))}
-                  {hasRruEquipment && rruItems.length > 0 && rruItems.map((item, idx) => (
-                    <li key={`rru-${idx}`}>Équipement RRU : <span className="text-slate-900 font-semibold">{item.quantity}x {item.reference}</span></li>
-                  ))}
-                  {hasTdEquipment && (
-                    <li>Équipement TD : <span className="text-slate-900 font-semibold">{config?.td_references?.find(r => r.id === tdReference)?.reference || 'Sélectionné'}</span></li>
-                  )}
-                  {hasBoitierLovage && (
-                    <li>Boîtier de lovage : <span className="text-slate-900 font-semibold">{config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || 'Sélectionné'}</span></li>
-                  )}
-                  {hasCoffret && (
-                    <li>Coffret : <span className="text-slate-900 font-semibold">{config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || 'Sélectionné'}</span></li>
-                  )}
-                </ul>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <p className="font-semibold text-slate-900">Vous avez sélectionné :</p>
+                <div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Site & Environnement</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600">
+                    <li>Région de Vent : <span className="text-slate-900 font-semibold">{activeSectors[0]?.lookupResult?.detected_region || '1'}</span></li>
+                    <li>Terrain : <span className="text-slate-900 font-semibold">Type {activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa'}</span></li>
+                    <li>Épaisseur de la dalle : <span className="text-slate-900 font-semibold">{dalleThickness || 'Non spécifié'} cm</span></li>
+                    <li>Épaisseur de l'étanchéité : <span className="text-slate-900 font-semibold">{etancheite || 'Non spécifié'} cm</span></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-violet-700 uppercase tracking-wider mb-1">Aérien</p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600">
+                    {activeSectors.map((sector, idx) => (
+                      <li key={`std-${idx}`}>
+                        Secteur {idx + 1} (Standard) : <span className="text-slate-900 font-semibold">{getMontageDisplayLabel(sector)}</span>
+                      </li>
+                    ))}
+                    {hasFhEquipment && fhQuantity > 0 && (
+                      <li>Équipement FH : <span className="text-slate-900 font-semibold">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span></li>
+                    )}
+                    {operator !== 'bouygues' && hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => (
+                      <li key={`rrh-${idx}`}>Équipement RRH : <span className="text-slate-900 font-semibold">{item.quantity}x {resolveRrh(item.reference) || item.reference}</span></li>
+                    ))}
+                    {hasRruEquipment && rruItems.length > 0 && rruItems.map((item, idx) => (
+                      <li key={`rru-${idx}`}>Équipement {operator === 'free' ? 'RFM' : 'RRU'} : <span className="text-slate-900 font-semibold">{item.quantity}x {resolveRru(item.reference) || item.reference}</span></li>
+                    ))}
+                    {hasCoffret && (
+                      <li>Coffret : <span className="text-slate-900 font-semibold">{config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || 'Sélectionné'}</span></li>
+                    )}
+                    {operator === 'orange' && hasBaie && (
+                      <li>Présence baie : <span className="text-slate-900 font-semibold">{[baieRadio ? 'Baie radio' : null, baieEnergie ? 'Baie énergie' : null].filter(Boolean).join(', ') || 'Sélectionnée'}</span></li>
+                    )}
+                  </ul>
+                </div>
+                {(hasTdEquipment || hasGps || hasBoitierLovage) && (
+                  <div>
+                    <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-1">Zone Technique</p>
+                    <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600">
+                      {hasTdEquipment && (
+                        <li>Équipement TD : <span className="text-slate-900 font-semibold">{config?.td_references?.find(r => r.id === tdReference)?.reference || 'Sélectionné'}</span></li>
+                      )}
+                      {hasGps && (
+                        <li>GPS : <span className="text-slate-900 font-semibold">{gpsMarque ? `${gpsMarque} - ` : ''}{gpsReference || 'Sélectionné'}</span></li>
+                      )}
+                      {hasBoitierLovage && (
+                        <li>Boîtier de lovage : <span className="text-slate-900 font-semibold">{config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || 'Sélectionné'}</span></li>
+                      )}
+                    </ul>
+                  </div>
+                )}
               </div>
-              
+
               <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex gap-3 text-amber-800">
                 <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
                 <p className="text-sm text-amber-900 leading-relaxed">
@@ -1110,7 +1261,7 @@ export default function RegularUserView({
                 </p>
               </div>
             </div>
-            
+
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
               <button
                 onClick={() => setShowConfirmationModal(false)}
@@ -1233,45 +1384,67 @@ export default function RegularUserView({
                 {[
                   { num: 1, label: 'Localisation' },
                   { num: 2, label: 'Projet' },
-                  { num: 3, label: 'Secteurs' },
-                  { num: 4, label: 'Équipements' }
-                ].map((s) => (
-                  <div key={s.num} className="flex flex-col gap-1">
-                    <div
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        s.num < activeStep 
-                          ? 'bg-emerald-500' 
-                          : s.num === activeStep 
-                            ? 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xs' 
-                            : 'bg-slate-200'
-                      }`}
-                    />
-                    <span className={`text-[10px] text-center truncate ${
-                      s.num === activeStep ? 'font-bold text-violet-700' : s.num < activeStep ? 'font-medium text-emerald-700' : 'text-slate-400'
-                    }`}>
-                      {s.label}
-                    </span>
-                  </div>
-                ))}
+                  { num: 3, label: 'Aérien' },
+                  { num: 4, label: 'Zone Technique' }
+                ].map((s) => {
+                  const isStepLocked = s.num > 1 && (!selectedCoords || !!pendingGenericAddress);
+                  return (
+                    <div key={s.num} className="flex flex-col gap-1">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          isStepLocked
+                            ? 'bg-slate-200/80 opacity-60'
+                            : s.num < activeStep
+                              ? 'bg-emerald-500'
+                              : s.num === activeStep
+                                ? 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xs'
+                                : 'bg-slate-200'
+                        }`}
+                      />
+                      <span className={`text-[10px] text-center truncate ${
+                        isStepLocked
+                          ? 'text-slate-300'
+                          : s.num === activeStep
+                            ? 'font-bold text-violet-700'
+                            : s.num < activeStep
+                              ? 'font-medium text-emerald-700'
+                              : 'text-slate-400'
+                      }`}>
+                        {s.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             <div className={`border-none p-0 m-0 w-full ${isLocked ? "pointer-events-none opacity-60 transition-opacity duration-300" : ""}`}>
-              
+
               <AccordionStep
                 step={1}
                 title="Localisation"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={!!selectedAddress}
-                summary={selectedAddress ? <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-violet-600"/> {selectedAddress.label}</span> : "Non renseigné"}
+                isCompleted={!!selectedAddress && !pendingGenericAddress}
+                summary={
+                  pendingGenericAddress ? (
+                    <span className="flex items-center gap-1 text-amber-600 font-semibold text-[11px]">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" /> Précision requise ({pendingGenericAddress.name || pendingGenericAddress.city || pendingGenericAddress.label})
+                    </span>
+                  ) : selectedAddress ? (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-violet-600" /> {selectedAddress.label}
+                    </span>
+                  ) : (
+                    "Non renseigné"
+                  )
+                }
+                hideContinue={true}
               >
                 <AddressSearchSection
-                  onAddressSelect={(addr) => {
-                     onAddressSelect(addr);
-                     setActiveStep(2);
-                  }}
+                  onAddressSelect={onAddressSelect}
                   selectedAddress={selectedAddress}
+                  pendingGenericAddress={pendingGenericAddress}
                   showMap={showMap}
                   setShowMap={setShowMap}
                 />
@@ -1283,6 +1456,7 @@ export default function RegularUserView({
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
                 isCompleted={!!siteName || !!clientName}
+                disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={`Site: ${siteName || 'N/A'} | Client: ${clientName || 'N/A'}`}
                 hideContinue={foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')}
               >
@@ -1321,106 +1495,203 @@ export default function RegularUserView({
 
               <AccordionStep
                 step={3}
-                title="Configuration des Secteurs"
+                title="Aérien"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
                 isCompleted={sectors[0].selectedMontage4G !== ''}
-                summary={`${nombreSecteurs} secteur(s) configuré(s)`}
+                disabled={!selectedCoords || !!pendingGenericAddress}
+                summary={[
+                  `${nombreSecteurs} secteur(s)`,
+                  hasFhEquipment ? 'FH' : null,
+                  (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
+                  hasRruEquipment ? (operator === 'free' ? 'RFM' : 'RRU') : null,
+                  hasCoffret ? 'Fibre' : null,
+                  (operator === 'orange' && hasBaie) ? 'Baie' : null
+                ].filter(Boolean).join(' • ')}
               >
                 <div className="space-y-6">
-                  {activeSectors.map((sector, idx) => {
-                    const isCollapsed = (idx === 1 && similarityMode === 'all_similar') ||
-                      (idx === 2 && similarityMode === 'all_similar');
-                    return (
-                      <Fragment key={sector.id}>
-                        <SectorConfigurator
-                          index={idx}
-                          sectorData={sector}
-                          updateSector={updateSector}
-                          config={config}
-                          collapsed={isCollapsed}
-                          operator={operator}
-                        />
-                      </Fragment>
-                    );
-                  })}
+                  {/* Secteurs (Mâts & Antennes 4G / 5G) */}
+                  <div className="space-y-6">
+                    {activeSectors.map((sector, idx) => {
+                      const isCollapsed = (idx === 1 && similarityMode === 'all_similar') ||
+                        (idx === 2 && similarityMode === 'all_similar');
+                      return (
+                        <Fragment key={sector.id}>
+                          <SectorConfigurator
+                            index={idx}
+                            sectorData={sector}
+                            updateSector={updateSector}
+                            config={config}
+                            collapsed={isCollapsed}
+                            operator={operator}
+                          >
+                            <div className="mt-4 pt-4 border-t border-slate-200/80">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 bg-gradient-to-br from-violet-500/10 to-indigo-500/20 text-violet-600 rounded-lg border border-violet-200/50 shadow-2xs">
+                                    <Radio className="w-3.5 h-3.5" />
+                                  </div>
+                                  <div>
+                                    <h4 className="text-xs font-bold text-slate-900 tracking-tight">Équipements sur mât</h4>
+                                  </div>
+                                </div>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  Sur mât
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <FHEquipmentToggle
+                                  hasFhEquipment={sector.hasFhEquipment ?? hasFhEquipment}
+                                  setHasFhEquipment={(val) => {
+                                    updateSector(idx, { hasFhEquipment: val });
+                                    if (idx === 0) setHasFhEquipment(val);
+                                  }}
+                                  fhDiameter={sector.fhDiameter ?? fhDiameter}
+                                  setFhDiameter={(val) => {
+                                    updateSector(idx, { fhDiameter: val });
+                                    if (idx === 0) setFhDiameter(val);
+                                  }}
+                                  fhReference={sector.fhReference ?? fhReference}
+                                  setFhReference={(val) => {
+                                    updateSector(idx, { fhReference: val });
+                                    if (idx === 0) setFhReference(val);
+                                  }}
+                                  fhQuantity={sector.fhQuantity ?? fhQuantity}
+                                  setFhQuantity={(val) => {
+                                    updateSector(idx, { fhQuantity: val });
+                                    if (idx === 0) setFhQuantity(val);
+                                  }}
+                                  fhOptions={config?.fh_references || []}
+                                />
+                                {operator !== 'bouygues' && (
+                                  <RRHEquipmentToggle
+                                    hasRrhEquipment={sector.hasRrhEquipment ?? hasRrhEquipment}
+                                    setHasRrhEquipment={(val) => {
+                                      updateSector(idx, { hasRrhEquipment: val });
+                                      if (idx === 0) setHasRrhEquipment(val);
+                                    }}
+                                    rrhItems={sector.rrhItems ?? rrhItems}
+                                    setRrhItems={(val) => {
+                                      const newItems = typeof val === 'function' ? val(sector.rrhItems ?? rrhItems) : val;
+                                      updateSector(idx, { rrhItems: newItems });
+                                      if (idx === 0) setRrhItems(newItems);
+                                    }}
+                                    rrhOptions={config?.rrh_references || []}
+                                    operator={operator}
+                                  />
+                                )}
+                                <RRUEquipmentToggle
+                                  hasRruEquipment={sector.hasRruEquipment ?? hasRruEquipment}
+                                  setHasRruEquipment={(val) => {
+                                    updateSector(idx, { hasRruEquipment: val });
+                                    if (idx === 0) setHasRruEquipment(val);
+                                  }}
+                                  rruItems={sector.rruItems ?? rruItems}
+                                  setRruItems={(val) => {
+                                    const newItems = typeof val === 'function' ? val(sector.rruItems ?? rruItems) : val;
+                                    updateSector(idx, { rruItems: newItems });
+                                    if (idx === 0) setRruItems(newItems);
+                                  }}
+                                  rruOptions={config?.rru_references || []}
+                                  isRfmMode={operator === 'free'}
+                                  operator={operator}
+                                />
+                                <CoffretEquipmentToggle
+                                  hasCoffret={sector.hasCoffret ?? hasCoffret}
+                                  setHasCoffret={(val) => {
+                                    updateSector(idx, { hasCoffret: val });
+                                    if (idx === 0) setHasCoffret(val);
+                                  }}
+                                  coffretReference={sector.coffretReference ?? coffretReference}
+                                  setCoffretReference={(val) => {
+                                    updateSector(idx, { coffretReference: val });
+                                    if (idx === 0) setCoffretReference(val);
+                                  }}
+                                  coffretOptions={config?.coffret_references || []}
+                                />
+                                {operator === 'orange' && (
+                                  <BaieEquipmentToggle
+                                    hasBaie={sector.hasBaie ?? hasBaie}
+                                    setHasBaie={(val) => {
+                                      updateSector(idx, { hasBaie: val });
+                                      if (idx === 0) setHasBaie(val);
+                                    }}
+                                    baieRadio={sector.baieRadio ?? baieRadio}
+                                    setBaieRadio={(val) => {
+                                      updateSector(idx, { baieRadio: val });
+                                      if (idx === 0) setBaieRadio(val);
+                                    }}
+                                    baieEnergie={sector.baieEnergie ?? baieEnergie}
+                                    setBaieEnergie={(val) => {
+                                      updateSector(idx, { baieEnergie: val });
+                                      if (idx === 0) setBaieEnergie(val);
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </SectorConfigurator>
+                        </Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
               </AccordionStep>
 
               <AccordionStep
                 step={4}
-                title="Équipements Additionnels"
+                title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={hasFhEquipment || hasRrhEquipment || hasRruEquipment || hasTdEquipment || hasGps || hasBoitierLovage || hasCoffret}
+                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage}
+                disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
-                  hasFhEquipment ? 'FH' : null,
-                  hasRrhEquipment ? 'RRH' : null,
-                  hasRruEquipment ? 'RRU' : null,
                   hasTdEquipment ? 'TD' : null,
                   hasGps ? 'GPS' : null,
-                  hasBoitierLovage ? 'Lovage' : null,
-                  hasCoffret ? 'Fibre' : null
-                ].filter(Boolean).join(', ') || 'Aucun équipement additionnel'}
+                  hasBoitierLovage ? 'Lovage' : null
+                ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}
                 hideContinue={true}
               >
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <FHEquipmentToggle
-                    hasFhEquipment={hasFhEquipment}
-                    setHasFhEquipment={setHasFhEquipment}
-                    fhDiameter={fhDiameter}
-                    setFhDiameter={setFhDiameter}
-                    fhReference={fhReference}
-                    setFhReference={setFhReference}
-                    fhQuantity={fhQuantity}
-                    setFhQuantity={setFhQuantity}
-                    fhOptions={config?.fh_references || []}
-                  />
-                  <TDEquipmentToggle
-                    hasTdEquipment={hasTdEquipment}
-                    setHasTdEquipment={setHasTdEquipment}
-                    tdType={tdType}
-                    setTdType={setTdType}
-                    tdReference={tdReference}
-                    setTdReference={setTdReference}
-                    tgbtReference={tgbtReference}
-                    setTgbtReference={setTgbtReference}
-                    tdOptions={config?.td_references || []}
-                  />
-                  <RRHEquipmentToggle
-                    hasRrhEquipment={hasRrhEquipment}
-                    setHasRrhEquipment={setHasRrhEquipment}
-                    rrhItems={rrhItems}
-                    setRrhItems={setRrhItems}
-                    rrhOptions={config?.rrh_references || []}
-                  />
-                  <RRUEquipmentToggle
-                    hasRruEquipment={hasRruEquipment}
-                    setHasRruEquipment={setHasRruEquipment}
-                    rruItems={rruItems}
-                    setRruItems={setRruItems}
-                    rruOptions={config?.rru_references || []}
-                    isRfmMode={operator === 'free'}
-                    operator={operator}
-                  />
-                  <BoitierLovageEquipmentToggle
-                    hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
-                    boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
-                    boitierLovageQuantity={boitierLovageQuantity} setBoitierLovageQuantity={setBoitierLovageQuantity}
-                    boitierOptions={config?.boitier_lovage_references || []}
-                  />
-                  <GPSEquipmentToggle
-                    hasGps={hasGps} setHasGps={setHasGps}
-                    gpsReference={gpsReference} setGpsReference={setGpsReference}
-                    gpsMarque={gpsMarque} setGpsMarque={setGpsMarque}
-                  />
-                  <CoffretEquipmentToggle
-                    hasCoffret={hasCoffret}
-                    setHasCoffret={setHasCoffret}
-                    coffretReference={coffretReference}
-                    setCoffretReference={setCoffretReference}
-                    coffretOptions={config?.coffret_references || []}
-                  />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-gradient-to-br from-indigo-500/10 to-blue-500/20 text-indigo-600 rounded-xl border border-indigo-200/50 shadow-2xs">
+                        <Activity className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 tracking-tight">Zone Technique</h4>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                      Local technique
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <TDEquipmentToggle
+                      hasTdEquipment={hasTdEquipment}
+                      setHasTdEquipment={setHasTdEquipment}
+                      tdType={tdType}
+                      setTdType={setTdType}
+                      tdReference={tdReference}
+                      setTdReference={setTdReference}
+                      tgbtReference={tgbtReference}
+                      setTgbtReference={setTgbtReference}
+                      tdOptions={config?.td_references || []}
+                    />
+                    <GPSEquipmentToggle
+                      hasGps={hasGps} setHasGps={setHasGps}
+                      gpsReference={gpsReference} setGpsReference={setGpsReference}
+                      gpsMarque={gpsMarque} setGpsMarque={setGpsMarque}
+                    />
+                    <BoitierLovageEquipmentToggle
+                      hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
+                      boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
+                      boitierLovageQuantity={boitierLovageQuantity} setBoitierLovageQuantity={setBoitierLovageQuantity}
+                      boitierOptions={config?.boitier_lovage_references || []}
+                    />
+                  </div>
                 </div>
               </AccordionStep>
 
@@ -1431,18 +1702,31 @@ export default function RegularUserView({
         <div className="flex-1 bg-gradient-to-br from-slate-50 via-violet-50/20 to-indigo-50/30 relative flex flex-col min-w-0">
           {showMap && (
             <div className="absolute inset-0 z-10 animate-fadeIn flex flex-col">
-              <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-white/90 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-md border border-slate-200/80 text-xs text-slate-700">
-                <MapPin className="w-4 h-4 text-violet-600 animate-bounce" />
-                <span className="font-semibold">Cliquez n'importe où sur la carte pour positionner le site</span>
-                <button 
+              {pendingGenericAddress && (
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-amber-500 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-2xl shadow-xl border border-amber-400 max-w-[90%] text-center animate-bounce">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>
+                    Commune/Zone sélectionnée : <strong>{pendingGenericAddress.label}</strong>. Veuillez cliquer sur la carte pour définir l'emplacement exact du site.
+                  </span>
+                </div>
+              )}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-lg border border-slate-200/90 text-xs text-slate-700 whitespace-nowrap">
+                <MapPin className="w-4 h-4 text-violet-600 animate-bounce shrink-0" />
+                <span className="font-semibold">
+                  {pendingGenericAddress 
+                    ? "Cliquez sur la carte pour définir l'emplacement exact du site" 
+                    : "Cliquez n'importe où sur la carte pour positionner le site"}
+                </span>
+                <button
                   onClick={() => setShowMap(false)}
-                  className="ml-3 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-semibold transition-colors"
+                  className="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-semibold transition-colors shadow-2xs"
                 >
                   Fermer
                 </button>
               </div>
               <TerrainMap
                 selectedCoordinates={selectedCoords ? { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude } : null}
+                flyToLocation={flyToLocation}
                 onMapClick={handleMapLocationSelect}
               />
             </div>
@@ -1454,10 +1738,41 @@ export default function RegularUserView({
               <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-violet-400/10 rounded-full blur-3xl pointer-events-none"></div>
               <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none"></div>
 
-              {!selectedCoords && (
+              {!selectedCoords && pendingGenericAddress && (
+                <div className="flex-1 flex flex-col justify-center items-center max-w-xl mx-auto w-full py-8 px-6 text-center relative z-10 animate-fadeIn">
+                  <div className="w-full bg-white/90 backdrop-blur-md border border-amber-200/80 rounded-3xl p-8 shadow-xl shadow-amber-500/5 text-center relative overflow-hidden">
+                    <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+
+                    <div className="relative mx-auto w-16 h-16 mb-5 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shadow-sm">
+                        <MapPin className="w-8 h-8 animate-bounce" />
+                      </div>
+                    </div>
+
+                    <h3 className="text-xl lg:text-2xl font-extrabold text-slate-900 tracking-tight mb-2">
+                      Précision requise : Bâtiment ou surface
+                    </h3>
+                    <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                      Vous avez sélectionné une commune ou zone générique : <br />
+                      <strong className="text-slate-900 font-semibold">{pendingGenericAddress.label}</strong>.<br />
+                      Pour effectuer le calcul Eurocode 1 et générer la note, vous devez désigner l'emplacement précis (bâtiment, toiture ou parcelle) sur la carte satellite.
+                    </p>
+
+                    <button
+                      onClick={() => setShowMap(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 transition-all shadow-md shadow-violet-500/25 mx-auto"
+                    >
+                      <MapIcon className="w-5 h-5" />
+                      Choisir sur la carte satellite
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!selectedCoords && !pendingGenericAddress && (
                 <div className="flex-1 flex flex-col justify-center items-center max-w-3xl mx-auto w-full py-6 relative z-10">
                   {/* Central Glassmorphism Card */}
-                  <div className="w-full bg-white/80 backdrop-blur-md border border-white/80 rounded-3xl p-8 lg:p-10 shadow-xl shadow-slate-200/60 text-center relative overflow-hidden mb-8">
+                  <div className="w-full bg-white/80 backdrop-blur-md border border-white/80 rounded-3xl p-8 lg:p-10 shadow-xl shadow-slate-200/60 text-center relative overflow-hidden">
                     <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600"></div>
 
                     {/* Animated Pulsing Icon */}
@@ -1482,43 +1797,11 @@ export default function RegularUserView({
                       >
                         <MapIcon className="w-5 h-5" /> Explorer sur la carte
                       </button>
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100/90 px-3.5 py-3 rounded-xl border border-slate-200">
-                        <Search className="w-4 h-4 text-violet-600" />
-                        <span>Ou saisissez une adresse à gauche</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 3 Value Proposition Feature Badges */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                    <div className="bg-white/70 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-violet-300 hover:shadow-sm transition-all group">
-                      <div className="w-9 h-9 rounded-xl bg-violet-100 text-violet-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                        <MapPin className="w-5 h-5" />
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 mb-1">Eurocode 1 & IGN</h4>
-                      <p className="text-[11px] text-slate-500 leading-normal">
-                        Classification automatique de la rugosité du terrain (II, IIIa, IIIb, IV) et région de vent.
-                      </p>
-                    </div>
-
-                    <div className="bg-white/70 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-emerald-300 hover:shadow-sm transition-all group">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                        <ShieldCheck className="w-5 h-5" />
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 mb-1">Vérification Dalle & Ancrages</h4>
-                      <p className="text-[11px] text-slate-500 leading-normal">
-                        Validation de la portance de dalle, poinçonnement et dimensionnement des plots béton/métal.
-                      </p>
-                    </div>
-
-                    <div className="bg-white/70 backdrop-blur-xs p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:border-blue-300 hover:shadow-sm transition-all group">
-                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-900 mb-1">Note de Calcul Conforme</h4>
-                      <p className="text-[11px] text-slate-500 leading-normal">
-                        Rapport PDF complet prêt pour validation selon les exigences des opérateurs majeurs.
-                      </p>
+                      <HeroAddressSearch
+                        onAddressSelect={onAddressSelect}
+                        onFocus={() => setActiveStep(1)}
+                        className="w-full sm:w-80 md:w-96"
+                      />
                     </div>
                   </div>
                 </div>
@@ -1560,7 +1843,7 @@ export default function RegularUserView({
               {/* Dashboard Content */}
               {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && !anyLoading && !anyError && (
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                  
+
                   {/* Shared Analysis Header — shown once at top */}
                   {uniqueGroups[0]?.sector.lookupResult && (
                     <ResultsPanel
@@ -1574,7 +1857,9 @@ export default function RegularUserView({
                       equipmentToggles={{}}
                       equipmentValues={{}}
                       ndcPdfUrl={null}
+                      codeSite={codeSite}
                       showSectorsCount={activeStep >= 2}
+                      operator={operator}
                     />
                   )}
 
@@ -1603,24 +1888,26 @@ export default function RegularUserView({
                           brasDeDeport={group.sector.brasDeDeport}
                           matSecondaire={group.sector.matSecondaire}
                           hideAnalysisHeader={true}
+                          operator={operator}
                           equipmentToggles={{
                             fh: hasFhEquipment,
-                            rrh: hasRrhEquipment,
+                            rrh: operator !== 'bouygues' && hasRrhEquipment,
                             rru: hasRruEquipment,
                             td: hasTdEquipment,
                             gps: hasGps,
                             boitier_lovage: hasBoitierLovage,
                             coffrets_fibre: hasCoffret,
-                            coffrets_hybride: false
+                            coffrets_hybride: false,
+                            baie: operator === 'orange' && hasBaie
                           }}
                           equipmentValues={{
-                            fh: { 
-                              diamètre: `${fhDiameter} mm`, 
-                              référence: config?.fh_references?.find(r => r.id === fhReference)?.reference || 'N/A', 
-                              quantité: fhQuantity, 
-                              poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A' 
+                            fh: {
+                              diamètre: `${fhDiameter} mm`,
+                              référence: config?.fh_references?.find(r => r.id === fhReference)?.reference || 'N/A',
+                              quantité: fhQuantity,
+                              poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A'
                             },
-                            rrhItems: hasRrhEquipment ? rrhItems.map(item => ({ ...item, reference: resolveRrh(item.reference) })) : null,
+                            rrhItems: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ ...item, reference: resolveRrh(item.reference) })) : null,
                             rruItems: hasRruEquipment ? rruItems.map(item => ({ ...item, reference: resolveRru(item.reference) })) : null,
                             td: tdType === 'monophase'
                               ? { type: 'TD Monophasé', référence: resolveTd(tdReference) || 'N/A', tgbt: tgbtReference || 'N/A' }
@@ -1628,11 +1915,16 @@ export default function RegularUserView({
                             gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
                             boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
                             coffrets_fibre: { référence: coffretReference || 'N/A' },
-                            coffrets_hybride: { référence: 'N/A', quantité: 0 }
+                            coffrets_hybride: { référence: 'N/A', quantité: 0 },
+                            baie: (operator === 'orange' && hasBaie) ? {
+                              baieRadio,
+                              baieEnergie
+                            } : null
                           }}
                           ndcPdfUrl={ndcPdfUrl}
                           siteImageUrl={siteImageUrl}
                           siteName={siteName}
+                          codeSite={codeSite}
                           clientName={clientName}
                           clientLogoUrl={clientLogoUrl}
                           ant4gConfig={group.sector.ant4gConfig}
@@ -1646,7 +1938,7 @@ export default function RegularUserView({
                       )}
                     </div>
                   ))}
-                  
+
                   {/* Résumé de Configuration & Disclaimer */}
                   {!ndcPdfUrl && uniqueGroups.length > 0 && activeStep >= 4 && (
                     <div className="mt-8 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -1656,7 +1948,7 @@ export default function RegularUserView({
                         </div>
                         <h3 className="text-xl font-bold text-slate-900">Confirmation de Génération</h3>
                       </div>
-                      
+
                       <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 mb-4">
                         <p className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -1676,49 +1968,66 @@ export default function RegularUserView({
                             <span className="text-slate-500">Épaisseur de l'étanchéité</span>
                             <span className="text-slate-900 font-semibold">{etancheite || 'Non spécifié'} cm</span>
                           </div>
-                          
+
+                          <div className="col-span-full pt-2">
+                            <span className="text-xs font-bold text-violet-700 uppercase tracking-wider">Aérien</span>
+                          </div>
+
                           {activeSectors.map((sector, idx) => (
                             <div key={`std-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-200">
                               <span className="text-slate-500">Secteur {idx + 1} (Standard)</span>
                               <span className="text-slate-900 font-semibold">{getMontageDisplayLabel(sector)}</span>
                             </div>
                           ))}
-                          
+
                           {hasFhEquipment && fhQuantity > 0 && (
                             <div className="flex justify-between items-center py-1 border-b border-slate-200">
                               <span className="text-slate-500">Équipement FH</span>
                               <span className="text-slate-900 font-semibold">{fhQuantity}x {config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</span>
                             </div>
                           )}
-                          
-                          {hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => (
+
+                          {operator !== 'bouygues' && hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => (
                             <div key={`rrh-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-200">
                               <span className="text-slate-500">Équipement RRH</span>
                               <span className="text-slate-900 font-semibold">{item.quantity}x {resolveRrh(item.reference) || 'Sélectionné'}</span>
                             </div>
                           ))}
-                          
+
                           {hasRruEquipment && rruItems.length > 0 && rruItems.map((item, idx) => (
                             <div key={`rru-${idx}`} className="flex justify-between items-center py-1 border-b border-slate-200">
-                              <span className="text-slate-500">Équipement RRU</span>
+                              <span className="text-slate-500">Équipement {operator === 'free' ? 'RFM' : 'RRU'}</span>
                               <span className="text-slate-900 font-semibold">{item.quantity}x {resolveRru(item.reference) || 'Sélectionné'}</span>
                             </div>
                           ))}
-                          
+
+                          {hasCoffret && (
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Coffret</span>
+                              <span className="text-slate-900 font-semibold">{coffretReference || 'Sélectionné'}</span>
+                            </div>
+                          )}
+
+                          {operator === 'orange' && hasBaie && (
+                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                              <span className="text-slate-500">Présence baie</span>
+                              <span className="text-slate-900 font-semibold">{[baieRadio ? 'Baie radio' : null, baieEnergie ? 'Baie énergie' : null].filter(Boolean).join(', ') || 'Sélectionnée'}</span>
+                            </div>
+                          )}
+
+                          {(hasTdEquipment || hasGps || hasBoitierLovage) && (
+                            <div className="col-span-full pt-3">
+                              <span className="text-xs font-bold text-indigo-700 uppercase tracking-wider">Zone Technique</span>
+                            </div>
+                          )}
+
                           {hasTdEquipment && (
                             <div className="flex justify-between items-center py-1 border-b border-slate-200">
                               <span className="text-slate-500">Équipement TD</span>
                               <span className="text-slate-900 font-semibold">{resolveTd(tdReference) || 'Sélectionné'}</span>
                             </div>
                           )}
-                          
-                          {hasBoitierLovage && (
-                            <div className="flex justify-between items-center py-1 border-b border-slate-200">
-                              <span className="text-slate-500">Boîtier de Lovage</span>
-                              <span className="text-slate-900 font-semibold">{boitierLovageReference || 'Sélectionné'}</span>
-                            </div>
-                          )}
-                          
+
                           {hasGps && (
                             <div className="flex justify-between items-center py-1 border-b border-slate-200">
                               <span className="text-slate-500">GPS</span>
@@ -1727,11 +2036,11 @@ export default function RegularUserView({
                               </span>
                             </div>
                           )}
-                          
-                          {hasCoffret && (
+
+                          {hasBoitierLovage && (
                             <div className="flex justify-between items-center py-1 border-b border-slate-200">
-                              <span className="text-slate-500">Coffret</span>
-                              <span className="text-slate-900 font-semibold">{coffretReference || 'Sélectionné'}</span>
+                              <span className="text-slate-500">Boîtier de Lovage</span>
+                              <span className="text-slate-900 font-semibold">{boitierLovageReference || 'Sélectionné'}</span>
                             </div>
                           )}
                         </div>
@@ -1760,29 +2069,28 @@ export default function RegularUserView({
                         )}
                         <button
                           onClick={handleGenerateSiteNdc}
-                                disabled={isGeneratingSiteNdc || !canGenerate}
-                                className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all text-lg ${
-                                  !canGenerate 
-                                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                                    : isFullyStandard() 
-                                      ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' 
-                                      : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
-                                } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
-                              >
-                                {isGeneratingSiteNdc ? (
-                                  <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    {siteNdcPollingMsg || 'Génération en cours...'}
-                                  </>
-                                ) : (
-                                  <>
-                                    <FileText className="w-5 h-5" />
-                                    {isFullyStandard() 
-                                      ? 'Générer la Note de Calcul Standard (Instantané)' 
-                                      : 'Lancer Calcul Robot (Analyse Requise)'}
-                                  </>
-                                )}
-                              </button>
+                          disabled={isGeneratingSiteNdc || !canGenerate}
+                          className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all text-lg ${!canGenerate
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                            : isFullyStandard()
+                              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                              : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
+                            } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
+                        >
+                          {isGeneratingSiteNdc ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              {siteNdcPollingMsg || 'Génération en cours...'}
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="w-5 h-5" />
+                              {isFullyStandard()
+                                ? 'Générer la Note de Calcul Standard (Instantané)'
+                                : 'Lancer Calcul Robot (Analyse Requise)'}
+                            </>
+                          )}
+                        </button>
 
                         {isGeneratingSiteNdc && (
                           <div className="w-full mt-2 animate-fadeIn">
@@ -1795,7 +2103,7 @@ export default function RegularUserView({
                               `}
                             </style>
                             <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
-                              <div 
+                              <div
                                 className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
                                 style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
                               ></div>
@@ -1808,44 +2116,14 @@ export default function RegularUserView({
                       </div>
                     ) : (
                       <div className="flex flex-col gap-4">
-                        <div className="flex gap-4">
-                          {isFullyStandard() ? (
-                            <>
-                              <button
-                                onClick={() => setShowPdfPreview(!showPdfPreview)}
-                                className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-200 shadow-sm"
-                              >
-                                <Eye className="w-5 h-5" />
-                                {showPdfPreview ? 'Masquer l\'Aperçu' : 'Aperçu'}
-                              </button>
-                              <button
-                                onClick={handleDownloadPdf}
-                                className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md shadow-emerald-500/20 transition-all text-lg"
-                              >
-                                <Download className="w-5 h-5" />
-                                Télécharger ({sectors.length} secteur{sectors.length > 1 ? 's' : ''})
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => setShowPdfPreview(!showPdfPreview)}
-                                className="flex-1 py-4 bg-white hover:bg-slate-50 text-slate-800 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-lg border border-slate-200 shadow-sm"
-                              >
-                                <Eye className="w-5 h-5" />
-                                {showPdfPreview ? 'Fermer la Note' : 'Ouvrir la Note'}
-                              </button>
-                              <button
-                                onClick={handleDownloadPdf}
-                                className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md shadow-emerald-500/20 transition-all text-lg"
-                              >
-                                <Download className="w-5 h-5" />
-                                Télécharger ({sectors.length} secteur{sectors.length > 1 ? 's' : ''})
-                              </button>
-                            </>
-                          )}
-                        </div>
-                        
+                        <button
+                          onClick={() => setShowPdfPreview(!showPdfPreview)}
+                          className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md shadow-emerald-500/20 transition-all text-lg"
+                        >
+                          <Eye className="w-5 h-5" />
+                          {showPdfPreview ? 'Fermer la Note de Calcul' : 'Ouvrir la Note de Calcul'}
+                        </button>
+
                         <div className="flex gap-4 border-t border-slate-200 pt-4 mt-2">
                           <button
                             onClick={() => {

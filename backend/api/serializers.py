@@ -40,8 +40,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class CalculationJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalculationJob
-        fields = ['id', 'user', 'input_hash', 'input_data', 'status', 'result_data', 'error_message', 'screenshot', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'input_hash', 'status', 'result_data', 'error_message', 'screenshot', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'input_hash', 'input_data', 'status', 'result_data', 'error_message', 'screenshot', 'verification_screenshot', 'note_de_calcul', 'assemblage_note', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'input_hash', 'status', 'result_data', 'error_message', 'screenshot', 'verification_screenshot', 'note_de_calcul', 'assemblage_note', 'created_at', 'updated_at']
 
 
 class SiteSerializer(serializers.Serializer):
@@ -49,6 +49,8 @@ class SiteSerializer(serializers.Serializer):
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'encastre'], required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    code_site = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    ref_site = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client_logo_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     latitude = serializers.FloatField(required=False, allow_null=True)

@@ -211,6 +211,7 @@ export interface TerrainMapProps {
   onMapClick: (lat: number, lng: number) => void;
   onMapLoad?: (map: maplibregl.Map) => void;
   selectedCoordinates: { latitude: number; longitude: number } | null;
+  flyToLocation?: { latitude: number; longitude: number; zoom?: number } | null;
   clcPolygons?: any;
   transitionZones?: any;
   analysisRadius?: number;

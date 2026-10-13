@@ -344,6 +344,7 @@ export default function TerrainMap({
   onMapClick,
   onMapLoad,
   selectedCoordinates,
+  flyToLocation,
   clcPolygons,
   transitionZones,
   analysisRadius = 0.5
@@ -547,6 +548,30 @@ export default function TerrainMap({
     }
   }, [selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius, coastlineGeoJSON, coastlineBufferGeoJSON]);
 
+  // Handle flying to a requested location (e.g. generic commune or street)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !flyToLocation) return;
+
+    const zoom = flyToLocation.zoom || 14;
+    const target = [flyToLocation.longitude, flyToLocation.latitude] as [number, number];
+
+    const fly = () => {
+      map.flyTo({
+        center: target,
+        zoom: zoom,
+        essential: true,
+        duration: 1200
+      });
+    };
+
+    if (map.isStyleLoaded()) {
+      fly();
+    } else {
+      map.once('load', fly);
+    }
+  }, [flyToLocation]);
+
   // Manage marker reactively based on selectedCoordinates prop
   useEffect(() => {
     const map = mapRef.current;
@@ -561,6 +586,15 @@ export default function TerrainMap({
     }
 
     const { latitude, longitude } = selectedCoordinates;
+
+    // Center map on coordinates if no custom flyTo is currently active
+    if (!flyToLocation) {
+      map.flyTo({
+        center: [longitude, latitude],
+        zoom: Math.max(map.getZoom(), 16),
+        essential: true
+      });
+    }
 
     if (!markerRef.current) {
       // Create custom element
@@ -605,7 +639,7 @@ export default function TerrainMap({
         pulse.classList.add('animate-ping');
       }
     }
-  }, [selectedCoordinates]);
+  }, [selectedCoordinates, flyToLocation]);
 
   return (
     <div className="map-container relative w-full h-full">

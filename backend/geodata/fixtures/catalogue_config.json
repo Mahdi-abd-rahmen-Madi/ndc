@@ -2043,63 +2043,147 @@
       ],
       "rrh_references": [
         {
-          "id": "rrh_nok_ahpd",
+          "id": "rrh_nok_free_ahpd",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHPD"
         },
         {
-          "id": "rrh_nok_arpa",
+          "id": "rrh_nok_free_arpa",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "ARPA"
         },
         {
-          "id": "rrh_nok_ahda",
+          "id": "rrh_nok_free_ahda",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHDA"
         },
         {
-          "id": "rrh_nok_arda",
+          "id": "rrh_nok_free_arda",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "ARDA"
         },
         {
-          "id": "rrh_nok_aera",
+          "id": "rrh_nok_free_aera",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AERA"
         },
         {
-          "id": "rrh_nok_arga",
+          "id": "rrh_nok_free_arga",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "ARGA"
         },
         {
-          "id": "rrh_nok_ahhb",
+          "id": "rrh_nok_free_ahhb",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHHB"
         },
         {
-          "id": "rrh_nok_ahpmdb",
+          "id": "rrh_nok_free_ahpmdb",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHPMDB"
         },
         {
-          "id": "rrh_nok_ahpmd",
+          "id": "rrh_nok_free_ahpmd",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHPMD"
         },
         {
-          "id": "rrh_nok_ahegc",
+          "id": "rrh_nok_free_ahegc",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHEGC"
         },
         {
-          "id": "rrh_nok_ahegha",
+          "id": "rrh_nok_free_ahegha",
           "vendor": "NOKIA",
+          "operator": "free",
           "reference": "AHEGHA"
         },
         {
-          "id": "rrh_nok_3500_azqj",
+          "id": "rrh_nok_free_3500_azqj",
           "vendor": "NOKIA",
+          "operator": "free",
+          "reference": "3500 AZQJ"
+        },
+        {
+          "id": "rrh_nok_orange_ahpd",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHPD"
+        },
+        {
+          "id": "rrh_nok_orange_arpa",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "ARPA"
+        },
+        {
+          "id": "rrh_nok_orange_ahda",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHDA"
+        },
+        {
+          "id": "rrh_nok_orange_arda",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "ARDA"
+        },
+        {
+          "id": "rrh_nok_orange_aera",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AERA"
+        },
+        {
+          "id": "rrh_nok_orange_arga",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "ARGA"
+        },
+        {
+          "id": "rrh_nok_orange_ahhb",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHHB"
+        },
+        {
+          "id": "rrh_nok_orange_ahpmdb",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHPMDB"
+        },
+        {
+          "id": "rrh_nok_orange_ahpmd",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHPMD"
+        },
+        {
+          "id": "rrh_nok_orange_ahegc",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHEGC"
+        },
+        {
+          "id": "rrh_nok_orange_ahegha",
+          "vendor": "NOKIA",
+          "operator": "orange",
+          "reference": "AHEGHA"
+        },
+        {
+          "id": "rrh_nok_orange_3500_azqj",
+          "vendor": "NOKIA",
+          "operator": "orange",
           "reference": "3500 AZQJ"
         }
       ],

@@ -88,6 +88,9 @@ interface PdfGeneratorOptions {
   hasCoffret: boolean;
   coffretReference: string;
   coffretOptions: { id: string; name: string }[];
+  hasBaie?: boolean;
+  baieRadio?: boolean;
+  baieEnergie?: boolean;
   miniMapImage: string | null;
   nombreSecteurs: number;
   operator?: string;
@@ -132,6 +135,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasGps, gpsMarque, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
       hasCoffret, coffretReference, coffretOptions,
+      hasBaie, baieRadio, baieEnergie,
       miniMapImage,
       nombreSecteurs,
       operator
@@ -227,13 +231,19 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.addPage();
     yPos = 20;
 
-    // 4. Équipement & Antennes
+    // 4. Équipements : Aérien & Zone Technique
     doc.setTextColor(primaryColor);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('4. Équipement & Spécifications (Vérifiées)', 20, yPos);
+    doc.text('4. Spécifications des Équipements (Aérien & Technique)', 20, yPos);
     doc.line(20, yPos + 2, 190, yPos + 2);
-    yPos += 10;
+    yPos += 8;
+
+    // Sous-titre : Aérien
+    doc.setFontSize(11);
+    doc.setTextColor(primaryColor);
+    doc.text('Aérien (Antennes & Équipements de mât)', 20, yPos);
+    yPos += 5;
 
     // 4G Specs
     doc.setFillColor(245, 245, 255);
@@ -260,27 +270,28 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.text(`Modèle: ${ant5gModel === 'custom' ? 'Sur-mesure' : (ant5gModel || 'Standard')}`, 115, yPos + 16);
     doc.text(`Dimensions: ${ant5gHeight}x${ant5gWidth}x${ant5gThickness} mm`, 115, yPos + 24);
     doc.text(`Poids unitaire: ${ant5gWeight} daN`, 115, yPos + 32);
-    yPos += 55;
+    yPos += 52;
 
-    // Additional Equipment (FH, RRH, RRU)
-    if (hasFhEquipment || hasRrhEquipment || hasRruEquipment) {
-      doc.setFillColor(255, 245, 245);
+    // Équipements Aérien (FH, RRH, RRU, Coffret, Baie)
+    const showRrhInPdf = operator !== 'bouygues' && hasRrhEquipment && rrhItems && rrhItems.length > 0;
+    const showBaieInPdf = operator === 'orange' && hasBaie;
+    const hasAerialEquipment = hasFhEquipment || showRrhInPdf || hasRruEquipment || hasCoffret || showBaieInPdf;
+    if (hasAerialEquipment) {
+      doc.setFillColor(250, 245, 255);
 
-      let count = 0;
-      if (hasFhEquipment) count++;
-      if (hasRrhEquipment && rrhItems) count += rrhItems.length;
-      if (hasRruEquipment && rruItems) count += rruItems.length;
-      if (hasTdEquipment) count++;
-      if (hasGps) count++;
-      if (hasBoitierLovage) count++;
-      if (hasCoffret) count++;
+      let aerialCount = 0;
+      if (hasFhEquipment) aerialCount++;
+      if (showRrhInPdf) aerialCount += rrhItems.length;
+      if (hasRruEquipment && rruItems) aerialCount += rruItems.length;
+      if (hasCoffret) aerialCount++;
+      if (showBaieInPdf) aerialCount++;
 
-      const boxHeight = 10 + count * 8;
+      const boxHeight = 10 + aerialCount * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Équipements Additionnels :`, 25, yPos + 8);
+      doc.text(`Équipements Aériens Additionnels :`, 25, yPos + 8);
 
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
@@ -288,7 +299,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         doc.text(`• Faisceau Hertzien (FH): Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
         lineY += 8;
       }
-      if (hasRrhEquipment && rrhItems) {
+      if (showRrhInPdf) {
         rrhItems.forEach((item, index) => {
           doc.text(`• RRH ${rrhItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
           lineY += 8;
@@ -301,6 +312,41 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           lineY += 8;
         });
       }
+      if (hasCoffret) {
+        const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
+        const refName = refObj ? `${refObj.name.replace(/\s*\([^)]*\)/g, '').trim()} - Réf: ${refObj.id}` : (coffretReference || 'Standard');
+        doc.text(`• Coffrets fibre / hybride : ${refName}`, 28, lineY);
+        lineY += 8;
+      }
+      if (showBaieInPdf) {
+        const baies = [];
+        if (baieRadio) baies.push('Baie radio');
+        if (baieEnergie) baies.push('Baie énergie');
+        doc.text(`• Présence baie : ${baies.join(', ') || 'Sélectionnée'}`, 28, lineY);
+        lineY += 8;
+      }
+      yPos += boxHeight + 8;
+    }
+
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage)
+    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage;
+    if (hasTechniqueEquipment) {
+      doc.setFillColor(245, 248, 255);
+
+      let techCount = 0;
+      if (hasTdEquipment) techCount++;
+      if (hasGps) techCount++;
+      if (hasBoitierLovage) techCount++;
+
+      const boxHeight = 10 + techCount * 8;
+      doc.rect(20, yPos, 170, boxHeight, 'F');
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Zone Technique :`, 25, yPos + 8);
+
+      doc.setFont('helvetica', 'normal');
+      let lineY = yPos + 16;
       if (hasTdEquipment) {
         const tdStr = tdType === 'monophase'
           ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - TGBT 300x255x160mm`
@@ -317,13 +363,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         doc.text(`• Boitier de lovage : Référence ${boitierLovageReference || 'Standard'} - Qté: ${boitierLovageQuantity}`, 28, lineY);
         lineY += 8;
       }
-      if (hasCoffret) {
-        const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
-        const refName = refObj ? `${refObj.name.replace(/\s*\([^)]*\)/g, '').trim()} - Réf: ${refObj.id}` : (coffretReference || 'Standard');
-        doc.text(`• Coffrets fibre / hybride : ${refName}`, 28, lineY);
-        lineY += 8;
-      }
       yPos += boxHeight + 10;
+    } else {
+      yPos += 6;
     }
 
     // 5. Résultats du Catalogue & Profil Structurel

@@ -1,24 +1,68 @@
 import os
+import json
 import django
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 
 from geodata.models import CatalogueConfig
 config = CatalogueConfig.objects.get(pk=1)
 
-config.rrh_references = [
-    { "id": "rrh_nok_ahpd", "vendor": "NOKIA", "reference": "RRH AHPD" },
-    { "id": "rrh_nok_arpa", "vendor": "NOKIA", "reference": "RRH ARPA" },
-    { "id": "rrh_nok_ahda", "vendor": "NOKIA", "reference": "RRH AHDA" },
-    { "id": "rrh_nok_arda", "vendor": "NOKIA", "reference": "RRH ARDA" },
-    { "id": "rrh_nok_aera", "vendor": "NOKIA", "reference": "RRH AERA" },
-    { "id": "rrh_nok_arga", "vendor": "NOKIA", "reference": "RRH ARGA" },
-    { "id": "rrh_nok_ahhb", "vendor": "NOKIA", "reference": "RRH AHHB" },
-    { "id": "rrh_nok_ahpmdb", "vendor": "NOKIA", "reference": "RRH AHPMDB" },
-    { "id": "rrh_nok_ahpmd", "vendor": "NOKIA", "reference": "RRH AHPMD" },
-    { "id": "rrh_nok_ahegc", "vendor": "NOKIA", "reference": "RRH AHEGC" },
-    { "id": "rrh_nok_ahegha", "vendor": "NOKIA", "reference": "RRH AHEGHA" },
-    { "id": "rrh_nok_3500_azqj", "vendor": "NOKIA", "reference": "RRH 3500 AZQJ" }
+nokia_models = [
+    ("ahpd", "AHPD"),
+    ("arpa", "ARPA"),
+    ("ahda", "AHDA"),
+    ("arda", "ARDA"),
+    ("aera", "AERA"),
+    ("arga", "ARGA"),
+    ("ahhb", "AHHB"),
+    ("ahpmdb", "AHPMDB"),
+    ("ahpmd", "AHPMD"),
+    ("ahegc", "AHEGC"),
+    ("ahegha", "AHEGHA"),
+    ("3500_azqj", "3500 AZQJ"),
 ]
+
+rrh_refs = []
+for op in ["free", "orange"]:
+    for key, model in nokia_models:
+        rrh_refs.append({
+            "id": f"rrh_nok_{op}_{key}",
+            "vendor": "NOKIA",
+            "operator": op,
+            "reference": model
+        })
+
+config.rrh_references = rrh_refs
 config.save()
-print("Catalogue config updated with full list of RRH Nokia references.")
+print(f"Database CatalogueConfig updated with {len(rrh_refs)} RRH Nokia references (Free and Orange).")
+
+# Update catalogue_config.json fixture
+fixture_path = "geodata/fixtures/catalogue_config.json"
+if os.path.exists(fixture_path):
+    with open(fixture_path, "r") as f:
+        data = json.load(f)
+
+    for item in data:
+        if item.get("model") == "geodata.catalogueconfig" and item.get("pk") == 1:
+            item["fields"]["rrh_references"] = rrh_refs
+            break
+
+    with open(fixture_path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Updated {fixture_path}")
+
+# Update all_geodata.json fixture if present
+all_fixture_path = "geodata/fixtures/all_geodata.json"
+if os.path.exists(all_fixture_path):
+    with open(all_fixture_path, "r") as f:
+        data = json.load(f)
+
+    for item in data:
+        if item.get("model") == "geodata.catalogueconfig" and item.get("pk") == 1:
+            item["fields"]["rrh_references"] = rrh_refs
+            break
+
+    with open(all_fixture_path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Updated {all_fixture_path}")
