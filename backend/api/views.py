@@ -211,6 +211,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # Attach site_image_url if provided
         site_image_url = input_data.get('site_image_url', '')
         
+        import threading
+        from .tasks import send_job_to_worker
+
         job = CalculationJob.objects.create(
             user=user,
             input_hash=input_hash,
@@ -218,13 +221,17 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             status='PENDING'
         )
         
-        # Dispatch the job to the FastAPI worker asynchronously
-        from django_q.tasks import async_task
-        async_task('api.tasks.send_job_to_worker', job.id)
+        # Directly dispatch to the Windows worker in a background thread
+        # (Zero polling, non-blocking, no worker container needed)
+        threading.Thread(
+            target=send_job_to_worker,
+            args=(job.id,),
+            daemon=True
+        ).start()
         
         serializer = self.get_serializer(job)
         return Response({
-            'message': 'New calculation job queued.',
+            'message': 'Calculation job dispatched to Windows worker.',
             'cached': False,
             'data': serializer.data
         }, status=status.HTTP_201_CREATED)
@@ -299,11 +306,10 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # photo_url is optional, it will be None or empty string if not provided
         photo_url = photo_url or ''
 
-        from django_q.tasks import async_task
+        from geodata.ndc_generator import generate_ndc_pdf_task
         try:
-            # We use a task wrapper that handles job ID instead of job object
-            task_id = async_task('geodata.ndc_generator.generate_ndc_pdf_task', job.id, photo_url)
-            return Response({'message': 'PDF generation queued', 'task_id': task_id}, status=status.HTTP_202_ACCEPTED)
+            pdf_url = generate_ndc_pdf_task(job.id, photo_url)
+            return Response({'message': 'PDF generated successfully', 'ndc_pdf_url': pdf_url}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
