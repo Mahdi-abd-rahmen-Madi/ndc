@@ -43,12 +43,18 @@ jobs:
               git reset --hard origin/master
             fi
             
+            # Clean up disk space before building
+            docker builder prune -af --filter "until=24h" || true
+            docker system prune -af --volumes=false || true
+            rm -rf /tmp/* 2>/dev/null || true
+
             # Build and deploy the Docker containers
             docker compose -f docker-compose.prod.yml up -d --build
             
             # Automatically apply any pending database schema migrations
             docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
             
-            # Prune unused images to save space
-            docker image prune -f
+            # Prune unused build cache and dangling images after build
+            docker system prune -f
+            docker builder prune -f || true
           EOF
