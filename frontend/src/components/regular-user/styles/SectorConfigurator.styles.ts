@@ -12,13 +12,16 @@ export const styles = {
   
   contentSpace: "space-y-6",
   
-  mastContainer: "flex flex-col space-y-2 p-4 bg-slate-50 border border-slate-200 rounded-xl relative overflow-hidden group hover:border-violet-300 transition-colors",
-  mastDeco: "absolute right-0 top-0 w-24 h-24 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors",
+  mastContainer: "flex flex-col space-y-3 p-4 bg-slate-50/80 border border-slate-200 rounded-xl relative overflow-hidden group hover:border-violet-300 transition-all duration-300",
+  mastContainerCustom: "flex flex-col space-y-3 p-4 bg-gradient-to-br from-amber-500/[0.05] via-amber-500/[0.02] to-orange-500/[0.06] border-2 border-amber-400 rounded-xl relative overflow-hidden group shadow-md shadow-amber-500/10 ring-2 ring-amber-400/25 transition-all duration-300",
+  mastDecoStandard: "absolute right-0 top-0 w-24 h-24 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors pointer-events-none",
+  mastDecoCustom: "absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-amber-400/20 via-orange-400/10 to-transparent rounded-bl-full -z-10 animate-pulse pointer-events-none",
   mastLabel: "text-xs font-semibold text-slate-700 flex items-center justify-between",
   mastLabelInner: "flex items-center gap-1.5",
   mastIcon: "w-3.5 h-3.5 text-violet-600",
+  mastIconCustom: "w-3.5 h-3.5 text-amber-600",
   
-  mastInputsContainer: "flex flex-wrap items-end gap-6 mt-2",
+  mastInputsContainer: "flex flex-wrap items-end gap-6 mt-1",
   
   standardCol: "flex flex-col gap-1.5 min-w-[220px]",
   standardLabel: "text-xs font-medium text-slate-500 pl-1 mb-1",
@@ -28,8 +31,11 @@ export const styles = {
   standardButtonInactive: "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-sm",
   
   customCol: "flex flex-col gap-1.5 min-w-[160px]",
-  customLabel: "text-xs font-medium text-slate-500 pl-1 mb-1",
+  customLabel: "text-xs font-medium text-slate-500 pl-1 mb-1 flex items-center justify-between",
+  customLabelActive: "text-xs font-bold text-amber-700 pl-1 mb-1 flex items-center justify-between",
   customInputContainer: "flex items-center gap-2 h-10",
   customInput: "w-full h-full bg-white border border-slate-300 rounded-lg px-3 text-sm text-slate-900 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all",
+  customInputActive: "w-full h-full bg-white border-2 border-amber-400 rounded-lg px-3 text-sm font-bold text-amber-950 focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 shadow-sm shadow-amber-500/10 transition-all",
   customUnit: "text-slate-500 text-sm font-medium",
+  customUnitActive: "text-amber-700 text-sm font-extrabold",
 };

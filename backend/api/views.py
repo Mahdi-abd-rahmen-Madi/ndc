@@ -367,7 +367,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 preview_data = dict(request.data)
                 
                 import json
-                for key in ['site', 'environment', 'structure', 'antenna_4g', 'antenna_5g', 'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre', 'baie']:
+                for key in ['site', 'environment', 'structure', 'antenna_4g', 'antenna_5g', 'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre', 'baie', 'cab', 'atelier_energie']:
                     val = preview_data.get(key)
                     if isinstance(val, str):
                         try:

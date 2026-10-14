@@ -24342,31 +24342,42 @@
       "coffret_references": [
         {
           "id": "HDB24MKII",
-          "name": "Coffrets hybride (400x350x150, 4kg)"
+          "name": "Coffrets hybride (400x350x150, 4kg)",
+          "operator": "bouygues"
         },
         {
           "id": "622191062",
-          "name": "Coffret PANAMA (215x360x111mm, 2.8kg)"
+          "name": "Coffret PANAMA (215x360x111mm, 2.8kg)",
+          "operator": "orange"
         },
         {
           "id": "TRANS_FO",
           "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)"
         },
         {
+          "id": "TELENCO",
+          "name": "Coffret TELENCO (260x380x95mm, 2.1kg)",
+          "operator": "orange"
+        },
+        {
           "id": "SLHDU056-12-00",
-          "name": "Coffrets HTTA 1 (300x400x150mm, 5.8kg)"
+          "name": "Coffrets HTTA 1 (300x400x150mm, 5.8kg)",
+          "operator": "sfr"
         },
         {
           "id": "SLHDU056-12-2+4",
-          "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)"
+          "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)",
+          "operator": "sfr"
         },
         {
           "id": "SLHDU056-12-3+3",
-          "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)"
+          "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)",
+          "operator": "sfr"
         },
         {
           "id": "SLHDU005-12",
-          "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)"
+          "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)",
+          "operator": "sfr"
         }
       ],
       "fh_references": [
@@ -24825,6 +24836,32 @@
           "vendor": "NOKIA",
           "operator": "orange",
           "reference": "3500 AZQJ"
+        }
+      ],
+      "atelier_energie_references": [
+        {
+          "id": "module_energie_fprb",
+          "name": "Module d'énergie FPRB",
+          "reference": "FPRB",
+          "vendor": "NOKIA",
+          "operator": "free",
+          "height": 128.7,
+          "width": 447,
+          "thickness": 395,
+          "weight": 25.0,
+          "dimensions": "128.7x447x395mm"
+        },
+        {
+          "id": "module_batterie_fpbc",
+          "name": "Module FPBC (batterie)",
+          "reference": "FPBC",
+          "vendor": "NOKIA",
+          "operator": "free",
+          "height": 127.5,
+          "width": 490,
+          "thickness": 521,
+          "weight": 27.3,
+          "dimensions": "127.5x490x521mm"
         }
       ],
       "updated_at": "2026-09-28T10:38:50.896Z"

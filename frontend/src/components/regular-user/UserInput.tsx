@@ -36,6 +36,7 @@ interface UserInputProps {
 }
 
 export default function UserInput({
+  siteType,
   foundationType,
   selectedBuildingHeight,
   setSelectedBuildingHeight,
@@ -259,6 +260,9 @@ export default function UserInput({
                 <option value="orange">Orange</option>
                 <option value="free">Free</option>
                 <option value="bouygues">Bouygues</option>
+                {siteType !== 'nouveau' && (
+                  <option value="sfr">SFR</option>
+                )}
               </select>
             </div>
           </div>

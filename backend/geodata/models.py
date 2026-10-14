@@ -566,6 +566,11 @@ class CatalogueConfig(models.Model):
         help_text=_("List of RRH equipment references with vendor"),
         verbose_name=_("RRH References")
     )
+    atelier_energie_references = models.JSONField(
+        default=list,
+        help_text=_("List of Atelier d'énergie equipment references with dimensions and weight"),
+        verbose_name=_("Atelier Énergie References")
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     class Meta:
@@ -590,13 +595,14 @@ class CatalogueConfig(models.Model):
                 'recommended_mast_heights': [3, 4],
                 'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
                 'coffret_references': [
-                    { "id": "HDB24MKII", "name": "Coffrets hybride (400x350x150, 4kg)" },
-                    { "id": "622191062", "name": "Coffret PANAMA (215x360x111mm, 2.8kg)" },
+                    { "id": "HDB24MKII", "name": "Coffrets hybride (400x350x150, 4kg)", "operator": "bouygues" },
+                    { "id": "622191062", "name": "Coffret PANAMA (215x360x111mm, 2.8kg)", "operator": "orange" },
                     { "id": "TRANS_FO", "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)" },
-                    { "id": "SLHDU056-12-00", "name": "Coffrets HTTA 1 (300x400x150mm, 5.8kg)" },
-                    { "id": "SLHDU056-12-2+4", "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)" },
-                    { "id": "SLHDU056-12-3+3", "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)" },
-                    { "id": "SLHDU005-12", "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)" }
+                    { "id": "TELENCO", "name": "Coffret TELENCO (260x380x95mm, 2.1kg)", "operator": "orange" },
+                    { "id": "SLHDU056-12-00", "name": "Coffrets HTTA 1 (300x400x150mm, 5.8kg)", "operator": "sfr" },
+                    { "id": "SLHDU056-12-2+4", "name": "Coffrets HTTA 2 (300x400x150mm, 6.5kg)", "operator": "sfr" },
+                    { "id": "SLHDU056-12-3+3", "name": "Coffrets HTTA 3 (300x400x150mm, 6.5kg)", "operator": "sfr" },
+                    { "id": "SLHDU005-12", "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)", "operator": "sfr" }
                 ],
                 'fh_references': [
                     { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H" },

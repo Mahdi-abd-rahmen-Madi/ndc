@@ -15,8 +15,8 @@ content = re.sub(r'\{uniqueGroups\.map\(\(group, groupIdx\) => \(', '{uniqueGrou
 with open(file1, 'w') as f:
     f.write(content)
 
-# FHEquipmentToggle.tsx
-file2 = 'src/components/regular-user/FHEquipmentToggle.tsx'
+# EquipmentToggle.tsx
+file2 = 'src/components/regular-user/EquipmentToggle.tsx'
 with open(file2, 'r') as f:
     content = f.read()
 

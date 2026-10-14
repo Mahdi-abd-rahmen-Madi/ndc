@@ -1,4 +1,4 @@
-import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings, Server } from 'lucide-react';
+import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings, Server, SignalHigh, ArrowDownToLine } from 'lucide-react';
 import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
@@ -88,13 +88,27 @@ export default function ResultsPanel({
   });
   const techniqueConfigs = enabledConfigs.filter(c => c.zone === 'technique');
 
+  const displaySectors: SectorData[] = (sectors && sectors.length > 0)
+    ? sectors
+    : (ant4gConfig || ant5gConfig)
+      ? [{
+          id: 'sector-default',
+          selectedHeight: mastHeight || 3,
+          selectedMontage4G: ant4gConfig?.model || '',
+          selectedMontage5G: ant5gConfig?.model || '',
+          ant4gConfig: ant4gConfig || { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
+          ant5gConfig: ant5gConfig || { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
+        } as unknown as SectorData]
+      : [];
+
   const renderEquipmentItem = (config: EquipmentConfig) => {
     const IconComponent = config.icon === 'Radio' ? Radio : config.icon === 'Server' ? Server : Activity;
     const colorClass = config.color === 'blue' ? 'blue' :
       config.color === 'purple' ? 'purple' :
         config.color === 'amber' ? 'amber' :
           config.color === 'rose' ? 'rose' :
-            config.color === 'orange' ? 'orange' : 'emerald';
+            config.color === 'orange' ? 'orange' :
+              config.color === 'fuchsia' ? 'fuchsia' : 'emerald';
 
     const accentBorderClasses: Record<string, string> = {
       blue: 'border-l-blue-500 hover:border-blue-400',
@@ -103,46 +117,124 @@ export default function ResultsPanel({
       rose: 'border-l-rose-500 hover:border-rose-400',
       emerald: 'border-l-emerald-500 hover:border-emerald-400',
       orange: 'border-l-orange-500 hover:border-orange-400',
+      fuchsia: 'border-l-fuchsia-500 hover:border-fuchsia-400',
+    };
+    const iconColorClasses: Record<string, string> = {
+      blue: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
+      purple: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
+      amber: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100',
+      rose: 'bg-rose-50 text-rose-600 group-hover:bg-rose-100',
+      emerald: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
+      orange: 'bg-orange-50 text-orange-600 group-hover:bg-orange-100',
+      fuchsia: 'bg-fuchsia-50 text-fuchsia-600 group-hover:bg-fuchsia-100',
     };
     const accentBorder = accentBorderClasses[colorClass] || 'border-l-violet-600 hover:border-violet-400';
 
     const quantiteField = config.fields.find(f => f.label.toLowerCase().includes('quantit'));
     const otherFields = config.fields.filter(f => !f.label.toLowerCase().includes('quantit'));
 
-    const renderCard = (keyId: string, qValue: any, itemValues: any, indexLabel?: string) => {
-      const displayName = config.id === 'rru' && operator === 'free' ? 'RFM' : config.name;
+    const renderCard = (
+      keyId: string,
+      qValue: any,
+      itemValues: any,
+      indexLabel?: string,
+      scopeBadge?: { text: string; bg: string; textCol: string; border: string },
+      totalQtyInfo?: { perSector: number; total: number; unit?: string },
+      customTitle?: string,
+      typeBadge?: { text: string; bg: string; textCol: string; border: string }
+    ) => {
+      const defaultDisplayName = config.id === 'rru' && operator === 'free' ? 'RF NSN' : config.name;
+      const displayName = customTitle || (defaultDisplayName + (indexLabel ? ` ${indexLabel}` : ''));
       return (
-        <div key={keyId} className={`group relative bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex flex-col gap-2 border-l-[3px] ${accentBorder} hover:shadow-md duration-300`}>
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <div className="flex items-center gap-2">
-              <div className={`p-1.5 bg-${colorClass}-50 rounded-lg text-${colorClass}-600 group-hover:bg-${colorClass}-100 group-hover:scale-110 shadow-inner transition-transform`}>
+        <div key={keyId} className={`group relative bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-sm flex flex-col gap-3 border-l-[3px] ${accentBorder} hover:shadow-md duration-300 transition-all`}>
+          {/* Header section */}
+          <div className="flex flex-col gap-2 border-b border-slate-100 pb-2.5">
+            {/* Line 1: Reserved EXCLUSIVELY for Icon + Full Name / Reference */}
+            <div className="flex items-center gap-2 w-full min-w-0">
+              <div className={`p-1.5 ${iconColorClasses[colorClass] || 'bg-violet-50 text-violet-600'} rounded-lg group-hover:scale-105 shadow-2xs transition-transform shrink-0`}>
                 <IconComponent className="w-3.5 h-3.5" />
               </div>
-              <h4 className="text-[11px] font-bold text-slate-900 tracking-tight truncate max-w-[120px]" title={displayName}>
-                {displayName} {indexLabel || ''}
+              <h4 className="text-xs font-bold text-slate-900 tracking-tight leading-snug break-words flex-1 min-w-0" title={displayName}>
+                {displayName}
               </h4>
             </div>
-            {qValue !== null && (
-              <div className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shadow-sm flex items-center justify-center">
-                <span className="text-[10px] font-bold text-slate-700">x{qValue}</span>
+
+            {/* Line 2: Scope & Type badges on left & Stacked Quantity + Total on right */}
+            <div className="flex items-center justify-between gap-2 pt-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {typeBadge && (
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${typeBadge.bg} ${typeBadge.textCol} border ${typeBadge.border}`}>
+                    {typeBadge.text}
+                  </span>
+                )}
+                {scopeBadge ? (
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${scopeBadge.bg} ${scopeBadge.textCol} border ${scopeBadge.border}`}>
+                    {scopeBadge.text}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                    {config.zone === 'technique' ? 'Zone technique' : 'Équipement'}
+                  </span>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex flex-col gap-1.5 flex-1 justify-center">
-            {otherFields.length > 0 ? otherFields.map((field, idx) => {
-              const val = itemValues?.[field.label.toLowerCase()] ||
-                itemValues?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
-                field.value;
-              return (
-                <div key={idx} className="flex justify-between items-center bg-slate-50 rounded p-1.5 border border-slate-100 hover:border-slate-200 transition-colors">
-                  <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">{field.label}</span>
-                  <span className="text-xs font-bold text-slate-800 text-right max-w-[65%] truncate" title={String(val)}>
-                    {val}
+
+              {totalQtyInfo ? (
+                <div className="flex flex-col items-end shrink-0">
+                  <div className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80 shadow-2xs flex items-center justify-center">
+                    <span className="text-[10px] font-bold text-slate-700">
+                      {totalQtyInfo.perSector}/secteur
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-violet-700 mt-0.5 tracking-tight">
+                    Total : {totalQtyInfo.total}
                   </span>
                 </div>
-              );
-            }) : (
-              <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic">
+              ) : qValue !== null ? (
+                <div className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80 shadow-2xs flex items-center justify-center shrink-0">
+                  <span className="text-[10px] font-bold text-slate-700">
+                    x{qValue}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Body fields with clean non-redundant specs */}
+          <div className="flex flex-col gap-1.5 flex-1 justify-center">
+            {itemValues && typeof itemValues === 'object' && Object.keys(itemValues).length > 0 ? (
+              Object.entries(itemValues).map(([key, val], idx) => {
+                if (val === undefined || val === null || val === '') return null;
+                const label = key.charAt(0).toUpperCase() + key.slice(1);
+                return (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center gap-2.5 bg-slate-50/80 rounded-lg p-2 border border-slate-100 hover:border-slate-200 transition-colors"
+                  >
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider shrink-0">
+                      {label}
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 text-right leading-tight max-w-[65%] break-words" title={String(val)}>
+                      {String(val)}
+                    </span>
+                  </div>
+                );
+              })
+            ) : otherFields.length > 0 ? (
+              otherFields.map((field, idx) => {
+                const val = itemValues?.[field.label.toLowerCase()] ||
+                  itemValues?.[field.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")] ||
+                  field.value;
+                return (
+                  <div key={idx} className="flex justify-between items-center gap-2.5 bg-slate-50/80 rounded-lg p-2 border border-slate-100 hover:border-slate-200 transition-colors">
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider shrink-0">{field.label}</span>
+                    <span className="text-xs font-bold text-slate-800 text-right leading-tight max-w-[65%] break-words" title={String(val)}>
+                      {String(val)}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic py-2">
                 Aucun paramètre
               </div>
             )}
@@ -151,18 +243,97 @@ export default function ResultsPanel({
       );
     };
 
+    if (config.id === 'fh') {
+      const fhVal = equipmentValues.fh || {};
+      const qVal = fhVal.quantité || 1;
+      return renderCard(
+        config.id,
+        qVal,
+        {
+          modèle: fhVal.référence || 'N/A',
+          diamètre: fhVal.diamètre || 'N/A',
+          ...(fhVal.poids && fhVal.poids !== 'N/A' ? { poids: fhVal.poids } : {})
+        },
+        '',
+        { text: '1x par site', bg: 'bg-amber-50', textCol: 'text-amber-700', border: 'border-amber-200' }
+      );
+    }
+
     if (config.id === 'rrh') {
       if (operator === 'bouygues') return null;
       if (equipmentValues.rrhItems && Array.isArray(equipmentValues.rrhItems)) {
-        return equipmentValues.rrhItems.map((item, index) =>
-          renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rrhItems.length > 1 ? `#${index + 1}` : '')
-        );
+        return equipmentValues.rrhItems.map((item, index) => {
+          const qty = item.quantity || 1;
+          const totalQty = qty * (nombreSecteurs || 1);
+          const typeName = 'RRH';
+          const title = item.reference || `${typeName} #${index + 1}`;
+          const vendor = item.vendor;
+          const model = vendor && item.reference && item.reference.startsWith(vendor)
+            ? item.reference.substring(vendor.length).trim()
+            : item.reference;
+          const bodySpecs = vendor && model && model !== item.reference ? {
+            marque: vendor,
+            modèle: model
+          } : {
+            modèle: item.reference || 'N/A'
+          };
+
+          return renderCard(
+            `${config.id}-${index}`,
+            qty,
+            bodySpecs,
+            '',
+            { text: 'Par secteur', bg: 'bg-violet-50', textCol: 'text-violet-700', border: 'border-violet-200' },
+            { perSector: qty, total: totalQty },
+            title,
+            { text: typeName, bg: 'bg-rose-50', textCol: 'text-rose-700', border: 'border-rose-200' }
+          );
+        });
       }
     }
 
     if (config.id === 'rru' && equipmentValues.rruItems && Array.isArray(equipmentValues.rruItems)) {
-      return equipmentValues.rruItems.map((item, index) =>
-        renderCard(`${config.id}-${index}`, item.quantity, { modèle: item.reference || 'N/A' }, equipmentValues.rruItems.length > 1 ? `#${index + 1}` : '')
+      return equipmentValues.rruItems.map((item, index) => {
+        const qty = item.quantity || 1;
+        const totalQty = qty * (nombreSecteurs || 1);
+        const typeName = operator === 'free' ? 'RF NSN' : 'RRU';
+        const title = item.reference || `${typeName} #${index + 1}`;
+        const vendor = item.vendor;
+        const model = vendor && item.reference && item.reference.startsWith(vendor)
+          ? item.reference.substring(vendor.length).trim()
+          : item.reference;
+        const bodySpecs = vendor && model && model !== item.reference ? {
+          marque: vendor,
+          modèle: model
+        } : {
+          modèle: item.reference || 'N/A'
+        };
+
+        return renderCard(
+          `${config.id}-${index}`,
+          qty,
+          bodySpecs,
+          '',
+          { text: 'Par secteur', bg: 'bg-violet-50', textCol: 'text-violet-700', border: 'border-violet-200' },
+          { perSector: qty, total: totalQty },
+          title,
+          { text: typeName, bg: 'bg-emerald-50', textCol: 'text-emerald-700', border: 'border-emerald-200' }
+        );
+      });
+    }
+
+    if (config.id === 'coffrets_fibre') {
+      const coffretVal = equipmentValues.coffrets_fibre || {};
+      const totalQty = nombreSecteurs || 1;
+      return renderCard(
+        config.id,
+        1,
+        {
+          modèle: coffretVal.référence || 'Standard'
+        },
+        '',
+        { text: 'Par secteur', bg: 'bg-violet-50', textCol: 'text-violet-700', border: 'border-violet-200' },
+        { perSector: 1, total: totalQty }
       );
     }
 
@@ -171,6 +342,28 @@ export default function ResultsPanel({
       if (equipmentValues.baie?.baieRadio) types.push('Baie radio');
       if (equipmentValues.baie?.baieEnergie) types.push('Baie énergie');
       return renderCard(config.id, null, { type: types.join(', ') || 'Sélectionnée' });
+    }
+
+    if (config.id === 'cab') {
+      const types = [];
+      if (equipmentValues.cab?.cabOne) types.push('CAB ONE');
+      if (equipmentValues.cab?.cabTwo) types.push('CAB TWO');
+      if (equipmentValues.cab?.cabThree) types.push('CAB THREE');
+      const supportMap: Record<string, string> = {
+        plinthes: 'Plinthes',
+        support_autostable: 'Support Autostable',
+        support_fimo: 'Support FIMO',
+        support_muraux: 'Support Muraux'
+      };
+      const supportLabel = supportMap[equipmentValues.cab?.support] || equipmentValues.cab?.support || 'N/A';
+      return renderCard(config.id, null, { type: types.join(', ') || 'Sélectionnée', support: supportLabel });
+    }
+
+    if (config.id === 'atelier_energie') {
+      const modules = [];
+      if (equipmentValues.atelier_energie?.atelierFprb) modules.push('FPRB');
+      if (equipmentValues.atelier_energie?.atelierFpbc) modules.push('FPBC (batterie)');
+      return renderCard(config.id, null, { modules: modules.join(', ') || 'Sélectionné' });
     }
 
     let quantiteValue = null;
@@ -468,11 +661,10 @@ export default function ResultsPanel({
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Header Results with Classification on Right — shown only once */}
+    <div className="flex flex-col w-full">
       {/* Header Results with Classification on Right — shown only once */}
       {!hideAnalysisHeader && (
-        <div className="mb-8 p-5 sm:p-6 bg-gradient-to-r from-white via-violet-50/20 to-white rounded-2xl border border-slate-200/90 shadow-sm relative overflow-hidden">
+        <div className="mb-5 p-4 sm:p-5 bg-gradient-to-r from-white via-violet-50/20 to-white rounded-2xl border border-slate-200/90 shadow-sm relative overflow-hidden">
           {/* Subtle decorative glow */}
           <div className="absolute -right-8 -top-8 w-40 h-40 bg-violet-400/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -537,77 +729,138 @@ export default function ResultsPanel({
 
       {!headerOnly && (
         <>
-          {/* Aérien : Secteurs & Équipements de mât */}
-          {(showSectorsConfig || aerialConfigs.length > 0) && (
-            <div className="mb-8 animate-slide-in">
+          {/* Aériens : Secteurs & Équipements de mât */}
+          {(showSectorsConfig || (showEquipmentConfig && aerialConfigs.length > 0)) && (
+            <div className="mb-5 animate-slide-in">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                   <Radio className="w-4 h-4 text-violet-600" />
-                  Aérien
+                  Aériens
                 </h3>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100 tracking-normal">
+                <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100 tracking-normal shadow-2xs">
                   Antennes & Mâts
                 </span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sectors.map((sector, idx) => (
-                  <div key={sector.id} className="bg-white rounded-xl p-4 border border-slate-200 border-l-4 border-l-violet-600 shadow-sm hover:border-violet-300 hover:scale-[1.01] hover:shadow-md duration-300">
-                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-                      <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-violet-600 animate-pulse"></span>
-                        Secteur {idx + 1}
-                      </h4>
-                      <span className="text-[10px] font-medium text-slate-600 px-2 py-0.5 bg-slate-100 rounded-full border border-slate-200">
-                        h mât: {sector.selectedHeight}m
-                      </span>
-                    </div>
 
-                    <div className="space-y-4">
-                      {/* 4G Antenna */}
-                      <div>
-                        <div className="flex items-center justify-between text-xs font-semibold text-blue-600 mb-1">
-                          <span>Antenne 4G</span>
-                          <span className="text-[10px] text-slate-500 truncate max-w-[120px]">{sector.ant4gConfig.model || 'Standard'}</span>
-                        </div>
-                        <div className="bg-slate-50 rounded p-2 text-xs space-y-1 border border-slate-100">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Dimensions:</span>
-                            <span className="text-slate-800 font-medium">{sector.ant4gConfig.height}×{sector.ant4gConfig.width}×{sector.ant4gConfig.thickness} mm</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Poids:</span>
-                            <span className="text-slate-800 font-medium">{sector.ant4gConfig.weight} daN</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 5G Antenna */}
-                      <div>
-                        <div className="flex items-center justify-between text-xs font-semibold text-violet-600 mb-1">
-                          <span>Antenne 5G</span>
-                          <span className="text-[10px] text-slate-500 truncate max-w-[120px]">{sector.ant5gConfig.model || 'Standard'}</span>
-                        </div>
-                        <div className="bg-slate-50 rounded p-2 text-xs space-y-1 border border-slate-100">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Dimensions:</span>
-                            <span className="text-slate-800 font-medium">{sector.ant5gConfig.height}×{sector.ant5gConfig.width}×{sector.ant5gConfig.thickness} mm</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Poids:</span>
-                            <span className="text-slate-800 font-medium">{sector.ant5gConfig.weight} daN</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              {/* Sub-section 1: Antennes 4G & 5G */}
+              {showSectorsConfig && displaySectors.length > 0 && (
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-violet-600" />
+                      Antennes 4G & 5G
+                    </p>
+                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                      {displaySectors.length} secteur{displaySectors.length > 1 ? 's' : ''} configuré{displaySectors.length > 1 ? 's' : ''}
+                    </span>
                   </div>
-                ))}
-              </div>
 
-              {/* Aerial equipments */}
-              {aerialConfigs.length > 0 && (
-                <div className={`${showSectorsConfig && sectors && sectors.length > 0 ? 'mt-5 pt-4 border-t border-slate-200/80' : ''}`}>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Équipements Aériens Additionnels</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="space-y-3">
+                    {displaySectors.map((sector, idx) => {
+                      const brand4G = sector.selectedVendor4G || 'Standard';
+                      const model4G = sector.ant4gConfig.model || sector.selectedReference4G || 'Standard';
+                      const brand5G = sector.selectedVendor5G || 'Standard';
+                      const model5G = sector.ant5gConfig.model || sector.selectedReference5G || 'Standard';
+
+                      return (
+                        <div key={sector.id || idx} className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm hover:border-violet-300 transition-all">
+                          {/* Sector Header with Mast Height */}
+                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-violet-600 animate-pulse"></span>
+                              Secteur {idx + 1}
+                            </h4>
+                            {sector.selectedHeight && sector.selectedHeight !== 3 && sector.selectedHeight !== 4 ? (
+                              <span className="text-[10px] font-bold text-amber-800 px-2.5 py-0.5 bg-amber-50/90 border border-amber-300 rounded-full flex items-center gap-1.5 shadow-2xs animate-fadeIn">
+                                <span className="text-amber-700 font-medium">Mât :</span>
+                                <span className="font-extrabold text-amber-950">{sector.selectedHeight}m</span>
+                                <span className="text-[8px] px-1.5 py-0.2 bg-amber-200/90 text-amber-900 rounded font-bold uppercase tracking-wider">Sur-mesure</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-slate-600 px-2.5 py-0.5 bg-slate-100 rounded-full border border-slate-200 flex items-center gap-1.5">
+                                <ArrowDownToLine className="w-3 h-3 text-violet-600" />
+                                <span className="text-slate-500">Mât :</span>
+                                <span className="font-bold text-slate-800">{sector.selectedHeight}m</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 4G & 5G Cards side by side */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {/* 4G Antenna */}
+                            <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-blue-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
+                              <div className="flex items-center justify-between mb-2.5 gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-200/60 shadow-2xs shrink-0">
+                                    <Radio className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-900 truncate">Antenne 4G</span>
+                                </div>
+                                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
+                                  4G LTE
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 pt-1">
+                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
+                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand4G}>
+                                    {brand4G}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
+                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model4G}>
+                                    {model4G}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 5G Antenna */}
+                            <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-purple-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
+                              <div className="flex items-center justify-between mb-2.5 gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600 border border-purple-200/60 shadow-2xs shrink-0">
+                                    <SignalHigh className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-900 truncate">Antenne 5G</span>
+                                </div>
+                                <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 shrink-0">
+                                  5G NR
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 pt-1">
+                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
+                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand5G}>
+                                    {brand5G}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
+                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model5G}>
+                                    {model5G}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-section 2: Aerial equipments */}
+              {showEquipmentConfig && aerialConfigs.length > 0 && (
+                <div className={`${showSectorsConfig && displaySectors.length > 0 ? 'mt-6 pt-5 border-t border-slate-200/80' : ''}`}>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
+                    Équipements Aériens Additionnels
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                     {aerialConfigs.map(renderEquipmentItem)}
                   </div>
                 </div>
@@ -637,7 +890,7 @@ export default function ResultsPanel({
 
                   return (
                     <div key={idx} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:border-emerald-500/40 duration-300 group">
-                      <div className="p-6">
+                      <div className="p-4 sm:p-5">
                         <div className="flex justify-between items-start mb-5">
                           <div>
                             <div className="flex items-center gap-3 mb-2">
@@ -755,7 +1008,7 @@ export default function ResultsPanel({
 
           {/* Zone Technique */}
           {showEquipmentConfig && techniqueConfigs.length > 0 && (
-            <div className="mb-8 animate-slide-in">
+            <div className="mb-5 animate-slide-in">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                   <Activity className="w-4 h-4 text-indigo-600" />
@@ -765,7 +1018,7 @@ export default function ResultsPanel({
                   Local technique & Baies
                 </span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                 {techniqueConfigs.map(renderEquipmentItem)}
               </div>
             </div>

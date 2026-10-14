@@ -496,6 +496,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'td_references': config.td_references,
             'rru_references': config.rru_references,
             'rrh_references': config.rrh_references,
+            'atelier_energie_references': getattr(config, 'atelier_energie_references', []),
             'real_world_references': final_refs,
         })
 
@@ -2265,7 +2266,7 @@ def test_catalogue_equipment_view(request):
         })
 
     # Compute statistics
-    operators = ['orange', 'bouygues', 'free', 'all']
+    operators = ['orange', 'bouygues', 'free', 'sfr', 'all']
     stats_by_operator = {}
     for op in operators:
         op_items = [i for i in items if i['operator'] == op]

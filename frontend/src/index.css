@@ -26,6 +26,46 @@ body {
   animation: slideIn 0.25s ease-out;
 }
 
+/* Smooth fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Pulsing amber glow */
+@keyframes glowPulseAmber {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.25), 0 0 4px rgba(245, 158, 11, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.5), 0 0 8px rgba(245, 158, 11, 0.25);
+  }
+}
+.animate-glow-amber {
+  animation: glowPulseAmber 2.2s infinite ease-in-out;
+}
+
+/* Shimmer beam effect */
+@keyframes shimmerBeam {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.animate-shimmer-beam {
+  animation: shimmerBeam 2.4s infinite ease-in-out;
+}
+
+/* Radar ping wave for custom height beacon */
+@keyframes radarPing {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.animate-radar-ping {
+  animation: radarPing 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
 /* Custom scrollbar styling for a modern, sleek appearance */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

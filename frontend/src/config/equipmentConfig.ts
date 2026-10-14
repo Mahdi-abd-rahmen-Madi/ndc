@@ -132,9 +132,32 @@ export const equipmentConfigs: EquipmentConfig[] = [
     enabled: false,
     icon: 'Server',
     color: 'orange',
-    zone: 'aerienne',
+    zone: 'technique',
     fields: [
       { label: 'Type', value: 'N/A' },
+    ],
+  },
+  {
+    id: 'cab',
+    name: 'Présence Baie CAB',
+    enabled: false,
+    icon: 'Server',
+    color: 'rose',
+    zone: 'technique',
+    fields: [
+      { label: 'Type', value: 'N/A' },
+      { label: 'Support', value: 'N/A' },
+    ],
+  },
+  {
+    id: 'atelier_energie',
+    name: "Atelier d'énergie",
+    enabled: false,
+    icon: 'Activity',
+    color: 'amber',
+    zone: 'technique',
+    fields: [
+      { label: 'Modules', value: 'N/A' },
     ],
   },
 ];

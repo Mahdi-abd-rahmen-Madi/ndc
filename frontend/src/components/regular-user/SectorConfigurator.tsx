@@ -24,6 +24,14 @@ export default function SectorConfigurator({
   children
 }: SectorConfiguratorProps) {
   const recommendedMastHeights = config?.recommended_mast_heights || [3, 4];
+  const isCustomHeight = Boolean(
+    sectorData.selectedHeight !== undefined &&
+    sectorData.selectedHeight !== null &&
+    sectorData.selectedHeight !== 0 &&
+    sectorData.selectedHeight !== 3 &&
+    sectorData.selectedHeight !== 4 &&
+    !recommendedMastHeights.includes(Number(sectorData.selectedHeight))
+  );
 
   const handleMontage4GChange = (val: string) => {
     const updates: Partial<SectorData> = { selectedMontage4G: val };
@@ -88,14 +96,26 @@ export default function SectorConfigurator({
 
       <div className={styles.contentSpace}>
         {/* Hauteur du Mât */}
-        <div className={styles.mastContainer}>
-          <div className={styles.mastDeco}></div>
+        <div className={isCustomHeight ? styles.mastContainerCustom : styles.mastContainer}>
+          {/* Top animated cyber beam on custom selection */}
+          {isCustomHeight && (
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 overflow-hidden">
+              <div className="w-1/3 h-full bg-white/70 blur-[1px] animate-shimmer-beam" />
+            </div>
+          )}
+
+          <div className={isCustomHeight ? styles.mastDecoCustom : styles.mastDecoStandard}></div>
 
           <label className={styles.mastLabel}>
             <span className={styles.mastLabelInner}>
-              <ArrowDownToLine className={styles.mastIcon} />
-              3. Hauteur du mât :
+              <ArrowDownToLine className={isCustomHeight ? styles.mastIconCustom : styles.mastIcon} />
+              <span>3. Hauteur du mât :</span>
             </span>
+            {isCustomHeight && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs shadow-amber-500/30 animate-fadeIn">
+                <span>Sur-Mesure ({sectorData.selectedHeight}m)</span>
+              </span>
+            )}
           </label>
           <div className={styles.mastInputsContainer}>
             <div className={styles.standardCol}>
@@ -118,7 +138,14 @@ export default function SectorConfigurator({
             </div>
 
             <div className={styles.customCol}>
-              <label className={styles.customLabel}>Personnalisé</label>
+              <label className={isCustomHeight ? styles.customLabelActive : styles.customLabel}>
+                <span>Personnalisé</span>
+                {isCustomHeight && (
+                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-200/90 text-amber-900 border border-amber-300">
+                    Actif
+                  </span>
+                )}
+              </label>
               <div className={styles.customInputContainer}>
                 <input
                   type="number"
@@ -127,10 +154,13 @@ export default function SectorConfigurator({
                   step="0.5"
                   placeholder="Ex: 3.5"
                   value={sectorData.selectedHeight || ''}
-                  onChange={(e) => updateSector(index, { selectedHeight: Number(e.target.value) })}
-                  className={styles.customInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateSector(index, { selectedHeight: val === '' ? ('' as any) : Number(val) });
+                  }}
+                  className={isCustomHeight ? styles.customInputActive : styles.customInput}
                 />
-                <span className={styles.customUnit}>m</span>
+                <span className={isCustomHeight ? styles.customUnitActive : styles.customUnit}>m</span>
               </div>
             </div>
           </div>

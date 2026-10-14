@@ -1,4 +1,4 @@
-import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2, Server } from 'lucide-react';
+import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2, Server, Zap } from 'lucide-react';
 import { CustomSelect } from '../ui/CustomSelect';
 import React, { useEffect } from 'react';
 import type { EquipmentItem } from '../RegularUserView';
@@ -14,9 +14,10 @@ interface FHEquipmentToggleProps {
   fhQuantity: number;
   setFhQuantity: (val: number) => void;
   fhOptions?: { id: string; vendor: string; name: string; diameter: number; weight: number }[];
+  nombreSecteurs?: number;
 }
 
-export default function FHEquipmentToggle({
+export function FHEquipmentToggle({
   hasFhEquipment,
   setHasFhEquipment,
   setFhDiameter,
@@ -24,7 +25,8 @@ export default function FHEquipmentToggle({
   setFhReference,
   fhQuantity,
   setFhQuantity,
-  fhOptions = []
+  fhOptions = [],
+  nombreSecteurs = 1
 }: FHEquipmentToggleProps) {
 
   const selectedRef = fhOptions.find(r => r.id === fhReference);
@@ -44,64 +46,39 @@ export default function FHEquipmentToggle({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasFhEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
-            <div className="relative flex items-center">
-              <input
-                type="checkbox"
-                checked={hasFhEquipment}
-                onChange={(e) => setHasFhEquipment(e.target.checked)}
-                className="sr-only"
-              />
-              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
-            </div>
-            <Radio className="w-4 h-4 text-violet-600" />
-            présence FH
-          </label>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={hasFhEquipment}
+                  onChange={(e) => setHasFhEquipment(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-10 h-6 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <Radio className="w-4 h-4 text-violet-600" />
+              <span>Présence FH</span>
+            </label>
+            <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200 shadow-2xs">
+              1x par site
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 font-normal pl-6">
+            Liaison FH unique pour l'ensemble du site (non multiplié par le nombre de secteurs)
+          </p>
         </div>
 
         {hasFhEquipment && (
-          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
-
-            {/* Row 1: Quantité & Marque & Modèle */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              {/* Quantité */}
-              <div className="flex flex-col">
-                <label className="text-xs font-medium text-slate-500 mb-1">Quantité:</label>
-                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden shadow-sm">
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={fhQuantity || 1}
-                    onChange={(e) => setFhQuantity(Math.max(1, Number(e.target.value)))}
-                    className="bg-transparent border-none py-1.5 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <div className="flex flex-col border-l border-slate-300">
-                    <button
-                      type="button"
-                      onClick={() => setFhQuantity((fhQuantity || 1) + 1)}
-                      className="px-1.5 flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
-                    >
-                      <ChevronUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFhQuantity(Math.max(1, (fhQuantity || 1) - 1))}
-                      className="px-1.5 flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Marque */}
-              <div className="flex flex-col flex-1">
-                <label className="text-xs font-medium text-slate-500 mb-1">Marque:</label>
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            {/* Row 1: Marque & Modèle */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col min-w-0">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Marque</label>
                 <CustomSelect
                   value={selectedVendor}
                   onChange={handleVendorChange}
@@ -111,9 +88,8 @@ export default function FHEquipmentToggle({
                 />
               </div>
 
-              {/* Modèle */}
-              <div className="flex flex-col flex-1">
-                <label className="text-xs font-medium text-slate-500 mb-1">Modèle:</label>
+              <div className="flex flex-col min-w-0">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Modèle</label>
                 <CustomSelect
                   value={fhReference}
                   onChange={(val) => {
@@ -131,30 +107,66 @@ export default function FHEquipmentToggle({
               </div>
             </div>
 
-            {/* Row 2: Diamètre & Poids (Visual Only) */}
-            {selectedRef && (
-              <div className="flex gap-4">
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-slate-500 mb-1">Diamètre:</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={selectedRef.diameter}
-                      disabled
-                      className="bg-slate-100 border border-slate-200 rounded-lg py-1.5 px-3 text-sm text-slate-700 w-24 cursor-not-allowed font-medium"
-                    />
-                    <span className="absolute right-3 top-1.5 text-slate-400 text-sm pointer-events-none">mm</span>
+            {/* Row 2: Quantité & Diamètre & Poids (matching antenna dimensions layout) */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {/* Quantité */}
+              <div className="flex flex-col">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Quantité</label>
+                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-[34px] shadow-sm">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={fhQuantity || 1}
+                    onChange={(e) => setFhQuantity(Math.max(1, Number(e.target.value)))}
+                    className="w-full bg-transparent border-none py-1 px-2 text-xs text-center text-slate-900 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
+                  />
+                  <div className="flex flex-col border-l border-slate-300 w-5">
+                    <button
+                      type="button"
+                      onClick={() => setFhQuantity((fhQuantity || 1) + 1)}
+                      className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFhQuantity(Math.max(1, (fhQuantity || 1) - 1))}
+                      className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
               </div>
-            )}
 
+              {/* Diamètre */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Diamètre</span>
+                <div className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-lg px-2 h-[34px]">
+                  <span className="text-xs text-slate-800 font-mono font-medium">{selectedRef ? selectedRef.diameter : '-'}</span>
+                  <span className="text-[10px] text-slate-400">mm</span>
+                </div>
+              </div>
+
+              {/* Poids */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Poids</span>
+                <div className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-lg px-2 h-[34px]">
+                  <span className="text-xs text-slate-800 font-mono font-medium">{selectedRef ? selectedRef.weight : '-'}</span>
+                  <span className="text-[10px] text-slate-400">kg</span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
+
+export { FHEquipmentToggle as EquipmentToggle };
+export default FHEquipmentToggle;
 
 export interface RRHEquipmentToggleProps {
   hasRrhEquipment: boolean;
@@ -163,6 +175,7 @@ export interface RRHEquipmentToggleProps {
   setRrhItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
   rrhOptions: { id: string; vendor: string; reference: string; operator?: string }[];
   operator?: string;
+  nombreSecteurs?: number;
 }
 
 export function RRHEquipmentToggle({
@@ -171,7 +184,8 @@ export function RRHEquipmentToggle({
   rrhItems,
   setRrhItems,
   rrhOptions,
-  operator = 'free'
+  operator = 'free',
+  nombreSecteurs = 1
 }: RRHEquipmentToggleProps) {
   const filteredRrhOptions = rrhOptions.filter(o =>
     o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false
@@ -226,22 +240,32 @@ export function RRHEquipmentToggle({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRrhEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
-          <div className="relative flex items-center">
-            <input
-              type="checkbox"
-              checked={hasRrhEquipment}
-              onChange={(e) => setHasRrhEquipment(e.target.checked)}
-              className="sr-only"
-            />
-            <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasRrhEquipment ? 'bg-rose-500' : ''}`}></div>
-            <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={hasRrhEquipment}
+                  onChange={(e) => setHasRrhEquipment(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-10 h-6 rounded-full transition-colors ${hasRrhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <Activity className="w-4 h-4 text-violet-600" />
+              <span>Présence RRH</span>
+            </label>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+              Par secteur
+            </span>
           </div>
-          <Activity className="w-4 h-4 text-rose-500" />
-          Présence RRH
-        </label>
+          <p className="text-[11px] text-slate-500 font-normal pl-6">
+            Équipement configuré par mât / secteur {nombreSecteurs > 1 ? `(multiplié par ${nombreSecteurs} secteurs pour le site)` : ''}
+          </p>
+        </div>
 
         {hasRrhEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
@@ -249,8 +273,8 @@ export function RRHEquipmentToggle({
               <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex gap-3">
                   {/* Marque */}
-                  <div className="flex flex-col flex-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Marque</label>
                     <CustomSelect
                       value={item.vendor || ''}
                       onChange={(val) => updateRrhItem(item.id, 'vendor', val)}
@@ -261,8 +285,8 @@ export function RRHEquipmentToggle({
                   </div>
 
                   {/* Modèle */}
-                  <div className="flex flex-col flex-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Modèle</label>
                     <CustomSelect
                       value={item.reference}
                       onChange={(val) => updateRrhItem(item.id, 'reference', val)}
@@ -279,33 +303,44 @@ export function RRHEquipmentToggle({
 
                 <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                   {/* Quantité */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
-                    <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={item.quantity || 1}
-                        onChange={(e) => updateRrhItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <div className="flex flex-col border-l border-slate-300 w-5">
-                        <button
-                          type="button"
-                          onClick={() => updateRrhItem(item.id, 'quantity', (item.quantity || 1) + 1)}
-                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
-                        >
-                          <ChevronUp className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateRrhItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
-                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                        >
-                          <ChevronDown className="w-3 h-3" />
-                        </button>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Qté :</label>
+                      <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={item.quantity || 1}
+                          onChange={(e) => updateRrhItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                          className="bg-transparent border-none py-0 px-2 text-xs text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
+                        />
+                        <div className="flex flex-col border-l border-slate-300 w-5">
+                          <button
+                            type="button"
+                            onClick={() => updateRrhItem(item.id, 'quantity', (item.quantity || 1) + 1)}
+                            className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
+                          >
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateRrhItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
+                            className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-slate-500 font-medium">/ secteur</span>
+                      {nombreSecteurs > 1 && (
+                        <span className="text-[11px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200">
+                          Total site : {(item.quantity || 1) * nombreSecteurs} ({nombreSecteurs} secteurs)
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -345,6 +380,7 @@ export interface RRUEquipmentToggleProps {
   rruOptions: { id: string; vendor: string; reference: string; operator?: string }[];
   isRfmMode?: boolean;
   operator?: string;
+  nombreSecteurs?: number;
 }
 
 export function RRUEquipmentToggle({
@@ -354,7 +390,8 @@ export function RRUEquipmentToggle({
   setRruItems,
   rruOptions,
   isRfmMode = false,
-  operator = 'bouygues'
+  operator = 'bouygues',
+  nombreSecteurs = 1
 }: RRUEquipmentToggleProps) {
   const rfmModels = [
     { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
@@ -419,22 +456,32 @@ export function RRUEquipmentToggle({
     }));
   };
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRruEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
-          <div className="relative flex items-center">
-            <input
-              type="checkbox"
-              checked={hasRruEquipment}
-              onChange={(e) => setHasRruEquipment(e.target.checked)}
-              className="sr-only"
-            />
-            <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasRruEquipment ? 'bg-emerald-600' : ''}`}></div>
-            <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={hasRruEquipment}
+                  onChange={(e) => setHasRruEquipment(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-10 h-6 rounded-full transition-colors ${hasRruEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <Activity className="w-4 h-4 text-violet-600" />
+              <span>Présence {isRfmMode ? 'RF NSN' : 'RRU'}</span>
+            </label>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+              Par secteur
+            </span>
           </div>
-          <Activity className="w-4 h-4 text-emerald-600" />
-          présence {isRfmMode ? 'RFM' : 'RRU'}
-        </label>
+          <p className="text-[11px] text-slate-500 font-normal pl-6">
+            Équipement configuré par mât / secteur {nombreSecteurs > 1 ? `(multiplié par ${nombreSecteurs} secteurs pour le site)` : ''}
+          </p>
+        </div>
 
         {hasRruEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
@@ -442,8 +489,8 @@ export function RRUEquipmentToggle({
               <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="flex gap-3">
                   {/* Marque */}
-                  <div className="flex flex-col flex-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Marque</label>
                     <CustomSelect
                       value={item.vendor || ''}
                       onChange={(val) => updateRruItem(item.id, 'vendor', val)}
@@ -454,8 +501,8 @@ export function RRUEquipmentToggle({
                   </div>
 
                   {/* Modèle */}
-                  <div className="flex flex-col flex-1">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Modèle</label>
                     <CustomSelect
                       value={item.reference}
                       onChange={(val) => updateRruItem(item.id, 'reference', val)}
@@ -473,19 +520,19 @@ export function RRUEquipmentToggle({
                 {isRfmMode && item.reference && (
                   <div className="grid grid-cols-4 gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Hauteur</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Hauteur</span>
                       <span className="text-xs text-slate-800 font-medium">133 mm</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Largeur</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Largeur</span>
                       <span className="text-xs text-slate-800 font-medium">447 mm</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Profondeur</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Profondeur</span>
                       <span className="text-xs text-slate-800 font-medium">560 mm</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Poids</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
                       <span className="text-xs text-slate-800 font-medium">25 kg</span>
                     </div>
                   </div>
@@ -493,33 +540,44 @@ export function RRUEquipmentToggle({
 
                 <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                   {/* Quantité */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
-                    <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
-                      <input
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={item.quantity || 1}
-                        onChange={(e) => updateRruItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
-                        className="bg-transparent border-none py-0 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <div className="flex flex-col border-l border-slate-300 w-5">
-                        <button
-                          type="button"
-                          onClick={() => updateRruItem(item.id, 'quantity', (item.quantity || 1) + 1)}
-                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
-                        >
-                          <ChevronUp className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateRruItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
-                          className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                        >
-                          <ChevronDown className="w-3 h-3" />
-                        </button>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Qté :</label>
+                      <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={item.quantity || 1}
+                          onChange={(e) => updateRruItem(item.id, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                          className="bg-transparent border-none py-0 px-2 text-xs text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
+                        />
+                        <div className="flex flex-col border-l border-slate-300 w-5">
+                          <button
+                            type="button"
+                            onClick={() => updateRruItem(item.id, 'quantity', (item.quantity || 1) + 1)}
+                            className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
+                          >
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateRruItem(item.id, 'quantity', Math.max(1, (item.quantity || 1) - 1))}
+                            className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="text-slate-500 font-medium">/ secteur</span>
+                      {nombreSecteurs > 1 && (
+                        <span className="text-[11px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-200">
+                          Total site : {(item.quantity || 1) * nombreSecteurs} ({nombreSecteurs} secteurs)
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -595,7 +653,7 @@ export function TDEquipmentToggle({
   });
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasTdEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
@@ -606,11 +664,11 @@ export function TDEquipmentToggle({
                 onChange={(e) => setHasTdEquipment(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasTdEquipment ? 'bg-amber-500' : ''}`}></div>
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasTdEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasTdEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-amber-500" />
-            présence TD
+            <Activity className="w-4 h-4 text-violet-600" />
+            Présence TD
           </label>
         </div>
 
@@ -639,9 +697,9 @@ export function TDEquipmentToggle({
             </div>
 
             {/* References */}
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col w-full md:w-1/2">
-                <label className="text-xs font-medium text-slate-500 mb-1">Équipement:</label>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col w-full md:w-1/2 min-w-0">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Équipement</label>
                 <CustomSelect
                   value={tdReference}
                   onChange={(val) => setTdReference(val)}
@@ -656,11 +714,11 @@ export function TDEquipmentToggle({
 
               {tdType === 'monophase' && (
                 <div className="flex flex-col flex-1 mt-2">
-                  <label className="text-xs font-medium text-slate-500 mb-2">TGBT:</label>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">TGBT</label>
                   <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Hauteur (mm)</label>
+                        <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
                         <input
                           type="text"
                           value="300"
@@ -733,7 +791,7 @@ export function GenericEquipmentToggle({
   icon: Icon = Activity
 }: GenericEquipmentToggleProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${enabled ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex items-center justify-between gap-4">
         <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
           <div className="relative flex items-center">
@@ -743,7 +801,7 @@ export function GenericEquipmentToggle({
               onChange={(e) => setEnabled(e.target.checked)}
               className="sr-only"
             />
-            <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${enabled ? 'bg-violet-600' : ''}`}></div>
+            <div className={`w-10 h-6 rounded-full transition-colors ${enabled ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
             <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${enabled ? 'transform translate-x-4' : ''}`}></div>
           </div>
           <Icon className="w-4 h-4 text-violet-600" />
@@ -835,7 +893,7 @@ export function BoitierLovageEquipmentToggle({
   }, [hasBoitierLovage, boitierLovageReference, options, setBoitierLovageReference]);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasBoitierLovage ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
@@ -846,28 +904,28 @@ export function BoitierLovageEquipmentToggle({
                 onChange={(e) => setHasBoitierLovage(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasBoitierLovage ? 'bg-purple-600' : ''}`}></div>
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasBoitierLovage ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasBoitierLovage ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-purple-600" />
+            <Activity className="w-4 h-4 text-violet-600" />
             Présence Boitiers de lovage
           </label>
         </div>
 
         {hasBoitierLovage && (
-          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
               {/* Quantité */}
               <div className="flex items-center gap-2 shrink-0">
-                <label className="text-[10px] text-slate-500 uppercase font-semibold">Qté:</label>
-                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-7 shadow-sm">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Qté:</label>
+                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-8 shadow-sm">
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={boitierLovageQuantity}
                     onChange={(e) => setBoitierLovageQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="bg-transparent border-none py-0 px-2 text-sm text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="bg-transparent border-none py-0 px-2 text-xs text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
                   />
                   <div className="flex flex-col border-l border-slate-300 w-5">
                     <button
@@ -888,11 +946,11 @@ export function BoitierLovageEquipmentToggle({
                 </div>
               </div>
 
-              <div className="flex flex-col flex-1">
+              <div className="flex flex-col flex-1 min-w-0">
                 <select
                   value={boitierLovageReference}
                   onChange={(e) => setBoitierLovageReference(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg h-7 px-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-purple-500 shadow-sm"
+                  className="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-sm"
                 >
                   <option value="" disabled>Sélectionner une référence</option>
                   {options.map((opt, idx) => (
@@ -905,7 +963,7 @@ export function BoitierLovageEquipmentToggle({
             <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Hauteur (mm)</label>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
                   <input
                     type="text"
                     value="225"
@@ -969,7 +1027,7 @@ export function GPSEquipmentToggle({
   setGpsMarque
 }: GPSEquipmentToggleProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasGps ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
@@ -980,19 +1038,19 @@ export function GPSEquipmentToggle({
                 onChange={(e) => setHasGps(e.target.checked)}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasGps ? 'bg-blue-600' : ''}`}></div>
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasGps ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasGps ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Activity className="w-4 h-4 text-blue-600" />
+            <Activity className="w-4 h-4 text-violet-600" />
             Présence GPS
           </label>
         </div>
 
         {hasGps && (
-          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
             <div className="flex gap-3">
-              <div className="flex flex-col flex-1">
-                <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Marque</label>
+              <div className="flex flex-col flex-1 min-w-0">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Marque</label>
                 <CustomSelect
                   value={gpsMarque}
                   onChange={(val) => setGpsMarque?.(val)}
@@ -1002,8 +1060,8 @@ export function GPSEquipmentToggle({
                 />
               </div>
 
-              <div className="flex flex-col flex-1">
-                <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1">Modèle</label>
+              <div className="flex flex-col flex-1 min-w-0">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Modèle</label>
                 <CustomSelect
                   value={gpsReference}
                   onChange={(val) => setGpsReference(val)}
@@ -1021,15 +1079,15 @@ export function GPSEquipmentToggle({
             {gpsReference && (
               <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 mt-1">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 uppercase font-semibold">Diamètre</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Diamètre</span>
                   <span className="text-xs text-slate-800 font-medium">95 mm</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 uppercase font-semibold">Hauteur</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Hauteur</span>
                   <span className="text-xs text-slate-800 font-medium">72.5 mm</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 uppercase font-semibold">Poids</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
                   <span className="text-xs text-slate-800 font-medium">154 g</span>
                 </div>
               </div>
@@ -1046,7 +1104,9 @@ export interface CoffretEquipmentToggleProps {
   setHasCoffret: (val: boolean) => void;
   coffretReference: string;
   setCoffretReference: (val: string) => void;
-  coffretOptions: { id: string; name: string }[];
+  coffretOptions: { id: string; name: string; operator?: string }[];
+  operator?: string;
+  nombreSecteurs?: number;
 }
 
 export function CoffretEquipmentToggle({
@@ -1054,65 +1114,79 @@ export function CoffretEquipmentToggle({
   setHasCoffret,
   coffretReference,
   setCoffretReference,
-  coffretOptions
+  coffretOptions,
+  operator,
+  nombreSecteurs = 1
 }: CoffretEquipmentToggleProps) {
+  // Filter coffret options by operator if specified
+  const filteredOptions = coffretOptions.filter(opt => {
+    if (!opt.operator || opt.operator === 'all') return true;
+    if (operator) return opt.operator.toLowerCase() === operator.toLowerCase();
+    return true;
+  });
 
-  const httaOptions = coffretOptions.filter(opt => opt.name.includes('HTTA'));
-  const otherOptions = coffretOptions.filter(opt => !opt.name.includes('HTTA'));
+  const httaOptions = filteredOptions.filter(opt => opt.name.includes('HTTA'));
+  const otherOptions = filteredOptions.filter(opt => !opt.name.includes('HTTA'));
   const isHttaSelected = httaOptions.some(opt => opt.id === coffretReference) || coffretReference === 'HTTA';
   const mainSelectValue = isHttaSelected ? 'HTTA' : coffretReference;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-violet-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasCoffret ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
-            <div className="relative flex items-center">
-              <input
-                type="checkbox"
-                checked={hasCoffret}
-                onChange={(e) => setHasCoffret(e.target.checked)}
-                className="sr-only"
-              />
-              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasCoffret ? 'bg-fuchsia-600' : ''}`}></div>
-              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
-            </div>
-            <Activity className="w-4 h-4 text-fuchsia-600" />
-            Présence Coffrets fibre
-          </label>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  checked={hasCoffret}
+                  onChange={(e) => setHasCoffret(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-10 h-6 rounded-full transition-colors ${hasCoffret ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <Activity className="w-4 h-4 text-violet-600" />
+              <span>Présence Coffrets fibre</span>
+            </label>
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+              Par secteur
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 font-normal pl-6">
+            1 coffret par mât / secteur {nombreSecteurs > 1 ? `(Total site : ${nombreSecteurs} coffrets pour ${nombreSecteurs} secteurs)` : ''}
+          </p>
         </div>
 
         {hasCoffret && (
-          <div className="flex flex-col gap-4 pt-3 border-t border-slate-100">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <label className="text-xs font-medium text-slate-500 shrink-0 w-16 md:w-auto">Type:</label>
-                <CustomSelect
-                  value={mainSelectValue}
-                  onChange={(val) => {
-                    if (val === 'HTTA' && httaOptions.length > 0) {
-                      setCoffretReference(httaOptions[0].id);
-                    } else {
-                      setCoffretReference(val);
-                    }
-                  }}
-                  className="focus:ring-2 focus:ring-fuchsia-500"
-                  options={[
-                    ...otherOptions.map(ref => ({ value: ref.id, label: ref.name.replace(/\s*\([^)]*\)/g, '').trim() })),
-                    ...(httaOptions.length > 0 ? [{ value: 'HTTA', label: 'Coffrets HTTA' }] : [])
-                  ]}
-                  placeholder="Sélectionner..."
-                />
-              </div>
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col min-w-0">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Type</label>
+              <CustomSelect
+                value={mainSelectValue}
+                onChange={(val) => {
+                  if (val === 'HTTA' && httaOptions.length > 0) {
+                    setCoffretReference(httaOptions[0].id);
+                  } else {
+                    setCoffretReference(val);
+                  }
+                }}
+                className="focus:ring-2 focus:ring-fuchsia-500"
+                options={[
+                  ...otherOptions.map(ref => ({ value: ref.id, label: ref.name.replace(/\s*\([^)]*\)/g, '').trim() })),
+                  ...(httaOptions.length > 0 ? [{ value: 'HTTA', label: 'Coffrets HTTA' }] : [])
+                ]}
+                placeholder="Sélectionner..."
+              />
             </div>
 
             {isHttaSelected && httaOptions.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
-                <label className="text-xs font-medium text-slate-700 shrink-0 sm:w-24">Référence HTTA:</label>
+              <div className="flex flex-col min-w-0 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Référence HTTA</label>
                 <select
                   value={coffretReference === 'HTTA' ? httaOptions[0].id : coffretReference}
                   onChange={(e) => setCoffretReference(e.target.value)}
-                  className="w-full bg-white border border-slate-300 rounded-lg py-1.5 px-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-fuchsia-500 shadow-sm"
+                  className="w-full bg-white border border-slate-300 rounded-lg py-2 px-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/20 focus:border-fuchsia-500 shadow-sm"
                 >
                   {httaOptions.map(ref => (
                     <option key={ref.id} value={ref.id}>
@@ -1222,7 +1296,7 @@ export function BaieEquipmentToggle({
   setBaieEnergie
 }: BaieEquipmentToggleProps) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-orange-200 transition-all">
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasBaie ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
@@ -1239,10 +1313,10 @@ export function BaieEquipmentToggle({
                 }}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 bg-slate-300 rounded-full transition-colors ${hasBaie ? 'bg-orange-500' : ''}`}></div>
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasBaie ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasBaie ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Server className="w-4 h-4 text-orange-500" />
+            <Server className="w-4 h-4 text-violet-600" />
             présence baie
           </label>
         </div>
@@ -1251,11 +1325,10 @@ export function BaieEquipmentToggle({
           <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
             <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Options de baie</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${
-                baieRadio
-                  ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
-              }`}>
+              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${baieRadio
+                ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                }`}>
                 <input
                   type="checkbox"
                   checked={baieRadio}
@@ -1265,11 +1338,10 @@ export function BaieEquipmentToggle({
                 <span>Baie radio</span>
               </label>
 
-              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${
-                baieEnergie
-                  ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
-                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
-              }`}>
+              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${baieEnergie
+                ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                }`}>
                 <input
                   type="checkbox"
                   checked={baieEnergie}
@@ -1277,6 +1349,226 @@ export function BaieEquipmentToggle({
                   className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
                 />
                 <span>Baie énergie</span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface CabEquipmentToggleProps {
+  hasCab: boolean;
+  setHasCab: (val: boolean) => void;
+  cabOne: boolean;
+  setCabOne: (val: boolean) => void;
+  cabTwo: boolean;
+  setCabTwo: (val: boolean) => void;
+  cabThree: boolean;
+  setCabThree: (val: boolean) => void;
+  cabSupport: string;
+  setCabSupport: (val: string) => void;
+}
+
+export function CabEquipmentToggle({
+  hasCab,
+  setHasCab,
+  cabOne,
+  setCabOne,
+  cabTwo,
+  setCabTwo,
+  cabThree,
+  setCabThree,
+  cabSupport,
+  setCabSupport
+}: CabEquipmentToggleProps) {
+  const supportOptions = [
+    { id: 'plinthes', label: 'Plinthes' },
+    { id: 'support_autostable', label: 'Support Autostable' },
+    { id: 'support_fimo', label: 'Support FIMO' },
+    { id: 'support_muraux', label: 'Support Muraux' }
+  ];
+
+  return (
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasCab ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasCab}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setHasCab(checked);
+                  if (checked) {
+                    if (!cabOne && !cabTwo && !cabThree) {
+                      setCabOne(true);
+                    }
+                    if (!cabSupport) {
+                      setCabSupport('plinthes');
+                    }
+                  }
+                }}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasCab ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCab ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Server className="w-4 h-4 text-violet-600" />
+            Présence Baie CAB
+          </label>
+        </div>
+
+        {hasCab && (
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-col gap-2">
+              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Options CAB</span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${cabOne
+                  ? 'bg-red-50/70 border-red-300 text-red-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={cabOne}
+                    onChange={(e) => setCabOne(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>CAB ONE</span>
+                </label>
+
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${cabTwo
+                  ? 'bg-red-50/70 border-red-300 text-red-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={cabTwo}
+                    onChange={(e) => setCabTwo(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>CAB TWO</span>
+                </label>
+
+                <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${cabThree
+                  ? 'bg-red-50/70 border-red-300 text-red-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={cabThree}
+                    onChange={(e) => setCabThree(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>CAB THREE</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Supports</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                {supportOptions.map((opt) => (
+                  <label
+                    key={opt.id}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${cabSupport === opt.id
+                      ? 'bg-red-50/70 border-red-300 text-red-950 shadow-2xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                      }`}
+                  >
+                    <input
+                      type="radio"
+                      name="cab_support_selection"
+                      value={opt.id}
+                      checked={cabSupport === opt.id}
+                      onChange={() => setCabSupport(opt.id)}
+                      className="w-4 h-4 text-red-600 border-slate-300 focus:ring-red-500"
+                    />
+                    <span>{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface AtelierEnergieEquipmentToggleProps {
+  hasAtelierEnergie: boolean;
+  setHasAtelierEnergie: (val: boolean) => void;
+  atelierFprb: boolean;
+  setAtelierFprb: (val: boolean) => void;
+  atelierFpbc: boolean;
+  setAtelierFpbc: (val: boolean) => void;
+}
+
+export function AtelierEnergieEquipmentToggle({
+  hasAtelierEnergie,
+  setHasAtelierEnergie,
+  atelierFprb,
+  setAtelierFprb,
+  atelierFpbc,
+  setAtelierFpbc
+}: AtelierEnergieEquipmentToggleProps) {
+  return (
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasAtelierEnergie ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasAtelierEnergie}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setHasAtelierEnergie(checked);
+                  if (checked && !atelierFprb && !atelierFpbc) {
+                    setAtelierFprb(true);
+                  }
+                }}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasAtelierEnergie ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasAtelierEnergie ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Zap className="w-4 h-4 text-violet-600" />
+            Atelier d'énergie
+          </label>
+        </div>
+
+        {hasAtelierEnergie && (
+          <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
+            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Modules d'énergie</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${atelierFprb
+                ? 'bg-amber-50/70 border-amber-300 text-amber-950 shadow-2xs'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                }`}>
+                <input
+                  type="checkbox"
+                  checked={atelierFprb}
+                  onChange={(e) => setAtelierFprb(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span>Module d'énergie FPRB</span>
+              </label>
+
+              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${atelierFpbc
+                ? 'bg-amber-50/70 border-amber-300 text-amber-950 shadow-2xs'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                }`}>
+                <input
+                  type="checkbox"
+                  checked={atelierFpbc}
+                  onChange={(e) => setAtelierFpbc(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span>Module FPBC (batterie)</span>
               </label>
             </div>
           </div>

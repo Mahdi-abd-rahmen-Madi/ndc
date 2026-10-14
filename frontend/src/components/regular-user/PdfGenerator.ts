@@ -91,6 +91,14 @@ interface PdfGeneratorOptions {
   hasBaie?: boolean;
   baieRadio?: boolean;
   baieEnergie?: boolean;
+  hasCab?: boolean;
+  cabOne?: boolean;
+  cabTwo?: boolean;
+  cabThree?: boolean;
+  cabSupport?: string;
+  hasAtelierEnergie?: boolean;
+  atelierFprb?: boolean;
+  atelierFpbc?: boolean;
   miniMapImage: string | null;
   nombreSecteurs: number;
   operator?: string;
@@ -136,6 +144,8 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
       hasCoffret, coffretReference, coffretOptions,
       hasBaie, baieRadio, baieEnergie,
+      hasCab, cabOne, cabTwo, cabThree, cabSupport,
+      hasAtelierEnergie, atelierFprb, atelierFpbc,
       miniMapImage,
       nombreSecteurs,
       operator
@@ -231,18 +241,18 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.addPage();
     yPos = 20;
 
-    // 4. Équipements : Aérien & Zone Technique
+    // 4. Équipements : Aériens & Zone Technique
     doc.setTextColor(primaryColor);
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('4. Spécifications des Équipements (Aérien & Technique)', 20, yPos);
+    doc.text('4. Spécifications des Équipements (Aériens & Technique)', 20, yPos);
     doc.line(20, yPos + 2, 190, yPos + 2);
     yPos += 8;
 
-    // Sous-titre : Aérien
+    // Sous-titre : Aériens
     doc.setFontSize(11);
     doc.setTextColor(primaryColor);
-    doc.text('Aérien (Antennes & Équipements de mât)', 20, yPos);
+    doc.text('Aériens (Antennes & Équipements de mât)', 20, yPos);
     yPos += 5;
 
     // 4G Specs
@@ -272,10 +282,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.text(`Poids unitaire: ${ant5gWeight} daN`, 115, yPos + 32);
     yPos += 52;
 
-    // Équipements Aérien (FH, RRH, RRU, Coffret, Baie)
+    // Équipements Aériens (FH, RRH, RRU, Coffret)
     const showRrhInPdf = operator !== 'bouygues' && hasRrhEquipment && rrhItems && rrhItems.length > 0;
-    const showBaieInPdf = operator === 'orange' && hasBaie;
-    const hasAerialEquipment = hasFhEquipment || showRrhInPdf || hasRruEquipment || hasCoffret || showBaieInPdf;
+    const hasAerialEquipment = hasFhEquipment || showRrhInPdf || hasRruEquipment || hasCoffret;
     if (hasAerialEquipment) {
       doc.setFillColor(250, 245, 255);
 
@@ -284,7 +293,6 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showRrhInPdf) aerialCount += rrhItems.length;
       if (hasRruEquipment && rruItems) aerialCount += rruItems.length;
       if (hasCoffret) aerialCount++;
-      if (showBaieInPdf) aerialCount++;
 
       const boxHeight = 10 + aerialCount * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
@@ -296,40 +304,41 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
       if (hasFhEquipment) {
-        doc.text(`• Faisceau Hertzien (FH): Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
+        doc.text(`• Faisceau Hertzien (FH) [Unique au site]: Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
         lineY += 8;
       }
       if (showRrhInPdf) {
         rrhItems.forEach((item, index) => {
-          doc.text(`• RRH ${rrhItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
+          const totalQty = item.quantity * (nombreSecteurs || 1);
+          const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${totalQty})` : '';
+          doc.text(`• RRH ${rrhItems.length > 1 ? `#${index + 1} ` : ''}[Par secteur]: Réf: ${item.reference || 'Standard'} - Qté: ${item.quantity}/secteur${totalText}`, 28, lineY);
           lineY += 8;
         });
       }
       if (hasRruEquipment && rruItems) {
         rruItems.forEach((item, index) => {
-          const prefix = operator === 'free' ? 'RFM' : 'RRU';
-          doc.text(`• ${prefix} ${rruItems.length > 1 ? `#${index + 1} ` : ''}: Référence ${item.reference || 'Standard'} - Qté: ${item.quantity}`, 28, lineY);
+          const prefix = operator === 'free' ? 'RF NSN' : 'RRU';
+          const totalQty = item.quantity * (nombreSecteurs || 1);
+          const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${totalQty})` : '';
+          doc.text(`• ${prefix} ${rruItems.length > 1 ? `#${index + 1} ` : ''}[Par secteur]: Réf: ${item.reference || 'Standard'} - Qté: ${item.quantity}/secteur${totalText}`, 28, lineY);
           lineY += 8;
         });
       }
       if (hasCoffret) {
         const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
         const refName = refObj ? `${refObj.name.replace(/\s*\([^)]*\)/g, '').trim()} - Réf: ${refObj.id}` : (coffretReference || 'Standard');
-        doc.text(`• Coffrets fibre / hybride : ${refName}`, 28, lineY);
-        lineY += 8;
-      }
-      if (showBaieInPdf) {
-        const baies = [];
-        if (baieRadio) baies.push('Baie radio');
-        if (baieEnergie) baies.push('Baie énergie');
-        doc.text(`• Présence baie : ${baies.join(', ') || 'Sélectionnée'}`, 28, lineY);
+        const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${nombreSecteurs})` : '';
+        doc.text(`• Coffrets fibre / hybride [Par secteur]: ${refName} - Qté: 1/secteur${totalText}`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 8;
     }
 
-    // Équipements Zone Technique (TD, GPS, Boîtier de lovage)
-    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage;
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie)
+    const showBaieInPdf = operator === 'orange' && hasBaie;
+    const showCabInPdf = operator === 'free' && hasCab;
+    const showAtelierInPdf = operator === 'free' && hasAtelierEnergie;
+    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
 
@@ -337,6 +346,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (hasTdEquipment) techCount++;
       if (hasGps) techCount++;
       if (hasBoitierLovage) techCount++;
+      if (showBaieInPdf) techCount++;
+      if (showCabInPdf) techCount++;
+      if (showAtelierInPdf) techCount++;
 
       const boxHeight = 10 + techCount * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
@@ -361,6 +373,36 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (hasBoitierLovage) {
         doc.text(`• Boitier de lovage : Référence ${boitierLovageReference || 'Standard'} - Qté: ${boitierLovageQuantity}`, 28, lineY);
+        lineY += 8;
+      }
+      if (showBaieInPdf) {
+        const baies = [];
+        if (baieRadio) baies.push('Baie radio');
+        if (baieEnergie) baies.push('Baie énergie');
+        doc.text(`• Présence baie : ${baies.join(', ') || 'Sélectionnée'}`, 28, lineY);
+        lineY += 8;
+      }
+      if (showCabInPdf) {
+        const cabs = [];
+        if (cabOne) cabs.push('CAB ONE');
+        if (cabTwo) cabs.push('CAB TWO');
+        if (cabThree) cabs.push('CAB THREE');
+        const supportMap: Record<string, string> = {
+          plinthes: 'Plinthes',
+          support_autostable: 'Support Autostable',
+          support_fimo: 'Support FIMO',
+          support_muraux: 'Support Muraux'
+        };
+        const suppLabel = (cabSupport && supportMap[cabSupport]) ? supportMap[cabSupport] : (cabSupport || '');
+        const suppText = suppLabel ? ` (Support: ${suppLabel})` : '';
+        doc.text(`• Présence Baie CAB : ${cabs.join(', ') || 'Sélectionnée'}${suppText}`, 28, lineY);
+        lineY += 8;
+      }
+      if (showAtelierInPdf) {
+        const modules = [];
+        if (atelierFprb) modules.push("Module d'énergie FPRB");
+        if (atelierFpbc) modules.push('Module FPBC (batterie)');
+        doc.text(`• Atelier d'énergie : ${modules.join(', ') || 'Sélectionné'}`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 10;

@@ -29,12 +29,13 @@ export interface CatalogueConfig {
   fh_weight_options: number[];
   standard_montages: MontageConfig[];
   real_world_references: RealWorldReference[];
-  coffret_references: { id: string; name: string }[];
+  coffret_references: { id: string; name: string; operator?: string }[];
   fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
   td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
   rru_references: { id: string; vendor: string; reference: string; operator?: string }[];
   rrh_references: { id: string; vendor: string; reference: string; operator?: string }[];
   boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
+  atelier_energie_references?: { id: string; vendor?: string; name: string; reference: string; operator?: string; height?: number; width?: number; thickness?: number; weight?: number; dimensions?: string }[];
 }
 
 export interface DocumentInfo {
@@ -124,6 +125,14 @@ export interface SectorData {
   hasBaie?: boolean;
   baieRadio?: boolean;
   baieEnergie?: boolean;
+  hasCab?: boolean;
+  cabOne?: boolean;
+  cabTwo?: boolean;
+  cabThree?: boolean;
+  cabSupport?: string;
+  hasAtelierEnergie?: boolean;
+  atelierFprb?: boolean;
+  atelierFpbc?: boolean;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
   loading?: boolean;

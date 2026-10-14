@@ -449,6 +449,48 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
                 
     if not verification_screenshot_found:
         context['verification_screenshot_abs'] = None
+    elif context.get('verification_screenshot_abs') and os.path.exists(context['verification_screenshot_abs']):
+        try:
+            from PIL import Image
+            import numpy as np
+            
+            orig_path = context['verification_screenshot_abs']
+            with Image.open(orig_path) as im:
+                arr = np.array(im.convert('RGB'))
+                h, w, _ = arr.shape
+                
+                dark = (arr[:, :, 0] < 80) & (arr[:, :, 1] < 80) & (arr[:, :, 2] < 80)
+                
+                vert_counts = dark[min(70, h-20):max(h-10, min(70, h-20)+1), :].sum(axis=0)
+                vert_lines = np.where(vert_counts > 20)[0]
+                table_vert_lines = vert_lines[vert_lines <= min(w, 880)]
+                
+                if len(table_vert_lines) > 0 and w > 840:
+                    right = min(w, int(table_vert_lines[-1]) + 3)
+                else:
+                    right = w
+                    
+                horiz_counts = dark[:, min(50, right-10):max(50, right-5)].sum(axis=1)
+                min_span = max(10, (right - 55) * 0.4)
+                horiz_lines = np.where(horiz_counts > min_span)[0]
+                table_horiz = horiz_lines[horiz_lines > 60]
+                
+                if len(table_horiz) > 0 and h > 160:
+                    bottom = min(h, int(table_horiz[-1]) + 3)
+                else:
+                    bottom = h
+                    
+                if right < w - 20 or bottom < h - 15:
+                    cropped_im = im.crop((0, 0, right, bottom))
+                    convert_dir = os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification')
+                    os.makedirs(convert_dir, exist_ok=True)
+                    base_name = os.path.splitext(os.path.basename(orig_path))[0]
+                    cropped_path = os.path.join(convert_dir, f"{base_name}_cropped.png")
+                    cropped_im.save(cropped_path, "PNG")
+                    context['verification_screenshot_abs'] = cropped_path
+        except Exception as e:
+            print(f"Warning: Failed to auto-crop verification screenshot: {e}")
+
         
     # Note de Calcul (RTF) Path
     note_de_calcul_found = False

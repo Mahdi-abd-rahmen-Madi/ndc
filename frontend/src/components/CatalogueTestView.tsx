@@ -43,6 +43,7 @@ interface ApiResponse {
     orange: OperatorStats;
     bouygues: OperatorStats;
     free: OperatorStats;
+    sfr?: OperatorStats;
     all: OperatorStats;
   };
   stats_by_category: Record<string, number>;
@@ -413,6 +414,29 @@ export default function CatalogueTestView() {
             </div>
           </div>
 
+          {/* SFR */}
+          <div
+            onClick={() => setSelectedOperator(selectedOperator === 'sfr' ? '' : 'sfr')}
+            className={`bg-white border rounded-2xl p-5 cursor-pointer transition-all border-l-4 border-l-red-500 shadow-sm hover:shadow-md ${
+              selectedOperator === 'sfr' ? 'ring-2 ring-red-500 border-red-300' : 'border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                SFR
+              </span>
+              <span className="text-xs text-slate-400 font-semibold">Opérateur</span>
+            </div>
+            <div className="text-3xl font-extrabold text-red-600 mb-2">
+              {stats?.sfr?.total ?? 0}
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 text-xs text-slate-600">
+              <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                Coffrets: <strong className="text-slate-900">{stats?.sfr?.coffrets ?? 0}</strong>
+              </span>
+            </div>
+          </div>
+
           {/* Commun / Multiopérateur */}
           <div
             onClick={() => setSelectedOperator(selectedOperator === 'all' ? '' : 'all')}
@@ -542,6 +566,16 @@ export default function CatalogueTestView() {
                 }`}
               >
                 Free <span className="text-[10px]">({stats?.free.total})</span>
+              </button>
+              <button
+                onClick={() => setSelectedOperator(selectedOperator === 'sfr' ? '' : 'sfr')}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                  selectedOperator === 'sfr'
+                    ? 'bg-red-500 text-white shadow-sm'
+                    : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                }`}
+              >
+                SFR <span className="text-[10px]">({stats?.sfr?.total ?? 0})</span>
               </button>
               <button
                 onClick={() => setSelectedOperator(selectedOperator === 'all' ? '' : 'all')}
@@ -859,6 +893,7 @@ export default function CatalogueTestView() {
                     <th className="py-3 px-4 border border-slate-200 text-orange-700 bg-orange-50/50">Orange</th>
                     <th className="py-3 px-4 border border-slate-200 text-sky-700 bg-sky-50/50">Bouygues</th>
                     <th className="py-3 px-4 border border-slate-200 text-rose-700 bg-rose-50/50">Free</th>
+                    <th className="py-3 px-4 border border-slate-200 text-red-700 bg-red-50/50">SFR</th>
                     <th className="py-3 px-4 border border-slate-200 text-violet-700 bg-violet-50/50">Commun</th>
                     <th className="py-3 px-4 border border-slate-200 font-extrabold text-slate-900">Total</th>
                   </tr>
@@ -868,8 +903,9 @@ export default function CatalogueTestView() {
                     const orangeCount = data?.items.filter((i) => i.category === cat && i.operator === 'orange').length || 0;
                     const bouyguesCount = data?.items.filter((i) => i.category === cat && i.operator === 'bouygues').length || 0;
                     const freeCount = data?.items.filter((i) => i.category === cat && i.operator === 'free').length || 0;
+                    const sfrCount = data?.items.filter((i) => i.category === cat && i.operator === 'sfr').length || 0;
                     const allCount = data?.items.filter((i) => i.category === cat && i.operator === 'all').length || 0;
-                    const total = orangeCount + bouyguesCount + freeCount + allCount;
+                    const total = orangeCount + bouyguesCount + freeCount + sfrCount + allCount;
 
                     return (
                       <tr key={cat} className="hover:bg-slate-50">
@@ -904,6 +940,15 @@ export default function CatalogueTestView() {
                           )}
                         </td>
                         <td className="py-3 px-4 border border-slate-200 font-bold text-slate-700">
+                          {sfrCount > 0 ? (
+                            <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs">
+                              {sfrCount}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">0</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 border border-slate-200 font-bold text-slate-700">
                           {allCount > 0 ? (
                             <span className="bg-violet-100 text-violet-800 px-2 py-0.5 rounded text-xs">
                               {allCount}
@@ -928,6 +973,9 @@ export default function CatalogueTestView() {
                     </td>
                     <td className="py-3 px-4 border border-slate-200 text-rose-700">
                       {stats?.free.total ?? 0}
+                    </td>
+                    <td className="py-3 px-4 border border-slate-200 text-red-700">
+                      {stats?.sfr?.total ?? 0}
                     </td>
                     <td className="py-3 px-4 border border-slate-200 text-violet-700">
                       {stats?.all.total ?? 0}
