@@ -571,6 +571,11 @@ class CatalogueConfig(models.Model):
         help_text=_("List of Atelier d'énergie equipment references with dimensions and weight"),
         verbose_name=_("Atelier Énergie References")
     )
+    baie_references = models.JSONField(
+        default=list,
+        help_text=_("List of Baie equipment references with category, dimensions and weight"),
+        verbose_name=_("Baie References")
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     class Meta:

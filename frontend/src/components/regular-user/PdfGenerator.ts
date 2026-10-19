@@ -89,6 +89,7 @@ interface PdfGeneratorOptions {
   coffretReference: string;
   coffretOptions: { id: string; name: string }[];
   hasBaie?: boolean;
+  baieItems?: any[];
   baieRadio?: boolean;
   baieEnergie?: boolean;
   hasCab?: boolean;
@@ -143,7 +144,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasGps, gpsMarque, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
       hasCoffret, coffretReference, coffretOptions,
-      hasBaie, baieRadio, baieEnergie,
+      hasBaie, baieItems, baieRadio, baieEnergie,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       hasAtelierEnergie, atelierFprb, atelierFpbc,
       miniMapImage,
@@ -346,7 +347,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (hasTdEquipment) techCount++;
       if (hasGps) techCount++;
       if (hasBoitierLovage) techCount++;
-      if (showBaieInPdf) techCount++;
+      if (showBaieInPdf) {
+        techCount += (baieItems && baieItems.length > 0) ? baieItems.length : 1;
+      }
       if (showCabInPdf) techCount++;
       if (showAtelierInPdf) techCount++;
 
@@ -376,11 +379,21 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         lineY += 8;
       }
       if (showBaieInPdf) {
-        const baies = [];
-        if (baieRadio) baies.push('Baie radio');
-        if (baieEnergie) baies.push('Baie énergie');
-        doc.text(`• Présence baie : ${baies.join(', ') || 'Sélectionnée'}`, 28, lineY);
-        lineY += 8;
+        if (baieItems && baieItems.length > 0) {
+          baieItems.forEach((b: any) => {
+            const dims = b.dimensions ? ` (${b.dimensions})` : '';
+            const weight = b.weight ? ` - ${b.weight * (b.quantity || 1)} kg` : '';
+            const qty = b.quantity > 1 ? `Qté: ${b.quantity}x ` : '';
+            doc.text(`• Baie Orange : ${qty}${b.name}${dims}${weight}`, 28, lineY);
+            lineY += 8;
+          });
+        } else {
+          const baies = [];
+          if (baieRadio) baies.push('Baie radio');
+          if (baieEnergie) baies.push('Baie énergie');
+          doc.text(`• Présence baie : ${baies.join(', ') || 'Sélectionnée'}`, 28, lineY);
+          lineY += 8;
+        }
       }
       if (showCabInPdf) {
         const cabs = [];

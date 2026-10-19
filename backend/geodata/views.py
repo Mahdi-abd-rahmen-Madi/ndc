@@ -497,6 +497,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'rru_references': config.rru_references,
             'rrh_references': config.rrh_references,
             'atelier_energie_references': getattr(config, 'atelier_energie_references', []),
+            'baie_references': getattr(config, 'baie_references', []),
             'real_world_references': final_refs,
         })
 

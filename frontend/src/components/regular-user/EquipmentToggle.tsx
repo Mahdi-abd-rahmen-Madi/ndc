@@ -1,7 +1,8 @@
-import { Radio, Activity, ChevronUp, ChevronDown, Plus, Trash2, Server, Zap } from 'lucide-react';
+import { Radio, Activity, ChevronUp, ChevronDown, Plus, Minus, Check, Trash2, Server, Zap, AlertCircle, Box, Layers } from 'lucide-react';
 import { CustomSelect } from '../ui/CustomSelect';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { EquipmentItem } from '../RegularUserView';
+import type { BaieReference, SelectedBaieItem } from './types';
 
 
 interface FHEquipmentToggleProps {
@@ -45,8 +46,16 @@ export function FHEquipmentToggle({
     setFhDiameter(0);
   };
 
+  const isFhIncomplete = hasFhEquipment && (!selectedVendor || !fhReference);
+
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasFhEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
+      hasFhEquipment 
+        ? isFhIncomplete 
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
+          : 'border-violet-300 ring-1 ring-violet-500/10' 
+        : 'border-slate-200 hover:border-violet-200'
+    }`}>
       <div className="flex flex-col space-y-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
@@ -64,9 +73,17 @@ export function FHEquipmentToggle({
               <Radio className="w-4 h-4 text-violet-600" />
               <span>Présence FH</span>
             </label>
-            <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200 shadow-2xs">
-              1x par site
-            </span>
+            <div className="flex items-center gap-1.5">
+              {isFhIncomplete && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                  Sélection requise
+                </span>
+              )}
+              <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200 shadow-2xs">
+                1x par site
+              </span>
+            </div>
           </div>
           <p className="text-[11px] text-slate-500 font-normal pl-6">
             Liaison FH unique pour l'ensemble du site (non multiplié par le nombre de secteurs)
@@ -78,18 +95,25 @@ export function FHEquipmentToggle({
             {/* Row 1: Marque & Modèle */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col min-w-0">
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Marque</label>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold flex items-center gap-1">
+                  Marque
+                  {!selectedVendor && <span className="text-amber-600 font-bold">*</span>}
+                </label>
                 <CustomSelect
                   value={selectedVendor}
                   onChange={handleVendorChange}
                   className="focus:ring-2 focus:ring-violet-500"
                   options={vendors.map(v => ({ value: v, label: v }))}
                   placeholder="Sélectionner..."
+                  error={!selectedVendor}
                 />
               </div>
 
               <div className="flex flex-col min-w-0">
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Modèle</label>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold flex items-center gap-1">
+                  Modèle
+                  {!fhReference && <span className="text-amber-600 font-bold">*</span>}
+                </label>
                 <CustomSelect
                   value={fhReference}
                   onChange={(val) => {
@@ -103,6 +127,7 @@ export function FHEquipmentToggle({
                   className="focus:ring-2 focus:ring-violet-500"
                   options={fhOptions.filter(o => o.vendor === selectedVendor).map(ref => ({ value: ref.id, label: ref.name }))}
                   placeholder="Sélectionner..."
+                  error={!fhReference}
                 />
               </div>
             </div>
@@ -239,8 +264,16 @@ export function RRHEquipmentToggle({
     }));
   };
 
+  const isRrhIncomplete = hasRrhEquipment && (rrhItems.length === 0 || rrhItems.some(i => !i.vendor || !i.reference));
+
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRrhEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
+      hasRrhEquipment 
+        ? isRrhIncomplete 
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
+          : 'border-violet-300 ring-1 ring-violet-500/10' 
+        : 'border-slate-200 hover:border-violet-200'
+    }`}>
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
@@ -258,9 +291,17 @@ export function RRHEquipmentToggle({
               <Activity className="w-4 h-4 text-violet-600" />
               <span>Présence RRH</span>
             </label>
-            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-              Par secteur
-            </span>
+            <div className="flex items-center gap-1.5">
+              {isRrhIncomplete && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                  Sélection requise
+                </span>
+              )}
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                Par secteur
+              </span>
+            </div>
           </div>
           <p className="text-[11px] text-slate-500 font-normal pl-6">
             Équipement configuré par mât / secteur {nombreSecteurs > 1 ? `(multiplié par ${nombreSecteurs} secteurs pour le site)` : ''}
@@ -270,23 +311,34 @@ export function RRHEquipmentToggle({
         {hasRrhEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rrhItems.map((item) => (
-              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${
+                (!item.vendor || !item.reference) 
+                  ? 'bg-amber-50/20 border-amber-200' 
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1 min-w-0">
-                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Marque</label>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                      Marque
+                      {!item.vendor && <span className="text-amber-600 font-bold">*</span>}
+                    </label>
                     <CustomSelect
                       value={item.vendor || ''}
                       onChange={(val) => updateRrhItem(item.id, 'vendor', val)}
                       className="focus:ring-2 focus:ring-rose-500"
                       options={uniqueVendors.map(vendor => ({ value: vendor, label: vendor }))}
                       placeholder="Sélectionner"
+                      error={!item.vendor}
                     />
                   </div>
 
                   {/* Modèle */}
                   <div className="flex flex-col flex-1 min-w-0">
-                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Modèle</label>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                      Modèle
+                      {!item.reference && <span className="text-amber-600 font-bold">*</span>}
+                    </label>
                     <CustomSelect
                       value={item.reference}
                       onChange={(val) => updateRrhItem(item.id, 'reference', val)}
@@ -297,6 +349,7 @@ export function RRHEquipmentToggle({
                         return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
                       })}
                       placeholder="Sélectionner"
+                      error={!item.reference}
                     />
                   </div>
                 </div>
@@ -455,8 +508,16 @@ export function RRUEquipmentToggle({
       return item;
     }));
   };
+  const isRruIncomplete = hasRruEquipment && (rruItems.length === 0 || rruItems.some(i => !i.vendor || !i.reference));
+
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRruEquipment ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
+      hasRruEquipment 
+        ? isRruIncomplete 
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
+          : 'border-violet-300 ring-1 ring-violet-500/10' 
+        : 'border-slate-200 hover:border-violet-200'
+    }`}>
       <div className="flex flex-col gap-2">
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
@@ -474,9 +535,17 @@ export function RRUEquipmentToggle({
               <Activity className="w-4 h-4 text-violet-600" />
               <span>Présence {isRfmMode ? 'RF NSN' : 'RRU'}</span>
             </label>
-            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-              Par secteur
-            </span>
+            <div className="flex items-center gap-1.5">
+              {isRruIncomplete && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                  Sélection requise
+                </span>
+              )}
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                Par secteur
+              </span>
+            </div>
           </div>
           <p className="text-[11px] text-slate-500 font-normal pl-6">
             Équipement configuré par mât / secteur {nombreSecteurs > 1 ? `(multiplié par ${nombreSecteurs} secteurs pour le site)` : ''}
@@ -486,23 +555,34 @@ export function RRUEquipmentToggle({
         {hasRruEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rruItems.map((item) => (
-              <div key={item.id} className="flex flex-col gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${
+                (!item.vendor || !item.reference) 
+                  ? 'bg-amber-50/20 border-amber-200' 
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1 min-w-0">
-                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Marque</label>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                      Marque
+                      {!item.vendor && <span className="text-amber-600 font-bold">*</span>}
+                    </label>
                     <CustomSelect
                       value={item.vendor || ''}
                       onChange={(val) => updateRruItem(item.id, 'vendor', val)}
                       className="focus:ring-2 focus:ring-emerald-500"
                       options={uniqueVendors.map(vendor => ({ value: vendor, label: vendor }))}
                       placeholder="Sélectionner"
+                      error={!item.vendor}
                     />
                   </div>
 
                   {/* Modèle */}
                   <div className="flex flex-col flex-1 min-w-0">
-                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Modèle</label>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                      Modèle
+                      {!item.reference && <span className="text-amber-600 font-bold">*</span>}
+                    </label>
                     <CustomSelect
                       value={item.reference}
                       onChange={(val) => updateRruItem(item.id, 'reference', val)}
@@ -513,6 +593,7 @@ export function RRUEquipmentToggle({
                         return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
                       })}
                       placeholder="Sélectionner"
+                      error={!item.reference}
                     />
                   </div>
                 </div>
@@ -1026,8 +1107,16 @@ export function GPSEquipmentToggle({
   gpsMarque = 'NOKIA',
   setGpsMarque
 }: GPSEquipmentToggleProps) {
+  const isGpsIncomplete = hasGps && (!gpsMarque || !gpsReference);
+
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasGps ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
+      hasGps 
+        ? isGpsIncomplete 
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
+          : 'border-violet-300 ring-1 ring-violet-500/10' 
+        : 'border-slate-200 hover:border-violet-200'
+    }`}>
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
@@ -1044,24 +1133,37 @@ export function GPSEquipmentToggle({
             <Activity className="w-4 h-4 text-violet-600" />
             Présence GPS
           </label>
+          {isGpsIncomplete && (
+            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+              <AlertCircle className="w-3 h-3 text-amber-600" />
+              Sélection requise
+            </span>
+          )}
         </div>
 
         {hasGps && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
             <div className="flex gap-3">
               <div className="flex flex-col flex-1 min-w-0">
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Marque</label>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                  Marque
+                  {!gpsMarque && <span className="text-amber-600 font-bold">*</span>}
+                </label>
                 <CustomSelect
                   value={gpsMarque}
                   onChange={(val) => setGpsMarque?.(val)}
                   className="focus:ring-2 focus:ring-blue-500"
                   options={[{ value: 'NOKIA', label: 'NOKIA' }]}
                   placeholder="Sélectionner"
+                  error={!gpsMarque}
                 />
               </div>
 
               <div className="flex flex-col flex-1 min-w-0">
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Modèle</label>
+                <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                  Modèle
+                  {!gpsReference && <span className="text-amber-600 font-bold">*</span>}
+                </label>
                 <CustomSelect
                   value={gpsReference}
                   onChange={(val) => setGpsReference(val)}
@@ -1072,6 +1174,7 @@ export function GPSEquipmentToggle({
                     { value: 'FYGB 472748A', label: 'FYGB 472748A' }
                   ]}
                   placeholder="Sélectionner"
+                  error={!gpsReference}
                 />
               </div>
             </div>
@@ -1130,8 +1233,16 @@ export function CoffretEquipmentToggle({
   const isHttaSelected = httaOptions.some(opt => opt.id === coffretReference) || coffretReference === 'HTTA';
   const mainSelectValue = isHttaSelected ? 'HTTA' : coffretReference;
 
+  const isCoffretIncomplete = hasCoffret && (!coffretReference || !mainSelectValue);
+
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasCoffret ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
+      hasCoffret 
+        ? isCoffretIncomplete 
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
+          : 'border-violet-300 ring-1 ring-violet-500/10' 
+        : 'border-slate-200 hover:border-violet-200'
+    }`}>
       <div className="flex flex-col space-y-3">
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
@@ -1149,9 +1260,17 @@ export function CoffretEquipmentToggle({
               <Activity className="w-4 h-4 text-violet-600" />
               <span>Présence Coffrets fibre</span>
             </label>
-            <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-              Par secteur
-            </span>
+            <div className="flex items-center gap-1.5">
+              {isCoffretIncomplete && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                  Sélection requise
+                </span>
+              )}
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+                Par secteur
+              </span>
+            </div>
           </div>
           <p className="text-[11px] text-slate-500 font-normal pl-6">
             1 coffret par mât / secteur {nombreSecteurs > 1 ? `(Total site : ${nombreSecteurs} coffrets pour ${nombreSecteurs} secteurs)` : ''}
@@ -1161,7 +1280,10 @@ export function CoffretEquipmentToggle({
         {hasCoffret && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
             <div className="flex flex-col min-w-0">
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Type</label>
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
+                Type
+                {!mainSelectValue && <span className="text-amber-600 font-bold">*</span>}
+              </label>
               <CustomSelect
                 value={mainSelectValue}
                 onChange={(val) => {
@@ -1177,6 +1299,7 @@ export function CoffretEquipmentToggle({
                   ...(httaOptions.length > 0 ? [{ value: 'HTTA', label: 'Coffrets HTTA' }] : [])
                 ]}
                 placeholder="Sélectionner..."
+                error={!mainSelectValue}
               />
             </div>
 
@@ -1278,26 +1401,283 @@ export function CoffretEquipmentToggle({
   );
 }
 
+export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
+  // 1. Radio & Trans
+  {
+    id: 'orange_baie_radio_rb6120_outdoor',
+    name: 'Baie radio RB6120 OUTDOOR',
+    reference: 'RB6120 OUTDOOR',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '1540x700x700mm',
+    height: 1540,
+    width: 700,
+    depth: 700,
+    weight: 380,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_radio_rb6140',
+    name: 'Baie radio RB6140',
+    reference: 'RB6140',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '1650x650x700mm',
+    height: 1650,
+    width: 650,
+    depth: 700,
+    weight: 190,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_radio_rbs6330',
+    name: 'Baie radio RBS6330',
+    reference: 'RBS6330',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '650x900x425mm',
+    height: 650,
+    width: 900,
+    depth: 425,
+    weight: 50,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_tlti_fg2_radio_trans',
+    name: 'Baie TLTI FG2 RADIO /TRANS',
+    reference: 'FG2 RADIO /TRANS',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: 93,
+    operator: 'orange'
+  },
+  // 2. Énergie (-48V)
+  {
+    id: 'orange_baie_energie_walkyrie_t3_18kw',
+    name: 'Baie énergie Outdoor WALKYRIE T3 18kw',
+    reference: 'WALKYRIE T3 18kw',
+    category: 'energie',
+    category_label: 'Énergie (-48V)',
+    dimensions: '1550x700x770mm',
+    height: 1550,
+    width: 700,
+    depth: 770,
+    weight: 211,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_energie_t3_10_8kw',
+    name: 'Baie énergie Outdoor T3 10.8kw',
+    reference: 'T3 10.8kw',
+    category: 'energie',
+    category_label: 'Énergie (-48V)',
+    dimensions: '1200x700x770mm',
+    height: 1200,
+    width: 700,
+    depth: 770,
+    weight: 150,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_energie_gbox',
+    name: 'Baie énergie GBOX',
+    reference: 'GBOX',
+    category: 'energie',
+    category_label: 'Énergie (-48V)',
+    dimensions: '',
+    height: null,
+    width: null,
+    depth: null,
+    weight: null,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_tlti_fg2_tgbt_48v',
+    name: 'Baie TLTI FG2 TGBT /48V',
+    reference: 'FG2 TGBT /48V',
+    category: 'energie',
+    category_label: 'Énergie (-48V)',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: null,
+    operator: 'orange'
+  },
+  // 3. Distribution (AC)
+  {
+    id: 'orange_baie_seifel',
+    name: 'Baie SEIFEL',
+    reference: 'SEIFEL',
+    category: 'distribution',
+    category_label: 'Distribution (AC)',
+    dimensions: '1485x885x540mm',
+    height: 1485,
+    width: 885,
+    depth: 540,
+    weight: 86,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_tlti_fg2_tgbt_trans',
+    name: 'Baie TLTI FG2 TGBT /TRANS',
+    reference: 'FG2 TGBT /TRANS',
+    category: 'distribution',
+    category_label: 'Distribution (AC)',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: 95,
+    operator: 'orange'
+  },
+  // 4. Raccordement
+  {
+    id: 'orange_coffret_outdoor_trans_tlti_2015',
+    name: 'Coffret Outdoor Trans TLTI 2015',
+    reference: 'Trans TLTI 2015',
+    category: 'raccordement',
+    category_label: 'Raccordement',
+    dimensions: '1600x900x620mm',
+    height: 1600,
+    width: 900,
+    depth: 620,
+    weight: 65,
+    operator: 'orange'
+  }
+];
+
 export interface BaieEquipmentToggleProps {
   hasBaie: boolean;
   setHasBaie: (val: boolean) => void;
-  baieRadio: boolean;
-  setBaieRadio: (val: boolean) => void;
-  baieEnergie: boolean;
-  setBaieEnergie: (val: boolean) => void;
+  baieItems?: SelectedBaieItem[];
+  setBaieItems?: React.Dispatch<React.SetStateAction<SelectedBaieItem[]>> | ((val: SelectedBaieItem[]) => void);
+  baieOptions?: BaieReference[];
+  baieRadio?: boolean;
+  setBaieRadio?: (val: boolean) => void;
+  baieEnergie?: boolean;
+  setBaieEnergie?: (val: boolean) => void;
 }
 
 export function BaieEquipmentToggle({
   hasBaie,
   setHasBaie,
+  baieItems = [],
+  setBaieItems,
+  baieOptions = [],
   baieRadio,
   setBaieRadio,
   baieEnergie,
   setBaieEnergie
 }: BaieEquipmentToggleProps) {
+  const options = (baieOptions && baieOptions.length > 0) ? baieOptions : DEFAULT_ORANGE_BAIES;
+  const [activeCategory, setActiveCategory] = useState<string>('radio_trans');
+
+  const categories = [
+    { id: 'radio_trans', label: '1. Radio & Trans', shortName: 'Radio & Trans', icon: Radio, count: options.filter(o => o.category === 'radio_trans').length },
+    { id: 'energie', label: '2. Énergie (-48V)', shortName: 'Énergie (-48V)', icon: Zap, count: options.filter(o => o.category === 'energie').length },
+    { id: 'distribution', label: '3. Distribution (AC)', shortName: 'Distribution (AC)', icon: Server, count: options.filter(o => o.category === 'distribution').length },
+    { id: 'raccordement', label: '4. Raccordement', shortName: 'Raccordement', icon: Box, count: options.filter(o => o.category === 'raccordement').length }
+  ];
+
+  const syncLegacyFlags = (items: SelectedBaieItem[]) => {
+    const hasRadio = items.some(i => {
+      const ref = options.find(o => o.id === i.referenceId);
+      return ref?.category === 'radio_trans';
+    });
+    const hasEnergie = items.some(i => {
+      const ref = options.find(o => o.id === i.referenceId);
+      return ref?.category === 'energie';
+    });
+    if (setBaieRadio) setBaieRadio(hasRadio);
+    if (setBaieEnergie) setBaieEnergie(hasEnergie);
+  };
+
+  // Enforce 1 reference per category: clicking an unselected item replaces any existing item in that category
+  const handleToggleItem = (item: BaieReference) => {
+    if (!setBaieItems) return;
+    const isCurrentSelected = baieItems.some(i => i.referenceId === item.id);
+    let next: SelectedBaieItem[];
+    if (isCurrentSelected) {
+      // Deselect if already selected
+      next = baieItems.filter(i => i.referenceId !== item.id);
+    } else {
+      // Replace any existing item from the same category (1 reference per category)
+      const withoutSameCategory = baieItems.filter(i => {
+        const ref = options.find(o => o.id === i.referenceId);
+        return ref?.category !== item.category;
+      });
+      next = [...withoutSameCategory, { id: crypto.randomUUID(), referenceId: item.id, quantity: 1 }];
+    }
+    setBaieItems(next);
+    syncLegacyFlags(next);
+  };
+
+  const handleQtyChange = (item: BaieReference, delta: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!setBaieItems) return;
+    const exists = baieItems.find(i => i.referenceId === item.id);
+    if (!exists) return;
+    const newQty = Math.max(1, (exists.quantity || 1) + delta);
+    const next = baieItems.map(i => i.referenceId === item.id ? { ...i, quantity: newQty } : i);
+    setBaieItems(next);
+    syncLegacyFlags(next);
+  };
+
+  const handleClearAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (setBaieItems) {
+      setBaieItems([]);
+      syncLegacyFlags([]);
+    }
+  };
+
+  const filteredOptions = options.filter(o => o.category === activeCategory);
+
+  const totalSelectedCount = baieItems.reduce((acc, i) => acc + (i.quantity || 1), 0);
+  const totalWeight = baieItems.reduce((acc, i) => {
+    const ref = options.find(o => o.id === i.referenceId);
+    return acc + (ref?.weight ? ref.weight * (i.quantity || 1) : 0);
+  }, 0);
+
+  const getCategoryColor = (cat: string) => {
+    switch (cat) {
+      case 'radio_trans':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'energie':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'distribution':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'raccordement':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      default:
+        return 'bg-slate-50 text-slate-700 border-slate-200';
+    }
+  };
+
+  const getSelectedForCategory = (catId: string) => {
+    const sel = baieItems.find(i => {
+      const ref = options.find(o => o.id === i.referenceId);
+      return ref?.category === catId;
+    });
+    if (!sel) return null;
+    const ref = options.find(o => o.id === sel.referenceId);
+    return { sel, ref };
+  };
+
+  const currentCategoryInfo = categories.find(c => c.id === activeCategory);
+  const currentCategorySelection = getSelectedForCategory(activeCategory);
+
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasBaie ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
+      hasBaie ? 'border-orange-300 ring-1 ring-orange-500/20' : 'border-slate-200 hover:border-orange-200'
+    }`}>
       <div className="flex flex-col space-y-3">
+        {/* En-tête avec Switch */}
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
             <div className="relative flex items-center">
@@ -1307,49 +1687,269 @@ export function BaieEquipmentToggle({
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setHasBaie(checked);
-                  if (checked && !baieRadio && !baieEnergie) {
-                    setBaieRadio(true);
-                  }
                 }}
                 className="sr-only"
               />
-              <div className={`w-10 h-6 rounded-full transition-colors ${hasBaie ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasBaie ? 'bg-orange-600' : 'bg-slate-300'}`}></div>
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasBaie ? 'transform translate-x-4' : ''}`}></div>
             </div>
-            <Server className="w-4 h-4 text-violet-600" />
-            présence baie
+            <Server className="w-4 h-4 text-orange-600" />
+            <span>Zone Technique Orange (Baies & Coffrets)</span>
           </label>
+
+          {hasBaie && (
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200">
+                {baieItems.length} / 4 catégories
+              </span>
+              {totalWeight > 0 && (
+                <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                  {totalWeight} kg
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
-        {hasBaie && (
-          <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Options de baie</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${baieRadio
-                ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
-                }`}>
-                <input
-                  type="checkbox"
-                  checked={baieRadio}
-                  onChange={(e) => setBaieRadio(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
-                />
-                <span>Baie radio</span>
-              </label>
+        <p className="text-[11px] text-slate-500 font-normal pl-6">
+          Sélectionnez 1 référence par catégorie en zone technique outdoor (Radio & Trans, Énergie, Distribution, Raccordement).
+        </p>
 
-              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${baieEnergie
-                ? 'bg-orange-50/70 border-orange-300 text-orange-950 shadow-2xs'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
-                }`}>
-                <input
-                  type="checkbox"
-                  checked={baieEnergie}
-                  onChange={(e) => setBaieEnergie(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
-                />
-                <span>Baie énergie</span>
-              </label>
+        {hasBaie && (
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            {/* Onglets des 4 Catégories (Sans "Toutes") avec indicateur direct du modèle choisi */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+              {categories.map((cat) => {
+                const isActive = activeCategory === cat.id;
+                const catSelection = getSelectedForCategory(cat.id);
+                const IconComponent = cat.icon;
+
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
+                      isActive
+                        ? 'bg-orange-50/80 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
+                        : catSelection
+                          ? 'bg-slate-50/80 border-orange-200 hover:bg-orange-50/40'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-orange-600' : 'text-slate-500'}`} />
+                        <span className={`text-xs font-bold truncate ${isActive ? 'text-orange-950' : 'text-slate-800'}`}>
+                          {cat.label}
+                        </span>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${
+                        isActive ? 'bg-orange-200/80 text-orange-900' : 'bg-slate-200/70 text-slate-600'
+                      }`}>
+                        {cat.count}
+                      </span>
+                    </div>
+
+                    {/* Aperçu du choix sélectionné dans cette catégorie */}
+                    <div className="mt-1 flex items-center justify-between text-[11px]">
+                      {catSelection ? (
+                        <div className="flex items-center gap-1 text-emerald-700 font-medium truncate">
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0 stroke-[3]" />
+                          <span className="truncate">{catSelection.ref?.reference || catSelection.ref?.name}</span>
+                          {catSelection.ref?.weight && (
+                            <span className="text-slate-500 text-[10px]">({catSelection.ref.weight * (catSelection.sel.quantity || 1)}kg)</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[10px]">
+                          Non sélectionné
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Bannière de la catégorie active */}
+            <div className="flex items-center justify-between bg-slate-50/80 border border-slate-200/80 rounded-lg px-3 py-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800">
+                  {currentCategoryInfo?.label}
+                </span>
+                <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-semibold">
+                  1 référence max
+                </span>
+              </div>
+              <div className="text-[11px] text-slate-600">
+                {currentCategorySelection ? (
+                  <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Modèle sélectionné : {currentCategorySelection.ref?.name}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 italic">Aucun modèle sélectionné (cliquez pour en choisir un)</span>
+                )}
+              </div>
+            </div>
+
+            {/* Liste des équipements de la catégorie active (Comportement Radio : 1 référence par catégorie) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-0.5">
+              {filteredOptions.map((item) => {
+                const sel = baieItems.find(i => i.referenceId === item.id);
+                const isSelected = !!sel;
+                const qty = sel?.quantity || 1;
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => handleToggleItem(item)}
+                    className={`relative flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-orange-50/70 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                    }`}
+                  >
+                    {/* Header item avec puce Radio (1 choix exclusif par catégorie) */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Puce Radio */}
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+                          isSelected
+                            ? 'border-orange-600 bg-white ring-2 ring-orange-200'
+                            : 'border-slate-300 bg-white'
+                        }`}>
+                          {isSelected && <div className="w-2 h-2 rounded-full bg-orange-600" />}
+                        </div>
+                        <span className={`text-xs font-bold truncate ${
+                          isSelected ? 'text-orange-950 font-extrabold' : 'text-slate-800'
+                        }`}>
+                          {item.name}
+                        </span>
+                      </div>
+
+                      {/* Badge Catégorie */}
+                      <span className={`text-[9px] font-semibold px-2 py-0.5 rounded border shrink-0 ${getCategoryColor(item.category)}`}>
+                        {item.category_label || item.category}
+                      </span>
+                    </div>
+
+                    {/* Dimensions & Poids */}
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100/80 text-[11px] text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Box className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="font-mono text-[10px]">
+                          {item.dimensions || 'Dims N/C'}
+                        </span>
+                      </div>
+
+                      <span className="text-slate-300">•</span>
+
+                      <div className="flex items-center gap-1 font-semibold text-slate-700">
+                        {item.weight ? (
+                          <span>{item.weight} kg</span>
+                        ) : (
+                          <span className="text-slate-400 font-normal italic text-[10px]">Poids N/C</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Contrôle de Quantité si sélectionné */}
+                    {isSelected && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center justify-between mt-2 pt-2 border-t border-orange-200/70"
+                      >
+                        <span className="text-[10px] font-bold text-orange-900 uppercase tracking-wider flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                          Quantité installée
+                        </span>
+                        <div className="flex items-center gap-1 bg-white border border-orange-200 rounded-lg p-0.5 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={(e) => handleQtyChange(item, -1, e)}
+                            className="w-5 h-5 flex items-center justify-center rounded text-slate-600 hover:bg-orange-100 disabled:opacity-30"
+                            disabled={qty <= 1}
+                            title="Diminuer la quantité"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-7 text-center text-xs font-bold text-orange-950">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleQtyChange(item, 1, e)}
+                            className="w-5 h-5 flex items-center justify-center rounded text-slate-600 hover:bg-orange-100"
+                            title="Augmenter la quantité"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Barre de synthèse globale des 4 catégories */}
+            <div className="mt-2 pt-3 border-t border-slate-200/80 flex flex-col gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                {categories.map((c) => {
+                  const s = getSelectedForCategory(c.id);
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => setActiveCategory(c.id)}
+                      className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${
+                        s
+                          ? 'bg-orange-50/60 border-orange-300 text-orange-950'
+                          : 'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}
+                    >
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
+                        {c.shortName}
+                      </div>
+                      <div className="text-[11px] font-semibold truncate">
+                        {s ? (
+                          <span className="text-slate-900">{s.sel.quantity > 1 ? `${s.sel.quantity}x ` : ''}{s.ref?.reference || s.ref?.name}</span>
+                        ) : (
+                          <span className="italic text-slate-400">Aucun</span>
+                        )}
+                      </div>
+                      {s && s.ref?.weight && (
+                        <div className="text-[10px] text-orange-700 font-bold mt-0.5">
+                          {s.ref.weight * (s.sel.quantity || 1)} kg
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {baieItems.length > 0 && (
+                <div className="flex items-center justify-between pt-1 px-1 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-800">
+                      Total : {totalSelectedCount} {totalSelectedCount > 1 ? 'équipements configurés' : 'équipement configuré'}
+                    </span>
+                    {totalWeight > 0 && (
+                      <span className="text-orange-700 font-bold bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200">
+                        Poids total : {totalWeight} kg
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="text-[11px] font-medium text-slate-500 hover:text-red-600 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Réinitialiser tout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

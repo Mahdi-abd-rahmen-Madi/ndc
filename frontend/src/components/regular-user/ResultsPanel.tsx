@@ -1,4 +1,4 @@
-import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings, Server, SignalHigh, ArrowDownToLine } from 'lucide-react';
+import { MapPin, Wind, Mountain, FileText, CheckCircle2, Download, Activity, RefreshCw, Radio, Layers, Settings, Server, SignalHigh, ArrowDownToLine, SlidersHorizontal, Ruler, Scale, Sparkles } from 'lucide-react';
 import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './types';
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
@@ -38,6 +38,8 @@ interface ResultsPanelProps {
   showSectorsCount?: boolean;
   showSectorsConfig?: boolean;
   showEquipmentConfig?: boolean;
+  showAerialEquipmentConfig?: boolean;
+  showTechniqueEquipmentConfig?: boolean;
   operator?: string;
 }
 
@@ -73,8 +75,13 @@ export default function ResultsPanel({
   headerOnly = false,
   showSectorsCount = true,
   showSectorsConfig = true,
-  showEquipmentConfig = true
+  showEquipmentConfig = true,
+  showAerialEquipmentConfig,
+  showTechniqueEquipmentConfig
 }: ResultsPanelProps) {
+  const isAerialEquipVisible = showAerialEquipmentConfig !== undefined ? showAerialEquipmentConfig : showEquipmentConfig;
+  const isTechniqueEquipVisible = showTechniqueEquipmentConfig !== undefined ? showTechniqueEquipmentConfig : showEquipmentConfig;
+
   const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
@@ -338,6 +345,29 @@ export default function ResultsPanel({
     }
 
     if (config.id === 'baie') {
+      const items = equipmentValues.baie?.items;
+      if (Array.isArray(items) && items.length > 0) {
+        return items.map((item: any, index: number) => {
+          const qty = item.quantity || 1;
+          const specs: Record<string, any> = {
+            'catégorie': item.category_label || item.category || 'N/A',
+            ...(item.dimensions ? { dimensions: item.dimensions } : {}),
+            ...(item.weight ? { 'poids unitaire': `${item.weight} kg` } : {}),
+            ...(item.weight && qty > 1 ? { 'poids total': `${item.weight * qty} kg` } : {})
+          };
+          return renderCard(
+            `${config.id}-${index}`,
+            qty,
+            specs,
+            '',
+            { text: '1x par site', bg: 'bg-orange-50', textCol: 'text-orange-700', border: 'border-orange-200' },
+            undefined,
+            item.name,
+            { text: item.category_label || 'Baie', bg: 'bg-orange-100', textCol: 'text-orange-800', border: 'border-orange-300' }
+          );
+        });
+      }
+
       const types = [];
       if (equipmentValues.baie?.baieRadio) types.push('Baie radio');
       if (equipmentValues.baie?.baieEnergie) types.push('Baie énergie');
@@ -730,7 +760,7 @@ export default function ResultsPanel({
       {!headerOnly && (
         <>
           {/* Aériens : Secteurs & Équipements de mât */}
-          {(showSectorsConfig || (showEquipmentConfig && aerialConfigs.length > 0)) && (
+          {(showSectorsConfig || (isAerialEquipVisible && aerialConfigs.length > 0)) && (
             <div className="mb-5 animate-slide-in">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -751,111 +781,257 @@ export default function ResultsPanel({
                       Antennes 4G & 5G
                     </p>
                     <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                      {displaySectors.length} secteur{displaySectors.length > 1 ? 's' : ''} configuré{displaySectors.length > 1 ? 's' : ''}
+                      {displaySectors.length} secteur{displaySectors.length > 1 ? 's' : ''} {displaySectors.length > 1 ? 'identiques' : 'configuré'}
                     </span>
                   </div>
 
-                  <div className="space-y-3">
-                    {displaySectors.map((sector, idx) => {
-                      const brand4G = sector.selectedVendor4G || 'Standard';
-                      const model4G = sector.ant4gConfig.model || sector.selectedReference4G || 'Standard';
-                      const brand5G = sector.selectedVendor5G || 'Standard';
-                      const model5G = sector.ant5gConfig.model || sector.selectedReference5G || 'Standard';
+                  {/* Group identical sectors to avoid repeating duplicate cards */}
+                  {(() => {
+                    const formatSectorTitle = (indices: number[]) => {
+                      if (indices.length === 1) return `Secteur ${indices[0]}`;
+                      if (indices.length === 2) return `Secteurs ${indices[0]} & ${indices[1]}`;
+                      const allButLast = indices.slice(0, -1).join(', ');
+                      return `Secteurs ${allButLast} & ${indices[indices.length - 1]}`;
+                    };
 
-                      return (
-                        <div key={sector.id || idx} className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm hover:border-violet-300 transition-all">
-                          {/* Sector Header with Mast Height */}
-                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
-                            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-violet-600 animate-pulse"></span>
-                              Secteur {idx + 1}
-                            </h4>
-                            {sector.selectedHeight && sector.selectedHeight !== 3 && sector.selectedHeight !== 4 ? (
-                              <span className="text-[10px] font-bold text-amber-800 px-2.5 py-0.5 bg-amber-50/90 border border-amber-300 rounded-full flex items-center gap-1.5 shadow-2xs animate-fadeIn">
-                                <span className="text-amber-700 font-medium">Mât :</span>
-                                <span className="font-extrabold text-amber-950">{sector.selectedHeight}m</span>
-                                <span className="text-[8px] px-1.5 py-0.2 bg-amber-200/90 text-amber-900 rounded font-bold uppercase tracking-wider">Sur-mesure</span>
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-semibold text-slate-600 px-2.5 py-0.5 bg-slate-100 rounded-full border border-slate-200 flex items-center gap-1.5">
-                                <ArrowDownToLine className="w-3 h-3 text-violet-600" />
-                                <span className="text-slate-500">Mât :</span>
-                                <span className="font-bold text-slate-800">{sector.selectedHeight}m</span>
-                              </span>
-                            )}
-                          </div>
+                    const groupedDisplaySectors: { indices: number[]; sector: SectorData }[] = [];
+                    displaySectors.forEach((s, idx) => {
+                      const sectorNum = idx + 1;
+                      const existingGroup = groupedDisplaySectors.find(g => {
+                        const prev = g.sector;
+                        const sameHeight = prev.selectedHeight === s.selectedHeight;
+                        const sameMode = (prev.configMode || 'agile') === (s.configMode || 'agile');
+                        const isModeAgile = (prev.configMode || 'agile') === 'agile';
+                        const same4G = isModeAgile
+                          ? prev.ant4gConfig?.height === s.ant4gConfig?.height &&
+                            prev.ant4gConfig?.width === s.ant4gConfig?.width &&
+                            prev.ant4gConfig?.thickness === s.ant4gConfig?.thickness &&
+                            prev.ant4gConfig?.weight === s.ant4gConfig?.weight
+                          : prev.selectedVendor4G === s.selectedVendor4G && prev.selectedReference4G === s.selectedReference4G;
+                        const same5G = isModeAgile
+                          ? prev.ant5gConfig?.height === s.ant5gConfig?.height &&
+                            prev.ant5gConfig?.width === s.ant5gConfig?.width &&
+                            prev.ant5gConfig?.thickness === s.ant5gConfig?.thickness &&
+                            prev.ant5gConfig?.weight === s.ant5gConfig?.weight
+                          : prev.selectedVendor5G === s.selectedVendor5G && prev.selectedReference5G === s.selectedReference5G;
+                        return sameHeight && sameMode && same4G && same5G;
+                      });
 
-                          {/* 4G & 5G Cards side by side */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {/* 4G Antenna */}
-                            <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-blue-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
-                              <div className="flex items-center justify-between mb-2.5 gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-200/60 shadow-2xs shrink-0">
-                                    <Radio className="w-3.5 h-3.5" />
-                                  </div>
-                                  <span className="text-xs font-bold text-slate-900 truncate">Antenne 4G</span>
+                      if (existingGroup) {
+                        existingGroup.indices.push(sectorNum);
+                      } else {
+                        groupedDisplaySectors.push({ indices: [sectorNum], sector: s });
+                      }
+                    });
+
+                    return (
+                      <div className="space-y-3">
+                        {groupedDisplaySectors.map((group, groupIdx) => {
+                          const sector = group.sector;
+                          const isAgile = sector.configMode === 'agile' || !sector.configMode;
+                          const brand4G = sector.selectedVendor4G || 'Standard';
+                          const model4G = sector.ant4gConfig?.model || sector.selectedReference4G || 'Standard';
+                          const brand5G = sector.selectedVendor5G || 'Standard';
+                          const model5G = sector.ant5gConfig?.model || sector.selectedReference5G || 'Standard';
+
+                          const dim4G = sector.ant4gConfig && sector.ant4gConfig.height > 0
+                            ? `${sector.ant4gConfig.height} × ${sector.ant4gConfig.width} × ${sector.ant4gConfig.thickness} mm`
+                            : 'Non spécifié';
+                          const weight4G = sector.ant4gConfig && sector.ant4gConfig.weight > 0
+                            ? `${sector.ant4gConfig.weight} kg`
+                            : 'N/A';
+
+                          const dim5G = sector.ant5gConfig && sector.ant5gConfig.height > 0
+                            ? `${sector.ant5gConfig.height} × ${sector.ant5gConfig.width} × ${sector.ant5gConfig.thickness} mm`
+                            : 'Non spécifié';
+                          const weight5G = sector.ant5gConfig && sector.ant5gConfig.weight > 0
+                            ? `${sector.ant5gConfig.weight} kg`
+                            : 'N/A';
+
+                          return (
+                            <div key={groupIdx} className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200/90 shadow-sm hover:border-violet-300 transition-all">
+                              {/* Sector Header with Mast Height */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-100">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-violet-600 animate-pulse"></span>
+                                    {formatSectorTitle(group.indices)}
+                                  </h4>
+                                  {group.indices.length > 1 && (
+                                    <span className="text-[9px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                                      {group.indices.length} secteurs identiques
+                                    </span>
+                                  )}
+                                  {isAgile ? (
+                                    <span className="text-[9px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full border border-violet-200 flex items-center gap-1 shadow-2xs">
+                                      <SlidersHorizontal className="w-2.5 h-2.5 text-violet-600" />
+                                      Configuration Agile
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 shadow-2xs">
+                                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                                      Références Réelles
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
-                                  4G LTE
-                                </span>
+                                {sector.selectedHeight && sector.selectedHeight !== 3 && sector.selectedHeight !== 4 ? (
+                                  <span className="text-[10px] font-bold text-amber-800 px-2.5 py-0.5 bg-amber-50/90 border border-amber-300 rounded-full flex items-center gap-1.5 shadow-2xs animate-fadeIn">
+                                    <span className="text-amber-700 font-medium">Mât :</span>
+                                    <span className="font-extrabold text-amber-950">{sector.selectedHeight}m</span>
+                                    <span className="text-[8px] px-1.5 py-0.2 bg-amber-200/90 text-amber-900 rounded font-bold uppercase tracking-wider">Sur-mesure</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-slate-600 px-2.5 py-0.5 bg-slate-100 rounded-full border border-slate-200 flex items-center gap-1.5">
+                                    <ArrowDownToLine className="w-3 h-3 text-violet-600" />
+                                    <span className="text-slate-500">Mât :</span>
+                                    <span className="font-bold text-slate-800">{sector.selectedHeight}m</span>
+                                  </span>
+                                )}
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2 pt-1">
-                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
-                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand4G}>
-                                    {brand4G}
-                                  </span>
+                              {/* 4G & 5G Cards side by side */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {/* 4G Antenna */}
+                                <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-blue-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
+                                  <div className="flex items-center justify-between mb-2.5 gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-200/60 shadow-2xs shrink-0">
+                                        <Radio className="w-3.5 h-3.5" />
+                                      </div>
+                                      <span className="text-xs font-bold text-slate-900 truncate">Antenne 4G</span>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
+                                      4G LTE
+                                    </span>
+                                  </div>
+
+                                  {isAgile ? (
+                                    <div className="space-y-1.5 pt-1">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                                            <Ruler className="w-3 h-3 text-blue-500 shrink-0" />
+                                            Dimensions
+                                          </span>
+                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5" title={dim4G}>
+                                            {dim4G}
+                                          </span>
+                                        </div>
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                                            <Scale className="w-3 h-3 text-blue-500 shrink-0" />
+                                            Poids
+                                          </span>
+                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5">
+                                            {weight4G}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="text-[10px] text-violet-600 font-medium flex items-center gap-1 pt-0.5">
+                                        <Sparkles className="w-3 h-3 text-violet-500 shrink-0" />
+                                        <span>Gabarit agile (sans référence constructeur)</span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1.5 pt-1">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
+                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand4G}>
+                                            {brand4G}
+                                          </span>
+                                        </div>
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
+                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model4G}>
+                                            {model4G}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="text-[10px] text-slate-500 font-medium flex items-center justify-between pt-0.5">
+                                        <span>Dimensions : {dim4G}</span>
+                                        <span>{weight4G}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
-                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model4G}>
-                                    {model4G}
-                                  </span>
+
+                                {/* 5G Antenna */}
+                                <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-purple-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
+                                  <div className="flex items-center justify-between mb-2.5 gap-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600 border border-purple-200/60 shadow-2xs shrink-0">
+                                        <SignalHigh className="w-3.5 h-3.5" />
+                                      </div>
+                                      <span className="text-xs font-bold text-slate-900 truncate">Antenne 5G</span>
+                                    </div>
+                                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 shrink-0">
+                                      5G NR
+                                    </span>
+                                  </div>
+
+                                  {isAgile ? (
+                                    <div className="space-y-1.5 pt-1">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                                            <Ruler className="w-3 h-3 text-purple-500 shrink-0" />
+                                            Dimensions
+                                          </span>
+                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5" title={dim5G}>
+                                            {dim5G}
+                                          </span>
+                                        </div>
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+                                            <Scale className="w-3 h-3 text-purple-500 shrink-0" />
+                                            Poids
+                                          </span>
+                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5">
+                                            {weight5G}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="text-[10px] text-purple-700 font-medium flex items-center gap-1 pt-0.5">
+                                        <Sparkles className="w-3 h-3 text-purple-600 shrink-0" />
+                                        <span>Gabarit agile (sans référence constructeur)</span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1.5 pt-1">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
+                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand5G}>
+                                            {brand5G}
+                                          </span>
+                                        </div>
+                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
+                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
+                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model5G}>
+                                            {model5G}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center justify-between px-2 py-1 bg-slate-100/70 border border-slate-200/80 rounded-lg text-[10px] text-slate-600 font-medium">
+                                        <span>Dimensions : {dim5G}</span>
+                                        <span>{weight5G}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
-
-                            {/* 5G Antenna */}
-                            <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-purple-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
-                              <div className="flex items-center justify-between mb-2.5 gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600 border border-purple-200/60 shadow-2xs shrink-0">
-                                    <SignalHigh className="w-3.5 h-3.5" />
-                                  </div>
-                                  <span className="text-xs font-bold text-slate-900 truncate">Antenne 5G</span>
-                                </div>
-                                <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 shrink-0">
-                                  5G NR
-                                </span>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-2 pt-1">
-                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
-                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand5G}>
-                                    {brand5G}
-                                  </span>
-                                </div>
-                                <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                  <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
-                                  <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model5G}>
-                                    {model5G}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
               {/* Sub-section 2: Aerial equipments */}
-              {showEquipmentConfig && aerialConfigs.length > 0 && (
+              {isAerialEquipVisible && aerialConfigs.length > 0 && (
                 <div className={`${showSectorsConfig && displaySectors.length > 0 ? 'mt-6 pt-5 border-t border-slate-200/80' : ''}`}>
                   <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
                     Équipements Aériens Additionnels
@@ -1007,7 +1183,7 @@ export default function ResultsPanel({
           )}
 
           {/* Zone Technique */}
-          {showEquipmentConfig && techniqueConfigs.length > 0 && (
+          {isTechniqueEquipVisible && techniqueConfigs.length > 0 && (
             <div className="mb-5 animate-slide-in">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-2">

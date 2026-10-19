@@ -36,6 +36,27 @@ export interface CatalogueConfig {
   rrh_references: { id: string; vendor: string; reference: string; operator?: string }[];
   boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
   atelier_energie_references?: { id: string; vendor?: string; name: string; reference: string; operator?: string; height?: number; width?: number; thickness?: number; weight?: number; dimensions?: string }[];
+  baie_references?: BaieReference[];
+}
+
+export interface BaieReference {
+  id: string;
+  name: string;
+  reference: string;
+  category: 'radio_trans' | 'energie' | 'distribution' | 'raccordement' | string;
+  category_label?: string;
+  dimensions?: string;
+  height?: number | null;
+  width?: number | null;
+  depth?: number | null;
+  weight?: number | null;
+  operator?: string;
+}
+
+export interface SelectedBaieItem {
+  id: string;
+  referenceId: string;
+  quantity: number;
 }
 
 export interface DocumentInfo {
@@ -125,6 +146,7 @@ export interface SectorData {
   hasBaie?: boolean;
   baieRadio?: boolean;
   baieEnergie?: boolean;
+  baieItems?: SelectedBaieItem[];
   hasCab?: boolean;
   cabOne?: boolean;
   cabTwo?: boolean;

@@ -36,7 +36,9 @@ export default function SectorConfigurator({
   const handleMontage4GChange = (val: string) => {
     const updates: Partial<SectorData> = { selectedMontage4G: val };
 
-    if (val !== 'custom') {
+    if (!val) {
+      updates.ant4gConfig = { model: '', height: 0, width: 0, thickness: 0, weight: 0 };
+    } else if (val !== 'custom') {
       const spec = config?.standard_montages.find(m => m.id === val);
       if (spec) {
         updates.ant4gConfig = { model: val, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight };
@@ -48,7 +50,9 @@ export default function SectorConfigurator({
   const handleMontage5GChange = (val: string) => {
     const updates: Partial<SectorData> = { selectedMontage5G: val };
 
-    if (val !== 'custom') {
+    if (!val) {
+      updates.ant5gConfig = { model: '', height: 0, width: 0, thickness: 0, weight: 0 };
+    } else if (val !== 'custom') {
       const spec = config?.standard_montages.find(m => m.id === val);
       if (spec) {
         updates.ant5gConfig = { model: val, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight };

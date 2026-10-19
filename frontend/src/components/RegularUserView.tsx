@@ -22,17 +22,16 @@ import { useGeocoding } from '../hooks/useGeocoding';
 // Sub-components
 import NotificationsDropdown from './regular-user/NotificationsDropdown';
 import AddressSearchSection from './regular-user/AddressSearchSection';
-import HeroAddressSearch from './regular-user/HeroAddressSearch';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, CabEquipmentToggle, AtelierEnergieEquipmentToggle } from './regular-user/EquipmentToggle';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, DEFAULT_ORANGE_BAIES, CabEquipmentToggle, AtelierEnergieEquipmentToggle } from './regular-user/EquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
 import { getTerrainDetails } from './regular-user/PdfGenerator';
 import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
-import { SectorData, RequestFormData, PreviewDocState, SimilarityMode } from './regular-user/types';
+import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem } from './regular-user/types';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
@@ -51,12 +50,12 @@ const defaultSectorData = (id: number): SectorData => ({
   selectedMontage4G: '',
   selectedMontage5G: '',
   configMode: 'agile',
-  selectedVendor4G: 'Huawei',
-  selectedVendor5G: 'Ericsson',
-  selectedReference4G: 'ref-huawei-standard',
-  selectedReference5G: 'ref-huawei-standard',
-  ant4gConfig: { model: 'A1', height: 2100, width: 470, thickness: 210, weight: 45 },
-  ant5gConfig: { model: 'A1', height: 1010, width: 500, thickness: 250, weight: 50 },
+  selectedVendor4G: '',
+  selectedVendor5G: '',
+  selectedReference4G: '',
+  selectedReference5G: '',
+  ant4gConfig: { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
+  ant5gConfig: { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
   matPrincipal: '',
   plotMetallique: '',
   brasDeDeport: '',
@@ -74,6 +73,7 @@ const defaultSectorData = (id: number): SectorData => ({
   hasBaie: false,
   baieRadio: false,
   baieEnergie: false,
+  baieItems: [],
   hasCab: false,
   cabOne: false,
   cabTwo: false,
@@ -110,11 +110,11 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, di
   const isOpen = activeStep === step;
 
   return (
-    <div className={`bg-white rounded-2xl border transition-all duration-300 mb-4 overflow-hidden ${disabled
-      ? 'opacity-50 border-slate-200/80 bg-slate-50/50 cursor-not-allowed'
+    <div className={`bg-white rounded-2xl border transition-all duration-300 mb-4 ${disabled
+      ? 'opacity-50 border-slate-200/80 bg-slate-50/50 cursor-not-allowed overflow-hidden'
       : isOpen
-        ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5'
-        : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm'
+        ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5 overflow-visible z-20 relative'
+        : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm overflow-hidden'
       }`}>
       <div
         className={`p-4 flex items-center justify-between transition-all ${disabled
@@ -138,14 +138,14 @@ function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, di
                 ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300'
                 : 'bg-slate-100 text-slate-500 border border-slate-200'
             }`}>
-            {isCompleted && !isOpen ? <Check className="w-5 h-5 text-emerald-700 stroke-[2.5]" /> : step}
+            {isCompleted && !isOpen && !disabled ? <Check className="w-5 h-5 text-emerald-700 stroke-[2.5]" /> : step}
           </div>
           <div className="min-w-0">
             <h3 className={`font-bold text-sm tracking-tight transition-colors ${disabled ? 'text-slate-400' : isOpen ? 'text-slate-900' : 'text-slate-700'
               }`}>
               {title}
             </h3>
-            {!isOpen && isCompleted && summary && (
+            {!isOpen && isCompleted && !disabled && summary && (
               <div className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1 font-medium">
                 {summary}
               </div>
@@ -219,6 +219,7 @@ export default function RegularUserView({
         'Fixation sur plot métallique';
 
   const [activeStep, setActiveStep] = useState<number>(1);
+  const [isInfoConfirmed, setIsInfoConfirmed] = useState<boolean>(false);
   const [sectors, setSectors] = useState<SectorData[]>(
     Array.from({ length: 3 }, (_, i) => defaultSectorData(i))
   );
@@ -255,6 +256,7 @@ export default function RegularUserView({
   const [hasBaie, setHasBaie] = useState<boolean>(false);
   const [baieRadio, setBaieRadio] = useState<boolean>(false);
   const [baieEnergie, setBaieEnergie] = useState<boolean>(false);
+  const [baieItems, setBaieItems] = useState<SelectedBaieItem[]>([]);
   const [hasCab, setHasCab] = useState<boolean>(false);
   const [cabOne, setCabOne] = useState<boolean>(false);
   const [cabTwo, setCabTwo] = useState<boolean>(false);
@@ -301,8 +303,8 @@ export default function RegularUserView({
     }
   }, [showConfirmationModal]);
 
-  // Map State
-  const [showMap, setShowMap] = useState<boolean>(false);
+  // Map State (visible by default on startup for intuitive spatial selection)
+  const [showMap, setShowMap] = useState<boolean>(true);
   const miniMapContainerRef = useRef<HTMLDivElement>(null);
   const miniMapRef = useRef<maplibregl.Map | null>(null);
 
@@ -322,6 +324,7 @@ export default function RegularUserView({
       setHasBaie(false);
       setBaieRadio(false);
       setBaieEnergie(false);
+      setBaieItems([]);
     }
     if (operator !== 'free') {
       setHasCab(false);
@@ -350,6 +353,7 @@ export default function RegularUserView({
       hasBaie: operator === 'orange' ? s.hasBaie : false,
       baieRadio: operator === 'orange' ? s.baieRadio : false,
       baieEnergie: operator === 'orange' ? s.baieEnergie : false,
+      baieItems: operator === 'orange' ? s.baieItems || [] : [],
       hasCab: operator === 'free' ? s.hasCab : false,
       cabOne: operator === 'free' ? s.cabOne : false,
       cabTwo: operator === 'free' ? s.cabTwo : false,
@@ -363,25 +367,6 @@ export default function RegularUserView({
     })));
   }, [operator]);
 
-  // Sync initialMontage from parent or default to first standard montage
-  useEffect(() => {
-    if (config?.standard_montages?.length) {
-      setSectors(prev => prev.map(s => {
-        if (!s.selectedMontage4G) {
-          const mId = (initialMontage && initialMontage !== 'custom') ? initialMontage : config.standard_montages[0].id;
-          const spec = config.standard_montages.find(m => m.id === mId) || config.standard_montages[0];
-          return {
-            ...s,
-            selectedMontage4G: mId,
-            selectedMontage5G: mId,
-            ant4gConfig: { model: mId, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight },
-            ant5gConfig: { model: mId, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight }
-          };
-        }
-        return s;
-      }));
-    }
-  }, [initialMontage, config]);
 
   const updateSector = (index: number, updates: Partial<SectorData>) => {
     setSectors(prev => {
@@ -666,6 +651,27 @@ export default function RegularUserView({
     return opt ? `${opt.vendor} ${opt.name} (${opt.reference})` : id;
   };
 
+  const resolveBaieItems = (items: SelectedBaieItem[]) => {
+    const options = config?.baie_references && config.baie_references.length > 0
+      ? config.baie_references
+      : DEFAULT_ORANGE_BAIES;
+    return items.map(item => {
+      const ref = options.find(o => o.id === item.referenceId);
+      return {
+        id: item.id,
+        referenceId: item.referenceId,
+        name: ref?.name || item.referenceId,
+        reference: ref?.reference || '',
+        category: ref?.category || '',
+        category_label: ref?.category_label || '',
+        dimensions: ref?.dimensions || '',
+        weight: ref?.weight ?? null,
+        quantity: item.quantity || 1,
+        totalWeight: ref?.weight ? ref.weight * (item.quantity || 1) : null
+      };
+    });
+  };
+
 
   const confirmAndCalculate = async (sector: SectorData) => {
     setCalculating(true);
@@ -744,8 +750,15 @@ export default function RegularUserView({
         coffrets_hybride: { enabled: false, quantity: null, reference: null },
         baie: {
           enabled: operator === 'orange' && hasBaie,
-          baie_radio: operator === 'orange' && hasBaie && baieRadio,
-          baie_energie: operator === 'orange' && hasBaie && baieEnergie
+          items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],
+          baie_radio: operator === 'orange' && hasBaie && (baieRadio || baieItems.some(i => {
+            const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
+            return ref?.category === 'radio_trans';
+          })),
+          baie_energie: operator === 'orange' && hasBaie && (baieEnergie || baieItems.some(i => {
+            const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
+            return ref?.category === 'energie';
+          }))
         },
         cab: {
           enabled: operator === 'free' && hasCab,
@@ -992,8 +1005,15 @@ export default function RegularUserView({
           coffrets_hybride: { enabled: false, quantity: null, reference: null },
           baie: {
             enabled: operator === 'orange' && hasBaie,
-            baie_radio: operator === 'orange' && hasBaie && baieRadio,
-            baie_energie: operator === 'orange' && hasBaie && baieEnergie
+            items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],
+            baie_radio: operator === 'orange' && hasBaie && (baieRadio || baieItems.some(i => {
+              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
+              return ref?.category === 'radio_trans';
+            })),
+            baie_energie: operator === 'orange' && hasBaie && (baieEnergie || baieItems.some(i => {
+              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
+              return ref?.category === 'energie';
+            }))
           },
           cab: {
             enabled: operator === 'free' && hasCab,
@@ -1123,8 +1143,15 @@ export default function RegularUserView({
           coffrets_hybride: { enabled: false, quantity: null, reference: null },
           baie: {
             enabled: operator === 'orange' && hasBaie,
-            baie_radio: operator === 'orange' && hasBaie && baieRadio,
-            baie_energie: operator === 'orange' && hasBaie && baieEnergie
+            items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],
+            baie_radio: operator === 'orange' && hasBaie && (baieRadio || baieItems.some(i => {
+              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
+              return ref?.category === 'radio_trans';
+            })),
+            baie_energie: operator === 'orange' && hasBaie && (baieEnergie || baieItems.some(i => {
+              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
+              return ref?.category === 'energie';
+            }))
           },
           cab: {
             enabled: operator === 'free' && hasCab,
@@ -1260,6 +1287,56 @@ export default function RegularUserView({
     if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
   }
   const canGenerate = missingRequirements.length === 0;
+
+  const missingStep3Equipments: string[] = [];
+  sectors.slice(0, nombreSecteurs).forEach((sector, idx) => {
+    const secLabel = nombreSecteurs > 1 ? ` (Secteur ${idx + 1})` : '';
+    const hasFh = sector.hasFhEquipment ?? hasFhEquipment;
+    const fhRef = sector.fhReference ?? fhReference;
+    if (hasFh && !fhRef) {
+      missingStep3Equipments.push(`Référence FH${secLabel}`);
+    }
+
+    const hasRrh = sector.hasRrhEquipment ?? hasRrhEquipment;
+    const rrhList = sector.rrhItems ?? rrhItems;
+    if (operator !== 'bouygues' && hasRrh) {
+      if (rrhList.length === 0 || rrhList.some(i => !i.reference || !i.vendor)) {
+        missingStep3Equipments.push(`Référence RRH${secLabel}`);
+      }
+    }
+
+    const hasRru = sector.hasRruEquipment ?? hasRruEquipment;
+    const rruList = sector.rruItems ?? rruItems;
+    if (hasRru) {
+      if (rruList.length === 0 || rruList.some(i => !i.reference || !i.vendor)) {
+        missingStep3Equipments.push(`Référence ${operator === 'free' ? 'RF NSN' : 'RRU'}${secLabel}`);
+      }
+    }
+
+    const hasCoff = sector.hasCoffret ?? hasCoffret;
+    const coffRef = sector.coffretReference ?? coffretReference;
+    if (hasCoff && !coffRef) {
+      missingStep3Equipments.push(`Référence Coffret fibre${secLabel}`);
+    }
+  });
+
+  const missingStep4Equipments: string[] = [];
+  if (hasTdEquipment && !tdReference) {
+    missingStep4Equipments.push('Référence TD');
+  }
+  if (hasGps && !gpsReference) {
+    missingStep4Equipments.push('Référence GPS');
+  }
+  if (hasBoitierLovage && !boitierLovageReference) {
+    missingStep4Equipments.push('Référence Boîtier de lovage');
+  }
+
+  const isStep1Complete = !!selectedCoords && !pendingGenericAddress;
+  const isStep2Complete = canGenerate;
+  const isStep3Complete = activeSectors.length > 0 && activeSectors.every(s => Boolean(s.selectedMontage4G) && Boolean(s.selectedMontage5G)) && missingStep3Equipments.length === 0;
+  const isStep4Complete = missingStep4Equipments.length === 0;
+  const allSectionsFilled = isStep1Complete && isStep2Complete && isStep3Complete && isStep4Complete;
+  const isConfirmed = isInfoConfirmed && allSectionsFilled;
 
   return (
     <div className="flex flex-col w-full h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden selection:bg-violet-500/20">
@@ -1534,10 +1611,26 @@ export default function RegularUserView({
                     )}
                     {operator === 'orange' && hasBaie && (
                       <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Présence Baie</span>
-                        <span className="text-xs font-bold text-slate-900 block">
-                          {[baieRadio ? 'Baie radio' : null, baieEnergie ? 'Baie énergie' : null].filter(Boolean).join(', ') || 'Sélectionnée'}
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">
+                          Zone Technique Orange ({baieItems.length} {baieItems.length > 1 ? 'équipements' : 'équipement'})
                         </span>
+                        {baieItems.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {baieItems.map(item => {
+                              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === item.referenceId);
+                              return (
+                                <span key={item.id} className="inline-flex items-center gap-1 text-[11px] bg-orange-50 text-orange-800 border border-orange-200 px-2 py-0.5 rounded font-medium">
+                                  <span>{item.quantity > 1 ? `${item.quantity}x ` : ''}{ref?.name || item.referenceId}</span>
+                                  {ref?.weight ? <span className="text-orange-600 font-semibold text-[10px]">({ref.weight * item.quantity}kg)</span> : null}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-xs font-bold text-slate-900 block">
+                            {[baieRadio ? 'Baie radio' : null, baieEnergie ? 'Baie énergie' : null].filter(Boolean).join(', ') || 'Sélectionnée'}
+                          </span>
+                        )}
                       </div>
                     )}
                     {operator === 'free' && hasCab && (
@@ -1827,15 +1920,20 @@ export default function RegularUserView({
                 title="Aériens"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={sectors[0].selectedMontage4G !== ''}
+                isCompleted={isStep3Complete}
                 disabled={!selectedCoords || !!pendingGenericAddress}
-                summary={[
-                  `${nombreSecteurs} secteur(s)`,
-                  hasFhEquipment ? 'FH' : null,
-                  (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
-                  hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
-                  hasCoffret ? 'Fibre' : null
-                ].filter(Boolean).join(' • ')}
+                hideContinue={!isStep3Complete}
+                summary={
+                  isStep3Complete
+                    ? [
+                        `${nombreSecteurs} secteur(s)`,
+                        hasFhEquipment ? 'FH' : null,
+                        (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
+                        hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
+                        hasCoffret ? 'Fibre' : null
+                      ].filter(Boolean).join(' • ')
+                    : undefined
+                }
               >
                 <div className="space-y-6">
                   {/* Secteurs (Mâts & Antennes 4G / 5G) */}
@@ -1950,6 +2048,20 @@ export default function RegularUserView({
                       );
                     })}
                   </div>
+
+                  {missingStep3Equipments.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2.5 items-start text-amber-800 text-xs">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold">Veuillez sélectionner un modèle pour chaque équipement activé avant de continuer :</p>
+                        <ul className="list-disc list-inside mt-1 space-y-0.5 text-amber-700">
+                          {missingStep3Equipments.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </AccordionStep>
 
@@ -2009,14 +2121,19 @@ export default function RegularUserView({
                       boitierOptions={config?.boitier_lovage_references || []}
                     />
                     {operator === 'orange' && (
-                      <BaieEquipmentToggle
-                        hasBaie={hasBaie}
-                        setHasBaie={setHasBaie}
-                        baieRadio={baieRadio}
-                        setBaieRadio={setBaieRadio}
-                        baieEnergie={baieEnergie}
-                        setBaieEnergie={setBaieEnergie}
-                      />
+                      <div className="lg:col-span-2">
+                        <BaieEquipmentToggle
+                          hasBaie={hasBaie}
+                          setHasBaie={setHasBaie}
+                          baieItems={baieItems}
+                          setBaieItems={setBaieItems}
+                          baieOptions={config?.baie_references || DEFAULT_ORANGE_BAIES}
+                          baieRadio={baieRadio}
+                          setBaieRadio={setBaieRadio}
+                          baieEnergie={baieEnergie}
+                          setBaieEnergie={setBaieEnergie}
+                        />
+                      </div>
                     )}
                     {operator === 'free' && (
                       <>
@@ -2047,6 +2164,122 @@ export default function RegularUserView({
               </AccordionStep>
 
             </div>
+
+            {/* Launch Calculation Button after Section 4 */}
+            {(activeStep >= 4 || allSectionsFilled) && (
+              <div className="mt-4 p-4 sm:p-5 bg-white rounded-2xl border border-violet-200/90 shadow-md shadow-violet-500/5 transition-all animate-fadeIn">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-gradient-to-br from-violet-500/10 to-indigo-500/20 text-violet-600 rounded-xl border border-violet-200/50 shadow-2xs">
+                      <Sparkles className="w-4 h-4 text-violet-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 tracking-tight">Validation & Calcul</h4>
+                      <p className="text-[11px] text-slate-500">
+                        {allSectionsFilled
+                          ? 'Toutes les sections sont renseignées'
+                          : 'Veuillez finaliser les informations obligatoires'}
+                      </p>
+                    </div>
+                  </div>
+                  {allSectionsFilled && !ndcPdfUrl && (
+                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      Prêt pour le calcul
+                    </span>
+                  )}
+                </div>
+
+                {!allSectionsFilled && (
+                  <div className="mb-3 px-3 py-2 bg-amber-50/80 border border-amber-200/80 rounded-xl flex items-center gap-2 text-amber-800 text-xs">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Complétez les informations requises pour valider.</span>
+                  </div>
+                )}
+
+                {siteNdcError && canGenerate && (
+                  <div className="mb-3 bg-rose-50 border border-rose-200 rounded-xl p-3 flex gap-2.5 items-center text-rose-800 text-xs">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <p>{siteNdcError}</p>
+                  </div>
+                )}
+
+                {ndcPdfUrl ? (
+                  <div className="flex flex-col gap-2.5">
+                    <button
+                      onClick={() => setShowPdfPreview(!showPdfPreview)}
+                      className="w-full py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md shadow-emerald-500/20 transition-all text-sm sm:text-base cursor-pointer"
+                    >
+                      <Eye className="w-5 h-5" />
+                      <span>{showPdfPreview ? 'Fermer la Note de Calcul' : 'Voir la Note de Calcul'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNdcPdfUrl(null);
+                        setShowPdfPreview(false);
+                        setSiteNdcError(null);
+                      }}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-xs border border-slate-200/80 cursor-pointer"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      <span>Modifier les paramètres</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (!isConfirmed) {
+                        setIsInfoConfirmed(true);
+                      } else {
+                        handleGenerateSiteNdc();
+                      }
+                    }}
+                    disabled={isGeneratingSiteNdc || !allSectionsFilled}
+                    className={`w-full py-3.5 px-6 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-sm sm:text-base ${
+                      !allSectionsFilled
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                        : isConfirmed
+                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
+                          : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
+                    } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.99]' : ''}`}
+                  >
+                    {isGeneratingSiteNdc ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>{siteNdcPollingMsg || 'Calcul en cours...'}</span>
+                      </>
+                    ) : isConfirmed ? (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span>Informations confirmées (Lancer le calcul)</span>
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" />
+                        <span>Confirmer les informations</span>
+                        <ArrowRight className="w-4 h-4 ml-1" />
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {isGeneratingSiteNdc && (
+                  <div className="w-full mt-3 animate-fadeIn">
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
+                      <div
+                        className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${
+                          isFullyStandard()
+                            ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
+                            : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
+                        }`}
+                        style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -2068,12 +2301,14 @@ export default function RegularUserView({
                     ? "Cliquez sur la carte pour définir l'emplacement exact du site"
                     : "Cliquez n'importe où sur la carte pour positionner le site"}
                 </span>
-                <button
-                  onClick={() => setShowMap(false)}
-                  className="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-semibold transition-colors shadow-2xs"
-                >
-                  Fermer
-                </button>
+                {selectedCoords && (
+                  <button
+                    onClick={() => setShowMap(false)}
+                    className="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-semibold transition-colors shadow-2xs"
+                  >
+                    Fermer la carte
+                  </button>
+                )}
               </div>
               <TerrainMap
                 selectedCoordinates={selectedCoords ? { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude } : null}
@@ -2120,54 +2355,172 @@ export default function RegularUserView({
                 </div>
               )}
 
+              {/* When no coordinates and no generic address are selected, show a subtle prompt bar on top of the map if needed */}
               {!selectedCoords && !pendingGenericAddress && (
-                <div className="flex-1 flex flex-col justify-center items-center max-w-3xl mx-auto w-full py-6 relative z-10">
-                  {/* Central Glassmorphism Card */}
-                  <div className="w-full bg-white/80 backdrop-blur-md border border-white/80 rounded-3xl p-8 lg:p-10 shadow-xl shadow-slate-200/60 text-center relative overflow-hidden">
-                    <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600"></div>
-
-                    {/* Animated Pulsing Icon */}
-                    <div className="relative mx-auto w-20 h-20 mb-6 flex items-center justify-center">
-                      <div className="absolute inset-0 rounded-2xl bg-violet-500/20 animate-ping opacity-60"></div>
-                      <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 text-white">
-                        <Compass className="w-10 h-10 animate-pulse" />
-                      </div>
-                    </div>
-
-                    <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight mb-3">
-                      Analyse Structurelle <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Télécom</span>
-                    </h2>
-                    <p className="text-slate-600 max-w-lg mx-auto text-sm sm:text-base leading-relaxed mb-8">
-                      Déterminez instantanément la zone de vent Eurocode 1, la rugosité de terrain IGN et générez votre note de calcul certifiée.
-                    </p>
-
-                    <div className="flex flex-wrap items-center justify-center gap-3">
-                      <button
-                        onClick={() => setShowMap(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-bold flex items-center gap-2.5 transition-all shadow-md shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5"
-                      >
-                        <MapIcon className="w-5 h-5" /> Explorer sur la carte
-                      </button>
-                      <HeroAddressSearch
-                        onAddressSelect={onAddressSelect}
-                        onFocus={() => setActiveStep(1)}
-                        className="w-full sm:w-80 md:w-96"
-                      />
-                    </div>
-                  </div>
+                <div className="flex-1 flex flex-col justify-center items-center max-w-md mx-auto w-full py-6 relative z-10 pointer-events-none opacity-0">
                 </div>
               )}
 
               {selectedCoords && (!sectors[0].selectedMontage4G || !sectors[0].selectedMontage5G) && (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full relative z-10">
-                  <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
-                    <Layers className="w-10 h-10 text-violet-600" />
+                activeStep === 2 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 w-full max-w-2xl mx-auto animate-fadeIn relative z-10">
+                    <div className="w-full bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 relative overflow-hidden">
+                      {/* Top accent gradient bar */}
+                      <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600"></div>
+
+                      {/* Header */}
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/25 shrink-0">
+                          <Building2 className="w-7 h-7" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[11px] font-bold text-violet-700 bg-violet-50 border border-violet-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                              Étape 2 sur 4
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium">Informations du Projet</span>
+                          </div>
+                          <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                            Paramètres & Données du Site
+                          </h3>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+                        Complétez les informations du site et ses paramètres structurels dans le panneau de gauche pour configurer votre note de calcul.
+                      </p>
+
+                      {/* Live summary grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Nom du site</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1" title={siteName || 'Non renseigné'}>
+                            {siteName || <span className="text-slate-400 italic font-normal">À renseigner</span>}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Client</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1" title={clientName || 'Non renseigné'}>
+                            {clientName || <span className="text-slate-400 italic font-normal">À renseigner</span>}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Opérateur</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                            {operator ? operator.toUpperCase() : 'BOUYGUES'}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hauteur Bâtiment</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                            {selectedBuildingHeight !== '' ? `${selectedBuildingHeight} m` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Épaisseur Dalle</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                            {dalleThickness !== '' ? `${dalleThickness} cm` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Photo du site</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                            {siteImageUrl ? (
+                              <span className="text-emerald-600 flex items-center gap-1 font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Chargée
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 italic font-normal">À ajouter</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status indicator bar */}
+                      {isStep2Complete ? (
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-emerald-800">
+                          <div className="flex items-center gap-2.5">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                            <span className="text-xs sm:text-sm font-semibold">
+                              Informations du projet complètes !
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => setActiveStep(3)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
+                          >
+                            <span>Passer aux Aériens</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-violet-50/60 border border-violet-100 rounded-2xl p-3.5 flex items-start sm:items-center gap-3 text-violet-900">
+                          <Sparkles className="w-5 h-5 text-violet-600 shrink-0 mt-0.5 sm:mt-0" />
+                          <div className="text-xs sm:text-sm leading-relaxed">
+                            <span className="font-semibold text-slate-700">Champs requis restants : </span>
+                            <span className="text-violet-700 font-medium">{missingRequirements.join(', ')}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-3">Sélectionner le type de montage</h3>
-                  <p className="text-base text-slate-600 max-w-md leading-relaxed">
-                    Choisissez un type de montage dans le panneau de gauche pour récupérer les spécifications de conception.
-                  </p>
-                </div>
+                ) : activeStep === 3 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full relative z-10 animate-fadeIn">
+                    <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
+                      <Radio className="w-10 h-10 text-violet-600" />
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <span className="text-[11px] font-bold text-violet-700 bg-violet-50 border border-violet-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Étape 3 sur 4
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">Aériens & Antennes</span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-3">Sélectionnez les Aériens</h3>
+                    <p className="text-base text-slate-600 max-w-md leading-relaxed mb-4">
+                      Choisissez un gabarit agile ou des références d'antennes 4G et 5G dans le panneau de gauche pour vos secteurs.
+                    </p>
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-100 rounded-full text-xs font-semibold text-slate-600">
+                      <span>{nombreSecteurs} secteur(s) à configurer</span>
+                    </div>
+                  </div>
+                ) : activeStep === 4 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full relative z-10 animate-fadeIn">
+                    <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
+                      <Server className="w-10 h-10 text-violet-600" />
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <span className="text-[11px] font-bold text-violet-700 bg-violet-50 border border-violet-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Étape 4 sur 4
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">Zone Technique</span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-3">Zone Technique</h3>
+                    <p className="text-base text-slate-600 max-w-md leading-relaxed">
+                      Configurez les équipements techniques (baies, cheminements de câbles, atelier énergie) dans le panneau de gauche.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full relative z-10 animate-fadeIn">
+                    <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
+                      <MapPin className="w-10 h-10 text-violet-600" />
+                    </div>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <span className="text-[11px] font-bold text-violet-700 bg-violet-50 border border-violet-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Étape 1 sur 4
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">Localisation</span>
+                    </div>
+                    <h3 className="text-2xl font-bold text-slate-900 mb-3">Localisation du Site</h3>
+                    <p className="text-base text-slate-600 max-w-md leading-relaxed mb-4">
+                      {selectedAddress?.label || "Emplacement géographique sélectionné."}
+                    </p>
+                  </div>
+                )
               )}
 
               {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && anyLoading && (
@@ -2271,7 +2624,8 @@ export default function RegularUserView({
                             coffrets_hybride: { référence: 'N/A', quantité: 0 },
                             baie: (operator === 'orange' && hasBaie) ? {
                               baieRadio,
-                              baieEnergie
+                              baieEnergie,
+                              items: resolveBaieItems(baieItems)
                             } : null,
                             cab: (operator === 'free' && hasCab) ? {
                               cabOne,
@@ -2297,7 +2651,8 @@ export default function RegularUserView({
                           plotHeight={plotHeight}
                           sectors={group.indices.map(i => activeSectors[i])}
                           showSectorsConfig={activeStep >= 3}
-                          showEquipmentConfig={activeStep >= 4}
+                          showAerialEquipmentConfig={activeStep >= 3}
+                          showTechniqueEquipmentConfig={activeStep >= 4}
                         />
                       )}
                     </div>
@@ -2305,65 +2660,101 @@ export default function RegularUserView({
 
 
 
-                  {/* GENERATE GLOBAL NDC BUTTON */}
+                  {/* GENERATE GLOBAL NDC / STEP GUIDANCE */}
                   <div className="mt-6 pt-5 border-t border-slate-200">
                     {!ndcPdfUrl ? (
-                      <div className="flex flex-col gap-4">
-                        {!canGenerate && (
-                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-3 items-center text-amber-800">
-                            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                            <p className="text-sm">
-                              Veuillez renseigner les informations obligatoires avant de générer : <span className="font-semibold">{missingRequirements.join(', ')}</span>
-                            </p>
-                          </div>
-                        )}
-                        <button
-                          onClick={handleGenerateSiteNdc}
-                          disabled={isGeneratingSiteNdc || !canGenerate}
-                          className={`w-full py-4 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md transition-all text-lg ${!canGenerate
-                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                            : isFullyStandard()
-                              ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
-                              : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
-                            } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
-                        >
-                          {isGeneratingSiteNdc ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              {siteNdcPollingMsg || 'Génération en cours...'}
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="w-5 h-5" />
-                              {isFullyStandard()
-                                ? 'Générer la Note de Calcul Standard (Instantané)'
-                                : 'Lancer Calcul Robot (Analyse Requise)'}
-                            </>
-                          )}
-                        </button>
-
-                        {isGeneratingSiteNdc && (
-                          <div className="w-full mt-2 animate-fadeIn">
-                            <style>
-                              {`
-                                @keyframes indeterminateProgress {
-                                  0% { transform: translateX(-100%); }
-                                  100% { transform: translateX(400%); }
-                                }
-                              `}
-                            </style>
-                            <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
-                              <div
-                                className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
-                                style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
-                              ></div>
+                      !isConfirmed ? (
+                        activeStep === 3 ? (
+                          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 animate-fadeIn">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-violet-700 bg-violet-100/80 px-2 py-0.5 rounded-full inline-block mb-1">
+                                  Étape 3 : Aériens
+                                </span>
+                                <h4 className="text-sm font-bold text-slate-900">Équipements sur mât</h4>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  Sélectionnez vos équipements ci-contre ou passez à l'étape suivante.
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => setActiveStep(4)}
+                                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer shadow-xs"
+                              >
+                                <span>Zone Technique (4)</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                            <p className="text-center text-xs text-slate-500 mt-3 animate-pulse font-medium">
-                              {isFullyStandard() ? 'Assemblage des documents en cours...' : 'Nos serveurs calculent votre structure, cela peut prendre 1 à 2 minutes...'}
-                            </p>
                           </div>
-                        )}
-                      </div>
+                        ) : activeStep === 4 ? (
+                          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 animate-fadeIn">
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-full inline-block mb-1">
+                                Étape 4 : Zone Technique
+                              </span>
+                              <h4 className="text-sm font-bold text-slate-900">
+                                {allSectionsFilled ? 'Prêt pour confirmation' : 'Configuration de la zone technique'}
+                              </h4>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {allSectionsFilled
+                                  ? 'Cliquez sur « Confirmer les informations » à gauche pour débloquer le calcul.'
+                                  : 'Complétez les informations requises à gauche pour valider.'}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-xs text-slate-500 text-center">
+                            Complétez les informations requises à gauche pour valider.
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex flex-col gap-3 animate-fadeIn">
+                          <button
+                            onClick={handleGenerateSiteNdc}
+                            disabled={isGeneratingSiteNdc || !canGenerate}
+                            className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${
+                              !canGenerate
+                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                : isFullyStandard()
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                                  : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
+                            } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
+                          >
+                            {isGeneratingSiteNdc ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>{siteNdcPollingMsg || 'Calcul en cours...'}</span>
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="w-5 h-5" />
+                                <span>Calculer</span>
+                              </>
+                            )}
+                          </button>
+
+                          {isGeneratingSiteNdc && (
+                            <div className="w-full mt-2 animate-fadeIn">
+                              <style>
+                                {`
+                                  @keyframes indeterminateProgress {
+                                    0% { transform: translateX(-100%); }
+                                    100% { transform: translateX(400%); }
+                                  }
+                                `}
+                              </style>
+                              <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
+                                <div
+                                  className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
+                                  style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
+                                ></div>
+                              </div>
+                              <p className="text-center text-xs text-slate-500 mt-3 animate-pulse font-medium">
+                                {isFullyStandard() ? 'Assemblage des documents en cours...' : 'Nos serveurs calculent votre structure, cela peut prendre 1 à 2 minutes...'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
                     ) : (
                       <div className="flex flex-col gap-4">
                         <button

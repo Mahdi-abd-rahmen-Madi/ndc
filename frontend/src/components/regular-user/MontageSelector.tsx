@@ -43,8 +43,8 @@ export default function MontageSelector({
   selectedReference5G,
   setSelectedReference4G,
   setSelectedReference5G,
-  selectedVendor4G = 'Ericsson',
-  selectedVendor5G = 'Ericsson',
+  selectedVendor4G = '',
+  selectedVendor5G = '',
   setSelectedVendor4G,
   setSelectedVendor5G,
   operator = 'bouygues',
@@ -104,113 +104,68 @@ export default function MontageSelector({
 
   const handleVendor4GChange = (vendor: string) => {
     setSelectedVendor4G?.(vendor);
-    const vRefs = Array.from(unique4GMap.values()).filter(r => 
-      r.name.toUpperCase().startsWith(vendor.toUpperCase()) ||
-      r.name.toUpperCase().includes(vendor.toUpperCase())
-    );
-    if (vRefs.length > 0) {
-      const firstRef = vRefs[0];
-      setSelectedReference4G(firstRef.id);
-      setAnt4gConfig(firstRef.ant4g);
-      handleMontage4GChange(firstRef.montageId);
-    }
+    setSelectedReference4G('');
+    setAnt4gConfig({ model: '', height: 0, width: 0, thickness: 0, weight: 0 });
+    handleMontage4GChange('');
   };
 
   const handleVendor5GChange = (vendor: string) => {
     setSelectedVendor5G?.(vendor);
-    const vRefs = Array.from(unique5GMap.values()).filter(r => 
-      r.name.toUpperCase().startsWith(vendor.toUpperCase()) ||
-      r.name.toUpperCase().includes(vendor.toUpperCase())
-    );
-    if (vRefs.length > 0) {
-      const firstRef = vRefs[0];
-      setSelectedReference5G(firstRef.id);
-      setAnt5gConfig(firstRef.ant5g);
-      handleMontage5GChange(firstRef.montageId);
-    }
+    setSelectedReference5G('');
+    setAnt5gConfig({ model: '', height: 0, width: 0, thickness: 0, weight: 0 });
+    handleMontage5GChange('');
   };
 
-  // Sync 4G vendor and reference when operator or available vendors change
+  // Sync 4G vendor and reference only if user has selected a vendor
   useEffect(() => {
-    if (availableVendors4G.length === 0) return;
+    if (availableVendors4G.length === 0 || !selectedVendor4G) return;
 
-    let targetVendor = selectedVendor4G;
-    const vendorExists = availableVendors4G.some(v => v.toUpperCase() === targetVendor.toUpperCase());
+    const vendorExists = availableVendors4G.some(v => v.toUpperCase() === selectedVendor4G.toUpperCase());
     if (!vendorExists) {
-      targetVendor = availableVendors4G[0];
-      setSelectedVendor4G?.(targetVendor);
+      setSelectedVendor4G?.('');
+      setSelectedReference4G('');
+      return;
     }
 
     const vRefs = Array.from(unique4GMap.values()).filter(r => 
-      r.name.toUpperCase().startsWith(targetVendor.toUpperCase()) ||
-      r.name.toUpperCase().includes(targetVendor.toUpperCase())
+      r.name.toUpperCase().startsWith(selectedVendor4G.toUpperCase()) ||
+      r.name.toUpperCase().includes(selectedVendor4G.toUpperCase())
     );
 
-    if (vRefs.length > 0) {
-      const currentRef = vRefs.find(r => r.id === selectedReference4G);
-      if (!currentRef) {
-        const firstRef = vRefs[0];
-        setSelectedReference4G(firstRef.id);
-        if (configMode === 'reference') {
-          setAnt4gConfig(firstRef.ant4g);
-          handleMontage4GChange(firstRef.montageId);
-        }
+    if (vRefs.length > 0 && selectedReference4G) {
+      const exists = vRefs.some(r => r.id === selectedReference4G);
+      if (!exists) {
+        setSelectedReference4G('');
       }
     }
-  }, [operator, availableVendors4G, selectedVendor4G, selectedReference4G, configMode, unique4GMap]);
+  }, [operator, availableVendors4G, selectedVendor4G, selectedReference4G, unique4GMap]);
 
-  // Sync 5G vendor and reference when operator or available vendors change
+  // Sync 5G vendor and reference only if user has selected a vendor
   useEffect(() => {
-    if (availableVendors5G.length === 0) return;
+    if (availableVendors5G.length === 0 || !selectedVendor5G) return;
 
-    let targetVendor = selectedVendor5G;
-    const vendorExists = availableVendors5G.some(v => v.toUpperCase() === targetVendor.toUpperCase());
+    const vendorExists = availableVendors5G.some(v => v.toUpperCase() === selectedVendor5G.toUpperCase());
     if (!vendorExists) {
-      targetVendor = availableVendors5G[0];
-      setSelectedVendor5G?.(targetVendor);
+      setSelectedVendor5G?.('');
+      setSelectedReference5G('');
+      return;
     }
 
     const vRefs = Array.from(unique5GMap.values()).filter(r => 
-      r.name.toUpperCase().startsWith(targetVendor.toUpperCase()) ||
-      r.name.toUpperCase().includes(targetVendor.toUpperCase())
+      r.name.toUpperCase().startsWith(selectedVendor5G.toUpperCase()) ||
+      r.name.toUpperCase().includes(selectedVendor5G.toUpperCase())
     );
 
-    if (vRefs.length > 0) {
-      const currentRef = vRefs.find(r => r.id === selectedReference5G);
-      if (!currentRef) {
-        const firstRef = vRefs[0];
-        setSelectedReference5G(firstRef.id);
-        if (configMode === 'reference') {
-          setAnt5gConfig(firstRef.ant5g);
-          handleMontage5GChange(firstRef.montageId);
-        }
+    if (vRefs.length > 0 && selectedReference5G) {
+      const exists = vRefs.some(r => r.id === selectedReference5G);
+      if (!exists) {
+        setSelectedReference5G('');
       }
     }
-  }, [operator, availableVendors5G, selectedVendor5G, selectedReference5G, configMode, unique5GMap]);
+  }, [operator, availableVendors5G, selectedVendor5G, selectedReference5G, unique5GMap]);
 
   const handleConfigModeChange = (mode: 'agile' | 'reference') => {
     setConfigMode(mode);
-    if (mode === 'reference') {
-      const ref4G = unique4GRefs.find(r => r.id === selectedReference4G) || unique4GRefs[0];
-      const ref5G = unique5GRefs.find(r => r.id === selectedReference5G) || unique5GRefs[0];
-      
-      if (ref4G) {
-        setSelectedReference4G(ref4G.id);
-        setAnt4gConfig(ref4G.ant4g);
-        handleMontage4GChange(ref4G.montageId);
-      }
-      if (ref5G) {
-        setSelectedReference5G(ref5G.id);
-        setAnt5gConfig(ref5G.ant5g);
-        handleMontage5GChange(ref5G.montageId);
-      }
-    } else {
-      const spec = montages[0];
-      if (spec) {
-        handleMontage4GChange(spec.id);
-        handleMontage5GChange(spec.id);
-      }
-    }
   };
 
   const handleReference4GChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -239,8 +194,8 @@ export default function MontageSelector({
         <div className={styles.dimensionContainerRef}>
           <span className={styles.dimensionLabelRef}>{label}</span>
           <div className={styles.dimensionValueBoxRef}>
-            <span className={styles.dimensionValueRef}>{value}</span>
-            <span className={styles.dimensionUnitRef}>{unit}</span>
+            <span className={styles.dimensionValueRef}>{value > 0 ? value : '-'}</span>
+            <span className={styles.dimensionUnitRef}>{value > 0 ? unit : ''}</span>
           </div>
         </div>
       );
@@ -250,7 +205,8 @@ export default function MontageSelector({
         <label className={styles.dimensionLabelInput}>{label} ({unit})</label>
         <input
           type="number"
-          value={value}
+          value={value > 0 ? value : ''}
+          placeholder="0"
           onChange={(e) => onChange(Number(e.target.value))}
           className={styles.dimensionInput}
         />
@@ -311,10 +267,11 @@ export default function MontageSelector({
             <div className={styles.dropdownContainer}>
               {configMode === 'agile' ? (
                 <select
-                  value={selectedMontage4G}
+                  value={selectedMontage4G || ''}
                   onChange={(e) => handleMontage4GChange(e.target.value)}
                   className={styles.selectInput}
                 >
+                  <option value="" disabled>Sélectionner un gabarit agile...</option>
                   {montages.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.ant4g.height} x {m.ant4g.width} x {m.ant4g.thickness} mm ({m.ant4g.weight} kg)
@@ -325,19 +282,24 @@ export default function MontageSelector({
               ) : (
                 <div className={styles.dropdownCol}>
                   <select
-                    value={selectedVendor4G}
+                    value={selectedVendor4G || ''}
                     onChange={(e) => handleVendor4GChange(e.target.value)}
                     className={styles.selectInput}
                   >
+                    <option value="" disabled>Sélectionner une marque...</option>
                     {availableVendors4G.map(v => (
                       <option key={v} value={v}>{v}</option>
                     ))}
                   </select>
                   <select
-                    value={selectedReference4G}
+                    value={selectedReference4G || ''}
                     onChange={handleReference4GChange}
                     className={styles.selectInput}
+                    disabled={!selectedVendor4G}
                   >
+                    <option value="" disabled>
+                      {!selectedVendor4G ? 'Choisir une marque d\'abord' : 'Sélectionner une référence...'}
+                    </option>
                     {unique4GRefs.map((ref) => (
                       <option key={ref.id} value={ref.id}>
                         {ref.ant4g.model}
@@ -371,10 +333,11 @@ export default function MontageSelector({
             <div className={styles.dropdownContainer}>
               {configMode === 'agile' ? (
                 <select
-                  value={selectedMontage5G}
+                  value={selectedMontage5G || ''}
                   onChange={(e) => handleMontage5GChange(e.target.value)}
                   className={styles.selectInput}
                 >
+                  <option value="" disabled>Sélectionner un gabarit agile...</option>
                   {montages.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.ant5g.height} x {m.ant5g.width} x {m.ant5g.thickness} mm ({m.ant5g.weight} kg)
@@ -385,19 +348,24 @@ export default function MontageSelector({
               ) : (
                 <div className={styles.dropdownCol}>
                   <select
-                    value={selectedVendor5G}
+                    value={selectedVendor5G || ''}
                     onChange={(e) => handleVendor5GChange(e.target.value)}
                     className={styles.selectInput}
                   >
+                    <option value="" disabled>Sélectionner une marque...</option>
                     {availableVendors5G.map(v => (
                       <option key={v} value={v}>{v}</option>
                     ))}
                   </select>
                   <select
-                    value={selectedReference5G}
+                    value={selectedReference5G || ''}
                     onChange={handleReference5GChange}
                     className={styles.selectInput}
+                    disabled={!selectedVendor5G}
                   >
+                    <option value="" disabled>
+                      {!selectedVendor5G ? 'Choisir une marque d\'abord' : 'Sélectionner une référence...'}
+                    </option>
                     {unique5GRefs.map((ref) => (
                       <option key={ref.id} value={ref.id}>
                         {ref.ant5g.model}

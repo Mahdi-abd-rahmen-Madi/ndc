@@ -52,8 +52,17 @@ export default function AddressSearchSection({
     }, 250);
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setAddressResults([]);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
@@ -81,7 +90,7 @@ export default function AddressSearchSection({
         </button>
       </div>
 
-      <div className={styles.searchContainer}>
+      <div ref={containerRef} className={styles.searchContainer}>
         <div className={styles.searchIconContainer}>
           {isSearching ? (
             <Loader2 className={`${styles.searchIconBase} text-violet-600 animate-spin`} />
@@ -101,9 +110,21 @@ export default function AddressSearchSection({
               setAddressResults([]);
             }
           }}
-          className={styles.searchInput}
+          className={`${styles.searchInput} pr-9`}
           placeholder={selectedAddress ? selectedAddress.label : "Entrez une adresse ou code postal..."}
         />
+        {addressQuery && (
+          <button
+            type="button"
+            onClick={() => {
+              setAddressQuery('');
+              setAddressResults([]);
+            }}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
         
         {/* Dropdown results */}
         {addressResults.length > 0 && (

@@ -18,8 +18,8 @@ export const styles = {
   
   searchInput: "w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all",
   
-  dropdownContainer: "absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-xl shadow-2xl z-50 overflow-hidden py-1 divide-y divide-slate-100 ring-1 ring-black/5",
-  dropdownButton: "w-full text-left px-4 py-2.5 hover:bg-violet-50 flex flex-col gap-0.5 transition-colors group",
-  dropdownName: "text-sm font-semibold text-slate-800 group-hover:text-violet-700 transition-colors",
-  dropdownAddress: "text-xs text-slate-500",
+  dropdownContainer: "absolute top-full mt-2 w-full bg-white/95 backdrop-blur-md border border-slate-200/95 rounded-xl shadow-2xl z-[100] max-h-72 overflow-y-auto custom-scrollbar py-1 divide-y divide-slate-100 ring-1 ring-black/5 animate-in fade-in-0 duration-150",
+  dropdownButton: "w-full text-left px-4 py-2.5 hover:bg-violet-50 flex flex-col gap-0.5 transition-colors group cursor-pointer",
+  dropdownName: "text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-violet-700 transition-colors",
+  dropdownAddress: "text-[11px] sm:text-xs text-slate-500",
 };

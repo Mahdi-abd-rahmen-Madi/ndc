@@ -21,9 +21,10 @@ interface CustomSelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  error?: boolean;
 }
 
-export function CustomSelect({ value, onChange, options = [], groups = [], placeholder = "Sélectionner...", className = "", disabled = false }: CustomSelectProps) {
+export function CustomSelect({ value, onChange, options = [], groups = [], placeholder = "Sélectionner...", className = "", disabled = false, error = false }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -67,13 +68,15 @@ export function CustomSelect({ value, onChange, options = [], groups = [], place
   return (
     <div className={`${styles.selectContainer} ${className}`} ref={containerRef}>
       <div 
-        className={`${styles.triggerBase} ${disabled ? styles.triggerDisabled : styles.triggerEnabled}`}
+        className={`${styles.triggerBase} ${disabled ? styles.triggerDisabled : styles.triggerEnabled} ${
+          error ? '!border-rose-400 !bg-rose-50/40 ring-2 ring-rose-500/20' : ''
+        }`}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
-        <span className={styles.triggerValue}>
+        <span className={`${styles.triggerValue} ${!selectedOption && error ? '!text-rose-600 font-medium' : ''}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconOpen : ''}`} />
+        <ChevronDown className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconOpen : error ? 'text-rose-400' : ''}`} />
       </div>
       
       {isOpen && !disabled && (
