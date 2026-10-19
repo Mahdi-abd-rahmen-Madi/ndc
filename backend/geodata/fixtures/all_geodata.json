@@ -24593,103 +24593,153 @@
           "id": "rru_eri_radio_2217_b28",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2217 B28"
+          "reference": "Radio 2217 B28",
+          "dimensions": "351x298x138mm",
+          "weight": 12.9
         },
         {
           "id": "rru_eri_radio_2217_b20",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2217 B20"
+          "reference": "Radio 2217 B20",
+          "dimensions": "351x298x138mm",
+          "weight": 12.9
         },
         {
           "id": "rru_eri_radio_2212_b8",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2212 B8"
+          "reference": "Radio 2212 B8",
+          "dimensions": "420x342x149mm",
+          "weight": 18.2
         },
         {
           "id": "rru_eri_radio_2262_b20b28",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2262 B20B28"
+          "reference": "Radio 2262 B20B28",
+          "dimensions": "447x398x143mm",
+          "weight": 21.0
         },
         {
           "id": "rru_eri_radio_2260_b8b20",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2260 B8B20"
+          "reference": "Radio 2260 B8B20",
+          "dimensions": "447x398x143mm",
+          "weight": 21.0
         },
         {
           "id": "rru_eri_radio_4486_b8b20b28",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4486 B8B20B28"
+          "reference": "Radio 4486 B8B20B28",
+          "dimensions": "522x397x149mm",
+          "weight": 27.1
         },
         {
           "id": "rru_eri_radio_2217_b3",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2217 B3"
+          "reference": "Radio 2217 B3",
+          "dimensions": "351x298x138mm",
+          "weight": 12.6
         },
         {
           "id": "rru_eri_radio_2212_b3",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2212 B3"
+          "reference": "Radio 2212 B3",
+          "dimensions": "420x342x149mm",
+          "weight": 18.0
         },
         {
           "id": "rru_eri_radio_4415_b3",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4415 B3"
+          "reference": "Radio 4415 B3",
+          "dimensions": "420x342x131mm",
+          "weight": 17.5
         },
         {
           "id": "rru_eri_radio_2271_b1",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2271 B1"
+          "reference": "Radio 2271 B1",
+          "dimensions": "409x269x110mm",
+          "weight": 9.4
         },
         {
           "id": "rru_eri_radio_2260_b1b3",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2260 B1B3"
+          "reference": "Radio 2260 B1B3",
+          "dimensions": "447x398x137mm",
+          "weight": 19.5
         },
         {
           "id": "rru_eri_radio_4490_b1b3",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4490 B1B3"
+          "reference": "Radio 4490 B1B3",
+          "dimensions": "522x397x130mm",
+          "weight": 23.0
         },
         {
           "id": "rru_eri_radio_2271_b7",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 2271 B7"
+          "reference": "Radio 2271 B7",
+          "dimensions": "409x269x110mm",
+          "weight": 10.0
         },
         {
           "id": "rru_eri_radio_4415_b7",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4415 B7"
+          "reference": "Radio 4415 B7",
+          "dimensions": "420x342x150mm",
+          "weight": 19.0
         },
         {
           "id": "rru_eri_radio_4471_b7",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4471 B7"
+          "reference": "Radio 4471 B7",
+          "dimensions": "419x269x136mm",
+          "weight": 13.0
         },
         {
           "id": "rru_eri_radio_4485_b1b3b7",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4485 B1B3B7"
+          "reference": "Radio 4485 B1B3B7",
+          "dimensions": "533x398x145mm",
+          "weight": 24.0
         },
         {
           "id": "rru_eri_radio_4823_b1b3b7",
           "vendor": "ERICSSON",
           "operator": "orange",
-          "reference": "Radio 4823 B1B3B7"
+          "reference": "Radio 4823 B1B3B7",
+          "dimensions": "572x398x168mm",
+          "weight": 31.4
+        },
+        {
+          "id": "rru_eri_orange_radio_2460",
+          "vendor": "ERICSSON",
+          "operator": "orange",
+          "reference": "Radio 2460",
+          "dimensions": "553x398x190mm",
+          "weight": 37.0
+        },
+        {
+          "id": "rru_eri_orange_radio_4480",
+          "vendor": "ERICSSON",
+          "operator": "orange",
+          "reference": "Radio 4480",
+          "dimensions": "553x398x151mm",
+          "weight": 38.0
         }
       ],
       "rrh_references": [
