@@ -86,8 +86,16 @@ export default function SectorConfigurator({
   }
 
   return (
-    <div className={styles.mainContainer}>
-      <div className={styles.mainDeco}></div>
+    <div className={`${styles.mainContainer} ${
+      operator === 'orange' ? 'hover:border-orange-200' :
+      operator === 'free' ? 'hover:border-red-200' :
+      'hover:border-sky-200'
+    }`}>
+      <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full pointer-events-none transition-colors ${
+        operator === 'orange' ? 'bg-orange-500/[0.04]' :
+        operator === 'free' ? 'bg-red-500/[0.04]' :
+        'bg-sky-500/[0.04]'
+      }`}></div>
 
       <div className={styles.headerContainer}>
         <h3 className={styles.headerTitle}>

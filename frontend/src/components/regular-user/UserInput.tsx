@@ -135,10 +135,28 @@ export default function UserInput({
   return (
     <div className="flex flex-col gap-4">
       {/* 1. Informations du Projet */}
-      <div className="p-5 bg-white border border-slate-200 rounded-2xl relative overflow-hidden group hover:border-violet-300 shadow-sm transition-all duration-300">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors"></div>
+      <div className={`p-5 bg-white border rounded-2xl relative overflow-hidden group shadow-sm transition-all duration-300 ${
+        operator === 'orange'
+          ? 'border-orange-200/90 hover:border-orange-300 ring-1 ring-orange-500/5'
+          : operator === 'free'
+            ? 'border-red-200/90 hover:border-red-300 ring-1 ring-red-500/5'
+            : operator === 'bouygues'
+              ? 'border-sky-200/90 hover:border-sky-300 ring-1 ring-sky-500/5'
+              : 'border-slate-200 hover:border-violet-300'
+      }`}>
+        <div className={`absolute right-0 top-0 w-36 h-36 rounded-bl-full -z-10 transition-colors pointer-events-none ${
+          operator === 'orange'
+            ? 'bg-gradient-to-bl from-orange-500/10 via-amber-500/5 to-transparent'
+            : operator === 'free'
+              ? 'bg-gradient-to-bl from-red-500/10 via-rose-500/5 to-transparent'
+              : operator === 'bouygues'
+                ? 'bg-gradient-to-bl from-sky-500/10 via-blue-500/5 to-transparent'
+                : 'bg-violet-500/5 group-hover:bg-violet-500/10'
+        }`}></div>
         <h3 className="text-sm font-bold text-slate-900 mb-5 flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-violet-600" />
+          <MapPin className={`w-4 h-4 transition-colors ${
+            operator === 'orange' ? 'text-orange-500' : operator === 'free' ? 'text-red-500' : operator === 'bouygues' ? 'text-sky-600' : 'text-violet-600'
+          }`} />
           Informations du Projet
         </h3>
 
@@ -248,15 +266,32 @@ export default function UserInput({
               />
             </div>
             <div className="flex flex-col">
-              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
-                Opérateur
+              <label className="text-xs font-semibold text-slate-700 flex items-center justify-between mb-2 h-6">
+                <span className="flex items-center gap-1.5">Opérateur</span>
+                {operator && (
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors ${
+                    operator === 'orange' ? 'bg-orange-100 text-orange-800' :
+                    operator === 'free' ? 'bg-red-100 text-red-800' :
+                    'bg-sky-100 text-sky-800'
+                  }`}>
+                    {operator}
+                  </span>
+                )}
               </label>
               <select
-                className="w-full bg-white border border-slate-300 rounded-lg py-2.5 px-3 text-sm text-slate-900 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 shadow-sm transition-all cursor-pointer"
-                value={operator || 'bouygues'}
+                className={`w-full bg-white border rounded-lg py-2.5 px-3 text-sm font-medium shadow-sm transition-all cursor-pointer ${
+                  !operator 
+                    ? 'text-slate-400 border-slate-300 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500'
+                    : operator === 'orange'
+                      ? 'text-slate-900 border-orange-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500'
+                      : operator === 'free'
+                        ? 'text-slate-900 border-red-300 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                        : 'text-slate-900 border-sky-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500'
+                }`}
+                value={operator || ''}
                 onChange={(e) => setOperator && setOperator(e.target.value)}
               >
-                <option value="" disabled>Sélectionner</option>
+                <option value="" disabled>Sélectionner un opérateur</option>
                 <option value="orange">Orange</option>
                 <option value="free">Free</option>
                 <option value="bouygues">Bouygues</option>

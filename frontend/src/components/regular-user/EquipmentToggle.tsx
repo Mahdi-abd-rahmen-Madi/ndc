@@ -57,38 +57,32 @@ export function FHEquipmentToggle({
         : 'border-slate-200 hover:border-violet-200'
     }`}>
       <div className="flex flex-col space-y-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
-              <div className="relative flex items-center">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
+              <div className="relative flex items-center shrink-0">
                 <input
                   type="checkbox"
                   checked={hasFhEquipment}
                   onChange={(e) => setHasFhEquipment(e.target.checked)}
                   className="sr-only"
                 />
-                <div className={`w-10 h-6 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
+                <div className={`w-9 h-5 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
               </div>
-              <Radio className="w-4 h-4 text-violet-600" />
-              <span>Présence FH</span>
+              <span className="font-semibold text-slate-800">Présence FH</span>
             </label>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               {isFhIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
                   <AlertCircle className="w-3 h-3 text-amber-600" />
                   Sélection requise
                 </span>
               )}
-              <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200 shadow-2xs">
+              <span className="text-[10px] font-bold text-violet-700 bg-violet-50/80 px-2.5 py-0.5 rounded-full border border-violet-200/80 whitespace-nowrap shadow-2xs">
                 1x par site
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 font-normal pl-6">
-            Liaison FH unique pour l'ensemble du site (non multiplié par le nombre de secteurs)
-          </p>
-        </div>
 
         {hasFhEquipment && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
@@ -275,38 +269,32 @@ export function RRHEquipmentToggle({
         : 'border-slate-200 hover:border-violet-200'
     }`}>
       <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
-              <div className="relative flex items-center">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
+              <div className="relative flex items-center shrink-0">
                 <input
                   type="checkbox"
                   checked={hasRrhEquipment}
                   onChange={(e) => setHasRrhEquipment(e.target.checked)}
                   className="sr-only"
                 />
-                <div className={`w-10 h-6 rounded-full transition-colors ${hasRrhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
+                <div className={`w-9 h-5 rounded-full transition-colors ${hasRrhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
               </div>
-              <Activity className="w-4 h-4 text-violet-600" />
-              <span>Présence RRH</span>
+              <span className="font-semibold text-slate-800">Présence RRH</span>
             </label>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               {isRrhIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
                   <AlertCircle className="w-3 h-3 text-amber-600" />
                   Sélection requise
                 </span>
               )}
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
                 Par secteur
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 font-normal pl-6">
-            Équipement configuré par mât / secteur {nombreSecteurs > 1 ? `(multiplié par ${nombreSecteurs} secteurs pour le site)` : ''}
-          </p>
-        </div>
 
         {hasRrhEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
@@ -519,37 +507,31 @@ export function RRUEquipmentToggle({
         : 'border-slate-200 hover:border-violet-200'
     }`}>
       <div className="flex flex-col gap-2">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
-              <div className="relative flex items-center">
-                <input
-                  type="checkbox"
-                  checked={hasRruEquipment}
-                  onChange={(e) => setHasRruEquipment(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-10 h-6 rounded-full transition-colors ${hasRruEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
-              </div>
-              <Activity className="w-4 h-4 text-violet-600" />
-              <span>Présence {isRfmMode ? 'RF NSN' : 'RRU'}</span>
-            </label>
-            <div className="flex items-center gap-1.5">
-              {isRruIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
-                  <AlertCircle className="w-3 h-3 text-amber-600" />
-                  Sélection requise
-                </span>
-              )}
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-                Par secteur
-              </span>
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
+            <div className="relative flex items-center shrink-0">
+              <input
+                type="checkbox"
+                checked={hasRruEquipment}
+                onChange={(e) => setHasRruEquipment(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-9 h-5 rounded-full transition-colors ${hasRruEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRruEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
+            <span className="font-semibold text-slate-800">Présence {isRfmMode ? 'Module RF NSN' : 'RRU'}</span>
+          </label>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isRruIncomplete && (
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
+                <AlertCircle className="w-3 h-3 text-amber-600" />
+                Sélection requise
+              </span>
+            )}
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
+              Par secteur
+            </span>
           </div>
-          <p className="text-[11px] text-slate-500 font-normal pl-6">
-            Équipement configuré par mât / secteur {nombreSecteurs > 1 ? `(multiplié par ${nombreSecteurs} secteurs pour le site)` : ''}
-          </p>
         </div>
 
         {hasRruEquipment && (
@@ -1244,38 +1226,32 @@ export function CoffretEquipmentToggle({
         : 'border-slate-200 hover:border-violet-200'
     }`}>
       <div className="flex flex-col space-y-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
-              <div className="relative flex items-center">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
+              <div className="relative flex items-center shrink-0">
                 <input
                   type="checkbox"
                   checked={hasCoffret}
                   onChange={(e) => setHasCoffret(e.target.checked)}
                   className="sr-only"
                 />
-                <div className={`w-10 h-6 rounded-full transition-colors ${hasCoffret ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
+                <div className={`w-9 h-5 rounded-full transition-colors ${hasCoffret ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+                <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
               </div>
-              <Activity className="w-4 h-4 text-violet-600" />
-              <span>Présence Coffrets fibre</span>
+              <span className="font-semibold text-slate-800">Présence Coffrets fibre</span>
             </label>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               {isCoffretIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse">
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
                   <AlertCircle className="w-3 h-3 text-amber-600" />
                   Sélection requise
                 </span>
               )}
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+              <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
                 Par secteur
               </span>
             </div>
           </div>
-          <p className="text-[11px] text-slate-500 font-normal pl-6">
-            1 coffret par mât / secteur {nombreSecteurs > 1 ? `(Total site : ${nombreSecteurs} coffrets pour ${nombreSecteurs} secteurs)` : ''}
-          </p>
-        </div>
 
         {hasCoffret && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">

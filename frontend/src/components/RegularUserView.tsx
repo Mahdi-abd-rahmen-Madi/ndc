@@ -281,7 +281,7 @@ export default function RegularUserView({
   const [siteName, setSiteName] = useState<string>('');
   const [codeSite, setCodeSite] = useState<string>('');
   const [clientName, setClientName] = useState<string>('');
-  const [operator, setOperator] = useState<string>('bouygues');
+  const [operator, setOperator] = useState<string>('');
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState<boolean>(false);
   const confirmationScrollRef = useRef<HTMLDivElement>(null);
@@ -1719,6 +1719,7 @@ export default function RegularUserView({
           <div className="h-6 w-px bg-slate-200/80 mx-1 hidden sm:block"></div>
 
           <div className="hidden sm:flex items-center gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 text-xs">
+            {/* Site & Ancrage group with Modifier button */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
               <Building2 className="w-3.5 h-3.5 text-violet-600" />
               <span className="text-slate-400 font-normal">Site:</span>
@@ -1743,6 +1744,35 @@ export default function RegularUserView({
                 <span>Modifier</span>
               </button>
             )}
+
+            {/* Opérateur badge (distinct pill, only shown once selected) */}
+            {operator ? (
+              <>
+                <div className="h-4 w-px bg-slate-300 mx-0.5"></div>
+                <div 
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg shadow-2xs font-medium border transition-all ${
+                    operator === 'orange'
+                      ? 'bg-orange-50/80 border-orange-200 text-orange-950'
+                      : operator === 'free'
+                        ? 'bg-red-50/80 border-red-200 text-red-950'
+                        : 'bg-sky-50/80 border-sky-200 text-sky-950'
+                  }`}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                      operator === 'orange' ? 'bg-orange-400' : operator === 'free' ? 'bg-red-400' : 'bg-sky-400'
+                    }`}></span>
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                      operator === 'orange' ? 'bg-orange-500' : operator === 'free' ? 'bg-red-500' : 'bg-sky-500'
+                    }`}></span>
+                  </span>
+                  <span className="text-slate-400 font-normal">Opérateur:</span>
+                  <span className="font-bold capitalize">
+                    {operator}
+                  </span>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
 
