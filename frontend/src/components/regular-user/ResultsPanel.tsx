@@ -309,11 +309,16 @@ export default function ResultsPanel({
         const model = vendor && item.reference && item.reference.startsWith(vendor)
           ? item.reference.substring(vendor.length).trim()
           : item.reference;
-        const bodySpecs = vendor && model && model !== item.reference ? {
-          marque: vendor,
-          modèle: model
-        } : {
-          modèle: item.reference || 'N/A'
+        const bodySpecs: Record<string, any> = {
+          ...(vendor && model && model !== item.reference ? {
+            marque: vendor,
+            modèle: model
+          } : {
+            modèle: item.reference || 'N/A'
+          }),
+          ...(item.dimensions ? { dimensions: item.dimensions } : {}),
+          ...(item.weight ? { 'poids unitaire': `${item.weight} kg` } : {}),
+          ...(item.weight && totalQty > 1 ? { 'poids total': `${(item.weight * totalQty).toFixed(1)} kg` } : {})
         };
 
         return renderCard(

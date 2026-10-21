@@ -73,7 +73,7 @@ interface PdfGeneratorOptions {
   hasRrhEquipment: boolean;
   rrhItems: { id: string; reference: string; quantity: number }[];
   hasRruEquipment: boolean;
-  rruItems: { id: string; reference: string; quantity: number }[];
+  rruItems: { id: string; reference: string; quantity: number; dimensions?: string; weight?: number }[];
   hasTdEquipment: boolean;
   tdType: 'tetraphase' | 'monophase';
   tdReference: string;
@@ -321,7 +321,11 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           const prefix = operator === 'free' ? 'RF NSN' : 'RRU';
           const totalQty = item.quantity * (nombreSecteurs || 1);
           const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${totalQty})` : '';
-          doc.text(`• ${prefix} ${rruItems.length > 1 ? `#${index + 1} ` : ''}[Par secteur]: Réf: ${item.reference || 'Standard'} - Qté: ${item.quantity}/secteur${totalText}`, 28, lineY);
+          const specs: string[] = [];
+          if (item.dimensions) specs.push(item.dimensions);
+          if (item.weight) specs.push(`${item.weight}kg`);
+          const specsText = specs.length > 0 ? ` (${specs.join(', ')})` : '';
+          doc.text(`• ${prefix} ${rruItems.length > 1 ? `#${index + 1} ` : ''}[Par secteur]: Réf: ${item.reference || 'Standard'}${specsText} - Qté: ${item.quantity}/secteur${totalText}`, 28, lineY);
           lineY += 8;
         });
       }

@@ -2644,7 +2644,15 @@ export default function RegularUserView({
                               poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A'
                             },
                             rrhItems: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ ...item, reference: resolveRrh(item.reference) })) : null,
-                            rruItems: hasRruEquipment ? rruItems.map(item => ({ ...item, reference: resolveRru(item.reference) })) : null,
+                            rruItems: hasRruEquipment ? rruItems.map(item => {
+                              const rruOpt = config?.rru_references?.find(r => r.id === item.reference || r.reference === item.reference);
+                              return {
+                                ...item,
+                                reference: resolveRru(item.reference),
+                                dimensions: rruOpt?.dimensions || '',
+                                weight: rruOpt?.weight ?? null
+                              };
+                            }) : null,
                             td: tdType === 'monophase'
                               ? { type: 'TD Monophasé', référence: resolveTd(tdReference) || 'N/A', tgbt: tgbtReference || 'N/A' }
                               : { type: 'TD Tétraphasé', référence: resolveTd(tdReference) || 'N/A' },

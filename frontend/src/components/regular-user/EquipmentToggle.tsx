@@ -418,7 +418,7 @@ export interface RRUEquipmentToggleProps {
   setHasRruEquipment: (val: boolean) => void;
   rruItems: EquipmentItem[];
   setRruItems: (val: EquipmentItem[] | ((prev: EquipmentItem[]) => EquipmentItem[])) => void;
-  rruOptions: { id: string; vendor: string; reference: string; operator?: string }[];
+  rruOptions: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[];
   isRfmMode?: boolean;
   operator?: string;
   nombreSecteurs?: number;
@@ -434,7 +434,7 @@ export function RRUEquipmentToggle({
   operator = 'bouygues',
   nombreSecteurs = 1
 }: RRUEquipmentToggleProps) {
-  const rfmModels = [
+  const rfmModels: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[] = [
     { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
     { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
     { id: 'ARHA', vendor: 'NOKIA', reference: 'ARHA' },
@@ -600,6 +600,30 @@ export function RRUEquipmentToggle({
                     </div>
                   </div>
                 )}
+
+                {!isRfmMode && item.reference && (() => {
+                  const sel = actualOptions.find(o => o.id === item.reference);
+                  if (!sel || (!sel.dimensions && !sel.weight)) return null;
+                  return (
+                    <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-2xs text-xs">
+                      {sel.dimensions && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Dimensions :</span>
+                          <span className="font-semibold text-slate-800">{sel.dimensions}</span>
+                        </div>
+                      )}
+                      {sel.dimensions && sel.weight !== undefined && (
+                        <div className="h-3 w-px bg-slate-200"></div>
+                      )}
+                      {sel.weight !== undefined && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids :</span>
+                          <span className="font-semibold text-slate-800">{sel.weight} kg</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div className="flex items-center justify-between border-t border-slate-200 pt-2">
                   {/* Quantité */}
