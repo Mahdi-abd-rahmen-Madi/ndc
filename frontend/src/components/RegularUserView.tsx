@@ -81,7 +81,9 @@ const defaultSectorData = (id: number): SectorData => ({
   cabSupport: 'plinthes',
   hasAtelierEnergie: false,
   atelierFprb: false,
+  atelierFprbQuantity: 1,
   atelierFpbc: false,
+  atelierFpbcQuantity: 1,
   lookupResult: null,
   loading: false,
   error: null
@@ -265,7 +267,9 @@ export default function RegularUserView({
   const [cabSupport, setCabSupport] = useState<string>('plinthes');
   const [hasAtelierEnergie, setHasAtelierEnergie] = useState<boolean>(false);
   const [atelierFprb, setAtelierFprb] = useState<boolean>(false);
+  const [atelierFprbQuantity, setAtelierFprbQuantity] = useState<number>(1);
   const [atelierFpbc, setAtelierFpbc] = useState<boolean>(false);
+  const [atelierFpbcQuantity, setAtelierFpbcQuantity] = useState<number>(1);
   const [bcubeReference, setBcubeReference] = useState<string>('');
 
   // Status State
@@ -363,7 +367,9 @@ export default function RegularUserView({
       cabSupport: operator === 'free' ? (s.cabSupport || 'plinthes') : 'plinthes',
       hasAtelierEnergie: (operator === 'free' || operator === 'bouygues') ? s.hasAtelierEnergie : false,
       atelierFprb: operator === 'free' ? s.atelierFprb : false,
+      atelierFprbQuantity: operator === 'free' ? (s.atelierFprbQuantity || 1) : 1,
       atelierFpbc: operator === 'free' ? s.atelierFpbc : false,
+      atelierFpbcQuantity: operator === 'free' ? (s.atelierFpbcQuantity || 1) : 1,
       bcubeReference: operator === 'bouygues' ? s.bcubeReference : '',
       rrhItems: defaultRrh,
       rruItems: defaultRru
@@ -774,7 +780,9 @@ export default function RegularUserView({
         atelier_energie: {
           enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
           module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
+          module_fprb_quantity: operator === 'free' && hasAtelierEnergie && atelierFprb ? atelierFprbQuantity : 0,
           module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
+          module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
           bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
         },
         site_image_url: siteImageUrl
@@ -1031,7 +1039,9 @@ export default function RegularUserView({
           atelier_energie: {
             enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
             module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
+            module_fprb_quantity: operator === 'free' && hasAtelierEnergie && atelierFprb ? atelierFprbQuantity : 0,
             module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
+            module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
             bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
           }
         };
@@ -1171,7 +1181,9 @@ export default function RegularUserView({
           atelier_energie: {
             enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
             module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
+            module_fprb_quantity: operator === 'free' && hasAtelierEnergie && atelierFprb ? atelierFprbQuantity : 0,
             module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
+            module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
             bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
           },
           site_image_url: siteImageUrl
@@ -1662,7 +1674,10 @@ export default function RegularUserView({
                       <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
                         <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Atelier d'Énergie</span>
                         <span className="text-xs font-bold text-slate-900 block">
-                          {[atelierFprb ? "Module FPRB" : null, atelierFpbc ? "Module FPBC" : null].filter(Boolean).join(', ') || 'Sélectionné'}
+                          {[
+                            atelierFprb ? (atelierFprbQuantity > 1 ? `${atelierFprbQuantity}x Module FPRB` : "Module FPRB") : null,
+                            atelierFpbc ? (atelierFpbcQuantity > 1 ? `${atelierFpbcQuantity}x Module FPBC` : "Module FPBC") : null
+                          ].filter(Boolean).join(', ') || 'Sélectionné'}
                         </span>
                       </div>
                     )}
@@ -2208,8 +2223,12 @@ export default function RegularUserView({
                           setHasAtelierEnergie={setHasAtelierEnergie}
                           atelierFprb={atelierFprb}
                           setAtelierFprb={setAtelierFprb}
+                          atelierFprbQuantity={atelierFprbQuantity}
+                          setAtelierFprbQuantity={setAtelierFprbQuantity}
                           atelierFpbc={atelierFpbc}
                           setAtelierFpbc={setAtelierFpbc}
+                          atelierFpbcQuantity={atelierFpbcQuantity}
+                          setAtelierFpbcQuantity={setAtelierFpbcQuantity}
                         />
                       </>
                     )}
@@ -2702,7 +2721,9 @@ export default function RegularUserView({
                             } : null,
                             atelier_energie: (operator === 'free' && hasAtelierEnergie) ? {
                               atelierFprb,
-                              atelierFpbc
+                              atelierFprbQuantity,
+                              atelierFpbc,
+                              atelierFpbcQuantity
                             } : (operator === 'bouygues' && hasAtelierEnergie) ? {
                               bcube: config?.atelier_energie_references?.find(r => r.id === bcubeReference)
                             } : null

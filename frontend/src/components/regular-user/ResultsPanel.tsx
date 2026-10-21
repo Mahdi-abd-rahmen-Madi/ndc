@@ -405,8 +405,14 @@ export default function ResultsPanel({
         }, '', undefined, undefined, 'BCube (TD + AE)');
       }
       const modules = [];
-      if (equipmentValues.atelier_energie?.atelierFprb) modules.push('FPRB');
-      if (equipmentValues.atelier_energie?.atelierFpbc) modules.push('FPBC (batterie)');
+      if (equipmentValues.atelier_energie?.atelierFprb) {
+        const qty = equipmentValues.atelier_energie?.atelierFprbQuantity;
+        modules.push(qty && qty > 1 ? `${qty}x FPRB` : 'FPRB');
+      }
+      if (equipmentValues.atelier_energie?.atelierFpbc) {
+        const qty = equipmentValues.atelier_energie?.atelierFpbcQuantity;
+        modules.push(qty && qty > 1 ? `${qty}x FPBC (batterie)` : 'FPBC (batterie)');
+      }
       return renderCard(config.id, null, { modules: modules.join(', ') || 'Sélectionné' });
     }
 

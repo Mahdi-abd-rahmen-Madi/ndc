@@ -154,7 +154,9 @@ export interface SectorData {
   cabSupport?: string;
   hasAtelierEnergie?: boolean;
   atelierFprb?: boolean;
+  atelierFprbQuantity?: number;
   atelierFpbc?: boolean;
+  atelierFpbcQuantity?: number;
   bcubeReference?: string;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;

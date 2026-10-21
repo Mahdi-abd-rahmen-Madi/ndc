@@ -2268,8 +2268,12 @@ export interface AtelierEnergieEquipmentToggleProps {
   setHasAtelierEnergie: (val: boolean) => void;
   atelierFprb: boolean;
   setAtelierFprb: (val: boolean) => void;
+  atelierFprbQuantity?: number;
+  setAtelierFprbQuantity?: (val: number) => void;
   atelierFpbc: boolean;
   setAtelierFpbc: (val: boolean) => void;
+  atelierFpbcQuantity?: number;
+  setAtelierFpbcQuantity?: (val: number) => void;
 }
 
 export function AtelierEnergieEquipmentToggle({
@@ -2277,8 +2281,12 @@ export function AtelierEnergieEquipmentToggle({
   setHasAtelierEnergie,
   atelierFprb,
   setAtelierFprb,
+  atelierFprbQuantity = 1,
+  setAtelierFprbQuantity,
   atelierFpbc,
-  setAtelierFpbc
+  setAtelierFpbc,
+  atelierFpbcQuantity = 1,
+  setAtelierFpbcQuantity
 }: AtelierEnergieEquipmentToggleProps) {
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasAtelierEnergie ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
@@ -2310,31 +2318,131 @@ export function AtelierEnergieEquipmentToggle({
           <div className="flex flex-col gap-2 pt-3 border-t border-slate-100">
             <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Modules d'énergie</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
-              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${atelierFprb
-                ? 'bg-amber-50/70 border-amber-300 text-amber-950 shadow-2xs'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
-                }`}>
-                <input
-                  type="checkbox"
-                  checked={atelierFprb}
-                  onChange={(e) => setAtelierFprb(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                />
-                <span>Module d'énergie FPRB</span>
-              </label>
+              <div
+                onClick={() => setAtelierFprb(!atelierFprb)}
+                className={`flex flex-col justify-between p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${atelierFprb
+                  ? 'bg-amber-50/70 border-amber-300 text-amber-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={atelierFprb}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setAtelierFprb(e.target.checked);
+                      }}
+                      className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Module d'énergie FPRB</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono">25kg</span>
+                </div>
 
-              <label className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${atelierFpbc
-                ? 'bg-amber-50/70 border-amber-300 text-amber-950 shadow-2xs'
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
-                }`}>
-                <input
-                  type="checkbox"
-                  checked={atelierFpbc}
-                  onChange={(e) => setAtelierFpbc(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                />
-                <span>Module FPBC (batterie)</span>
-              </label>
+                {atelierFprb && setAtelierFprbQuantity && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-between mt-2 pt-2 border-t border-amber-200/70"
+                  >
+                    <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider">
+                      Quantité
+                    </span>
+                    <div className="flex items-center gap-1 bg-white border border-amber-300 rounded-lg p-0.5 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAtelierFprbQuantity(Math.max(1, (atelierFprbQuantity || 1) - 1));
+                        }}
+                        className="w-5 h-5 flex items-center justify-center rounded text-slate-600 hover:bg-amber-100 disabled:opacity-30"
+                        disabled={(atelierFprbQuantity || 1) <= 1}
+                        title="Diminuer la quantité"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-6 text-center text-xs font-bold text-amber-950">
+                        {atelierFprbQuantity || 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAtelierFprbQuantity((atelierFprbQuantity || 1) + 1);
+                        }}
+                        className="w-5 h-5 flex items-center justify-center rounded text-slate-600 hover:bg-amber-100"
+                        title="Augmenter la quantité"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div
+                onClick={() => setAtelierFpbc(!atelierFpbc)}
+                className={`flex flex-col justify-between p-2.5 rounded-lg border text-sm font-medium cursor-pointer transition-all ${atelierFpbc
+                  ? 'bg-amber-50/70 border-amber-300 text-amber-950 shadow-2xs'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100/70'
+                  }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={atelierFpbc}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setAtelierFpbc(e.target.checked);
+                      }}
+                      className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Module FPBC (batterie)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono">27.3kg</span>
+                </div>
+
+                {atelierFpbc && setAtelierFpbcQuantity && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center justify-between mt-2 pt-2 border-t border-amber-200/70"
+                  >
+                    <span className="text-[10px] font-bold text-amber-900 uppercase tracking-wider">
+                      Quantité
+                    </span>
+                    <div className="flex items-center gap-1 bg-white border border-amber-300 rounded-lg p-0.5 shadow-2xs">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAtelierFpbcQuantity(Math.max(1, (atelierFpbcQuantity || 1) - 1));
+                        }}
+                        className="w-5 h-5 flex items-center justify-center rounded text-slate-600 hover:bg-amber-100 disabled:opacity-30"
+                        disabled={(atelierFpbcQuantity || 1) <= 1}
+                        title="Diminuer la quantité"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-6 text-center text-xs font-bold text-amber-950">
+                        {atelierFpbcQuantity || 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAtelierFpbcQuantity((atelierFpbcQuantity || 1) + 1);
+                        }}
+                        className="w-5 h-5 flex items-center justify-center rounded text-slate-600 hover:bg-amber-100"
+                        title="Augmenter la quantité"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

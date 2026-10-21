@@ -99,7 +99,9 @@ interface PdfGeneratorOptions {
   cabSupport?: string;
   hasAtelierEnergie?: boolean;
   atelierFprb?: boolean;
+  atelierFprbQuantity?: number;
   atelierFpbc?: boolean;
+  atelierFpbcQuantity?: number;
   bcubeItem?: { name: string; supplier?: string; dimensions?: string; weight?: number; power?: string; phase?: string };
   miniMapImage: string | null;
   nombreSecteurs: number;
@@ -147,7 +149,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasCoffret, coffretReference, coffretOptions,
       hasBaie, baieItems, baieRadio, baieEnergie,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
-      hasAtelierEnergie, atelierFprb, atelierFpbc, bcubeItem,
+      hasAtelierEnergie, atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity, bcubeItem,
       miniMapImage,
       nombreSecteurs,
       operator
@@ -428,8 +430,14 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           doc.text(`• BCube (TD+AE) : ${bcubeItem.name}${supplierStr}${dimsStr}${weightStr}`, 28, lineY);
         } else {
           const modules = [];
-          if (atelierFprb) modules.push("Module d'énergie FPRB");
-          if (atelierFpbc) modules.push('Module FPBC (batterie)');
+          if (atelierFprb) {
+            const qtyStr = (atelierFprbQuantity && atelierFprbQuantity > 1) ? `${atelierFprbQuantity}x ` : '';
+            modules.push(`${qtyStr}Module d'énergie FPRB`);
+          }
+          if (atelierFpbc) {
+            const qtyStr = (atelierFpbcQuantity && atelierFpbcQuantity > 1) ? `${atelierFpbcQuantity}x ` : '';
+            modules.push(`${qtyStr}Module FPBC (batterie)`);
+          }
           doc.text(`• Atelier d'énergie : ${modules.join(', ') || 'Sélectionné'}`, 28, lineY);
         }
         lineY += 8;
