@@ -157,6 +157,8 @@ export interface SectorData {
   atelierFprbQuantity?: number;
   atelierFpbc?: boolean;
   atelierFpbcQuantity?: number;
+  hasConvertisseurMdea?: boolean;
+  convertisseurMdeaQuantity?: number;
   bcubeReference?: string;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;

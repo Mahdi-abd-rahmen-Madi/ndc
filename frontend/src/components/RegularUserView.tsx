@@ -25,7 +25,7 @@ import AddressSearchSection from './regular-user/AddressSearchSection';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, DEFAULT_ORANGE_BAIES, CabEquipmentToggle, AtelierEnergieEquipmentToggle, BCubeEquipmentToggle } from './regular-user/EquipmentToggle';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, DEFAULT_ORANGE_BAIES, CabEquipmentToggle, AtelierEnergieEquipmentToggle, BCubeEquipmentToggle, ConvertisseurMdeaEquipmentToggle } from './regular-user/EquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
@@ -84,6 +84,8 @@ const defaultSectorData = (id: number): SectorData => ({
   atelierFprbQuantity: 1,
   atelierFpbc: false,
   atelierFpbcQuantity: 1,
+  hasConvertisseurMdea: false,
+  convertisseurMdeaQuantity: 1,
   lookupResult: null,
   loading: false,
   error: null
@@ -270,6 +272,8 @@ export default function RegularUserView({
   const [atelierFprbQuantity, setAtelierFprbQuantity] = useState<number>(1);
   const [atelierFpbc, setAtelierFpbc] = useState<boolean>(false);
   const [atelierFpbcQuantity, setAtelierFpbcQuantity] = useState<number>(1);
+  const [hasConvertisseurMdea, setHasConvertisseurMdea] = useState<boolean>(false);
+  const [convertisseurMdeaQuantity, setConvertisseurMdeaQuantity] = useState<number>(1);
   const [bcubeReference, setBcubeReference] = useState<string>('');
 
   // Status State
@@ -370,6 +374,8 @@ export default function RegularUserView({
       atelierFprbQuantity: operator === 'free' ? (s.atelierFprbQuantity || 1) : 1,
       atelierFpbc: operator === 'free' ? s.atelierFpbc : false,
       atelierFpbcQuantity: operator === 'free' ? (s.atelierFpbcQuantity || 1) : 1,
+      hasConvertisseurMdea: operator === 'free' ? s.hasConvertisseurMdea : false,
+      convertisseurMdeaQuantity: operator === 'free' ? (s.convertisseurMdeaQuantity || 1) : 1,
       bcubeReference: operator === 'bouygues' ? s.bcubeReference : '',
       rrhItems: defaultRrh,
       rruItems: defaultRru
@@ -785,6 +791,12 @@ export default function RegularUserView({
           module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
           bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
         },
+        convertisseur_mdea: {
+          enabled: operator === 'free' && hasConvertisseurMdea,
+          quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
+          dimensions: '338*295*140mm',
+          poids: 10
+        },
         site_image_url: siteImageUrl
       };
 
@@ -1043,6 +1055,12 @@ export default function RegularUserView({
             module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
             module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
             bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
+          },
+          convertisseur_mdea: {
+            enabled: operator === 'free' && hasConvertisseurMdea,
+            quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
+            dimensions: '338*295*140mm',
+            poids: 10
           }
         };
 
@@ -1185,6 +1203,12 @@ export default function RegularUserView({
             module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
             module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
             bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
+          },
+          convertisseur_mdea: {
+            enabled: operator === 'free' && hasConvertisseurMdea,
+            quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
+            dimensions: '338*295*140mm',
+            poids: 10
           },
           site_image_url: siteImageUrl
         };
@@ -1600,7 +1624,7 @@ export default function RegularUserView({
               </div>
 
               {/* 3. Zone Technique */}
-              {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && hasCab) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)) && (
+              {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)) && (
                 <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/60">
                     <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md">
@@ -1679,6 +1703,19 @@ export default function RegularUserView({
                             atelierFpbc ? (atelierFpbcQuantity > 1 ? `${atelierFpbcQuantity}x Module FPBC` : "Module FPBC") : null
                           ].filter(Boolean).join(', ') || 'Sélectionné'}
                         </span>
+                      </div>
+                    )}
+                    {operator === 'free' && hasConvertisseurMdea && (
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Convertisseur MDEA</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900">
+                            MDEA (10 kg)
+                          </span>
+                          <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">
+                            Qté: {convertisseurMdeaQuantity}
+                          </span>
+                        </div>
                       </div>
                     )}
                     {operator === 'bouygues' && hasAtelierEnergie && (
@@ -2138,7 +2175,7 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && hasCab) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)}
+                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
                   hasTdEquipment ? 'TD' : null,
@@ -2147,6 +2184,7 @@ export default function RegularUserView({
                   (operator === 'orange' && hasBaie) ? 'Baie' : null,
                   (operator === 'free' && hasCab) ? 'CAB' : null,
                   (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
+                  (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
                   (operator === 'bouygues' && hasAtelierEnergie) ? 'BCube (TD + AE)' : null
                 ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}
                 hideContinue={true}
@@ -2229,6 +2267,12 @@ export default function RegularUserView({
                           setAtelierFpbc={setAtelierFpbc}
                           atelierFpbcQuantity={atelierFpbcQuantity}
                           setAtelierFpbcQuantity={setAtelierFpbcQuantity}
+                        />
+                        <ConvertisseurMdeaEquipmentToggle
+                          hasConvertisseurMdea={hasConvertisseurMdea}
+                          setHasConvertisseurMdea={setHasConvertisseurMdea}
+                          convertisseurMdeaQuantity={convertisseurMdeaQuantity}
+                          setConvertisseurMdeaQuantity={setConvertisseurMdeaQuantity}
                         />
                       </>
                     )}
@@ -2682,7 +2726,8 @@ export default function RegularUserView({
                             coffrets_hybride: false,
                             baie: operator === 'orange' && hasBaie,
                             cab: operator === 'free' && hasCab,
-                            atelier_energie: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie
+                            atelier_energie: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
+                            convertisseur_mdea: operator === 'free' && hasConvertisseurMdea
                           }}
                           equipmentValues={{
                             fh: {
@@ -2726,6 +2771,12 @@ export default function RegularUserView({
                               atelierFpbcQuantity
                             } : (operator === 'bouygues' && hasAtelierEnergie) ? {
                               bcube: config?.atelier_energie_references?.find(r => r.id === bcubeReference)
+                            } : null,
+                            convertisseur_mdea: (operator === 'free' && hasConvertisseurMdea) ? {
+                              modèle: 'MDEA',
+                              dimensions: '338*295*140mm',
+                              poids: `${10 * (convertisseurMdeaQuantity || 1)} kg`,
+                              quantité: convertisseurMdeaQuantity || 1
                             } : null
                           }}
                           ndcPdfUrl={ndcPdfUrl}

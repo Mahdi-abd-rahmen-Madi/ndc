@@ -102,6 +102,8 @@ interface PdfGeneratorOptions {
   atelierFprbQuantity?: number;
   atelierFpbc?: boolean;
   atelierFpbcQuantity?: number;
+  hasConvertisseurMdea?: boolean;
+  convertisseurMdeaQuantity?: number;
   bcubeItem?: { name: string; supplier?: string; dimensions?: string; weight?: number; power?: string; phase?: string };
   miniMapImage: string | null;
   nombreSecteurs: number;
@@ -150,6 +152,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasBaie, baieItems, baieRadio, baieEnergie,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       hasAtelierEnergie, atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity, bcubeItem,
+      hasConvertisseurMdea, convertisseurMdeaQuantity,
       miniMapImage,
       nombreSecteurs,
       operator
@@ -342,11 +345,12 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       yPos += boxHeight + 8;
     }
 
-    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube)
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA)
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
     const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);
-    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf;
+    const showMdeaInPdf = operator === 'free' && hasConvertisseurMdea;
+    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
 
@@ -359,6 +363,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (showCabInPdf) techCount++;
       if (showAtelierInPdf) techCount++;
+      if (showMdeaInPdf) techCount++;
 
       const boxHeight = 10 + techCount * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
@@ -440,6 +445,12 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           }
           doc.text(`• Atelier d'énergie : ${modules.join(', ') || 'Sélectionné'}`, 28, lineY);
         }
+        lineY += 8;
+      }
+      if (showMdeaInPdf) {
+        const qty = convertisseurMdeaQuantity || 1;
+        const qtyPrefix = qty > 1 ? `${qty}x ` : '';
+        doc.text(`• Présence convertisseur MDEA : ${qtyPrefix}MDEA (338*295*140mm - ${10 * qty}kg)`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 10;

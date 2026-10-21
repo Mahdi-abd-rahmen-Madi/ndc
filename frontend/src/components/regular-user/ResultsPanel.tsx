@@ -416,6 +416,17 @@ export default function ResultsPanel({
       return renderCard(config.id, null, { modules: modules.join(', ') || 'Sélectionné' });
     }
 
+    if (config.id === 'convertisseur_mdea') {
+      const mdea = equipmentValues.convertisseur_mdea;
+      const qty = mdea?.quantité || 1;
+      return renderCard(config.id, qty, {
+        modèle: 'MDEA',
+        dimensions: '338*295*140mm',
+        poids: `${10 * qty} kg${qty > 1 ? ' (10kg/u)' : ''}`,
+        quantité: qty
+      });
+    }
+
     let quantiteValue = null;
     if (quantiteField) {
       quantiteValue = equipmentValues[config.id]?.[quantiteField.label.toLowerCase()] ||

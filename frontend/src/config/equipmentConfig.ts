@@ -160,6 +160,19 @@ export const equipmentConfigs: EquipmentConfig[] = [
       { label: 'Modules', value: 'N/A' },
     ],
   },
+  {
+    id: 'convertisseur_mdea',
+    name: 'Présence convertisseur MDEA',
+    enabled: false,
+    icon: 'Zap',
+    color: 'indigo',
+    zone: 'technique',
+    fields: [
+      { label: 'Modèle', value: 'MDEA' },
+      { label: 'Dimensions', value: '338*295*140mm' },
+      { label: 'Poids', value: '10kg' },
+    ],
+  },
 ];
 
 export const getEnabledConfigs = (enabledToggles?: Record<string, boolean>): EquipmentConfig[] => {

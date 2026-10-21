@@ -2625,3 +2625,119 @@ export function BCubeEquipmentToggle({
     </div>
   );
 }
+
+export interface ConvertisseurMdeaEquipmentToggleProps {
+  hasConvertisseurMdea: boolean;
+  setHasConvertisseurMdea: (val: boolean) => void;
+  convertisseurMdeaQuantity: number;
+  setConvertisseurMdeaQuantity: (val: number) => void;
+}
+
+export function ConvertisseurMdeaEquipmentToggle({
+  hasConvertisseurMdea,
+  setHasConvertisseurMdea,
+  convertisseurMdeaQuantity,
+  setConvertisseurMdeaQuantity
+}: ConvertisseurMdeaEquipmentToggleProps) {
+  return (
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasConvertisseurMdea ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasConvertisseurMdea}
+                onChange={(e) => setHasConvertisseurMdea(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasConvertisseurMdea ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasConvertisseurMdea ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Zap className="w-4 h-4 text-violet-600" />
+            Présence convertisseur MDEA
+          </label>
+        </div>
+
+        {hasConvertisseurMdea && (
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            {/* Quantité */}
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Qté:</label>
+              <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-8 shadow-sm">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={convertisseurMdeaQuantity || 1}
+                  onChange={(e) => setConvertisseurMdeaQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="bg-transparent border-none py-0 px-2 text-xs text-center text-slate-900 focus:ring-0 w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
+                />
+                <div className="flex flex-col border-l border-slate-300 w-5">
+                  <button
+                    type="button"
+                    onClick={() => setConvertisseurMdeaQuantity((convertisseurMdeaQuantity || 1) + 1)}
+                    className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
+                  >
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConvertisseurMdeaQuantity(Math.max(1, (convertisseurMdeaQuantity || 1) - 1))}
+                    className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 boxes 2x2 (Hauteur, Largeur, Épaisseur, Poids) */}
+            <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
+                  <input
+                    type="text"
+                    value="338"
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
+                  <input
+                    type="text"
+                    value="295"
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Épaisseur (mm)</label>
+                  <input
+                    type="text"
+                    value="140"
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
+                  <input
+                    type="text"
+                    value={(10 * (convertisseurMdeaQuantity || 1)).toString()}
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
