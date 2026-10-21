@@ -25,7 +25,7 @@ import AddressSearchSection from './regular-user/AddressSearchSection';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, DEFAULT_ORANGE_BAIES, CabEquipmentToggle, AtelierEnergieEquipmentToggle } from './regular-user/EquipmentToggle';
+import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, DEFAULT_ORANGE_BAIES, CabEquipmentToggle, AtelierEnergieEquipmentToggle, BCubeEquipmentToggle } from './regular-user/EquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
@@ -265,6 +265,7 @@ export default function RegularUserView({
   const [hasAtelierEnergie, setHasAtelierEnergie] = useState<boolean>(false);
   const [atelierFprb, setAtelierFprb] = useState<boolean>(false);
   const [atelierFpbc, setAtelierFpbc] = useState<boolean>(false);
+  const [bcubeReference, setBcubeReference] = useState<string>('');
 
   // Status State
   const [calculating, setCalculating] = useState(false);
@@ -359,9 +360,10 @@ export default function RegularUserView({
       cabTwo: operator === 'free' ? s.cabTwo : false,
       cabThree: operator === 'free' ? s.cabThree : false,
       cabSupport: operator === 'free' ? (s.cabSupport || 'plinthes') : 'plinthes',
-      hasAtelierEnergie: operator === 'free' ? s.hasAtelierEnergie : false,
+      hasAtelierEnergie: (operator === 'free' || operator === 'bouygues') ? s.hasAtelierEnergie : false,
       atelierFprb: operator === 'free' ? s.atelierFprb : false,
       atelierFpbc: operator === 'free' ? s.atelierFpbc : false,
+      bcubeReference: operator === 'bouygues' ? s.bcubeReference : '',
       rrhItems: defaultRrh,
       rruItems: defaultRru
     })));
@@ -768,9 +770,10 @@ export default function RegularUserView({
           support: operator === 'free' && hasCab ? cabSupport : null
         },
         atelier_energie: {
-          enabled: operator === 'free' && hasAtelierEnergie,
+          enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
           module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
-          module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc
+          module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
+          bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
         },
         site_image_url: siteImageUrl
       };
@@ -1023,9 +1026,10 @@ export default function RegularUserView({
             support: operator === 'free' && hasCab ? cabSupport : null
           },
           atelier_energie: {
-            enabled: operator === 'free' && hasAtelierEnergie,
+            enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
             module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
-            module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc
+            module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
+            bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
           }
         };
 
@@ -1161,9 +1165,10 @@ export default function RegularUserView({
             support: operator === 'free' && hasCab ? cabSupport : null
           },
           atelier_energie: {
-            enabled: operator === 'free' && hasAtelierEnergie,
+            enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
             module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
-            module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc
+            module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
+            bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
           },
           site_image_url: siteImageUrl
         };
@@ -1329,6 +1334,9 @@ export default function RegularUserView({
   }
   if (hasBoitierLovage && !boitierLovageReference) {
     missingStep4Equipments.push('Référence Boîtier de lovage');
+  }
+  if (operator === 'bouygues' && hasAtelierEnergie && !bcubeReference) {
+    missingStep4Equipments.push('Modèle BCube');
   }
 
   const isStep1Complete = !!selectedCoords && !pendingGenericAddress;
@@ -1571,7 +1579,7 @@ export default function RegularUserView({
               </div>
 
               {/* 3. Zone Technique */}
-              {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && hasCab) || (operator === 'free' && hasAtelierEnergie)) && (
+              {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && hasCab) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)) && (
                 <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/60">
                     <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md">
@@ -1646,6 +1654,14 @@ export default function RegularUserView({
                         <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Atelier d'Énergie</span>
                         <span className="text-xs font-bold text-slate-900 block">
                           {[atelierFprb ? "Module FPRB" : null, atelierFpbc ? "Module FPBC" : null].filter(Boolean).join(', ') || 'Sélectionné'}
+                        </span>
+                      </div>
+                    )}
+                    {operator === 'bouygues' && hasAtelierEnergie && (
+                      <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">BCube (TD + AE)</span>
+                        <span className="text-xs font-bold text-slate-900 block">
+                          {config?.atelier_energie_references?.find(r => r.id === bcubeReference)?.name || bcubeReference || 'Sélectionné'}
                         </span>
                       </div>
                     )}
@@ -2100,7 +2116,7 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && hasCab) || (operator === 'free' && hasAtelierEnergie)}
+                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && hasCab) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
                   hasTdEquipment ? 'TD' : null,
@@ -2108,7 +2124,8 @@ export default function RegularUserView({
                   hasBoitierLovage ? 'Lovage' : null,
                   (operator === 'orange' && hasBaie) ? 'Baie' : null,
                   (operator === 'free' && hasCab) ? 'CAB' : null,
-                  (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null
+                  (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
+                  (operator === 'bouygues' && hasAtelierEnergie) ? 'BCube (TD + AE)' : null
                 ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}
                 hideContinue={true}
               >
@@ -2138,11 +2155,13 @@ export default function RegularUserView({
                       tgbtReference={tgbtReference}
                       setTgbtReference={setTgbtReference}
                       tdOptions={config?.td_references || []}
+                      operator={operator}
                     />
                     <GPSEquipmentToggle
                       hasGps={hasGps} setHasGps={setHasGps}
                       gpsReference={gpsReference} setGpsReference={setGpsReference}
                       gpsMarque={gpsMarque} setGpsMarque={setGpsMarque}
+                      operator={operator}
                     />
                     <BoitierLovageEquipmentToggle
                       hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
@@ -2150,6 +2169,15 @@ export default function RegularUserView({
                       boitierLovageQuantity={boitierLovageQuantity} setBoitierLovageQuantity={setBoitierLovageQuantity}
                       boitierOptions={config?.boitier_lovage_references || []}
                     />
+                    {operator === 'bouygues' && (
+                      <BCubeEquipmentToggle
+                        hasAtelierEnergie={hasAtelierEnergie}
+                        setHasAtelierEnergie={setHasAtelierEnergie}
+                        bcubeReference={bcubeReference}
+                        setBcubeReference={setBcubeReference}
+                        options={config?.atelier_energie_references || []}
+                      />
+                    )}
                     {operator === 'orange' && (
                       <div className="lg:col-span-2">
                         <BaieEquipmentToggle
@@ -2634,7 +2662,7 @@ export default function RegularUserView({
                             coffrets_hybride: false,
                             baie: operator === 'orange' && hasBaie,
                             cab: operator === 'free' && hasCab,
-                            atelier_energie: operator === 'free' && hasAtelierEnergie
+                            atelier_energie: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie
                           }}
                           equipmentValues={{
                             fh: {
@@ -2674,6 +2702,8 @@ export default function RegularUserView({
                             atelier_energie: (operator === 'free' && hasAtelierEnergie) ? {
                               atelierFprb,
                               atelierFpbc
+                            } : (operator === 'bouygues' && hasAtelierEnergie) ? {
+                              bcube: config?.atelier_energie_references?.find(r => r.id === bcubeReference)
                             } : null
                           }}
                           ndcPdfUrl={ndcPdfUrl}

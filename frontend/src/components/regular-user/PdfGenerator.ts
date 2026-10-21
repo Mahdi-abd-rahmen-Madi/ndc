@@ -100,6 +100,7 @@ interface PdfGeneratorOptions {
   hasAtelierEnergie?: boolean;
   atelierFprb?: boolean;
   atelierFpbc?: boolean;
+  bcubeItem?: { name: string; supplier?: string; dimensions?: string; weight?: number; power?: string; phase?: string };
   miniMapImage: string | null;
   nombreSecteurs: number;
   operator?: string;
@@ -146,7 +147,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasCoffret, coffretReference, coffretOptions,
       hasBaie, baieItems, baieRadio, baieEnergie,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
-      hasAtelierEnergie, atelierFprb, atelierFpbc,
+      hasAtelierEnergie, atelierFprb, atelierFpbc, bcubeItem,
       miniMapImage,
       nombreSecteurs,
       operator
@@ -339,10 +340,10 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       yPos += boxHeight + 8;
     }
 
-    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie)
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube)
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
-    const showAtelierInPdf = operator === 'free' && hasAtelierEnergie;
+    const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);
     const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
@@ -367,8 +368,12 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
       if (hasTdEquipment) {
+        let tgbtDesc = 'TGBT 300x255x160mm';
+        if (operator === 'bouygues') {
+          tgbtDesc = `${tgbtReference || 'TGBT ACTIA'} (500x400x230mm, 15kg)`;
+        }
         const tdStr = tdType === 'monophase'
-          ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - TGBT 300x255x160mm`
+          ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - ${tgbtDesc}`
           : `• TD Tétraphasé : Référence ${tdReference || 'N/A'}`;
         doc.text(tdStr, 28, lineY);
         lineY += 8;
@@ -416,10 +421,17 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         lineY += 8;
       }
       if (showAtelierInPdf) {
-        const modules = [];
-        if (atelierFprb) modules.push("Module d'énergie FPRB");
-        if (atelierFpbc) modules.push('Module FPBC (batterie)');
-        doc.text(`• Atelier d'énergie : ${modules.join(', ') || 'Sélectionné'}`, 28, lineY);
+        if (operator === 'bouygues' && bcubeItem) {
+          const supplierStr = bcubeItem.supplier ? ` [${bcubeItem.supplier}]` : '';
+          const dimsStr = bcubeItem.dimensions ? ` - ${bcubeItem.dimensions}` : '';
+          const weightStr = bcubeItem.weight ? ` - ${bcubeItem.weight}kg` : '';
+          doc.text(`• BCube (TD+AE) : ${bcubeItem.name}${supplierStr}${dimsStr}${weightStr}`, 28, lineY);
+        } else {
+          const modules = [];
+          if (atelierFprb) modules.push("Module d'énergie FPRB");
+          if (atelierFpbc) modules.push('Module FPBC (batterie)');
+          doc.text(`• Atelier d'énergie : ${modules.join(', ') || 'Sélectionné'}`, 28, lineY);
+        }
         lineY += 8;
       }
       yPos += boxHeight + 10;

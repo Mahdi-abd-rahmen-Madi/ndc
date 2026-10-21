@@ -706,6 +706,7 @@ export interface TDEquipmentToggleProps {
   tgbtReference: string;
   setTgbtReference: (val: string) => void;
   tdOptions: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
+  operator?: string;
 }
 
 export function TDEquipmentToggle({
@@ -717,8 +718,10 @@ export function TDEquipmentToggle({
   setTdReference,
   tgbtReference,
   setTgbtReference,
-  tdOptions
+  tdOptions,
+  operator = 'bouygues'
 }: TDEquipmentToggleProps) {
+  const isBouygues = operator.toLowerCase() === 'bouygues';
 
   React.useEffect(() => {
     if (hasTdEquipment) {
@@ -730,8 +733,11 @@ export function TDEquipmentToggle({
           setTdReference(validOptions[0].id);
         }
       }
+      if (isBouygues && !tgbtReference) {
+        setTgbtReference('TGBT ACTIA');
+      }
     }
-  }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference]);
+  }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference, isBouygues, tgbtReference, setTgbtReference]);
 
   const filteredTdOptions = tdOptions.filter(opt => {
     if (tdType === 'tetraphase') return opt.reference === '68237';
@@ -801,49 +807,93 @@ export function TDEquipmentToggle({
 
               {tdType === 'monophase' && (
                 <div className="flex flex-col flex-1 mt-2">
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-2">TGBT</label>
-                  <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
-                        <input
-                          type="text"
-                          value="300"
-                          disabled
-                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
-                        <input
-                          type="text"
-                          value="255"
-                          disabled
-                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Épaisseur (mm)</label>
-                        <input
-                          type="text"
-                          value="160"
-                          disabled
-                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
-                        <input
-                          type="text"
-                          value="4.75"
-                          disabled
-                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
-                        />
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">TGBT</label>
+                    {isBouygues && (
+                      <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full border border-violet-200">
+                        Bouygues
+                      </span>
+                    )}
                   </div>
+
+                  {isBouygues ? (
+                    <div className="space-y-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Modèle TGBT</label>
+                        <CustomSelect
+                          value={tgbtReference || 'TGBT ACTIA'}
+                          onChange={(val) => setTgbtReference(val)}
+                          className="focus:ring-2 focus:ring-violet-500"
+                          options={[
+                            { value: 'TGBT ACTIA', label: 'TGBT ACTIA' },
+                            { value: 'TGBT TLTI', label: 'TGBT TLTI' }
+                          ]}
+                          placeholder="Sélectionner un TGBT"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200">
+                        <div className="bg-white p-2 rounded border border-slate-200">
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Hauteur</span>
+                          <span className="text-xs text-slate-800 font-semibold">500 mm</span>
+                        </div>
+                        <div className="bg-white p-2 rounded border border-slate-200">
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Largeur</span>
+                          <span className="text-xs text-slate-800 font-semibold">400 mm</span>
+                        </div>
+                        <div className="bg-white p-2 rounded border border-slate-200">
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Profondeur</span>
+                          <span className="text-xs text-slate-800 font-semibold">230 mm</span>
+                        </div>
+                        <div className="bg-white p-2 rounded border border-slate-200">
+                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Poids</span>
+                          <span className="text-xs text-slate-800 font-semibold">15 kg</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
+                          <input
+                            type="text"
+                            value="300"
+                            disabled
+                            className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
+                          <input
+                            type="text"
+                            value="255"
+                            disabled
+                            className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Épaisseur (mm)</label>
+                          <input
+                            type="text"
+                            value="160"
+                            disabled
+                            className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
+                          <input
+                            type="text"
+                            value="4.75"
+                            disabled
+                            className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1103,6 +1153,7 @@ export interface GPSEquipmentToggleProps {
   setGpsReference: (val: string) => void;
   gpsMarque?: string;
   setGpsMarque?: (val: string) => void;
+  operator?: string;
 }
 
 export function GPSEquipmentToggle({
@@ -1111,8 +1162,41 @@ export function GPSEquipmentToggle({
   gpsReference,
   setGpsReference,
   gpsMarque = 'NOKIA',
-  setGpsMarque
+  setGpsMarque,
+  operator = 'bouygues'
 }: GPSEquipmentToggleProps) {
+  const isBouygues = operator.toLowerCase() === 'bouygues';
+  
+  const marqueOptions = isBouygues 
+    ? [{ value: 'ERICSSON', label: 'ERICSSON' }, { value: 'NOKIA', label: 'NOKIA' }]
+    : [{ value: 'NOKIA', label: 'NOKIA' }];
+
+  React.useEffect(() => {
+    if (hasGps) {
+      if (isBouygues && (!gpsMarque || gpsMarque === 'NOKIA')) {
+        setGpsMarque?.('ERICSSON');
+        setGpsReference('KRE 101 2395/2');
+      } else if (!gpsMarque) {
+        setGpsMarque?.('NOKIA');
+      }
+    }
+  }, [hasGps, isBouygues, gpsMarque, setGpsMarque, setGpsReference]);
+
+  React.useEffect(() => {
+    if (hasGps && gpsMarque === 'ERICSSON' && gpsReference !== 'KRE 101 2395/2') {
+      setGpsReference('KRE 101 2395/2');
+    } else if (hasGps && gpsMarque === 'NOKIA' && !['FYGC 474074A', 'FYGB 472748A'].includes(gpsReference)) {
+      setGpsReference('FYGC 474074A');
+    }
+  }, [hasGps, gpsMarque, gpsReference, setGpsReference]);
+
+  const modelOptions = gpsMarque === 'ERICSSON'
+    ? [{ value: 'KRE 101 2395/2', label: 'KRE 101 2395/2' }]
+    : [
+        { value: 'FYGC 474074A', label: 'FYGC 474074A' },
+        { value: 'FYGB 472748A', label: 'FYGB 472748A' }
+      ];
+
   const isGpsIncomplete = hasGps && (!gpsMarque || !gpsReference);
 
   return (
@@ -1157,9 +1241,16 @@ export function GPSEquipmentToggle({
                 </label>
                 <CustomSelect
                   value={gpsMarque}
-                  onChange={(val) => setGpsMarque?.(val)}
+                  onChange={(val) => {
+                    setGpsMarque?.(val);
+                    if (val === 'ERICSSON') {
+                      setGpsReference('KRE 101 2395/2');
+                    } else if (val === 'NOKIA') {
+                      setGpsReference('FYGC 474074A');
+                    }
+                  }}
                   className="focus:ring-2 focus:ring-blue-500"
-                  options={[{ value: 'NOKIA', label: 'NOKIA' }]}
+                  options={marqueOptions}
                   placeholder="Sélectionner"
                   error={!gpsMarque}
                 />
@@ -1175,10 +1266,7 @@ export function GPSEquipmentToggle({
                   onChange={(val) => setGpsReference(val)}
                   disabled={!gpsMarque}
                   className="focus:ring-2 focus:ring-blue-500"
-                  options={[
-                    { value: 'FYGC 474074A', label: 'FYGC 474074A' },
-                    { value: 'FYGB 472748A', label: 'FYGB 472748A' }
-                  ]}
+                  options={modelOptions}
                   placeholder="Sélectionner"
                   error={!gpsReference}
                 />
@@ -1189,15 +1277,23 @@ export function GPSEquipmentToggle({
               <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 mt-1">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Diamètre</span>
-                  <span className="text-xs text-slate-800 font-medium">95 mm</span>
+                  <span className="text-xs text-slate-800 font-medium">
+                    {gpsMarque === 'ERICSSON' ? 'Φ 78 mm' : '95 mm'}
+                  </span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Hauteur</span>
-                  <span className="text-xs text-slate-800 font-medium">72.5 mm</span>
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                    {gpsMarque === 'ERICSSON' ? 'Type' : 'Hauteur'}
+                  </span>
+                  <span className="text-xs text-slate-800 font-medium">
+                    {gpsMarque === 'ERICSSON' ? 'Antenne GNSS' : '72.5 mm'}
+                  </span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
-                  <span className="text-xs text-slate-800 font-medium">154 g</span>
+                  <span className="text-xs text-slate-800 font-medium">
+                    {gpsMarque === 'ERICSSON' ? '225 g' : '154 g'}
+                  </span>
                 </div>
               </div>
             )}
@@ -2171,6 +2267,158 @@ export function AtelierEnergieEquipmentToggle({
                 <span>Module FPBC (batterie)</span>
               </label>
             </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export interface BCubeEquipmentToggleProps {
+  hasAtelierEnergie: boolean;
+  setHasAtelierEnergie: (val: boolean) => void;
+  bcubeReference: string;
+  setBcubeReference: (val: string) => void;
+  options?: {
+    id: string;
+    vendor?: string;
+    supplier?: string;
+    name: string;
+    reference: string;
+    power?: string;
+    phase?: string;
+    dimensions?: string;
+    weight?: number;
+    height?: number;
+    width?: number;
+    thickness?: number;
+    operator?: string;
+  }[];
+}
+
+export function BCubeEquipmentToggle({
+  hasAtelierEnergie,
+  setHasAtelierEnergie,
+  bcubeReference,
+  setBcubeReference,
+  options = []
+}: BCubeEquipmentToggleProps) {
+  const bouyguesOptions = options.filter(o => !o.operator || o.operator.toLowerCase() === 'bouygues');
+
+  // Derive available vendors
+  const availableVendors = Array.from(new Set(bouyguesOptions.map(o => o.vendor || 'ELTEK')));
+  const [selectedVendor, setSelectedVendor] = useState<string>(() => {
+    const current = bouyguesOptions.find(o => o.id === bcubeReference);
+    return current?.vendor || availableVendors[0] || 'ELTEK';
+  });
+
+  // Filter options by vendor
+  const vendorOptions = bouyguesOptions.filter(o => (o.vendor || 'ELTEK') === selectedVendor);
+
+  React.useEffect(() => {
+    if (hasAtelierEnergie && !bcubeReference && vendorOptions.length > 0) {
+      setBcubeReference(vendorOptions[0].id);
+    }
+  }, [hasAtelierEnergie, bcubeReference, vendorOptions, setBcubeReference]);
+
+  const selectedItem = bouyguesOptions.find(o => o.id === bcubeReference);
+
+  return (
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasAtelierEnergie ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
+      <div className="flex flex-col space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer">
+            <div className="relative flex items-center">
+              <input
+                type="checkbox"
+                checked={hasAtelierEnergie}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setHasAtelierEnergie(checked);
+                  if (checked && !bcubeReference && vendorOptions.length > 0) {
+                    setBcubeReference(vendorOptions[0].id);
+                  }
+                }}
+                className="sr-only"
+              />
+              <div className={`w-10 h-6 rounded-full transition-colors ${hasAtelierEnergie ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasAtelierEnergie ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <Zap className="w-4 h-4 text-violet-600" />
+            BCube (TD + AE)
+          </label>
+          <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200">
+            Bouygues
+          </span>
+        </div>
+
+        {hasAtelierEnergie && (
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            {/* Vendor Tabs */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Marque :</span>
+              <div className="flex gap-2">
+                {availableVendors.map(vendor => (
+                  <button
+                    key={vendor}
+                    type="button"
+                    onClick={() => {
+                      setSelectedVendor(vendor);
+                      const firstInVendor = bouyguesOptions.find(o => (o.vendor || 'ELTEK') === vendor);
+                      if (firstInVendor) {
+                        setBcubeReference(firstInVendor.id);
+                      }
+                    }}
+                    className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                      selectedVendor === vendor
+                        ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {vendor}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Model Select */}
+            <div className="flex flex-col">
+              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+                Modèle BCube
+              </label>
+              <CustomSelect
+                value={bcubeReference}
+                onChange={(val) => setBcubeReference(val)}
+                className="focus:ring-2 focus:ring-violet-500"
+                options={vendorOptions.map(opt => ({
+                  value: opt.id,
+                  label: `${opt.supplier ? `FNRS : ${opt.supplier} - ` : ''}${opt.name}`
+                }))}
+                placeholder="Sélectionner un modèle BCube"
+              />
+            </div>
+
+            {/* Specs Display */}
+            {selectedItem && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-1">
+                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Fournisseur</span>
+                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.supplier || 'N/A'}</span>
+                </div>
+                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Dimensions</span>
+                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}</span>
+                </div>
+                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
+                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.weight ? `${selectedItem.weight} kg` : '50 kg'}</span>
+                </div>
+                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Puissance / Phase</span>
+                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.power || ''} {selectedItem.phase || ''}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -35,7 +35,7 @@ export interface CatalogueConfig {
   rru_references: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[];
   rrh_references: { id: string; vendor: string; reference: string; operator?: string }[];
   boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
-  atelier_energie_references?: { id: string; vendor?: string; name: string; reference: string; operator?: string; height?: number; width?: number; thickness?: number; weight?: number; dimensions?: string }[];
+  atelier_energie_references?: { id: string; vendor?: string; supplier?: string; name: string; reference: string; operator?: string; power?: string; phase?: string; height?: number; width?: number; thickness?: number; weight?: number; dimensions?: string }[];
   baie_references?: BaieReference[];
 }
 
@@ -155,6 +155,7 @@ export interface SectorData {
   hasAtelierEnergie?: boolean;
   atelierFprb?: boolean;
   atelierFpbc?: boolean;
+  bcubeReference?: string;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
   loading?: boolean;

@@ -395,6 +395,15 @@ export default function ResultsPanel({
     }
 
     if (config.id === 'atelier_energie') {
+      if (operator === 'bouygues') {
+        const bcube = equipmentValues.atelier_energie?.bcube;
+        return renderCard(config.id, null, {
+          modèle: bcube?.name || 'BCube (TD + AE)',
+          fournisseur: bcube?.supplier || 'N/A',
+          dimensions: bcube?.dimensions || 'N/A',
+          poids: bcube?.weight ? `${bcube.weight} kg` : '50 kg'
+        }, '', undefined, undefined, 'BCube (TD + AE)');
+      }
       const modules = [];
       if (equipmentValues.atelier_energie?.atelierFprb) modules.push('FPRB');
       if (equipmentValues.atelier_energie?.atelierFpbc) modules.push('FPBC (batterie)');
