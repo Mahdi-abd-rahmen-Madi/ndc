@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowUpToLine, Layers, FileStack, GitMerge, Camera, Loader2, CheckCircle2, AlertCircle, MapPin, Settings2 } from 'lucide-react';
+import { ArrowUpToLine, Layers, FileStack, GitMerge, Camera, Loader2, CheckCircle2, AlertCircle, MapPin, Settings2, AlignJustify } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { SimilarityMode } from './types';
+import { CustomSelect } from '../ui/CustomSelect';
 
 interface UserInputProps {
   siteType?: string | null;
@@ -29,6 +30,8 @@ interface UserInputProps {
   setHasChauffageAuSol?: (val: boolean) => void;
   fausseDalleThickness?: number | string;
   setFausseDalleThickness?: (val: number | string) => void;
+  selectedEchelle?: string;
+  setSelectedEchelle?: (val: string) => void;
   operator?: string;
   setOperator?: (val: string) => void;
   codeSite: string;
@@ -59,6 +62,8 @@ export default function UserInput({
   setHasChauffageAuSol,
   fausseDalleThickness = '',
   setFausseDalleThickness,
+  selectedEchelle = '',
+  setSelectedEchelle,
   operator,
   setOperator,
   codeSite,
@@ -433,6 +438,25 @@ export default function UserInput({
                   </div>
                 </div>
               )}
+
+              {/* Échelle au sol */}
+              <div className="flex flex-col space-y-2">
+                <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                  <AlignJustify className="w-3.5 h-3.5 text-violet-600" />
+                  Échelle
+                </label>
+                <CustomSelect
+                  value={selectedEchelle}
+                  onChange={(val) => setSelectedEchelle?.(val)}
+                  options={[
+                    { value: 'Echelle Söll', label: 'Echelle Söll' },
+                    { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
+                    { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' }
+                  ]}
+                  placeholder="Sélectionner une échelle"
+                  className="w-full"
+                />
+              </div>
 
             </div>
           </div>

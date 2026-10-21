@@ -57,8 +57,8 @@ export function FHEquipmentToggle({
         : 'border-slate-200 hover:border-violet-200'
     }`}>
       <div className="flex flex-col space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
               <div className="relative flex items-center shrink-0">
                 <input
                   type="checkbox"
@@ -71,10 +71,10 @@ export function FHEquipmentToggle({
               </div>
               <span className="font-semibold text-slate-800">Présence FH</span>
             </label>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
               {isFhIncomplete && (
                 <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
-                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                  <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
                   Sélection requise
                 </span>
               )}
@@ -86,8 +86,8 @@ export function FHEquipmentToggle({
 
         {hasFhEquipment && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
-            {/* Row 1: Marque & Modèle */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Marque & Modèle */}
+            <div className="flex flex-col gap-2.5">
               <div className="flex flex-col min-w-0">
                 <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold flex items-center gap-1">
                   Marque
@@ -126,54 +126,66 @@ export function FHEquipmentToggle({
               </div>
             </div>
 
-            {/* Row 2: Quantité & Diamètre & Poids (matching antenna dimensions layout) */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              {/* Quantité */}
-              <div className="flex flex-col">
-                <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Quantité</label>
-                <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden h-[34px] shadow-sm">
+            {/* Paramètres FH */}
+            <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-1">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Diamètre (mm)</label>
                   <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={fhQuantity || 1}
-                    onChange={(e) => setFhQuantity(Math.max(1, Number(e.target.value)))}
-                    className="w-full bg-transparent border-none py-1 px-2 text-xs text-center text-slate-900 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
+                    type="text"
+                    value={selectedRef ? `${selectedRef.diameter}` : '-'}
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
                   />
-                  <div className="flex flex-col border-l border-slate-300 w-5">
-                    <button
-                      type="button"
-                      onClick={() => setFhQuantity((fhQuantity || 1) + 1)}
-                      className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-300"
-                    >
-                      <ChevronUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFhQuantity(Math.max(1, (fhQuantity || 1) - 1))}
-                      className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Poids (Kg)</label>
+                  <input
+                    type="text"
+                    value={selectedRef && selectedRef.weight !== undefined ? `${selectedRef.weight}` : '-'}
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Quantité</label>
+                  <div className="flex bg-white border border-slate-200 rounded overflow-hidden h-[30px] shadow-xs">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={fhQuantity || 1}
+                      onChange={(e) => setFhQuantity(Math.max(1, Number(e.target.value)))}
+                      className="w-full bg-transparent border-none py-1 px-2 text-xs text-center text-slate-900 focus:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none font-medium"
+                    />
+                    <div className="flex flex-col border-l border-slate-200 w-5">
+                      <button
+                        type="button"
+                        onClick={() => setFhQuantity((fhQuantity || 1) + 1)}
+                        className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors border-b border-slate-200"
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFhQuantity(Math.max(1, (fhQuantity || 1) - 1))}
+                        className="flex-1 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Diamètre */}
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Diamètre</span>
-                <div className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-lg px-2 h-[34px]">
-                  <span className="text-xs text-slate-800 font-mono font-medium">{selectedRef ? selectedRef.diameter : '-'}</span>
-                  <span className="text-[10px] text-slate-400">mm</span>
-                </div>
-              </div>
-
-              {/* Poids */}
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 font-semibold">Poids</span>
-                <div className="flex justify-between items-center bg-slate-50 border border-slate-200 rounded-lg px-2 h-[34px]">
-                  <span className="text-xs text-slate-800 font-mono font-medium">{selectedRef ? selectedRef.weight : '-'}</span>
-                  <span className="text-[10px] text-slate-400">kg</span>
+                <div>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Poids Total (Kg)</label>
+                  <input
+                    type="text"
+                    value={selectedRef && selectedRef.weight !== undefined ? `${(selectedRef.weight * (fhQuantity || 1)).toFixed(1)}` : '-'}
+                    disabled
+                    className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                  />
                 </div>
               </div>
             </div>
@@ -507,8 +519,8 @@ export function RRUEquipmentToggle({
         : 'border-slate-200 hover:border-violet-200'
     }`}>
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3">
-          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
             <div className="relative flex items-center shrink-0">
               <input
                 type="checkbox"
@@ -521,10 +533,10 @@ export function RRUEquipmentToggle({
             </div>
             <span className="font-semibold text-slate-800">Présence {isRfmMode ? 'Module RF NSN' : 'RRU'}</span>
           </label>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
             {isRruIncomplete && (
               <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
-                <AlertCircle className="w-3 h-3 text-amber-600" />
+                <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
                 Sélection requise
               </span>
             )}
@@ -581,22 +593,46 @@ export function RRUEquipmentToggle({
                 </div>
 
                 {isRfmMode && item.reference && (
-                  <div className="grid grid-cols-4 gap-2 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Hauteur</span>
-                      <span className="text-xs text-slate-800 font-medium">133 mm</span>
+                  <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
+                        <input
+                          type="text"
+                          value="133"
+                          disabled
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
+                        <input
+                          type="text"
+                          value="447"
+                          disabled
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                        />
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Largeur</span>
-                      <span className="text-xs text-slate-800 font-medium">447 mm</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Profondeur</span>
-                      <span className="text-xs text-slate-800 font-medium">560 mm</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
-                      <span className="text-xs text-slate-800 font-medium">25 kg</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Profondeur (mm)</label>
+                        <input
+                          type="text"
+                          value="560"
+                          disabled
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
+                        <input
+                          type="text"
+                          value="25"
+                          disabled
+                          className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -605,22 +641,27 @@ export function RRUEquipmentToggle({
                   const sel = actualOptions.find(o => o.id === item.reference);
                   if (!sel || (!sel.dimensions && !sel.weight)) return null;
                   return (
-                    <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-2xs text-xs">
-                      {sel.dimensions && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Dimensions :</span>
-                          <span className="font-semibold text-slate-800">{sel.dimensions}</span>
+                    <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Dimensions (mm)</label>
+                          <input
+                            type="text"
+                            value={sel.dimensions || '-'}
+                            disabled
+                            className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                          />
                         </div>
-                      )}
-                      {sel.dimensions && sel.weight !== undefined && (
-                        <div className="h-3 w-px bg-slate-200"></div>
-                      )}
-                      {sel.weight !== undefined && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids :</span>
-                          <span className="font-semibold text-slate-800">{sel.weight} kg</span>
+                        <div>
+                          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Poids (Kg)</label>
+                          <input
+                            type="text"
+                            value={sel.weight !== undefined ? `${sel.weight}` : '-'}
+                            disabled
+                            className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                          />
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })()}
@@ -1030,6 +1071,7 @@ export interface BoitierLovageEquipmentToggleProps {
   boitierLovageQuantity: number;
   setBoitierLovageQuantity: (val: number) => void;
   boitierOptions?: any[];
+  operator?: string;
 }
 
 export function BoitierLovageEquipmentToggle({
@@ -1039,19 +1081,35 @@ export function BoitierLovageEquipmentToggle({
   setBoitierLovageReference,
   boitierLovageQuantity,
   setBoitierLovageQuantity,
-  boitierOptions = []
+  boitierOptions = [],
+  operator
 }: BoitierLovageEquipmentToggleProps) {
 
-  // Hardcoded option if none provided from backend
-  const options = boitierOptions.length > 0 ? boitierOptions : [
-    { id: 'BLM-515709', name: 'Boîte de dérivation OPTIBOX IP55', reference: 'BLM-515709' }
+  // Hardcoded option if none provided from backend (exclusive to free)
+  const defaultOptions = [
+    { id: 'BLM-515709', name: 'Boîte de dérivation OPTIBOX IP55', reference: 'BLM-515709', operator: 'free' }
   ];
 
+  const allOptions = boitierOptions.length > 0 ? boitierOptions : defaultOptions;
+
+  const options = allOptions.filter(opt => {
+    if (!opt.operator || opt.operator === 'all') return true;
+    if (operator) return opt.operator.toLowerCase() === operator.toLowerCase();
+    return true;
+  });
+
   React.useEffect(() => {
-    if (hasBoitierLovage && !boitierLovageReference) {
+    if (options.length === 0) {
+      if (hasBoitierLovage) setHasBoitierLovage(false);
+      if (boitierLovageReference) setBoitierLovageReference('');
+    } else if (hasBoitierLovage && !boitierLovageReference) {
       setBoitierLovageReference(options[0].id);
     }
-  }, [hasBoitierLovage, boitierLovageReference, options, setBoitierLovageReference]);
+  }, [hasBoitierLovage, boitierLovageReference, options, setBoitierLovageReference, setHasBoitierLovage]);
+
+  if (options.length === 0) {
+    return null;
+  }
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasBoitierLovage ? 'border-violet-300 ring-1 ring-violet-500/10' : 'border-slate-200 hover:border-violet-200'}`}>
@@ -1814,7 +1872,7 @@ export function BaieEquipmentToggle({
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasBaie ? 'transform translate-x-4' : ''}`}></div>
             </div>
             <Server className="w-4 h-4 text-orange-600" />
-            <span>Zone Technique Orange (Baies & Coffrets)</span>
+            <span>Présence Baie</span>
           </label>
 
           {hasBaie && (

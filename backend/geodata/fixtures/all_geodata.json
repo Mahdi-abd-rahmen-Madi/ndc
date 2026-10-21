@@ -24352,7 +24352,8 @@
         },
         {
           "id": "TRANS_FO",
-          "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)"
+          "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)",
+          "operator": "free"
         },
         {
           "id": "TELENCO",

@@ -232,6 +232,7 @@ export default function RegularUserView({
   const [plotHeight, setPlotHeight] = useState<number>(0.5);
   const [hasChauffageAuSol, setHasChauffageAuSol] = useState<boolean>(false);
   const [fausseDalleThickness, setFausseDalleThickness] = useState<number | string>('');
+  const [selectedEchelle, setSelectedEchelle] = useState<string>('');
 
   const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
   const [fhDiameter, setFhDiameter] = useState<number>(300);
@@ -709,7 +710,8 @@ export default function RegularUserView({
           plot_metallique: sector.plotMetallique,
           bras_de_deport: sector.brasDeDeport,
           mat_secondaire: sector.matSecondaire,
-          nombre_secteurs: nombreSecteurs
+          nombre_secteurs: nombreSecteurs,
+          echelle: selectedEchelle
         },
         antenna_4g: {
           model: sector.ant4gConfig.model,
@@ -965,7 +967,8 @@ export default function RegularUserView({
           structure: {
             mast_height_m: activeSectors[0]?.selectedHeight,
             mat_principal: "CH 88.9x3",
-            nombre_secteurs: activeSectors.length
+            nombre_secteurs: activeSectors.length,
+            echelle: selectedEchelle
           },
           antenna_4g: {
             model: activeSectors[0]?.ant4gConfig?.model,
@@ -1104,7 +1107,8 @@ export default function RegularUserView({
             bras_section: firstEqDetails?.brasDeDeport || sector.brasDeDeport || 'TCAR 50x5',
             mast_5g_section: firstEqDetails?.matSecondaire || sector.matSecondaire || 'TRON 76x5',
             mast_section: firstEqDetails?.matPrincipal || sector.matPrincipal || 'TRON 139x6.3',
-            nombre_secteurs: groupIndicesCount
+            nombre_secteurs: groupIndicesCount,
+            echelle: selectedEchelle
           },
           antenna_4g: {
             model: sector.ant4gConfig.model,
@@ -1291,6 +1295,7 @@ export default function RegularUserView({
   if (foundationType !== 'encastre') {
     if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
   }
+  if (!selectedEchelle.trim()) missingRequirements.push('Échelle');
   const canGenerate = missingRequirements.length === 0;
 
   const missingStep3Equipments: string[] = [];
@@ -1431,6 +1436,10 @@ export default function RegularUserView({
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
                     <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Épaisseur Étanchéité</span>
                     <span className="font-bold text-slate-900">{etancheite || 'Non spécifié'} cm</span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Échelle</span>
+                    <span className="font-bold text-slate-900">{selectedEchelle}</span>
                   </div>
                 </div>
               </div>
@@ -1926,7 +1935,7 @@ export default function RegularUserView({
                 isCompleted={!!siteName || !!clientName}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={`Site: ${siteName || 'N/A'} | Client: ${clientName || 'N/A'}`}
-                hideContinue={foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')}
+                hideContinue={(foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')) || !selectedEchelle}
               >
                 <UserInput
                   siteType={siteType}
@@ -1956,6 +1965,8 @@ export default function RegularUserView({
                   setHasChauffageAuSol={setHasChauffageAuSol}
                   fausseDalleThickness={fausseDalleThickness}
                   setFausseDalleThickness={setFausseDalleThickness}
+                  selectedEchelle={selectedEchelle}
+                  setSelectedEchelle={setSelectedEchelle}
                   operator={operator}
                   setOperator={setOperator}
                 />
@@ -2130,19 +2141,7 @@ export default function RegularUserView({
                 hideContinue={true}
               >
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 bg-gradient-to-br from-indigo-500/10 to-blue-500/20 text-indigo-600 rounded-xl border border-indigo-200/50 shadow-2xs">
-                        <Activity className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 tracking-tight">Zone Technique</h4>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                      Local technique
-                    </span>
-                  </div>
+
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <TDEquipmentToggle
@@ -2168,6 +2167,7 @@ export default function RegularUserView({
                       boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
                       boitierLovageQuantity={boitierLovageQuantity} setBoitierLovageQuantity={setBoitierLovageQuantity}
                       boitierOptions={config?.boitier_lovage_references || []}
+                      operator={operator}
                     />
                     {operator === 'bouygues' && (
                       <BCubeEquipmentToggle
@@ -2495,6 +2495,13 @@ export default function RegularUserView({
                             ) : (
                               <span className="text-slate-400 italic font-normal">À ajouter</span>
                             )}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col col-span-2 sm:col-span-3">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Échelle</span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                            {selectedEchelle ? selectedEchelle : <span className="text-slate-400 italic font-normal">À renseigner</span>}
                           </span>
                         </div>
                       </div>
