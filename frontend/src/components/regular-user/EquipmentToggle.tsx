@@ -1173,20 +1173,20 @@ export function GPSEquipmentToggle({
 
   React.useEffect(() => {
     if (hasGps) {
-      if (isBouygues && (!gpsMarque || gpsMarque === 'NOKIA')) {
-        setGpsMarque?.('ERICSSON');
-        setGpsReference('KRE 101 2395/2');
-      } else if (!gpsMarque) {
-        setGpsMarque?.('NOKIA');
+      if (!gpsMarque) {
+        setGpsMarque?.(isBouygues ? 'ERICSSON' : 'NOKIA');
+        setGpsReference(isBouygues ? 'KRE 101 2395/2' : 'FYGC 474074A');
       }
     }
   }, [hasGps, isBouygues, gpsMarque, setGpsMarque, setGpsReference]);
 
   React.useEffect(() => {
-    if (hasGps && gpsMarque === 'ERICSSON' && gpsReference !== 'KRE 101 2395/2') {
-      setGpsReference('KRE 101 2395/2');
-    } else if (hasGps && gpsMarque === 'NOKIA' && !['FYGC 474074A', 'FYGB 472748A'].includes(gpsReference)) {
-      setGpsReference('FYGC 474074A');
+    if (hasGps) {
+      if (gpsMarque === 'ERICSSON' && gpsReference !== 'KRE 101 2395/2') {
+        setGpsReference('KRE 101 2395/2');
+      } else if (gpsMarque === 'NOKIA' && !['FYGC 474074A', 'FYGB 472748A'].includes(gpsReference)) {
+        setGpsReference('FYGC 474074A');
+      }
     }
   }, [hasGps, gpsMarque, gpsReference, setGpsReference]);
 
