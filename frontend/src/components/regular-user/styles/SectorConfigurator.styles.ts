@@ -4,7 +4,7 @@ export const styles = {
   collapsedBadgeNumber: "flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-600 text-xs font-semibold",
   collapsedTag: "text-xs text-violet-700 font-medium bg-violet-50 border border-violet-200 px-2.5 py-1 rounded-md",
   
-  mainContainer: "bg-white border border-slate-200 rounded-xl p-5 mb-6 relative overflow-hidden shadow-sm hover:border-violet-300 transition-all duration-300",
+  mainContainer: "bg-white border border-slate-200 rounded-xl p-5 mb-6 relative shadow-sm hover:border-violet-300 transition-all duration-300",
   mainDeco: "absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-bl-full pointer-events-none",
   headerContainer: "flex items-center justify-between mb-5 border-b border-slate-100 pb-3",
   headerTitle: "text-lg font-bold text-slate-900 flex items-center gap-2",

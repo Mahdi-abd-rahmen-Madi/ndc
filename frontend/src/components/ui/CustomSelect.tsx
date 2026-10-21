@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 import { styles } from './styles/CustomSelect.styles';
 
@@ -27,10 +28,44 @@ interface CustomSelectProps {
 export function CustomSelect({ value, onChange, options = [], groups = [], placeholder = "Sélectionner...", className = "", disabled = false, error = false }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  const updatePosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropdownHeight = 240;
+      const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+      setCoords({
+        top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      const handleScrollOrResize = () => updatePosition();
+      window.addEventListener('resize', handleScrollOrResize);
+      window.addEventListener('scroll', handleScrollOrResize, true);
+      return () => {
+        window.removeEventListener('resize', handleScrollOrResize);
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+      };
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        dropdownRef.current && !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -71,7 +106,12 @@ export function CustomSelect({ value, onChange, options = [], groups = [], place
         className={`${styles.triggerBase} ${disabled ? styles.triggerDisabled : styles.triggerEnabled} ${
           error ? '!border-rose-400 !bg-rose-50/40 ring-2 ring-rose-500/20' : ''
         }`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => {
+          if (!disabled) {
+            updatePosition();
+            setIsOpen(!isOpen);
+          }
+        }}
       >
         <span className={`${styles.triggerValue} ${!selectedOption && error ? '!text-rose-600 font-medium' : ''}`}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -79,8 +119,18 @@ export function CustomSelect({ value, onChange, options = [], groups = [], place
         <ChevronDown className={`${styles.triggerIcon} ${isOpen ? styles.triggerIconOpen : error ? 'text-rose-400' : ''}`} />
       </div>
       
-      {isOpen && !disabled && (
-        <div className={styles.dropdownMenu}>
+      {isOpen && !disabled && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            zIndex: 99999,
+          }}
+          className="max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-2xl custom-scrollbar ring-1 ring-black/10 animate-fadeIn"
+        >
           {options.length === 0 && groups.length === 0 ? (
             <div className={styles.emptyState}>Aucune option</div>
           ) : (
@@ -96,7 +146,8 @@ export function CustomSelect({ value, onChange, options = [], groups = [], place
               ))}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
