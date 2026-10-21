@@ -1652,7 +1652,7 @@ export default function RegularUserView({
                     )}
                     {operator === 'free' && hasCab && (
                       <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Baie CAB ({cabSupport ? { plinthes: 'Plinthes', support_autostable: 'Support Autostable', support_fimo: 'Support FIMO', support_muraux: 'Support Muraux' }[cabSupport] || cabSupport : 'Support'})</span>
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Baie CAB ({cabSupport ? { plinthes: 'Plinthes', support_autostable: 'Support Autostable', support_fimo: 'Support FIMO', support_muraux: 'Supports Muraux' }[cabSupport] || cabSupport : 'Support'})</span>
                         <span className="text-xs font-bold text-slate-900 block">
                           {[cabOne ? 'CAB ONE' : null, cabTwo ? 'CAB TWO' : null, cabThree ? 'CAB THREE' : null].filter(Boolean).join(', ') || 'Sélectionnée'}
                         </span>
@@ -1713,11 +1713,10 @@ export default function RegularUserView({
                 <button
                   disabled={!hasScrolledToBottom}
                   onClick={confirmGenerateSiteNdc}
-                  className={`px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${
-                    hasScrolledToBottom
+                  className={`px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${hasScrolledToBottom
                       ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 hover:shadow-lg cursor-pointer active:scale-95'
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60 shadow-none'
-                  }`}
+                    }`}
                   title={!hasScrolledToBottom ? "Veuillez faire défiler le récapitulatif jusqu'en bas pour confirmer" : undefined}
                 >
                   <FileText className="w-4 h-4" />
@@ -1774,22 +1773,19 @@ export default function RegularUserView({
             {operator ? (
               <>
                 <div className="h-4 w-px bg-slate-300 mx-0.5"></div>
-                <div 
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg shadow-2xs font-medium border transition-all ${
-                    operator === 'orange'
+                <div
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg shadow-2xs font-medium border transition-all ${operator === 'orange'
                       ? 'bg-orange-50/80 border-orange-200 text-orange-950'
                       : operator === 'free'
                         ? 'bg-red-50/80 border-red-200 text-red-950'
                         : 'bg-sky-50/80 border-sky-200 text-sky-950'
-                  }`}
+                    }`}
                 >
                   <span className="relative flex h-2 w-2">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                      operator === 'orange' ? 'bg-orange-400' : operator === 'free' ? 'bg-red-400' : 'bg-sky-400'
-                    }`}></span>
-                    <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                      operator === 'orange' ? 'bg-orange-500' : operator === 'free' ? 'bg-red-500' : 'bg-sky-500'
-                    }`}></span>
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${operator === 'orange' ? 'bg-orange-400' : operator === 'free' ? 'bg-red-400' : 'bg-sky-400'
+                      }`}></span>
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${operator === 'orange' ? 'bg-orange-500' : operator === 'free' ? 'bg-red-500' : 'bg-sky-500'
+                      }`}></span>
                   </span>
                   <span className="text-slate-400 font-normal">Opérateur:</span>
                   <span className="font-bold capitalize">
@@ -1983,12 +1979,12 @@ export default function RegularUserView({
                 summary={
                   isStep3Complete
                     ? [
-                        `${nombreSecteurs} secteur(s)`,
-                        hasFhEquipment ? 'FH' : null,
-                        (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
-                        hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
-                        hasCoffret ? 'Fibre' : null
-                      ].filter(Boolean).join(' • ')
+                      `${nombreSecteurs} secteur(s)`,
+                      hasFhEquipment ? 'FH' : null,
+                      (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
+                      hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
+                      hasCoffret ? 'Fibre' : null
+                    ].filter(Boolean).join(' • ')
                     : undefined
                 }
               >
@@ -2293,13 +2289,12 @@ export default function RegularUserView({
                       }
                     }}
                     disabled={isGeneratingSiteNdc || !allSectionsFilled}
-                    className={`w-full py-3.5 px-6 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-sm sm:text-base ${
-                      !allSectionsFilled
+                    className={`w-full py-3.5 px-6 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-sm sm:text-base ${!allSectionsFilled
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                         : isConfirmed
                           ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
                           : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
-                    } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.99]' : ''}`}
+                      } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.99]' : ''}`}
                   >
                     {isGeneratingSiteNdc ? (
                       <>
@@ -2326,11 +2321,10 @@ export default function RegularUserView({
                   <div className="w-full mt-3 animate-fadeIn">
                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
                       <div
-                        className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${
-                          isFullyStandard()
+                        className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard()
                             ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
                             : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
-                        }`}
+                          }`}
                         style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
                       />
                     </div>
@@ -2786,13 +2780,12 @@ export default function RegularUserView({
                           <button
                             onClick={handleGenerateSiteNdc}
                             disabled={isGeneratingSiteNdc || !canGenerate}
-                            className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${
-                              !canGenerate
+                            className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${!canGenerate
                                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                                 : isFullyStandard()
                                   ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
                                   : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
-                            } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
+                              } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
                           >
                             {isGeneratingSiteNdc ? (
                               <>

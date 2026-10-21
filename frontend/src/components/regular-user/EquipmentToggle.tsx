@@ -50,10 +50,10 @@ export function FHEquipmentToggle({
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasFhEquipment
-        ? isFhIncomplete
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
-          : 'border-violet-300 ring-1 ring-violet-500/10'
-        : 'border-slate-200 hover:border-violet-200'
+      ? isFhIncomplete
+        ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+        : 'border-violet-300 ring-1 ring-violet-500/10'
+      : 'border-slate-200 hover:border-violet-200'
       }`}>
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -273,10 +273,10 @@ export function RRHEquipmentToggle({
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRrhEquipment
-        ? isRrhIncomplete
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
-          : 'border-violet-300 ring-1 ring-violet-500/10'
-        : 'border-slate-200 hover:border-violet-200'
+      ? isRrhIncomplete
+        ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+        : 'border-violet-300 ring-1 ring-violet-500/10'
+      : 'border-slate-200 hover:border-violet-200'
       }`}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -310,8 +310,8 @@ export function RRHEquipmentToggle({
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rrhItems.map((item) => (
               <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${(!item.vendor || !item.reference)
-                  ? 'bg-amber-50/20 border-amber-200'
-                  : 'bg-slate-50 border-slate-200'
+                ? 'bg-amber-50/20 border-amber-200'
+                : 'bg-slate-50 border-slate-200'
                 }`}>
                 <div className="flex gap-3">
                   {/* Marque */}
@@ -509,10 +509,10 @@ export function RRUEquipmentToggle({
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRruEquipment
-        ? isRruIncomplete
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
-          : 'border-violet-300 ring-1 ring-violet-500/10'
-        : 'border-slate-200 hover:border-violet-200'
+      ? isRruIncomplete
+        ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+        : 'border-violet-300 ring-1 ring-violet-500/10'
+      : 'border-slate-200 hover:border-violet-200'
       }`}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -546,8 +546,8 @@ export function RRUEquipmentToggle({
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rruItems.map((item) => (
               <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${(!item.vendor || !item.reference)
-                  ? 'bg-amber-50/20 border-amber-200'
-                  : 'bg-slate-50 border-slate-200'
+                ? 'bg-amber-50/20 border-amber-200'
+                : 'bg-slate-50 border-slate-200'
                 }`}>
                 <div className="flex gap-3">
                   {/* Marque */}
@@ -1278,10 +1278,10 @@ export function GPSEquipmentToggle({
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasGps
-        ? isGpsIncomplete
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
-          : 'border-violet-300 ring-1 ring-violet-500/10'
-        : 'border-slate-200 hover:border-violet-200'
+      ? isGpsIncomplete
+        ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+        : 'border-violet-300 ring-1 ring-violet-500/10'
+      : 'border-slate-200 hover:border-violet-200'
       }`}>
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
@@ -1415,10 +1415,10 @@ export function CoffretEquipmentToggle({
 
   return (
     <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasCoffret
-        ? isCoffretIncomplete
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
-          : 'border-violet-300 ring-1 ring-violet-500/10'
-        : 'border-slate-200 hover:border-violet-200'
+      ? isCoffretIncomplete
+        ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+        : 'border-violet-300 ring-1 ring-violet-500/10'
+      : 'border-slate-200 hover:border-violet-200'
       }`}>
       <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1901,10 +1901,10 @@ export function BaieEquipmentToggle({
                     type="button"
                     onClick={() => setActiveCategory(cat.id)}
                     className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${isActive
-                        ? 'bg-orange-50/80 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
-                        : catSelection
-                          ? 'bg-slate-50/80 border-orange-200 hover:bg-orange-50/40'
-                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                      ? 'bg-orange-50/80 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
+                      : catSelection
+                        ? 'bg-slate-50/80 border-orange-200 hover:bg-orange-50/40'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
                       }`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
@@ -1974,8 +1974,8 @@ export function BaieEquipmentToggle({
                     key={item.id}
                     onClick={() => handleToggleItem(item)}
                     className={`relative flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${isSelected
-                        ? 'bg-orange-50/70 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                      ? 'bg-orange-50/70 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
                       }`}
                   >
                     {/* Header item avec puce Radio (1 choix exclusif par catégorie) */}
@@ -1983,8 +1983,8 @@ export function BaieEquipmentToggle({
                       <div className="flex items-center gap-2.5 min-w-0">
                         {/* Puce Radio */}
                         <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${isSelected
-                            ? 'border-orange-600 bg-white ring-2 ring-orange-200'
-                            : 'border-slate-300 bg-white'
+                          ? 'border-orange-600 bg-white ring-2 ring-orange-200'
+                          : 'border-slate-300 bg-white'
                           }`}>
                           {isSelected && <div className="w-2 h-2 rounded-full bg-orange-600" />}
                         </div>
@@ -2069,8 +2069,8 @@ export function BaieEquipmentToggle({
                       key={c.id}
                       onClick={() => setActiveCategory(c.id)}
                       className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${s
-                          ? 'bg-orange-50/60 border-orange-300 text-orange-950'
-                          : 'bg-slate-50 border-slate-200 text-slate-500'
+                        ? 'bg-orange-50/60 border-orange-300 text-orange-950'
+                        : 'bg-slate-50 border-slate-200 text-slate-500'
                         }`}
                     >
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
@@ -2152,7 +2152,7 @@ export function CabEquipmentToggle({
     { id: 'plinthes', label: 'Plinthes' },
     { id: 'support_autostable', label: 'Support Autostable' },
     { id: 'support_fimo', label: 'Support FIMO' },
-    { id: 'support_muraux', label: 'Support Muraux' }
+    { id: 'support_muraux', label: 'Supports Muraux' }
   ];
 
   return (
@@ -2439,8 +2439,8 @@ export function BCubeEquipmentToggle({
                       }
                     }}
                     className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all ${selectedVendor === vendor
-                        ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                   >
                     {vendor}

@@ -99,13 +99,13 @@ export default function ResultsPanel({
     ? sectors
     : (ant4gConfig || ant5gConfig)
       ? [{
-          id: 'sector-default',
-          selectedHeight: mastHeight || 3,
-          selectedMontage4G: ant4gConfig?.model || '',
-          selectedMontage5G: ant5gConfig?.model || '',
-          ant4gConfig: ant4gConfig || { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
-          ant5gConfig: ant5gConfig || { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
-        } as unknown as SectorData]
+        id: 'sector-default',
+        selectedHeight: mastHeight || 3,
+        selectedMontage4G: ant4gConfig?.model || '',
+        selectedMontage5G: ant5gConfig?.model || '',
+        ant4gConfig: ant4gConfig || { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
+        ant5gConfig: ant5gConfig || { model: '', height: 0, width: 0, thickness: 0, weight: 0 },
+      } as unknown as SectorData]
       : [];
 
   const renderEquipmentItem = (config: EquipmentConfig) => {
@@ -388,7 +388,7 @@ export default function ResultsPanel({
         plinthes: 'Plinthes',
         support_autostable: 'Support Autostable',
         support_fimo: 'Support FIMO',
-        support_muraux: 'Support Muraux'
+        support_muraux: 'Supports Muraux'
       };
       const supportLabel = supportMap[equipmentValues.cab?.support] || equipmentValues.cab?.support || 'N/A';
       return renderCard(config.id, null, { type: types.join(', ') || 'Sélectionnée', support: supportLabel });
@@ -818,15 +818,15 @@ export default function ResultsPanel({
                         const isModeAgile = (prev.configMode || 'agile') === 'agile';
                         const same4G = isModeAgile
                           ? prev.ant4gConfig?.height === s.ant4gConfig?.height &&
-                            prev.ant4gConfig?.width === s.ant4gConfig?.width &&
-                            prev.ant4gConfig?.thickness === s.ant4gConfig?.thickness &&
-                            prev.ant4gConfig?.weight === s.ant4gConfig?.weight
+                          prev.ant4gConfig?.width === s.ant4gConfig?.width &&
+                          prev.ant4gConfig?.thickness === s.ant4gConfig?.thickness &&
+                          prev.ant4gConfig?.weight === s.ant4gConfig?.weight
                           : prev.selectedVendor4G === s.selectedVendor4G && prev.selectedReference4G === s.selectedReference4G;
                         const same5G = isModeAgile
                           ? prev.ant5gConfig?.height === s.ant5gConfig?.height &&
-                            prev.ant5gConfig?.width === s.ant5gConfig?.width &&
-                            prev.ant5gConfig?.thickness === s.ant5gConfig?.thickness &&
-                            prev.ant5gConfig?.weight === s.ant5gConfig?.weight
+                          prev.ant5gConfig?.width === s.ant5gConfig?.width &&
+                          prev.ant5gConfig?.thickness === s.ant5gConfig?.thickness &&
+                          prev.ant5gConfig?.weight === s.ant5gConfig?.weight
                           : prev.selectedVendor5G === s.selectedVendor5G && prev.selectedReference5G === s.selectedReference5G;
                         return sameHeight && sameMode && same4G && same5G;
                       });

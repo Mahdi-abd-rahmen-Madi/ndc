@@ -413,7 +413,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           plinthes: 'Plinthes',
           support_autostable: 'Support Autostable',
           support_fimo: 'Support FIMO',
-          support_muraux: 'Support Muraux'
+          support_muraux: 'Supports Muraux'
         };
         const suppLabel = (cabSupport && supportMap[cabSupport]) ? supportMap[cabSupport] : (cabSupport || '');
         const suppText = suppLabel ? ` (Support: ${suppLabel})` : '';
