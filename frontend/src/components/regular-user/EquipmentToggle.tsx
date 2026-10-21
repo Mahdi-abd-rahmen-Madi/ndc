@@ -2400,22 +2400,24 @@ export function BCubeEquipmentToggle({
 
             {/* Specs Display */}
             {selectedItem && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 mt-1">
-                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 mt-1">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Fournisseur</span>
-                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.supplier || 'N/A'}</span>
+                  <span className="text-xs text-slate-900 font-bold mt-0.5">{selectedItem.supplier || 'N/A'}</span>
                 </div>
-                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Dimensions</span>
-                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}</span>
+                  <span className="text-xs text-slate-900 font-bold mt-0.5 whitespace-nowrap overflow-visible" title={selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}>
+                    {selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}
+                  </span>
                 </div>
-                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
-                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.weight ? `${selectedItem.weight} kg` : '50 kg'}</span>
+                  <span className="text-xs text-slate-900 font-bold mt-0.5">{selectedItem.weight ? `${selectedItem.weight} kg` : '50 kg'}</span>
                 </div>
-                <div className="bg-white p-2 rounded border border-slate-200 flex flex-col">
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Puissance / Phase</span>
-                  <span className="text-xs text-slate-800 font-semibold">{selectedItem.power || ''} {selectedItem.phase || ''}</span>
+                  <span className="text-xs text-slate-900 font-bold mt-0.5">{[selectedItem.power, selectedItem.phase].filter(Boolean).join(' ') || 'N/A'}</span>
                 </div>
               </div>
             )}
