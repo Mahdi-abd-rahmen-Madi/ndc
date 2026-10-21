@@ -831,22 +831,46 @@ export function TDEquipmentToggle({
                           placeholder="Sélectionner un TGBT"
                         />
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-200">
-                        <div className="bg-white p-2 rounded border border-slate-200">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Hauteur</span>
-                          <span className="text-xs text-slate-800 font-semibold">500 mm</span>
+                      <div className="space-y-2 pt-1 border-t border-slate-200">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Hauteur (mm)</label>
+                            <input
+                              type="text"
+                              value="500"
+                              disabled
+                              className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Largeur (mm)</label>
+                            <input
+                              type="text"
+                              value="400"
+                              disabled
+                              className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                            />
+                          </div>
                         </div>
-                        <div className="bg-white p-2 rounded border border-slate-200">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Largeur</span>
-                          <span className="text-xs text-slate-800 font-semibold">400 mm</span>
-                        </div>
-                        <div className="bg-white p-2 rounded border border-slate-200">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Profondeur</span>
-                          <span className="text-xs text-slate-800 font-semibold">230 mm</span>
-                        </div>
-                        <div className="bg-white p-2 rounded border border-slate-200">
-                          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold block">Poids</span>
-                          <span className="text-xs text-slate-800 font-semibold">15 kg</span>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Profondeur (mm)</label>
+                            <input
+                              type="text"
+                              value="230"
+                              disabled
+                              className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
+                            <input
+                              type="text"
+                              value="15"
+                              disabled
+                              className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2400,24 +2424,46 @@ export function BCubeEquipmentToggle({
 
             {/* Specs Display */}
             {selectedItem && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 mt-1">
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Fournisseur</span>
-                  <span className="text-xs text-slate-900 font-bold mt-0.5">{selectedItem.supplier || 'N/A'}</span>
+              <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Fournisseur</label>
+                    <input
+                      type="text"
+                      value={selectedItem.supplier || 'N/A'}
+                      disabled
+                      className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Dimensions (mm)</label>
+                    <input
+                      type="text"
+                      value={selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}
+                      disabled
+                      className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                    />
+                  </div>
                 </div>
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Dimensions</span>
-                  <span className="text-xs text-slate-900 font-bold mt-0.5 whitespace-nowrap overflow-visible" title={selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}>
-                    {selectedItem.dimensions || `${selectedItem.height}x${selectedItem.width}x${selectedItem.thickness}mm`}
-                  </span>
-                </div>
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Poids</span>
-                  <span className="text-xs text-slate-900 font-bold mt-0.5">{selectedItem.weight ? `${selectedItem.weight} kg` : '50 kg'}</span>
-                </div>
-                <div className="bg-white p-2.5 rounded-lg border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Puissance / Phase</span>
-                  <span className="text-xs text-slate-900 font-bold mt-0.5">{[selectedItem.power, selectedItem.phase].filter(Boolean).join(' ') || 'N/A'}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Poids (Kg)</label>
+                    <input
+                      type="text"
+                      value={selectedItem.weight ? `${selectedItem.weight}` : '50'}
+                      disabled
+                      className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 uppercase font-semibold mb-1 block">Puissance / Phase</label>
+                    <input
+                      type="text"
+                      value={[selectedItem.power, selectedItem.phase].filter(Boolean).join(' ') || 'N/A'}
+                      disabled
+                      className="w-full bg-white border border-slate-200 rounded py-1.5 px-2 text-xs text-slate-800 font-medium cursor-not-allowed"
+                    />
+                  </div>
                 </div>
               </div>
             )}
