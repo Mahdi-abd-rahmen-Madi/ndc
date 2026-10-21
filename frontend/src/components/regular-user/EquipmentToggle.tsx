@@ -49,40 +49,39 @@ export function FHEquipmentToggle({
   const isFhIncomplete = hasFhEquipment && (!selectedVendor || !fhReference);
 
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-      hasFhEquipment 
-        ? isFhIncomplete 
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
-          : 'border-violet-300 ring-1 ring-violet-500/10' 
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasFhEquipment
+        ? isFhIncomplete
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+          : 'border-violet-300 ring-1 ring-violet-500/10'
         : 'border-slate-200 hover:border-violet-200'
-    }`}>
+      }`}>
       <div className="flex flex-col space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
-              <div className="relative flex items-center shrink-0">
-                <input
-                  type="checkbox"
-                  checked={hasFhEquipment}
-                  onChange={(e) => setHasFhEquipment(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-9 h-5 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
-              </div>
-              <span className="font-semibold text-slate-800">Présence FH</span>
-            </label>
-            <div className="flex items-center gap-1.5 flex-wrap justify-end">
-              {isFhIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
-                  <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
-                  Sélection requise
-                </span>
-              )}
-              <span className="text-[10px] font-bold text-violet-700 bg-violet-50/80 px-2.5 py-0.5 rounded-full border border-violet-200/80 whitespace-nowrap shadow-2xs">
-                1x par site
-              </span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
+            <div className="relative flex items-center shrink-0">
+              <input
+                type="checkbox"
+                checked={hasFhEquipment}
+                onChange={(e) => setHasFhEquipment(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-9 h-5 rounded-full transition-colors ${hasFhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasFhEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
+            <span className="font-semibold text-slate-800">Présence FH</span>
+          </label>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {isFhIncomplete && (
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
+                <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                Sélection requise
+              </span>
+            )}
+            <span className="text-[10px] font-bold text-violet-700 bg-violet-50/80 px-2.5 py-0.5 rounded-full border border-violet-200/80 whitespace-nowrap shadow-2xs">
+              1x par site
+            </span>
           </div>
+        </div>
 
         {hasFhEquipment && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
@@ -273,49 +272,47 @@ export function RRHEquipmentToggle({
   const isRrhIncomplete = hasRrhEquipment && (rrhItems.length === 0 || rrhItems.some(i => !i.vendor || !i.reference));
 
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-      hasRrhEquipment 
-        ? isRrhIncomplete 
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
-          : 'border-violet-300 ring-1 ring-violet-500/10' 
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRrhEquipment
+        ? isRrhIncomplete
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+          : 'border-violet-300 ring-1 ring-violet-500/10'
         : 'border-slate-200 hover:border-violet-200'
-    }`}>
+      }`}>
       <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
-              <div className="relative flex items-center shrink-0">
-                <input
-                  type="checkbox"
-                  checked={hasRrhEquipment}
-                  onChange={(e) => setHasRrhEquipment(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-9 h-5 rounded-full transition-colors ${hasRrhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
-              </div>
-              <span className="font-semibold text-slate-800">Présence RRH</span>
-            </label>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {isRrhIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
-                  <AlertCircle className="w-3 h-3 text-amber-600" />
-                  Sélection requise
-                </span>
-              )}
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
-                Par secteur
-              </span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
+            <div className="relative flex items-center shrink-0">
+              <input
+                type="checkbox"
+                checked={hasRrhEquipment}
+                onChange={(e) => setHasRrhEquipment(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-9 h-5 rounded-full transition-colors ${hasRrhEquipment ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasRrhEquipment ? 'transform translate-x-4' : ''}`}></div>
             </div>
+            <span className="font-semibold text-slate-800 whitespace-nowrap">Présence RRH</span>
+          </label>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {isRrhIncomplete && (
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
+                <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                Sélection requise
+              </span>
+            )}
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
+              Par secteur
+            </span>
           </div>
+        </div>
 
         {hasRrhEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rrhItems.map((item) => (
-              <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${
-                (!item.vendor || !item.reference) 
-                  ? 'bg-amber-50/20 border-amber-200' 
+              <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${(!item.vendor || !item.reference)
+                  ? 'bg-amber-50/20 border-amber-200'
                   : 'bg-slate-50 border-slate-200'
-              }`}>
+                }`}>
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1 min-w-0">
@@ -511,13 +508,12 @@ export function RRUEquipmentToggle({
   const isRruIncomplete = hasRruEquipment && (rruItems.length === 0 || rruItems.some(i => !i.vendor || !i.reference));
 
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-      hasRruEquipment 
-        ? isRruIncomplete 
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
-          : 'border-violet-300 ring-1 ring-violet-500/10' 
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasRruEquipment
+        ? isRruIncomplete
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+          : 'border-violet-300 ring-1 ring-violet-500/10'
         : 'border-slate-200 hover:border-violet-200'
-    }`}>
+      }`}>
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
@@ -549,11 +545,10 @@ export function RRUEquipmentToggle({
         {hasRruEquipment && (
           <div className="flex flex-col gap-3 mt-2 border-t border-slate-100 pt-3">
             {rruItems.map((item) => (
-              <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${
-                (!item.vendor || !item.reference) 
-                  ? 'bg-amber-50/20 border-amber-200' 
+              <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${(!item.vendor || !item.reference)
+                  ? 'bg-amber-50/20 border-amber-200'
                   : 'bg-slate-50 border-slate-200'
-              }`}>
+                }`}>
                 <div className="flex gap-3">
                   {/* Marque */}
                   <div className="flex flex-col flex-1 min-w-0">
@@ -1248,8 +1243,8 @@ export function GPSEquipmentToggle({
   operator = 'bouygues'
 }: GPSEquipmentToggleProps) {
   const isBouygues = operator.toLowerCase() === 'bouygues';
-  
-  const marqueOptions = isBouygues 
+
+  const marqueOptions = isBouygues
     ? [{ value: 'ERICSSON', label: 'ERICSSON' }, { value: 'NOKIA', label: 'NOKIA' }]
     : [{ value: 'NOKIA', label: 'NOKIA' }];
 
@@ -1275,20 +1270,19 @@ export function GPSEquipmentToggle({
   const modelOptions = gpsMarque === 'ERICSSON'
     ? [{ value: 'KRE 101 2395/2', label: 'KRE 101 2395/2' }]
     : [
-        { value: 'FYGC 474074A', label: 'FYGC 474074A' },
-        { value: 'FYGB 472748A', label: 'FYGB 472748A' }
-      ];
+      { value: 'FYGC 474074A', label: 'FYGC 474074A' },
+      { value: 'FYGB 472748A', label: 'FYGB 472748A' }
+    ];
 
   const isGpsIncomplete = hasGps && (!gpsMarque || !gpsReference);
 
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-      hasGps 
-        ? isGpsIncomplete 
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
-          : 'border-violet-300 ring-1 ring-violet-500/10' 
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasGps
+        ? isGpsIncomplete
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+          : 'border-violet-300 ring-1 ring-violet-500/10'
         : 'border-slate-200 hover:border-violet-200'
-    }`}>
+      }`}>
       <div className="flex flex-col space-y-4">
         <div className="flex items-center justify-between gap-4">
           <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer shrink-0">
@@ -1420,40 +1414,39 @@ export function CoffretEquipmentToggle({
   const isCoffretIncomplete = hasCoffret && (!coffretReference || !mainSelectValue);
 
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-      hasCoffret 
-        ? isCoffretIncomplete 
-          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10' 
-          : 'border-violet-300 ring-1 ring-violet-500/10' 
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasCoffret
+        ? isCoffretIncomplete
+          ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
+          : 'border-violet-300 ring-1 ring-violet-500/10'
         : 'border-slate-200 hover:border-violet-200'
-    }`}>
+      }`}>
       <div className="flex flex-col space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-sm font-semibold text-slate-800 flex items-center gap-2.5 cursor-pointer select-none">
-              <div className="relative flex items-center shrink-0">
-                <input
-                  type="checkbox"
-                  checked={hasCoffret}
-                  onChange={(e) => setHasCoffret(e.target.checked)}
-                  className="sr-only"
-                />
-                <div className={`w-9 h-5 rounded-full transition-colors ${hasCoffret ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
-                <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
-              </div>
-              <span className="font-semibold text-slate-800">Présence Coffrets fibre</span>
-            </label>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {isCoffretIncomplete && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
-                  <AlertCircle className="w-3 h-3 text-amber-600" />
-                  Sélection requise
-                </span>
-              )}
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
-                Par secteur
-              </span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
+            <div className="relative flex items-center shrink-0">
+              <input
+                type="checkbox"
+                checked={hasCoffret}
+                onChange={(e) => setHasCoffret(e.target.checked)}
+                className="sr-only"
+              />
+              <div className={`w-9 h-5 rounded-full transition-colors ${hasCoffret ? 'bg-violet-600' : 'bg-slate-300'}`}></div>
+              <div className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasCoffret ? 'transform translate-x-4' : ''}`}></div>
             </div>
+            <span className="font-semibold text-slate-800 whitespace-nowrap">Présence Coffrets fibre</span>
+          </label>
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {isCoffretIncomplete && (
+              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
+                <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                Sélection requise
+              </span>
+            )}
+            <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
+              Par secteur
+            </span>
           </div>
+        </div>
 
         {hasCoffret && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
@@ -1633,13 +1626,13 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     weight: 93,
     operator: 'orange'
   },
-  // 2. Énergie (-48V)
+  // 2. Énergie
   {
     id: 'orange_baie_energie_walkyrie_t3_18kw',
     name: 'Baie énergie Outdoor WALKYRIE T3 18kw',
     reference: 'WALKYRIE T3 18kw',
     category: 'energie',
-    category_label: 'Énergie (-48V)',
+    category_label: 'Énergie',
     dimensions: '1550x700x770mm',
     height: 1550,
     width: 700,
@@ -1652,7 +1645,7 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     name: 'Baie énergie Outdoor T3 10.8kw',
     reference: 'T3 10.8kw',
     category: 'energie',
-    category_label: 'Énergie (-48V)',
+    category_label: 'Énergie',
     dimensions: '1200x700x770mm',
     height: 1200,
     width: 700,
@@ -1665,7 +1658,7 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     name: 'Baie énergie GBOX',
     reference: 'GBOX',
     category: 'energie',
-    category_label: 'Énergie (-48V)',
+    category_label: 'Énergie',
     dimensions: '',
     height: null,
     width: null,
@@ -1678,7 +1671,7 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     name: 'Baie TLTI FG2 TGBT /48V',
     reference: 'FG2 TGBT /48V',
     category: 'energie',
-    category_label: 'Énergie (-48V)',
+    category_label: 'Énergie',
     dimensions: '1650x855x750mm',
     height: 1650,
     width: 855,
@@ -1686,13 +1679,25 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     weight: null,
     operator: 'orange'
   },
-  // 3. Distribution (AC)
+  {
+    id: 'orange_baie_tlti_fg2_tgbt_trans',
+    name: 'Baie TLTI FG2 TGBT /TRANS',
+    reference: 'FG2 TGBT /TRANS',
+    category: 'energie',
+    category_label: 'Énergie',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: 95,
+    operator: 'orange'
+  },
   {
     id: 'orange_baie_seifel',
     name: 'Baie SEIFEL',
     reference: 'SEIFEL',
-    category: 'distribution',
-    category_label: 'Distribution (AC)',
+    category: 'energie',
+    category_label: 'Énergie',
     dimensions: '1485x885x540mm',
     height: 1485,
     width: 885,
@@ -1701,25 +1706,11 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     operator: 'orange'
   },
   {
-    id: 'orange_baie_tlti_fg2_tgbt_trans',
-    name: 'Baie TLTI FG2 TGBT /TRANS',
-    reference: 'FG2 TGBT /TRANS',
-    category: 'distribution',
-    category_label: 'Distribution (AC)',
-    dimensions: '1650x855x750mm',
-    height: 1650,
-    width: 855,
-    depth: 750,
-    weight: 95,
-    operator: 'orange'
-  },
-  // 4. Raccordement
-  {
     id: 'orange_coffret_outdoor_trans_tlti_2015',
     name: 'Coffret Outdoor Trans TLTI 2015',
     reference: 'Trans TLTI 2015',
-    category: 'raccordement',
-    category_label: 'Raccordement',
+    category: 'energie',
+    category_label: 'Énergie',
     dimensions: '1600x900x620mm',
     height: 1600,
     width: 900,
@@ -1753,26 +1744,30 @@ export function BaieEquipmentToggle({
   setBaieEnergie
 }: BaieEquipmentToggleProps) {
   const options = (baieOptions && baieOptions.length > 0) ? baieOptions : DEFAULT_ORANGE_BAIES;
-  const [activeCategory, setActiveCategory] = useState<string>('radio_trans');
-
+  const [activeCategory, setActiveCategory] = useState<string>('radio');
   const categories = [
-    { id: 'radio_trans', label: '1. Radio & Trans', shortName: 'Radio & Trans', icon: Radio, count: options.filter(o => o.category === 'radio_trans').length },
-    { id: 'energie', label: '2. Énergie (-48V)', shortName: 'Énergie (-48V)', icon: Zap, count: options.filter(o => o.category === 'energie').length },
-    { id: 'distribution', label: '3. Distribution (AC)', shortName: 'Distribution (AC)', icon: Server, count: options.filter(o => o.category === 'distribution').length },
-    { id: 'raccordement', label: '4. Raccordement', shortName: 'Raccordement', icon: Box, count: options.filter(o => o.category === 'raccordement').length }
+    { id: 'radio', label: '1. Radio', shortName: 'Radio', icon: Radio, count: options.filter(o => o.category === 'radio' || o.category === 'radio_trans').length },
+    { id: 'energie', label: '2. Énergie', shortName: 'Énergie', icon: Zap, count: options.filter(o => o.category === 'energie' || o.category === 'distribution' || o.category === 'raccordement').length }
   ];
 
   const syncLegacyFlags = (items: SelectedBaieItem[]) => {
     const hasRadio = items.some(i => {
       const ref = options.find(o => o.id === i.referenceId);
-      return ref?.category === 'radio_trans';
+      return ref?.category === 'radio' || ref?.category === 'radio_trans';
     });
     const hasEnergie = items.some(i => {
       const ref = options.find(o => o.id === i.referenceId);
-      return ref?.category === 'energie';
+      return ref?.category === 'energie' || ref?.category === 'distribution' || ref?.category === 'raccordement';
     });
     if (setBaieRadio) setBaieRadio(hasRadio);
     if (setBaieEnergie) setBaieEnergie(hasEnergie);
+  };
+
+  // Helper to normalize category matching
+  const matchesCategory = (itemCategory: string | undefined, targetCat: string) => {
+    if (targetCat === 'radio') return itemCategory === 'radio' || itemCategory === 'radio_trans';
+    if (targetCat === 'energie') return itemCategory === 'energie' || itemCategory === 'distribution' || itemCategory === 'raccordement';
+    return itemCategory === targetCat;
   };
 
   // Enforce 1 reference per category: clicking an unselected item replaces any existing item in that category
@@ -1787,7 +1782,7 @@ export function BaieEquipmentToggle({
       // Replace any existing item from the same category (1 reference per category)
       const withoutSameCategory = baieItems.filter(i => {
         const ref = options.find(o => o.id === i.referenceId);
-        return ref?.category !== item.category;
+        return !matchesCategory(ref?.category, item.category);
       });
       next = [...withoutSameCategory, { id: crypto.randomUUID(), referenceId: item.id, quantity: 1 }];
     }
@@ -1814,7 +1809,7 @@ export function BaieEquipmentToggle({
     }
   };
 
-  const filteredOptions = options.filter(o => o.category === activeCategory);
+  const filteredOptions = options.filter(o => matchesCategory(o.category, activeCategory));
 
   const totalSelectedCount = baieItems.reduce((acc, i) => acc + (i.quantity || 1), 0);
   const totalWeight = baieItems.reduce((acc, i) => {
@@ -1824,14 +1819,13 @@ export function BaieEquipmentToggle({
 
   const getCategoryColor = (cat: string) => {
     switch (cat) {
+      case 'radio':
       case 'radio_trans':
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'energie':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'distribution':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'raccordement':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-200';
     }
@@ -1840,7 +1834,7 @@ export function BaieEquipmentToggle({
   const getSelectedForCategory = (catId: string) => {
     const sel = baieItems.find(i => {
       const ref = options.find(o => o.id === i.referenceId);
-      return ref?.category === catId;
+      return matchesCategory(ref?.category, catId);
     });
     if (!sel) return null;
     const ref = options.find(o => o.id === sel.referenceId);
@@ -1851,9 +1845,8 @@ export function BaieEquipmentToggle({
   const currentCategorySelection = getSelectedForCategory(activeCategory);
 
   return (
-    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-      hasBaie ? 'border-orange-300 ring-1 ring-orange-500/20' : 'border-slate-200 hover:border-orange-200'
-    }`}>
+    <div className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${hasBaie ? 'border-orange-300 ring-1 ring-orange-500/20' : 'border-slate-200 hover:border-orange-200'
+      }`}>
       <div className="flex flex-col space-y-3">
         {/* En-tête avec Switch */}
         <div className="flex items-center justify-between">
@@ -1878,7 +1871,7 @@ export function BaieEquipmentToggle({
           {hasBaie && (
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200">
-                {baieItems.length} / 4 catégories
+                {baieItems.length} / 2 catégories
               </span>
               {totalWeight > 0 && (
                 <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
@@ -1890,13 +1883,13 @@ export function BaieEquipmentToggle({
         </div>
 
         <p className="text-[11px] text-slate-500 font-normal pl-6">
-          Sélectionnez 1 référence par catégorie en zone technique outdoor (Radio & Trans, Énergie, Distribution, Raccordement).
+          Sélectionnez 1 référence par catégorie en zone technique outdoor (Radio, Énergie).
         </p>
 
         {hasBaie && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
-            {/* Onglets des 4 Catégories (Sans "Toutes") avec indicateur direct du modèle choisi */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {/* Onglets des 2 Catégories (Sans "Toutes") avec indicateur direct du modèle choisi */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {categories.map((cat) => {
                 const isActive = activeCategory === cat.id;
                 const catSelection = getSelectedForCategory(cat.id);
@@ -1907,13 +1900,12 @@ export function BaieEquipmentToggle({
                     key={cat.id}
                     type="button"
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${
-                      isActive
+                    className={`flex flex-col p-2.5 rounded-xl border text-left transition-all ${isActive
                         ? 'bg-orange-50/80 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
                         : catSelection
                           ? 'bg-slate-50/80 border-orange-200 hover:bg-orange-50/40'
                           : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between gap-1 mb-1">
                       <div className="flex items-center gap-1.5">
@@ -1922,9 +1914,8 @@ export function BaieEquipmentToggle({
                           {cat.label}
                         </span>
                       </div>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${
-                        isActive ? 'bg-orange-200/80 text-orange-900' : 'bg-slate-200/70 text-slate-600'
-                      }`}>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${isActive ? 'bg-orange-200/80 text-orange-900' : 'bg-slate-200/70 text-slate-600'
+                        }`}>
                         {cat.count}
                       </span>
                     </div>
@@ -1982,26 +1973,23 @@ export function BaieEquipmentToggle({
                   <div
                     key={item.id}
                     onClick={() => handleToggleItem(item)}
-                    className={`relative flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                      isSelected
+                    className={`relative flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${isSelected
                         ? 'bg-orange-50/70 border-orange-400 ring-2 ring-orange-500/20 shadow-xs'
                         : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
-                    }`}
+                      }`}
                   >
                     {/* Header item avec puce Radio (1 choix exclusif par catégorie) */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         {/* Puce Radio */}
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
-                          isSelected
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${isSelected
                             ? 'border-orange-600 bg-white ring-2 ring-orange-200'
                             : 'border-slate-300 bg-white'
-                        }`}>
+                          }`}>
                           {isSelected && <div className="w-2 h-2 rounded-full bg-orange-600" />}
                         </div>
-                        <span className={`text-xs font-bold truncate ${
-                          isSelected ? 'text-orange-950 font-extrabold' : 'text-slate-800'
-                        }`}>
+                        <span className={`text-xs font-bold truncate ${isSelected ? 'text-orange-950 font-extrabold' : 'text-slate-800'
+                          }`}>
                           {item.name}
                         </span>
                       </div>
@@ -2071,20 +2059,19 @@ export function BaieEquipmentToggle({
               })}
             </div>
 
-            {/* Barre de synthèse globale des 4 catégories */}
+            {/* Barre de synthèse globale des 2 catégories */}
             <div className="mt-2 pt-3 border-t border-slate-200/80 flex flex-col gap-2">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 {categories.map((c) => {
                   const s = getSelectedForCategory(c.id);
                   return (
                     <div
                       key={c.id}
                       onClick={() => setActiveCategory(c.id)}
-                      className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${
-                        s
+                      className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${s
                           ? 'bg-orange-50/60 border-orange-300 text-orange-950'
                           : 'bg-slate-50 border-slate-200 text-slate-500'
-                      }`}
+                        }`}
                     >
                       <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">
                         {c.shortName}
@@ -2427,7 +2414,7 @@ export function BCubeEquipmentToggle({
               <div className={`absolute left-1 top-1 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${hasAtelierEnergie ? 'transform translate-x-4' : ''}`}></div>
             </div>
             <Zap className="w-4 h-4 text-violet-600" />
-            BCube (TD + AE)
+            BCube
           </label>
           <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2.5 py-0.5 rounded-full border border-violet-200">
             Bouygues
@@ -2451,11 +2438,10 @@ export function BCubeEquipmentToggle({
                         setBcubeReference(firstInVendor.id);
                       }
                     }}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                      selectedVendor === vendor
+                    className={`px-3 py-1 text-xs font-semibold rounded-lg border transition-all ${selectedVendor === vendor
                         ? 'bg-violet-600 text-white border-violet-600 shadow-2xs'
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
+                      }`}
                   >
                     {vendor}
                   </button>

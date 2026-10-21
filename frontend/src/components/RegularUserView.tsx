@@ -1438,7 +1438,7 @@ export default function RegularUserView({
                     <span className="font-bold text-slate-900">{etancheite || 'Non spécifié'} cm</span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Échelle</span>
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Présence echelle + Palier de repos rabattable + PA</span>
                     <span className="font-bold text-slate-900">{selectedEchelle}</span>
                   </div>
                 </div>
@@ -2499,7 +2499,7 @@ export default function RegularUserView({
                         </div>
 
                         <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col col-span-2 sm:col-span-3">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Échelle</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Présence echelle + Palier de repos rabattable + PA</span>
                           <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
                             {selectedEchelle ? selectedEchelle : <span className="text-slate-400 italic font-normal">À renseigner</span>}
                           </span>

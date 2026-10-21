@@ -442,8 +442,8 @@ export default function UserInput({
               {/* Échelle au sol */}
               <div className="flex flex-col space-y-2">
                 <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
-                  <AlignJustify className="w-3.5 h-3.5 text-violet-600" />
-                  Échelle
+                  <AlignJustify className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                  Présence echelle + Palier de repos rabattable + PA
                 </label>
                 <CustomSelect
                   value={selectedEchelle}

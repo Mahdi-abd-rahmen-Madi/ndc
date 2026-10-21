@@ -108,7 +108,7 @@ baie_refs = [
         "name": "Baie TLTI FG2 TGBT /48V",
         "reference": "FG2 TGBT /48V",
         "category": "energie",
-        "category_label": "Énergie (-48V)",
+        "category_label": "Énergie",
         "dimensions": "1650x855x750mm",
         "height": 1650,
         "width": 855,
@@ -116,13 +116,25 @@ baie_refs = [
         "weight": None,
         "operator": "orange"
     },
-    # 3. Distribution (AC)
+    {
+        "id": "orange_baie_tlti_fg2_tgbt_trans",
+        "name": "Baie TLTI FG2 TGBT /TRANS",
+        "reference": "FG2 TGBT /TRANS",
+        "category": "energie",
+        "category_label": "Énergie",
+        "dimensions": "1650x855x750mm",
+        "height": 1650,
+        "width": 855,
+        "depth": 750,
+        "weight": 95,
+        "operator": "orange"
+    },
     {
         "id": "orange_baie_seifel",
         "name": "Baie SEIFEL",
         "reference": "SEIFEL",
-        "category": "distribution",
-        "category_label": "Distribution (AC)",
+        "category": "energie",
+        "category_label": "Énergie",
         "dimensions": "1485x885x540mm",
         "height": 1485,
         "width": 885,
@@ -131,25 +143,11 @@ baie_refs = [
         "operator": "orange"
     },
     {
-        "id": "orange_baie_tlti_fg2_tgbt_trans",
-        "name": "Baie TLTI FG2 TGBT /TRANS",
-        "reference": "FG2 TGBT /TRANS",
-        "category": "distribution",
-        "category_label": "Distribution (AC)",
-        "dimensions": "1650x855x750mm",
-        "height": 1650,
-        "width": 855,
-        "depth": 750,
-        "weight": 95,
-        "operator": "orange"
-    },
-    # 4. Raccordement
-    {
         "id": "orange_coffret_outdoor_trans_tlti_2015",
         "name": "Coffret Outdoor Trans TLTI 2015",
         "reference": "Trans TLTI 2015",
-        "category": "raccordement",
-        "category_label": "Raccordement",
+        "category": "energie",
+        "category_label": "Énergie",
         "dimensions": "1600x900x620mm",
         "height": 1600,
         "width": 900,
