@@ -3,6 +3,7 @@ import { LookupResult, DocumentInfo, SectorData, AntennaConfigState } from './ty
 import { getTerrainDetails } from './PdfGenerator';
 import { useState, useEffect } from 'react';
 import { getEnabledConfigs, EquipmentConfig } from '../../config/equipmentConfig';
+import { EquipmentPreviewCard } from '../ui/EquipmentPreviewCard';
 import PdfPreviewModal from './PdfPreviewModal';
 
 interface ResultsPanelProps {
@@ -253,16 +254,32 @@ export default function ResultsPanel({
     if (config.id === 'fh') {
       const fhVal = equipmentValues.fh || {};
       const qVal = fhVal.quantité || 1;
-      return renderCard(
-        config.id,
-        qVal,
-        {
-          modèle: fhVal.référence || 'N/A',
-          diamètre: fhVal.diamètre || 'N/A',
-          ...(fhVal.poids && fhVal.poids !== 'N/A' ? { poids: fhVal.poids } : {})
-        },
-        '',
-        { text: '1x par site', bg: 'bg-amber-50', textCol: 'text-amber-700', border: 'border-amber-200' }
+      const ref = fhVal.référence || 'N/A';
+      const vendor = fhVal.marque;
+      let model = ref;
+      if (vendor && model.startsWith(vendor)) {
+        model = model.substring(vendor.length).trim();
+      }
+
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title={config.name || 'Faisceau Hertzien (FH)'}
+          icon={IconComponent}
+          color="amber"
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-amber-50',
+            textCol: 'text-amber-700',
+            border: 'border-amber-200'
+          }}
+          quantityInfo={{
+            label: `x${qVal}`,
+            total: qVal
+          }}
+          marque={vendor}
+          modele={model}
+        />
       );
     }
 
@@ -273,27 +290,36 @@ export default function ResultsPanel({
           const qty = item.quantity || 1;
           const totalQty = qty * (nombreSecteurs || 1);
           const typeName = 'RRH';
-          const title = item.reference || `${typeName} #${index + 1}`;
           const vendor = item.vendor;
           const model = vendor && item.reference && item.reference.startsWith(vendor)
             ? item.reference.substring(vendor.length).trim()
             : item.reference;
-          const bodySpecs = vendor && model && model !== item.reference ? {
-            marque: vendor,
-            modèle: model
-          } : {
-            modèle: item.reference || 'N/A'
-          };
 
-          return renderCard(
-            `${config.id}-${index}`,
-            qty,
-            bodySpecs,
-            '',
-            { text: 'Par secteur', bg: 'bg-violet-50', textCol: 'text-violet-700', border: 'border-violet-200' },
-            { perSector: qty, total: totalQty },
-            title,
-            { text: typeName, bg: 'bg-rose-50', textCol: 'text-rose-700', border: 'border-rose-200' }
+          return (
+            <EquipmentPreviewCard
+              key={`${config.id}-${index}`}
+              title={typeName}
+              icon={IconComponent}
+              color="rose"
+              typeBadge={{
+                text: typeName,
+                bg: 'bg-rose-50',
+                textCol: 'text-rose-700',
+                border: 'border-rose-200'
+              }}
+              scopeBadge={{
+                text: 'Par secteur',
+                bg: 'bg-violet-50',
+                textCol: 'text-violet-700',
+                border: 'border-violet-200'
+              }}
+              quantityInfo={{
+                perSector: qty,
+                total: totalQty
+              }}
+              marque={vendor}
+              modele={model || 'N/A'}
+            />
           );
         });
       }
@@ -304,32 +330,36 @@ export default function ResultsPanel({
         const qty = item.quantity || 1;
         const totalQty = qty * (nombreSecteurs || 1);
         const typeName = operator === 'free' ? 'RF NSN' : 'RRU';
-        const title = item.reference || `${typeName} #${index + 1}`;
         const vendor = item.vendor;
         const model = vendor && item.reference && item.reference.startsWith(vendor)
           ? item.reference.substring(vendor.length).trim()
           : item.reference;
-        const bodySpecs: Record<string, any> = {
-          ...(vendor && model && model !== item.reference ? {
-            marque: vendor,
-            modèle: model
-          } : {
-            modèle: item.reference || 'N/A'
-          }),
-          ...(item.dimensions ? { dimensions: item.dimensions } : {}),
-          ...(item.weight ? { 'poids unitaire': `${item.weight} kg` } : {}),
-          ...(item.weight && totalQty > 1 ? { 'poids total': `${(item.weight * totalQty).toFixed(1)} kg` } : {})
-        };
 
-        return renderCard(
-          `${config.id}-${index}`,
-          qty,
-          bodySpecs,
-          '',
-          { text: 'Par secteur', bg: 'bg-violet-50', textCol: 'text-violet-700', border: 'border-violet-200' },
-          { perSector: qty, total: totalQty },
-          title,
-          { text: typeName, bg: 'bg-emerald-50', textCol: 'text-emerald-700', border: 'border-emerald-200' }
+        return (
+          <EquipmentPreviewCard
+            key={`${config.id}-${index}`}
+            title={typeName}
+            icon={IconComponent}
+            color="emerald"
+            typeBadge={{
+              text: typeName,
+              bg: 'bg-emerald-50',
+              textCol: 'text-emerald-700',
+              border: 'border-emerald-200'
+            }}
+            scopeBadge={{
+              text: 'Par secteur',
+              bg: 'bg-violet-50',
+              textCol: 'text-violet-700',
+              border: 'border-violet-200'
+            }}
+            quantityInfo={{
+              perSector: qty,
+              total: totalQty
+            }}
+            marque={vendor}
+            modele={model || 'N/A'}
+          />
         );
       });
     }
@@ -337,15 +367,24 @@ export default function ResultsPanel({
     if (config.id === 'coffrets_fibre') {
       const coffretVal = equipmentValues.coffrets_fibre || {};
       const totalQty = nombreSecteurs || 1;
-      return renderCard(
-        config.id,
-        1,
-        {
-          modèle: coffretVal.référence || 'Standard'
-        },
-        '',
-        { text: 'Par secteur', bg: 'bg-violet-50', textCol: 'text-violet-700', border: 'border-violet-200' },
-        { perSector: 1, total: totalQty }
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title={config.name || 'Coffrets fibre'}
+          icon={IconComponent}
+          color="emerald"
+          scopeBadge={{
+            text: 'Par secteur',
+            bg: 'bg-violet-50',
+            textCol: 'text-violet-700',
+            border: 'border-violet-200'
+          }}
+          quantityInfo={{
+            perSector: 1,
+            total: totalQty
+          }}
+          modele={coffretVal.référence || 'Standard'}
+        />
       );
     }
 
@@ -354,21 +393,34 @@ export default function ResultsPanel({
       if (Array.isArray(items) && items.length > 0) {
         return items.map((item: any, index: number) => {
           const qty = item.quantity || 1;
-          const specs: Record<string, any> = {
-            'catégorie': item.category_label || item.category || 'N/A',
-            ...(item.dimensions ? { dimensions: item.dimensions } : {}),
-            ...(item.weight ? { 'poids unitaire': `${item.weight} kg` } : {}),
-            ...(item.weight && qty > 1 ? { 'poids total': `${item.weight * qty} kg` } : {})
-          };
-          return renderCard(
-            `${config.id}-${index}`,
-            qty,
-            specs,
-            '',
-            { text: '1x par site', bg: 'bg-orange-50', textCol: 'text-orange-700', border: 'border-orange-200' },
-            undefined,
-            item.name,
-            { text: item.category_label || 'Baie', bg: 'bg-orange-100', textCol: 'text-orange-800', border: 'border-orange-300' }
+          const isRadio = item.category === 'radio' || item.category === 'radio_trans';
+          const cardTitle = isRadio ? 'Baie radio' : 'Baie énergie';
+          const modelOrRef = item.reference || item.name || 'N/A';
+
+          return (
+            <EquipmentPreviewCard
+              key={`${config.id}-${index}`}
+              title={cardTitle}
+              icon={IconComponent}
+              color="orange"
+              typeBadge={{
+                text: item.category_label || (isRadio ? 'Radio & Trans' : 'Énergie'),
+                bg: 'bg-orange-50',
+                textCol: 'text-orange-700',
+                border: 'border-orange-200'
+              }}
+              scopeBadge={{
+                text: '1x par site',
+                bg: 'bg-orange-50',
+                textCol: 'text-orange-700',
+                border: 'border-orange-200'
+              }}
+              quantityInfo={{
+                label: `x${qty}`,
+                total: qty
+              }}
+              modele={modelOrRef}
+            />
           );
         });
       }
@@ -377,6 +429,105 @@ export default function ResultsPanel({
       if (equipmentValues.baie?.baieRadio) types.push('Baie radio');
       if (equipmentValues.baie?.baieEnergie) types.push('Baie énergie');
       return renderCard(config.id, null, { type: types.join(', ') || 'Sélectionnée' });
+    }
+
+    if (config.id === 'td') {
+      const tdVal = equipmentValues.td || {};
+      const typeLabel = tdVal.type || 'TD Tétraphasé';
+      const refLabel = tdVal.référence || 'N/A';
+      const tgbtVal = tdVal.tgbt;
+
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title={config.name || 'Équipement TD'}
+          icon={IconComponent}
+          color="amber"
+          typeBadge={{
+            text: typeLabel,
+            bg: 'bg-amber-50',
+            textCol: 'text-amber-700',
+            border: 'border-amber-200'
+          }}
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-amber-50',
+            textCol: 'text-amber-700',
+            border: 'border-amber-200'
+          }}
+          quantityInfo={{
+            label: 'x1',
+            total: 1
+          }}
+          modele={refLabel}
+          extraSpecs={tgbtVal ? { TGBT: tgbtVal } : undefined}
+        />
+      );
+    }
+
+    if (config.id === 'gps') {
+      const gpsVal = equipmentValues.gps || {};
+      const marque = gpsVal.marque && gpsVal.marque !== 'N/A' ? gpsVal.marque : undefined;
+      const modele = gpsVal.référence || 'N/A';
+
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title="GPS"
+          icon={IconComponent}
+          color="blue"
+          typeBadge={{
+            text: 'GPS',
+            bg: 'bg-blue-50',
+            textCol: 'text-blue-700',
+            border: 'border-blue-200'
+          }}
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-blue-50',
+            textCol: 'text-blue-700',
+            border: 'border-blue-200'
+          }}
+          quantityInfo={{
+            label: 'x1',
+            total: 1
+          }}
+          marque={marque}
+          modele={modele}
+        />
+      );
+    }
+
+    if (config.id === 'boitier_lovage') {
+      const lovageVal = equipmentValues.boitier_lovage || {};
+      const qVal = lovageVal.quantité || 1;
+      const modele = lovageVal.référence || 'N/A';
+
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title={config.name || 'Boîtier de lovage'}
+          icon={IconComponent}
+          color="purple"
+          typeBadge={{
+            text: 'Lovage',
+            bg: 'bg-purple-50',
+            textCol: 'text-purple-700',
+            border: 'border-purple-200'
+          }}
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-purple-50',
+            textCol: 'text-purple-700',
+            border: 'border-purple-200'
+          }}
+          quantityInfo={{
+            label: `x${qVal}`,
+            total: qVal
+          }}
+          modele={modele}
+        />
+      );
     }
 
     if (config.id === 'cab') {
@@ -391,18 +542,67 @@ export default function ResultsPanel({
         support_muraux: 'Supports Muraux'
       };
       const supportLabel = supportMap[equipmentValues.cab?.support] || equipmentValues.cab?.support || 'N/A';
-      return renderCard(config.id, null, { type: types.join(', ') || 'Sélectionnée', support: supportLabel });
+
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title="Baie CAB"
+          icon={IconComponent}
+          color="rose"
+          typeBadge={{
+            text: 'Baie CAB',
+            bg: 'bg-rose-50',
+            textCol: 'text-rose-700',
+            border: 'border-rose-200'
+          }}
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-rose-50',
+            textCol: 'text-rose-700',
+            border: 'border-rose-200'
+          }}
+          quantityInfo={{
+            label: 'x1',
+            total: 1
+          }}
+          modele={types.join(', ') || 'Sélectionnée'}
+          extraSpecs={{ support: supportLabel }}
+        />
+      );
     }
 
     if (config.id === 'atelier_energie') {
       if (operator === 'bouygues') {
         const bcube = equipmentValues.atelier_energie?.bcube;
-        return renderCard(config.id, null, {
-          modèle: bcube?.name || 'BCube (TD + AE)',
-          fournisseur: bcube?.supplier || 'N/A',
-          dimensions: bcube?.dimensions || 'N/A',
-          poids: bcube?.weight ? `${bcube.weight} kg` : '50 kg'
-        }, '', undefined, undefined, 'BCube (TD + AE)');
+        return (
+          <EquipmentPreviewCard
+            key={config.id}
+            title="BCube (TD + AE)"
+            icon={IconComponent}
+            color="amber"
+            typeBadge={{
+              text: 'BCube',
+              bg: 'bg-amber-50',
+              textCol: 'text-amber-700',
+              border: 'border-amber-200'
+            }}
+            scopeBadge={{
+              text: '1x par site',
+              bg: 'bg-amber-50',
+              textCol: 'text-amber-700',
+              border: 'border-amber-200'
+            }}
+            quantityInfo={{
+              label: 'x1',
+              total: 1
+            }}
+            marque={bcube?.supplier || undefined}
+            modele={bcube?.name || 'BCube (TD + AE)'}
+            extraSpecs={[bcube?.power, bcube?.phase].filter(Boolean).length > 0 ? {
+              puissance: [bcube?.power, bcube?.phase].filter(Boolean).join(' ')
+            } : undefined}
+          />
+        );
       }
       const modules = [];
       if (equipmentValues.atelier_energie?.atelierFprb) {
@@ -413,18 +613,62 @@ export default function ResultsPanel({
         const qty = equipmentValues.atelier_energie?.atelierFpbcQuantity;
         modules.push(qty && qty > 1 ? `${qty}x FPBC (batterie)` : 'FPBC (batterie)');
       }
-      return renderCard(config.id, null, { modules: modules.join(', ') || 'Sélectionné' });
+
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title="Atelier d'énergie"
+          icon={IconComponent}
+          color="amber"
+          typeBadge={{
+            text: 'Énergie',
+            bg: 'bg-amber-50',
+            textCol: 'text-amber-700',
+            border: 'border-amber-200'
+          }}
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-amber-50',
+            textCol: 'text-amber-700',
+            border: 'border-amber-200'
+          }}
+          quantityInfo={{
+            label: 'x1',
+            total: 1
+          }}
+          modele={modules.join(', ') || 'Sélectionné'}
+        />
+      );
     }
 
     if (config.id === 'convertisseur_mdea') {
       const mdea = equipmentValues.convertisseur_mdea;
       const qty = mdea?.quantité || 1;
-      return renderCard(config.id, qty, {
-        modèle: 'MDEA',
-        dimensions: '338*295*140mm',
-        poids: `${10 * qty} kg${qty > 1 ? ' (10kg/u)' : ''}`,
-        quantité: qty
-      });
+      return (
+        <EquipmentPreviewCard
+          key={config.id}
+          title="Convertisseur MDEA"
+          icon={IconComponent}
+          color="purple"
+          typeBadge={{
+            text: 'MDEA',
+            bg: 'bg-purple-50',
+            textCol: 'text-purple-700',
+            border: 'border-purple-200'
+          }}
+          scopeBadge={{
+            text: '1x par site',
+            bg: 'bg-purple-50',
+            textCol: 'text-purple-700',
+            border: 'border-purple-200'
+          }}
+          quantityInfo={{
+            label: `x${qty}`,
+            total: qty
+          }}
+          modele="MDEA"
+        />
+      );
     }
 
     let quantiteValue = null;
@@ -923,134 +1167,36 @@ export default function ResultsPanel({
                               {/* 4G & 5G Cards side by side */}
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {/* 4G Antenna */}
-                                <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-blue-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
-                                  <div className="flex items-center justify-between mb-2.5 gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-200/60 shadow-2xs shrink-0">
-                                        <Radio className="w-3.5 h-3.5" />
-                                      </div>
-                                      <span className="text-xs font-bold text-slate-900 truncate">Antenne 4G</span>
-                                    </div>
-                                    <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 shrink-0">
-                                      4G LTE
-                                    </span>
-                                  </div>
-
-                                  {isAgile ? (
-                                    <div className="space-y-1.5 pt-1">
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
-                                            <Ruler className="w-3 h-3 text-blue-500 shrink-0" />
-                                            Dimensions
-                                          </span>
-                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5" title={dim4G}>
-                                            {dim4G}
-                                          </span>
-                                        </div>
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
-                                            <Scale className="w-3 h-3 text-blue-500 shrink-0" />
-                                            Poids
-                                          </span>
-                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5">
-                                            {weight4G}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="text-[10px] text-violet-600 font-medium flex items-center gap-1 pt-0.5">
-                                        <Sparkles className="w-3 h-3 text-violet-500 shrink-0" />
-                                        <span>Gabarit agile (sans référence constructeur)</span>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-1.5 pt-1">
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
-                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand4G}>
-                                            {brand4G}
-                                          </span>
-                                        </div>
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
-                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model4G}>
-                                            {model4G}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="text-[10px] text-slate-500 font-medium flex items-center justify-between pt-0.5">
-                                        <span>Dimensions : {dim4G}</span>
-                                        <span>{weight4G}</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                                <EquipmentPreviewCard
+                                  title="Antenne 4G"
+                                  icon={Radio}
+                                  color="blue"
+                                  typeBadge={{ text: '4G LTE', bg: 'bg-blue-50', textCol: 'text-blue-700', border: 'border-blue-200' }}
+                                  scopeBadge={group.indices.length > 1 ? { text: `${group.indices.length} secteurs` } : undefined}
+                                  marque={isAgile ? undefined : brand4G}
+                                  modele={isAgile ? undefined : model4G}
+                                  extraSpecs={isAgile ? {
+                                    "Dimensions": dim4G,
+                                    "Poids": weight4G,
+                                    "Mode": "Gabarit agile"
+                                  } : undefined}
+                                />
 
                                 {/* 5G Antenna */}
-                                <div className="bg-slate-50/70 border border-slate-200/90 border-l-[3px] border-l-purple-500 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-50 transition-colors shadow-2xs">
-                                  <div className="flex items-center justify-between mb-2.5 gap-2">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600 border border-purple-200/60 shadow-2xs shrink-0">
-                                        <SignalHigh className="w-3.5 h-3.5" />
-                                      </div>
-                                      <span className="text-xs font-bold text-slate-900 truncate">Antenne 5G</span>
-                                    </div>
-                                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 shrink-0">
-                                      5G NR
-                                    </span>
-                                  </div>
-
-                                  {isAgile ? (
-                                    <div className="space-y-1.5 pt-1">
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
-                                            <Ruler className="w-3 h-3 text-purple-500 shrink-0" />
-                                            Dimensions
-                                          </span>
-                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5" title={dim5G}>
-                                            {dim5G}
-                                          </span>
-                                        </div>
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1">
-                                            <Scale className="w-3 h-3 text-purple-500 shrink-0" />
-                                            Poids
-                                          </span>
-                                          <span className="text-xs font-extrabold text-slate-800 truncate mt-0.5">
-                                            {weight5G}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="text-[10px] text-purple-700 font-medium flex items-center gap-1 pt-0.5">
-                                        <Sparkles className="w-3 h-3 text-purple-600 shrink-0" />
-                                        <span>Gabarit agile (sans référence constructeur)</span>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-1.5 pt-1">
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Marque</span>
-                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={brand5G}>
-                                            {brand5G}
-                                          </span>
-                                        </div>
-                                        <div className="flex flex-col bg-white border border-slate-200/90 rounded-lg p-2 shadow-2xs min-w-0">
-                                          <span className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Modèle</span>
-                                          <span className="text-xs font-bold text-slate-800 truncate mt-0.5" title={model5G}>
-                                            {model5G}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center justify-between px-2 py-1 bg-slate-100/70 border border-slate-200/80 rounded-lg text-[10px] text-slate-600 font-medium">
-                                        <span>Dimensions : {dim5G}</span>
-                                        <span>{weight5G}</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                                <EquipmentPreviewCard
+                                  title="Antenne 5G"
+                                  icon={SignalHigh}
+                                  color="purple"
+                                  typeBadge={{ text: '5G NR', bg: 'bg-purple-50', textCol: 'text-purple-700', border: 'border-purple-200' }}
+                                  scopeBadge={group.indices.length > 1 ? { text: `${group.indices.length} secteurs` } : undefined}
+                                  marque={isAgile ? undefined : brand5G}
+                                  modele={isAgile ? undefined : model5G}
+                                  extraSpecs={isAgile ? {
+                                    "Dimensions": dim5G,
+                                    "Poids": weight5G,
+                                    "Mode": "Gabarit agile"
+                                  } : undefined}
+                                />
                               </div>
                             </div>
                           );

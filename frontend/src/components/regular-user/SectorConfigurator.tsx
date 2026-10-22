@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from 'react';
 import { ArrowDownToLine } from 'lucide-react';
 import { SectorData, CatalogueConfig, AntennaConfigState } from './types';
 import MontageSelector from './MontageSelector';
@@ -24,14 +25,22 @@ export default function SectorConfigurator({
   children
 }: SectorConfiguratorProps) {
   const recommendedMastHeights = config?.recommended_mast_heights || [3, 4];
-  const isCustomHeight = Boolean(
-    sectorData.selectedHeight !== undefined &&
-    sectorData.selectedHeight !== null &&
-    sectorData.selectedHeight !== 0 &&
-    sectorData.selectedHeight !== 3 &&
-    sectorData.selectedHeight !== 4 &&
-    !recommendedMastHeights.includes(Number(sectorData.selectedHeight))
-  );
+  const isStandardHeight = recommendedMastHeights.includes(Number(sectorData.selectedHeight));
+  const [customInputText, setCustomInputText] = useState<string>(() => {
+    if (sectorData.selectedHeight !== undefined && sectorData.selectedHeight !== null && !recommendedMastHeights.includes(Number(sectorData.selectedHeight))) {
+      return String(sectorData.selectedHeight);
+    }
+    return '';
+  });
+
+  const isCustomActive = !isStandardHeight || customInputText !== '';
+
+  useEffect(() => {
+    // If standard button was clicked, clear the custom input text
+    if (isStandardHeight && customInputText !== '' && Number(customInputText) !== sectorData.selectedHeight) {
+      setCustomInputText('');
+    }
+  }, [sectorData.selectedHeight, isStandardHeight]);
 
   const handleMontage4GChange = (val: string) => {
     const updates: Partial<SectorData> = { selectedMontage4G: val };
@@ -108,71 +117,67 @@ export default function SectorConfigurator({
 
       <div className={styles.contentSpace}>
         {/* Hauteur du Mât */}
-        <div className={isCustomHeight ? styles.mastContainerCustom : styles.mastContainer}>
-          {/* Top animated cyber beam on custom selection */}
-          {isCustomHeight && (
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 overflow-hidden">
-              <div className="w-1/3 h-full bg-white/70 blur-[1px] animate-shimmer-beam" />
-            </div>
-          )}
-
-          <div className={isCustomHeight ? styles.mastDecoCustom : styles.mastDecoStandard}></div>
+        <div className={styles.mastContainer}>
+          <div className={styles.mastDecoStandard}></div>
 
           <label className={styles.mastLabel}>
             <span className={styles.mastLabelInner}>
-              <ArrowDownToLine className={isCustomHeight ? styles.mastIconCustom : styles.mastIcon} />
+              <ArrowDownToLine className={styles.mastIcon} />
               <span>3. Hauteur du mât :</span>
             </span>
-            {isCustomHeight && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs shadow-amber-500/30 animate-fadeIn">
-                <span>Sur-Mesure ({sectorData.selectedHeight}m)</span>
-              </span>
-            )}
           </label>
           <div className={styles.mastInputsContainer}>
             <div className={styles.standardCol}>
               <label className={styles.standardLabel}>Standard</label>
               <div className={styles.standardButtonsContainer}>
-                {recommendedMastHeights.map(h => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => updateSector(index, { selectedHeight: h })}
-                    className={`${styles.standardButtonBase} ${sectorData.selectedHeight === h
-                        ? styles.standardButtonActive
-                        : styles.standardButtonInactive
-                      }`}
-                  >
-                    {h}m
-                  </button>
-                ))}
+                {recommendedMastHeights.map(h => {
+                  const isSelected = sectorData.selectedHeight === h && customInputText === '';
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => {
+                        setCustomInputText('');
+                        updateSector(index, { selectedHeight: h });
+                      }}
+                      className={`${styles.standardButtonBase} ${isSelected
+                          ? styles.standardButtonActive
+                          : styles.standardButtonInactive
+                        }`}
+                    >
+                      {h}m
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div className={styles.customCol}>
-              <label className={isCustomHeight ? styles.customLabelActive : styles.customLabel}>
+              <label className={customInputText !== '' ? styles.customLabelActive : styles.customLabel}>
                 <span>Personnalisé</span>
-                {isCustomHeight && (
-                  <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-amber-200/90 text-amber-900 border border-amber-300">
-                    Actif
-                  </span>
-                )}
               </label>
               <div className={styles.customInputContainer}>
                 <input
-                  type="number"
-                  min="0"
-                  max="15"
-                  step="0.5"
+                  type="text"
+                  inputMode="decimal"
                   placeholder="Ex: 3.5"
-                  value={sectorData.selectedHeight || ''}
+                  value={customInputText}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    updateSector(index, { selectedHeight: val === '' ? ('' as any) : Number(val) });
+                    const val = e.target.value.replace(',', '.');
+                    // Allow numbers and decimal points only
+                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                      setCustomInputText(val);
+                      const num = parseFloat(val);
+                      if (!isNaN(num) && num > 0) {
+                        updateSector(index, { selectedHeight: num });
+                      } else if (val === '') {
+                        updateSector(index, { selectedHeight: 3 }); // default fallback or keep 3
+                      }
+                    }
                   }}
-                  className={isCustomHeight ? styles.customInputActive : styles.customInput}
+                  className={customInputText !== '' ? styles.customInputActive : styles.customInput}
                 />
-                <span className={isCustomHeight ? styles.customUnitActive : styles.customUnit}>m</span>
+                <span className={customInputText !== '' ? styles.customUnitActive : styles.customUnit}>m</span>
               </div>
             </div>
           </div>

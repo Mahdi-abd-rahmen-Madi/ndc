@@ -236,7 +236,7 @@ export default function UserInput({
           <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex flex-col">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
-                Nom du site
+                <span>Nom du site <span className="text-red-500 font-bold">*</span></span>
               </label>
               <input
                 type="text"
@@ -260,7 +260,7 @@ export default function UserInput({
             </div>
             <div className="flex flex-col">
               <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-2 h-6">
-                Client
+                <span>Client <span className="text-red-500 font-bold">*</span></span>
               </label>
               <input
                 type="text"
@@ -340,7 +340,7 @@ export default function UserInput({
               <div className="flex flex-col space-y-2">
                 <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
                   <ArrowUpToLine className="w-3.5 h-3.5 text-violet-600" />
-                  Hauteur bâtiment
+                  <span>Hauteur bâtiment <span className="text-red-500 font-bold">*</span></span>
                 </label>
                 <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500 shadow-sm">
                   <input
@@ -361,7 +361,7 @@ export default function UserInput({
                 <div className="flex flex-col space-y-2">
                   <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
                     <FileStack className="w-3.5 h-3.5 text-violet-600" />
-                    Épaisseur dalle
+                    <span>Épaisseur dalle <span className="text-red-500 font-bold">*</span></span>
                   </label>
                   <div className={`flex bg-white border ${dalleThickness !== '' && Number(dalleThickness) < 12 ? 'border-red-400 focus-within:border-red-500' : 'border-slate-300 focus-within:border-violet-500'} rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 shadow-sm`}>
                     <input
@@ -383,7 +383,7 @@ export default function UserInput({
                 <div className="flex flex-col space-y-2">
                   <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
                     <Layers className="w-3.5 h-3.5 text-violet-600" />
-                    Etanchéité
+                    <span>Etanchéité <span className="text-red-500 font-bold">*</span></span>
                   </label>
                   <div className="flex bg-white border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500 shadow-sm">
                     <input
@@ -443,7 +443,7 @@ export default function UserInput({
               <div className="flex flex-col space-y-2">
                 <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
                   <AlignJustify className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-                  Présence echelle + Palier de repos rabattable + PA
+                  <span>Présence echelle + Palier de repos rabattable + PA <span className="text-red-500 font-bold">*</span></span>
                 </label>
                 <CustomSelect
                   value={selectedEchelle}

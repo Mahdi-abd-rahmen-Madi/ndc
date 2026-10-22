@@ -610,9 +610,9 @@ class CatalogueConfig(models.Model):
                     { "id": "SLHDU005-12", "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)", "operator": "sfr" }
                 ],
                 'fh_references': [
-                    { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H" },
-                    { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H" },
-                    { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H" }
+                    { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H Ø 600 mm", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H Ø 600 mm" },
+                    { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H Ø 900 mm", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H Ø 900 mm" },
+                    { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H Ø 1200 mm", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H Ø 1200 mm" }
                 ],
                 'td_references': [
                     { "id": "td_mono_free", "vendor": "FREE", "name": "TD mono", "reference": "68236", "weight": 60, "dimensions": "1055x850x350mm" },

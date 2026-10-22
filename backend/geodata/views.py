@@ -413,9 +413,9 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'recommended_mast_heights': [3, 4],
             'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
             'fh_references': [
-                { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H" },
-                { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H" },
-                { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H" }
+                { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H Ø 600 mm", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H Ø 600 mm" },
+                { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H Ø 900 mm", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H Ø 900 mm" },
+                { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H Ø 1200 mm", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H Ø 1200 mm" }
             ],
             'standard_montages': [
                 {

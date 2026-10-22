@@ -1330,6 +1330,7 @@ export default function RegularUserView({
   if (selectedBuildingHeight === '') missingRequirements.push('Hauteur bâtiment');
   if (foundationType !== 'encastre') {
     if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
+    if (etancheite === '') missingRequirements.push('Étanchéité');
   }
   if (!selectedEchelle.trim()) missingRequirements.push('Échelle');
   const canGenerate = missingRequirements.length === 0;
@@ -1532,7 +1533,6 @@ export default function RegularUserView({
                         </div>
                         <div className="text-[11px] text-slate-600 flex justify-between">
                           <span>Modèle : <strong className="text-slate-800">{config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</strong></span>
-                          {fhDiameter ? <span>Ø {fhDiameter} mm</span> : null}
                         </div>
                       </div>
                     )}
@@ -2542,6 +2542,15 @@ export default function RegularUserView({
                           </span>
                         </div>
 
+                        {foundationType !== 'encastre' && (
+                          <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Étanchéité</span>
+                            <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                              {etancheite !== '' ? `${etancheite} cm` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
                           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Photo du site</span>
                           <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
@@ -2733,6 +2742,7 @@ export default function RegularUserView({
                             fh: {
                               diamètre: `${fhDiameter} mm`,
                               référence: config?.fh_references?.find(r => r.id === fhReference)?.reference || 'N/A',
+                              marque: config?.fh_references?.find(r => r.id === fhReference)?.vendor || '',
                               quantité: fhQuantity,
                               poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A'
                             },
