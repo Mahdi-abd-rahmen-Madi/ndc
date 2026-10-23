@@ -16,12 +16,10 @@ export interface EquipmentItem {
 import { useCatalogueConfig } from '../hooks/useCatalogueConfig';
 import TerrainMap from './TerrainMap';
 import type { GeocodingAddress } from '../utils/types';
-import maplibregl from 'maplibre-gl';
 import { useGeocoding } from '../hooks/useGeocoding';
 import { useSiteNdcGenerator } from '../hooks/useSiteNdcGenerator';
 
 // Sub-components
-import NotificationsDropdown from './regular-user/NotificationsDropdown';
 import AddressSearchSection from './regular-user/AddressSearchSection';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
@@ -33,6 +31,9 @@ import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
 import SiteConfirmationModal from './regular-user/SiteConfirmationModal';
+import { AccordionStep } from './regular-user/AccordionStep';
+import { PortailHeader } from './regular-user/PortailHeader';
+import { calculateStepValidation } from './regular-user/validation';
 import { getTerrainDetails } from './regular-user/PdfGenerator';
 import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
 import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData } from './regular-user/types';
@@ -102,100 +103,7 @@ const getCatalogueHash = (s: SectorData) => {
 };
 
 
-interface AccordionStepProps {
-  step: number;
-  title: string;
-  activeStep: number;
-  setActiveStep: (step: number) => void;
-  isCompleted: boolean;
-  disabled?: boolean;
-  children: React.ReactNode;
-  summary?: React.ReactNode;
-  hideContinue?: boolean;
-}
 
-function AccordionStep({ step, title, activeStep, setActiveStep, isCompleted, disabled, children, summary, hideContinue }: AccordionStepProps) {
-  const isOpen = activeStep === step;
-
-  return (
-    <div className={`bg-white rounded-2xl border transition-all duration-300 mb-4 ${disabled
-      ? 'opacity-50 border-slate-200/80 bg-slate-50/50 cursor-not-allowed overflow-hidden'
-      : isOpen
-        ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5 overflow-visible z-20 relative'
-        : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm overflow-hidden'
-      }`}>
-      <div
-        className={`p-4 flex items-center justify-between transition-all ${disabled
-          ? 'cursor-not-allowed'
-          : isOpen
-            ? 'bg-gradient-to-r from-violet-50/70 via-indigo-50/30 to-white border-b border-violet-100 cursor-pointer'
-            : 'hover:bg-slate-50/70 cursor-pointer'
-          }`}
-        onClick={() => {
-          if (!disabled) {
-            setActiveStep(step);
-          }
-        }}
-      >
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className={`flex items-center justify-center w-9 h-9 rounded-xl font-bold text-xs shrink-0 transition-all ${disabled
-            ? 'bg-slate-100 text-slate-400 border border-slate-200'
-            : isCompleted && !isOpen
-              ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-200'
-              : isOpen
-                ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300'
-                : 'bg-slate-100 text-slate-500 border border-slate-200'
-            }`}>
-            {isCompleted && !isOpen && !disabled ? <Check className="w-5 h-5 text-emerald-700 stroke-[2.5]" /> : step}
-          </div>
-          <div className="min-w-0">
-            <h3 className={`font-bold text-sm tracking-tight transition-colors ${disabled ? 'text-slate-400' : isOpen ? 'text-slate-900' : 'text-slate-700'
-              }`}>
-              {title}
-            </h3>
-            {!isOpen && isCompleted && !disabled && summary && (
-              <div className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1 font-medium">
-                {summary}
-              </div>
-            )}
-            {!isOpen && disabled && (
-              <div className="text-[11px] text-slate-400 mt-0.5">
-                Localisation précise (bâtiment ou surface) requise
-              </div>
-            )}
-          </div>
-        </div>
-
-        {!isOpen && !disabled && (
-          <button
-            className="text-xs font-semibold text-slate-600 hover:text-violet-700 px-3 py-1.5 bg-slate-100/80 hover:bg-violet-50 rounded-xl border border-slate-200/80 hover:border-violet-200 transition-all flex items-center gap-1.5 shadow-2xs shrink-0"
-            onClick={(e) => { e.stopPropagation(); setActiveStep(step); }}
-          >
-            <Pencil className="w-3 h-3" />
-            Modifier
-          </button>
-        )}
-      </div>
-
-      {isOpen && (
-        <div className="p-5 animate-fadeIn">
-          {children}
-          {!hideContinue && (
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setActiveStep(step + 1)}
-                className="group px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-md shadow-violet-500/20 hover:shadow-violet-500/30 transition-all flex items-center gap-2"
-              >
-                <span>Continuer</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function RegularUserView({
   apiBaseUrl,
@@ -283,8 +191,6 @@ export default function RegularUserView({
 
   // Map State (visible by default on startup for intuitive spatial selection)
   const [showMap, setShowMap] = useState<boolean>(true);
-  const miniMapContainerRef = useRef<HTMLDivElement>(null);
-  const miniMapRef = useRef<maplibregl.Map | null>(null);
 
   // Request & Notifications State
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -542,38 +448,7 @@ export default function RegularUserView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCoords, selectedBuildingHeight, sectorDependencies, apiBaseUrl, config, nombreSecteurs]);
 
-  // MiniMap initialization
-  useEffect(() => {
-    if (!showMap && selectedCoords && miniMapContainerRef.current) {
-      if (!miniMapRef.current) {
-        miniMapRef.current = new maplibregl.Map({
-          container: miniMapContainerRef.current,
-          style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-          center: [selectedCoords.longitude, selectedCoords.latitude],
-          zoom: 14,
-          interactive: false,
-          attributionControl: false
-        });
 
-        const el = document.createElement('div');
-        el.className = 'w-4 h-4 bg-indigo-500 rounded-full border-2 border-white shadow-md';
-        new maplibregl.Marker(el)
-          .setLngLat([selectedCoords.longitude, selectedCoords.latitude])
-          .addTo(miniMapRef.current);
-
-        miniMapRef.current.on('load', () => {
-          setTimeout(() => miniMapRef.current?.resize(), 100);
-        });
-      } else {
-        miniMapRef.current.setCenter([selectedCoords.longitude, selectedCoords.latitude]);
-      }
-    } else {
-      if (miniMapRef.current) {
-        miniMapRef.current.remove();
-        miniMapRef.current = null;
-      }
-    }
-  }, [showMap, selectedCoords]);
 
   // Group unique configurations for calculations/PDF
   const uniqueGroupsMap = new Map<string, { hash: string, indices: number[], sector: SectorData }>();
@@ -645,7 +520,7 @@ export default function RegularUserView({
   };
 
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+
 
   if (configLoading) {
     return (
@@ -729,70 +604,33 @@ export default function RegularUserView({
 
   const isLocked = isGeneratingSiteNdc || !!ndcPdfUrl;
 
-  const missingRequirements = [];
-  if (!siteName.trim()) missingRequirements.push('Nom du site');
-  if (!clientName.trim()) missingRequirements.push('Nom du client');
-  if (!siteImageUrl) missingRequirements.push('Photo du site');
-  if (selectedBuildingHeight === '') missingRequirements.push('Hauteur bâtiment');
-  if (foundationType !== 'encastre') {
-    if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
-    if (etancheite === '') missingRequirements.push('Étanchéité');
-  }
-  if (!selectedEchelle.trim()) missingRequirements.push('Échelle');
-  const canGenerate = missingRequirements.length === 0;
-
-  const missingStep3Equipments: string[] = [];
-  sectors.slice(0, nombreSecteurs).forEach((sector, idx) => {
-    const secLabel = nombreSecteurs > 1 ? ` (Secteur ${idx + 1})` : '';
-    const hasFh = sector.hasFhEquipment ?? hasFhEquipment;
-    const fhRef = sector.fhReference ?? fhReference;
-    if (hasFh && !fhRef) {
-      missingStep3Equipments.push(`Référence FH${secLabel}`);
-    }
-
-    const hasRrh = sector.hasRrhEquipment ?? hasRrhEquipment;
-    const rrhList = sector.rrhItems ?? rrhItems;
-    if (operator !== 'bouygues' && hasRrh) {
-      if (rrhList.length === 0 || rrhList.some(i => !i.reference || !i.vendor)) {
-        missingStep3Equipments.push(`Référence RRH${secLabel}`);
-      }
-    }
-
-    const hasRru = sector.hasRruEquipment ?? hasRruEquipment;
-    const rruList = sector.rruItems ?? rruItems;
-    if (hasRru) {
-      if (rruList.length === 0 || rruList.some(i => !i.reference || !i.vendor)) {
-        missingStep3Equipments.push(`Référence ${operator === 'free' ? 'RF NSN' : 'RRU'}${secLabel}`);
-      }
-    }
-
-    const hasCoff = sector.hasCoffret ?? hasCoffret;
-    const coffRef = sector.coffretReference ?? coffretReference;
-    if (hasCoff && !coffRef) {
-      missingStep3Equipments.push(`Référence Coffret fibre${secLabel}`);
-    }
+  const {
+    missingRequirements,
+    canGenerate,
+    missingStep3Equipments,
+    isStep1Complete,
+    isStep2Complete,
+    isStep3Complete,
+    isStep4Complete,
+    allSectionsFilled,
+    isConfirmed
+  } = calculateStepValidation({
+    siteName,
+    clientName,
+    siteImageUrl,
+    selectedBuildingHeight,
+    foundationType,
+    dalleThickness,
+    etancheite,
+    selectedEchelle,
+    sectors,
+    nombreSecteurs,
+    operator,
+    zoneTechnique,
+    selectedCoords,
+    pendingGenericAddress,
+    isInfoConfirmed
   });
-
-  const missingStep4Equipments: string[] = [];
-  if (hasTdEquipment && !tdReference) {
-    missingStep4Equipments.push('Référence TD');
-  }
-  if (hasGps && !gpsReference) {
-    missingStep4Equipments.push('Référence GPS');
-  }
-  if (hasBoitierLovage && !boitierLovageReference) {
-    missingStep4Equipments.push('Référence Boîtier de lovage');
-  }
-  if (operator === 'bouygues' && hasAtelierEnergie && !bcubeReference) {
-    missingStep4Equipments.push('Modèle BCube');
-  }
-
-  const isStep1Complete = !!selectedCoords && !pendingGenericAddress;
-  const isStep2Complete = canGenerate;
-  const isStep3Complete = activeSectors.length > 0 && activeSectors.every(s => Boolean(s.selectedMontage4G) && Boolean(s.selectedMontage5G)) && missingStep3Equipments.length === 0;
-  const isStep4Complete = missingStep4Equipments.length === 0;
-  const allSectionsFilled = isStep1Complete && isStep2Complete && isStep3Complete && isStep4Complete;
-  const isConfirmed = isInfoConfirmed && allSectionsFilled;
 
   return (
     <div className="flex flex-col w-full h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden selection:bg-violet-500/20">
@@ -826,119 +664,19 @@ export default function RegularUserView({
         resolveBaieItems={resolveBaieItems}
         getMontageDisplayLabel={getMontageDisplayLabel}
       />
-      <header className="h-16 border-b border-slate-200/80 bg-white/85 backdrop-blur-md px-5 md:px-8 flex items-center justify-between shrink-0 z-20 sticky top-0 shadow-xs">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/25 ring-1 ring-white/20">
-              <Compass className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none flex items-center gap-1.5">
-                NDC Portail <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700">Client</span>
-              </h1>
-            </div>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200/80 mx-1 hidden sm:block"></div>
-
-          <div className="hidden sm:flex items-center gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 text-xs">
-            {/* Site & Ancrage group with Modifier button */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
-              <Building2 className="w-3.5 h-3.5 text-violet-600" />
-              <span className="text-slate-400 font-normal">Site:</span>
-              <span className="font-semibold text-slate-900">{siteType === 'nouveau' ? 'Neuf' : 'Existant'}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
-              <Anchor className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="text-slate-400 font-normal">Ancrage:</span>
-              <span className="font-semibold text-slate-900">
-                {foundationType === 'metallique' ? 'Plot Métallique' :
-                  foundationType === 'beton' ? 'Plot Béton' :
-                    foundationType === 'encastre' ? 'Encastré' : foundationType}
-              </span>
-            </div>
-            {onResetMontage && (
-              <button
-                onClick={onResetMontage}
-                className="flex items-center gap-1 px-2.5 py-1 text-violet-700 hover:text-violet-900 hover:bg-violet-50 rounded-lg transition-colors font-semibold"
-                title="Modifier le type de site ou d'ancrage"
-              >
-                <Edit3 className="w-3 h-3" />
-                <span>Modifier</span>
-              </button>
-            )}
-
-            {/* Opérateur badge (distinct pill, only shown once selected) */}
-            {operator ? (
-              <>
-                <div className="h-4 w-px bg-slate-300 mx-0.5"></div>
-                <div
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg shadow-2xs font-medium border transition-all ${operator === 'orange'
-                      ? 'bg-orange-50/80 border-orange-200 text-orange-950'
-                      : operator === 'free'
-                        ? 'bg-red-50/80 border-red-200 text-red-950'
-                        : 'bg-sky-50/80 border-sky-200 text-sky-950'
-                    }`}
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${operator === 'orange' ? 'bg-orange-400' : operator === 'free' ? 'bg-red-400' : 'bg-sky-400'
-                      }`}></span>
-                    <span className={`relative inline-flex rounded-full h-2 w-2 ${operator === 'orange' ? 'bg-orange-500' : operator === 'free' ? 'bg-red-500' : 'bg-sky-500'
-                      }`}></span>
-                  </span>
-                  <span className="text-slate-400 font-normal">Opérateur:</span>
-                  <span className="font-bold capitalize">
-                    {operator}
-                  </span>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">{userEmail}</span>
-            <button
-              onClick={() => setIsProfileModalOpen(true)}
-              className="text-xs px-2.5 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 font-medium shadow-2xs"
-            >
-              {clientLogoUrl ? (
-                <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-300 bg-white shrink-0">
-                  <img
-                    src={clientLogoUrl.startsWith('http') || clientLogoUrl.startsWith('data:') ? clientLogoUrl : `${apiBaseUrl}${clientLogoUrl.startsWith('/') ? '' : '/'}${clientLogoUrl}`}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <UserIcon className="w-3.5 h-3.5 text-slate-500" />
-              )}
-              Profil
-            </button>
-            <button
-              onClick={onLogout}
-              className="text-xs px-2.5 py-1.5 bg-slate-100/80 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 text-slate-700 rounded-xl border border-slate-200 transition-all font-medium shadow-2xs"
-            >
-              Déconnexion
-            </button>
-          </div>
-          <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full font-semibold border border-emerald-200 shadow-2xs flex items-center gap-1.5 hidden sm:flex">
-            <div className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </div>
-            En Ligne
-          </div>
-          <NotificationsDropdown
-            notifications={notifications}
-            unreadCount={unreadCount}
-            onMarkAsRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))}
-            onMarkAllAsRead={() => setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))}
-            onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
-          />
-        </div>
-      </header>
+      <PortailHeader
+        siteType={siteType}
+        foundationType={foundationType}
+        operator={operator}
+        onResetMontage={onResetMontage}
+        userEmail={userEmail}
+        clientLogoUrl={clientLogoUrl}
+        apiBaseUrl={apiBaseUrl}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onLogout={onLogout}
+        notifications={notifications}
+        setNotifications={setNotifications}
+      />
 
       <div className="flex-1 flex overflow-hidden">
         <div className="w-full lg:w-1/2 flex flex-col bg-slate-50/70 border-r border-slate-200 shadow-sm z-10 shrink-0">
