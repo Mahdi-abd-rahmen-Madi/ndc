@@ -24,6 +24,65 @@ export interface SiteConfirmationModalProps {
   getMontageDisplayLabel: (sector: any) => string;
 }
 
+function MastEquipmentCard({
+  borderClass,
+  title,
+  badgeText,
+  badgeClass = 'bg-violet-50 text-violet-700 border-violet-200',
+  quantityText,
+  totalCount,
+  detailLabel = 'Référence',
+  detailValue
+}: {
+  borderClass: string;
+  title: string;
+  badgeText: string;
+  badgeClass?: string;
+  quantityText: string;
+  totalCount?: number;
+  detailLabel?: string;
+  detailValue: React.ReactNode;
+}) {
+  return (
+    <div className={`bg-white p-3 rounded-lg border border-slate-200/80 flex flex-col gap-1.5 border-l-[3px] ${borderClass}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+          {title}
+          <span className={`text-[9px] border px-1.5 py-0.2 rounded font-bold uppercase ${badgeClass}`}>
+            {badgeText}
+          </span>
+        </span>
+        <div className="text-right">
+          <span className="text-xs font-bold text-slate-800">{quantityText}</span>
+          {totalCount !== undefined && totalCount > 1 && (
+            <span className="text-[10px] font-extrabold text-violet-700 ml-1.5">
+              (Total : {totalCount})
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="text-[11px] text-slate-600">
+        {detailLabel} : <strong className="text-slate-800">{detailValue}</strong>
+      </div>
+    </div>
+  );
+}
+
+function ZoneTechniqueCard({
+  title,
+  children
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
+      <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">{title}</span>
+      {children}
+    </div>
+  );
+}
+
 export function SiteConfirmationModal({
   isOpen,
   onClose,
@@ -203,105 +262,54 @@ export function SiteConfirmationModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {/* FH */}
                 {hasFhEquipment && fhQuantity > 0 && (
-                  <div className="bg-white p-3 rounded-lg border border-slate-200/80 flex flex-col gap-1.5 border-l-[3px] border-l-amber-500">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        Faisceau Hertzien (FH)
-                        <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.2 rounded font-bold uppercase">
-                          1x par site
-                        </span>
-                      </span>
-                      <span className="text-xs font-bold text-slate-800">
-                        {fhQuantity} unité
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-600 flex justify-between">
-                      <span>Modèle : <strong className="text-slate-800">{config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}</strong></span>
-                    </div>
-                  </div>
+                  <MastEquipmentCard
+                    borderClass="border-l-amber-500"
+                    title="Faisceau Hertzien (FH)"
+                    badgeText="1x par site"
+                    badgeClass="bg-amber-50 text-amber-700 border-amber-200"
+                    quantityText={`${fhQuantity} unité`}
+                    detailLabel="Modèle"
+                    detailValue={config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}
+                  />
                 )}
 
                 {/* RRU Items */}
-                {hasRruEquipment && rruItems.length > 0 && rruItems.map((item, idx) => {
-                  const resolved = resolveRru(item.reference) || item.reference || 'N/A';
-                  const totalCount = (item.quantity || 1) * nombreSecteurs;
-                  return (
-                    <div key={`rru-${idx}`} className="bg-white p-3 rounded-lg border border-slate-200/80 flex flex-col gap-1.5 border-l-[3px] border-l-emerald-500">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          {operator === 'free' ? 'RF NSN' : 'RRU'}
-                          <span className="text-[9px] bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.2 rounded font-bold uppercase">
-                            Par secteur
-                          </span>
-                        </span>
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-slate-800">{item.quantity} / sect.</span>
-                          {nombreSecteurs > 1 && (
-                            <span className="text-[10px] font-extrabold text-violet-700 ml-1.5">
-                              (Total : {totalCount})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-slate-600">
-                        Référence : <strong className="text-slate-800">{resolved}</strong>
-                      </div>
-                    </div>
-                  );
-                })}
+                {hasRruEquipment && rruItems.map((item, idx) => (
+                  <MastEquipmentCard
+                    key={`rru-${idx}`}
+                    borderClass="border-l-emerald-500"
+                    title={operator === 'free' ? 'RF NSN' : 'RRU'}
+                    badgeText="Par secteur"
+                    quantityText={`${item.quantity} / sect.`}
+                    totalCount={(item.quantity || 1) * nombreSecteurs}
+                    detailValue={resolveRru(item.reference) || item.reference || 'N/A'}
+                  />
+                ))}
 
                 {/* RRH Items */}
-                {operator !== 'bouygues' && hasRrhEquipment && rrhItems.length > 0 && rrhItems.map((item, idx) => {
-                  const resolved = resolveRrh(item.reference) || item.reference || 'N/A';
-                  const totalCount = (item.quantity || 1) * nombreSecteurs;
-                  return (
-                    <div key={`rrh-${idx}`} className="bg-white p-3 rounded-lg border border-slate-200/80 flex flex-col gap-1.5 border-l-[3px] border-l-rose-500">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                          RRH
-                          <span className="text-[9px] bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.2 rounded font-bold uppercase">
-                            Par secteur
-                          </span>
-                        </span>
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-slate-800">{item.quantity} / sect.</span>
-                          {nombreSecteurs > 1 && (
-                            <span className="text-[10px] font-extrabold text-violet-700 ml-1.5">
-                              (Total : {totalCount})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-[11px] text-slate-600">
-                        Référence : <strong className="text-slate-800">{resolved}</strong>
-                      </div>
-                    </div>
-                  );
-                })}
+                {operator !== 'bouygues' && hasRrhEquipment && rrhItems.map((item, idx) => (
+                  <MastEquipmentCard
+                    key={`rrh-${idx}`}
+                    borderClass="border-l-rose-500"
+                    title="RRH"
+                    badgeText="Par secteur"
+                    quantityText={`${item.quantity} / sect.`}
+                    totalCount={(item.quantity || 1) * nombreSecteurs}
+                    detailValue={resolveRrh(item.reference) || item.reference || 'N/A'}
+                  />
+                ))}
 
                 {/* Coffrets */}
                 {hasCoffret && (
-                  <div className="bg-white p-3 rounded-lg border border-slate-200/80 flex flex-col gap-1.5 border-l-[3px] border-l-pink-500">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                        Coffret Fibre / Hybride
-                        <span className="text-[9px] bg-violet-50 text-violet-700 border border-violet-200 px-1.5 py-0.2 rounded font-bold uppercase">
-                          Par secteur
-                        </span>
-                      </span>
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-slate-800">1 / sect.</span>
-                        {nombreSecteurs > 1 && (
-                          <span className="text-[10px] font-extrabold text-violet-700 ml-1.5">
-                            (Total : {nombreSecteurs})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-[11px] text-slate-600">
-                      Modèle : <strong className="text-slate-800">{config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || coffretReference || 'Sélectionné'}</strong>
-                    </div>
-                  </div>
+                  <MastEquipmentCard
+                    borderClass="border-l-pink-500"
+                    title="Coffret Fibre / Hybride"
+                    badgeText="Par secteur"
+                    quantityText="1 / sect."
+                    totalCount={nombreSecteurs}
+                    detailLabel="Modèle"
+                    detailValue={config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || coffretReference || 'Sélectionné'}
+                  />
                 )}
               </div>
             </div>
@@ -320,37 +328,31 @@ export function SiteConfirmationModal({
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {hasTdEquipment && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Équipement TD ({tdType === 'monophase' ? 'Monophasé' : 'Tétraphasé'})</span>
+                  <ZoneTechniqueCard title={`Équipement TD (${tdType === 'monophase' ? 'Monophasé' : 'Tétraphasé'})`}>
                     <span className="text-xs font-bold text-slate-900 block truncate" title={resolveTd(tdReference) || tdReference}>
                       {resolveTd(tdReference) || tdReference || 'Sélectionné'}
                     </span>
                     {tdType === 'monophase' && tgbtReference && (
                       <span className="text-[10px] text-slate-500 block mt-0.5">TGBT : {tgbtReference}</span>
                     )}
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {hasGps && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Antenne GPS</span>
+                  <ZoneTechniqueCard title="Antenne GPS">
                     <span className="text-xs font-bold text-slate-900 block">
                       {gpsMarque ? `${gpsMarque} ` : ''}{gpsReference || 'Sélectionné'}
                     </span>
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {hasBoitierLovage && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Boîtier de Lovage (Qté: {boitierLovageQuantity})</span>
+                  <ZoneTechniqueCard title={`Boîtier de Lovage (Qté: ${boitierLovageQuantity})`}>
                     <span className="text-xs font-bold text-slate-900 block truncate" title={config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || boitierLovageReference}>
                       {config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || boitierLovageReference || 'Sélectionné'}
                     </span>
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {operator === 'orange' && hasBaie && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">
-                      Zone Technique Orange ({baieItems.length} {baieItems.length > 1 ? 'équipements' : 'équipement'})
-                    </span>
+                  <ZoneTechniqueCard title={`Zone Technique Orange (${baieItems.length} ${baieItems.length > 1 ? 'équipements' : 'équipement'})`}>
                     {baieItems.length > 0 ? (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {baieItems.map(item => {
@@ -368,30 +370,27 @@ export function SiteConfirmationModal({
                         {[baieRadio ? 'Baie radio' : null, baieEnergie ? 'Baie énergie' : null].filter(Boolean).join(', ') || 'Sélectionnée'}
                       </span>
                     )}
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {operator === 'free' && hasCab && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Baie CAB ({cabSupport ? { plinthes: 'Plinthes', support_autostable: 'Support Autostable', support_fimo: 'Support FIMO', support_muraux: 'Supports Muraux' }[cabSupport] || cabSupport : 'Support'})</span>
+                  <ZoneTechniqueCard title={`Baie CAB (${cabSupport ? { plinthes: 'Plinthes', support_autostable: 'Support Autostable', support_fimo: 'Support FIMO', support_muraux: 'Supports Muraux' }[cabSupport] || cabSupport : 'Support'})`}>
                     <span className="text-xs font-bold text-slate-900 block">
                       {[cabOne ? 'CAB ONE' : null, cabTwo ? 'CAB TWO' : null, cabThree ? 'CAB THREE' : null].filter(Boolean).join(', ') || 'Sélectionnée'}
                     </span>
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {operator === 'free' && hasAtelierEnergie && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Atelier d'Énergie</span>
+                  <ZoneTechniqueCard title="Atelier d'Énergie">
                     <span className="text-xs font-bold text-slate-900 block">
                       {[
                         atelierFprb ? (atelierFprbQuantity > 1 ? `${atelierFprbQuantity}x Module FPRB` : "Module FPRB") : null,
                         atelierFpbc ? (atelierFpbcQuantity > 1 ? `${atelierFpbcQuantity}x Module FPBC` : "Module FPBC") : null
                       ].filter(Boolean).join(', ') || 'Sélectionné'}
                     </span>
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {operator === 'free' && hasConvertisseurMdea && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Convertisseur MDEA</span>
+                  <ZoneTechniqueCard title="Convertisseur MDEA">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900">
                         MDEA (10 kg)
@@ -400,15 +399,14 @@ export function SiteConfirmationModal({
                         Qté: {convertisseurMdeaQuantity}
                       </span>
                     </div>
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
                 {operator === 'bouygues' && hasAtelierEnergie && (
-                  <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                    <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">BCube (TD + AE)</span>
+                  <ZoneTechniqueCard title="BCube (TD + AE)">
                     <span className="text-xs font-bold text-slate-900 block">
                       {config?.atelier_energie_references?.find(r => r.id === bcubeReference)?.name || bcubeReference || 'Sélectionné'}
                     </span>
-                  </div>
+                  </ZoneTechniqueCard>
                 )}
               </div>
             </div>
