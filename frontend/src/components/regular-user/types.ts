@@ -143,23 +143,6 @@ export interface SectorData {
   rruItems?: EquipmentItem[];
   hasCoffret?: boolean;
   coffretReference?: string;
-  hasBaie?: boolean;
-  baieRadio?: boolean;
-  baieEnergie?: boolean;
-  baieItems?: SelectedBaieItem[];
-  hasCab?: boolean;
-  cabOne?: boolean;
-  cabTwo?: boolean;
-  cabThree?: boolean;
-  cabSupport?: string;
-  hasAtelierEnergie?: boolean;
-  atelierFprb?: boolean;
-  atelierFprbQuantity?: number;
-  atelierFpbc?: boolean;
-  atelierFpbcQuantity?: number;
-  hasConvertisseurMdea?: boolean;
-  convertisseurMdeaQuantity?: number;
-  bcubeReference?: string;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
   loading?: boolean;
@@ -240,6 +223,36 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
   convertisseurMdeaQuantity: 1,
 };
 
+export interface ProjectData {
+  siteName: string;
+  clientName: string;
+  codeSite: string;
+  operator: string;
+  siteImageUrl: string | null;
+  buildingHeight: number | string;
+  dalleThickness: number | string;
+  etancheite: number | string;
+  plotHeight: number;
+  hasChauffageAuSol: boolean;
+  fausseDalleThickness: number | string;
+  selectedEchelle: string;
+}
+
+export const defaultProjectData: ProjectData = {
+  siteName: '',
+  clientName: '',
+  codeSite: '',
+  operator: '',
+  siteImageUrl: null,
+  buildingHeight: '',
+  dalleThickness: '',
+  etancheite: '',
+  plotHeight: 0.5,
+  hasChauffageAuSol: false,
+  fausseDalleThickness: '',
+  selectedEchelle: '',
+};
+
 export const defaultSectorData = (id: number): SectorData => ({
   id,
   selectedHeight: 3,
@@ -266,22 +279,6 @@ export const defaultSectorData = (id: number): SectorData => ({
   rruItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   hasCoffret: false,
   coffretReference: '',
-  hasBaie: false,
-  baieRadio: false,
-  baieEnergie: false,
-  baieItems: [],
-  hasCab: false,
-  cabOne: false,
-  cabTwo: false,
-  cabThree: false,
-  cabSupport: 'plinthes',
-  hasAtelierEnergie: false,
-  atelierFprb: false,
-  atelierFprbQuantity: 1,
-  atelierFpbc: false,
-  atelierFpbcQuantity: 1,
-  hasConvertisseurMdea: false,
-  convertisseurMdeaQuantity: 1,
   lookupResult: null,
   loading: false,
   error: null

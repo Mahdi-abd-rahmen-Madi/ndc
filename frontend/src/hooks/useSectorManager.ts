@@ -60,23 +60,6 @@ export function useSectorManager({
     setSectors(prev => prev.map(s => ({
       ...s,
       hasRrhEquipment: operator === 'bouygues' ? false : s.hasRrhEquipment,
-      hasBaie: operator === 'orange' ? s.hasBaie : false,
-      baieRadio: operator === 'orange' ? s.baieRadio : false,
-      baieEnergie: operator === 'orange' ? s.baieEnergie : false,
-      baieItems: operator === 'orange' ? s.baieItems || [] : [],
-      hasCab: operator === 'free' ? s.hasCab : false,
-      cabOne: operator === 'free' ? s.cabOne : false,
-      cabTwo: operator === 'free' ? s.cabTwo : false,
-      cabThree: operator === 'free' ? s.cabThree : false,
-      cabSupport: operator === 'free' ? (s.cabSupport || 'plinthes') : 'plinthes',
-      hasAtelierEnergie: (operator === 'free' || operator === 'bouygues') ? s.hasAtelierEnergie : false,
-      atelierFprb: operator === 'free' ? s.atelierFprb : false,
-      atelierFprbQuantity: operator === 'free' ? (s.atelierFprbQuantity || 1) : 1,
-      atelierFpbc: operator === 'free' ? s.atelierFpbc : false,
-      atelierFpbcQuantity: operator === 'free' ? (s.atelierFpbcQuantity || 1) : 1,
-      hasConvertisseurMdea: operator === 'free' ? s.hasConvertisseurMdea : false,
-      convertisseurMdeaQuantity: operator === 'free' ? (s.convertisseurMdeaQuantity || 1) : 1,
-      bcubeReference: operator === 'bouygues' ? s.bcubeReference : '',
       rrhItems: defaultRrh,
       rruItems: defaultRru
     })));

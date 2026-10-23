@@ -1,17 +1,10 @@
-import { SectorData, ZoneTechniqueData } from './types';
+import { SectorData, ZoneTechniqueData, ProjectData } from './types';
 
 export interface ValidationParams {
-  siteName: string;
-  clientName: string;
-  siteImageUrl: string | null;
-  selectedBuildingHeight: number | string;
+  project: ProjectData;
   foundationType: string;
-  dalleThickness: number | string;
-  etancheite: number | string;
-  selectedEchelle: string;
   sectors: SectorData[];
   nombreSecteurs: number;
-  operator: string;
   zoneTechnique: ZoneTechniqueData;
   selectedCoords: { latitude: number; longitude: number } | null;
   pendingGenericAddress: any;
@@ -33,28 +26,32 @@ export interface ValidationResult {
 
 export function calculateStepValidation(params: ValidationParams): ValidationResult {
   const {
-    siteName,
-    clientName,
-    siteImageUrl,
-    selectedBuildingHeight,
+    project,
     foundationType,
-    dalleThickness,
-    etancheite,
-    selectedEchelle,
     sectors,
     nombreSecteurs,
-    operator,
     zoneTechnique,
     selectedCoords,
     pendingGenericAddress,
     isInfoConfirmed
   } = params;
 
+  const {
+    siteName,
+    clientName,
+    siteImageUrl,
+    buildingHeight,
+    dalleThickness,
+    etancheite,
+    selectedEchelle,
+    operator
+  } = project;
+
   const missingRequirements: string[] = [];
   if (!siteName.trim()) missingRequirements.push('Nom du site');
   if (!clientName.trim()) missingRequirements.push('Nom du client');
   if (!siteImageUrl) missingRequirements.push('Photo du site');
-  if (selectedBuildingHeight === '') missingRequirements.push('Hauteur bâtiment');
+  if (buildingHeight === '') missingRequirements.push('Hauteur bâtiment');
   if (foundationType !== 'encastre') {
     if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
     if (etancheite === '') missingRequirements.push('Étanchéité');

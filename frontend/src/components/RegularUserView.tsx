@@ -38,7 +38,7 @@ import { calculateStepValidation } from './regular-user/validation';
 import { createResolvers } from './regular-user/resolvers';
 import { getTerrainDetails } from './regular-user/PdfGenerator';
 import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
-import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData } from './regular-user/types';
+import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData, ProjectData, defaultProjectData } from './regular-user/types';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
@@ -67,8 +67,21 @@ export default function RegularUserView({
   const { reverseGeocode } = useGeocoding();
 
   // Core State
-  const [selectedBuildingHeight, setSelectedBuildingHeight] = useState<number | string>('');
-  const [operator, setOperator] = useState<string>('');
+  const [project, setProject] = useState<ProjectData>(defaultProjectData);
+  const {
+    siteName,
+    clientName,
+    codeSite,
+    operator,
+    siteImageUrl,
+    buildingHeight,
+    dalleThickness,
+    etancheite,
+    plotHeight,
+    hasChauffageAuSol,
+    fausseDalleThickness,
+    selectedEchelle,
+  } = project;
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isInfoConfirmed, setIsInfoConfirmed] = useState<boolean>(false);
 
@@ -133,17 +146,9 @@ export default function RegularUserView({
     config,
     operator,
     selectedCoords,
-    selectedBuildingHeight,
+    selectedBuildingHeight: buildingHeight,
     setZoneTechnique
   });
-
-  // Global Equipment
-  const [dalleThickness, setDalleThickness] = useState<number | string>('');
-  const [etancheite, setEtancheite] = useState<number | string>('');
-  const [plotHeight, setPlotHeight] = useState<number>(0.5);
-  const [hasChauffageAuSol, setHasChauffageAuSol] = useState<boolean>(false);
-  const [fausseDalleThickness, setFausseDalleThickness] = useState<number | string>('');
-  const [selectedEchelle, setSelectedEchelle] = useState<string>('');
 
   // Mast equipment derived directly from Sector 1 (single source of truth)
   const s1 = sectors[0];
@@ -161,13 +166,9 @@ export default function RegularUserView({
   // Status State
   const [showPdfPreview, setShowPdfPreview] = useState<boolean>(false);
 
-  // Photo Upload State
-  const [siteImageUrl, setSiteImageUrl] = useState<string | null>(null);
+  // Photo & Profile State
   const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [siteName, setSiteName] = useState<string>('');
-  const [codeSite, setCodeSite] = useState<string>('');
-  const [clientName, setClientName] = useState<string>('');
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
 
   // Request & Notifications State
@@ -214,7 +215,7 @@ export default function RegularUserView({
     apiBaseUrl,
     config,
     foundationType,
-    selectedBuildingHeight,
+    selectedBuildingHeight: buildingHeight,
     selectedAddress,
     selectedCoords,
     siteName,
@@ -280,17 +281,10 @@ export default function RegularUserView({
     allSectionsFilled,
     isConfirmed
   } = calculateStepValidation({
-    siteName,
-    clientName,
-    siteImageUrl,
-    selectedBuildingHeight,
+    project,
     foundationType,
-    dalleThickness,
-    etancheite,
-    selectedEchelle,
     sectors,
     nombreSecteurs,
-    operator,
     zoneTechnique,
     selectedCoords,
     pendingGenericAddress,
@@ -436,37 +430,15 @@ export default function RegularUserView({
                 hideContinue={(foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')) || !selectedEchelle}
               >
                 <UserInput
-                  siteType={siteType}
-                  foundationType={foundationType}
-                  selectedBuildingHeight={selectedBuildingHeight}
-                  setSelectedBuildingHeight={setSelectedBuildingHeight}
+                  project={project}
+                  onChange={(updates) => setProject(prev => ({ ...prev, ...updates }))}
                   nombreSecteurs={nombreSecteurs}
                   setNombreSecteurs={setNombreSecteurs}
-                  dalleThickness={dalleThickness}
-                  setDalleThickness={setDalleThickness}
-                  etancheite={etancheite}
-                  setEtancheite={setEtancheite}
-                  plotHeight={plotHeight}
-                  setPlotHeight={setPlotHeight}
                   similarityMode={similarityMode}
                   setSimilarityMode={setSimilarityMode}
+                  siteType={siteType}
+                  foundationType={foundationType}
                   apiBaseUrl={apiBaseUrl}
-                  siteImageUrl={siteImageUrl}
-                  onSiteImageUploaded={setSiteImageUrl}
-                  siteName={siteName}
-                  setSiteName={setSiteName}
-                  codeSite={codeSite}
-                  setCodeSite={setCodeSite}
-                  clientName={clientName}
-                  setClientName={setClientName}
-                  hasChauffageAuSol={hasChauffageAuSol}
-                  setHasChauffageAuSol={setHasChauffageAuSol}
-                  fausseDalleThickness={fausseDalleThickness}
-                  setFausseDalleThickness={setFausseDalleThickness}
-                  selectedEchelle={selectedEchelle}
-                  setSelectedEchelle={setSelectedEchelle}
-                  operator={operator}
-                  setOperator={setOperator}
                 />
               </AccordionStep>
 
@@ -834,7 +806,7 @@ export default function RegularUserView({
                         <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
                           <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hauteur Bâtiment</span>
                           <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                            {selectedBuildingHeight !== '' ? `${selectedBuildingHeight} m` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
+                            {buildingHeight !== '' ? `${buildingHeight} m` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
                           </span>
                         </div>
 
@@ -1100,7 +1072,7 @@ export default function RegularUserView({
                           clientLogoUrl={clientLogoUrl}
                           ant4gConfig={group.sector.ant4gConfig}
                           ant5gConfig={group.sector.ant5gConfig}
-                          buildingHeight={Number(selectedBuildingHeight) || 0}
+                          buildingHeight={Number(buildingHeight) || 0}
                           mastHeight={group.sector.selectedHeight}
                           plotHeight={plotHeight}
                           sectors={group.indices.map(i => activeSectors[i])}
@@ -1275,7 +1247,7 @@ export default function RegularUserView({
             alert("Demande envoyée avec succès.");
           }, 1500);
         }}
-        selectedBuildingHeight={selectedBuildingHeight}
+        selectedBuildingHeight={buildingHeight}
         selectedHeight={sectors[0]?.selectedHeight || 0}
       />
 
