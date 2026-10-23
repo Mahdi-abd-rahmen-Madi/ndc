@@ -166,3 +166,77 @@ export interface SectorData {
   error?: string | null;
 }
 
+export interface ZoneTechniqueData {
+  hasTdEquipment: boolean;
+  tdType: 'tetraphase' | 'monophase';
+  tdReference: string;
+  tgbtReference: string;
+
+  hasGps: boolean;
+  gpsReference: string;
+  gpsMarque: string;
+
+  hasBoitierLovage: boolean;
+  boitierLovageReference: string;
+  boitierLovageQuantity: number;
+
+  hasAtelierEnergie: boolean;
+  bcubeReference: string;
+
+  hasBaie: boolean;
+  baieItems: SelectedBaieItem[];
+  baieRadio: boolean;
+  baieEnergie: boolean;
+
+  hasCab: boolean;
+  cabOne: boolean;
+  cabTwo: boolean;
+  cabThree: boolean;
+  cabSupport: string;
+
+  atelierFprb: boolean;
+  atelierFprbQuantity: number;
+  atelierFpbc: boolean;
+  atelierFpbcQuantity: number;
+
+  hasConvertisseurMdea: boolean;
+  convertisseurMdeaQuantity: number;
+}
+
+export const defaultZoneTechniqueData: ZoneTechniqueData = {
+  hasTdEquipment: false,
+  tdType: 'tetraphase',
+  tdReference: '',
+  tgbtReference: '',
+
+  hasGps: false,
+  gpsReference: '',
+  gpsMarque: 'NOKIA',
+
+  hasBoitierLovage: false,
+  boitierLovageReference: '',
+  boitierLovageQuantity: 1,
+
+  hasAtelierEnergie: false,
+  bcubeReference: '',
+
+  hasBaie: false,
+  baieItems: [],
+  baieRadio: false,
+  baieEnergie: false,
+
+  hasCab: false,
+  cabOne: false,
+  cabTwo: false,
+  cabThree: false,
+  cabSupport: 'plinthes',
+
+  atelierFprb: false,
+  atelierFprbQuantity: 1,
+  atelierFpbc: false,
+  atelierFpbcQuantity: 1,
+
+  hasConvertisseurMdea: false,
+  convertisseurMdeaQuantity: 1,
+};
+

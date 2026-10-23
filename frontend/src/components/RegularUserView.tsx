@@ -33,7 +33,7 @@ import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
 import { getTerrainDetails } from './regular-user/PdfGenerator';
 import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
-import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem } from './regular-user/types';
+import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData } from './regular-user/types';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
@@ -248,35 +248,20 @@ export default function RegularUserView({
   const [hasRruEquipment, setHasRruEquipment] = useState<boolean>(false);
   const [rrhItems, setRrhItems] = useState<EquipmentItem[]>([{ id: crypto.randomUUID(), reference: '', quantity: 1 }]);
   const [rruItems, setRruItems] = useState<EquipmentItem[]>([{ id: crypto.randomUUID(), reference: '', quantity: 1 }]);
-  const [hasTdEquipment, setHasTdEquipment] = useState<boolean>(false);
-  const [tdType, setTdType] = useState<'tetraphase' | 'monophase'>('tetraphase');
-  const [tdReference, setTdReference] = useState<string>('');
-  const [tgbtReference, setTgbtReference] = useState<string>('');
-  const [gpsReference, setGpsReference] = useState<string>('');
-  const [gpsMarque, setGpsMarque] = useState<string>('NOKIA');
-  const [hasBoitierLovage, setHasBoitierLovage] = useState<boolean>(false);
-  const [hasGps, setHasGps] = useState<boolean>(false);
-  const [boitierLovageReference, setBoitierLovageReference] = useState<string>('');
-  const [boitierLovageQuantity, setBoitierLovageQuantity] = useState<number>(1);
   const [hasCoffret, setHasCoffret] = useState<boolean>(false);
   const [coffretReference, setCoffretReference] = useState<string>('');
-  const [hasBaie, setHasBaie] = useState<boolean>(false);
-  const [baieRadio, setBaieRadio] = useState<boolean>(false);
-  const [baieEnergie, setBaieEnergie] = useState<boolean>(false);
-  const [baieItems, setBaieItems] = useState<SelectedBaieItem[]>([]);
-  const [hasCab, setHasCab] = useState<boolean>(false);
-  const [cabOne, setCabOne] = useState<boolean>(false);
-  const [cabTwo, setCabTwo] = useState<boolean>(false);
-  const [cabThree, setCabThree] = useState<boolean>(false);
-  const [cabSupport, setCabSupport] = useState<string>('plinthes');
-  const [hasAtelierEnergie, setHasAtelierEnergie] = useState<boolean>(false);
-  const [atelierFprb, setAtelierFprb] = useState<boolean>(false);
-  const [atelierFprbQuantity, setAtelierFprbQuantity] = useState<number>(1);
-  const [atelierFpbc, setAtelierFpbc] = useState<boolean>(false);
-  const [atelierFpbcQuantity, setAtelierFpbcQuantity] = useState<number>(1);
-  const [hasConvertisseurMdea, setHasConvertisseurMdea] = useState<boolean>(false);
-  const [convertisseurMdeaQuantity, setConvertisseurMdeaQuantity] = useState<number>(1);
-  const [bcubeReference, setBcubeReference] = useState<string>('');
+
+  const [zoneTechnique, setZoneTechnique] = useState<ZoneTechniqueData>(defaultZoneTechniqueData);
+  const {
+    hasTdEquipment, tdType, tdReference, tgbtReference,
+    hasGps, gpsReference, gpsMarque,
+    hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
+    hasAtelierEnergie, bcubeReference,
+    hasBaie, baieRadio, baieEnergie, baieItems,
+    hasCab, cabOne, cabTwo, cabThree, cabSupport,
+    atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
+    hasConvertisseurMdea, convertisseurMdeaQuantity
+  } = zoneTechnique;
 
   // Status State
   const [calculating, setCalculating] = useState(false);
@@ -332,19 +317,13 @@ export default function RegularUserView({
     if (operator === 'bouygues') {
       setHasRrhEquipment(false);
     }
-    if (operator !== 'orange') {
-      setHasBaie(false);
-      setBaieRadio(false);
-      setBaieEnergie(false);
-      setBaieItems([]);
-    }
-    if (operator !== 'free') {
-      setHasCab(false);
-      setCabOne(false);
-      setCabTwo(false);
-      setCabThree(false);
-      setCabSupport('plinthes');
-    }
+    setZoneTechnique(prev => ({
+      ...prev,
+      ...(operator !== 'orange' ? { hasBaie: false, baieRadio: false, baieEnergie: false, baieItems: [] } : {}),
+      ...(operator !== 'free' ? { hasCab: false, cabOne: false, cabTwo: false, cabThree: false, cabSupport: 'plinthes' } : {}),
+      ...((operator !== 'free' && operator !== 'bouygues') ? { hasAtelierEnergie: false } : {}),
+      ...(operator !== 'bouygues' ? { bcubeReference: '' } : {})
+    }));
     const defaultRrh = [{
       id: crypto.randomUUID(),
       reference: '',
@@ -2139,62 +2118,8 @@ export default function RegularUserView({
 
 
                   <ZoneTechniqueGrid
-                    state={{
-                      hasTdEquipment,
-                      setHasTdEquipment,
-                      tdType,
-                      setTdType,
-                      tdReference,
-                      setTdReference,
-                      tgbtReference,
-                      setTgbtReference,
-                      hasGps,
-                      setHasGps,
-                      gpsReference,
-                      setGpsReference,
-                      gpsMarque,
-                      setGpsMarque,
-                      hasBoitierLovage,
-                      setHasBoitierLovage,
-                      boitierLovageReference,
-                      setBoitierLovageReference,
-                      boitierLovageQuantity,
-                      setBoitierLovageQuantity,
-                      hasAtelierEnergie,
-                      setHasAtelierEnergie,
-                      bcubeReference,
-                      setBcubeReference,
-                      hasBaie,
-                      setHasBaie,
-                      baieItems,
-                      setBaieItems,
-                      baieRadio,
-                      setBaieRadio,
-                      baieEnergie,
-                      setBaieEnergie,
-                      hasCab,
-                      setHasCab,
-                      cabOne,
-                      setCabOne,
-                      cabTwo,
-                      setCabTwo,
-                      cabThree,
-                      setCabThree,
-                      cabSupport,
-                      setCabSupport,
-                      atelierFprb,
-                      setAtelierFprb,
-                      atelierFprbQuantity,
-                      setAtelierFprbQuantity,
-                      atelierFpbc,
-                      setAtelierFpbc,
-                      atelierFpbcQuantity,
-                      setAtelierFpbcQuantity,
-                      hasConvertisseurMdea,
-                      setHasConvertisseurMdea,
-                      convertisseurMdeaQuantity,
-                      setConvertisseurMdeaQuantity
-                    }}
+                    data={zoneTechnique}
+                    onChange={(updates) => setZoneTechnique(prev => ({ ...prev, ...updates }))}
                     config={config}
                     operator={operator}
                   />
