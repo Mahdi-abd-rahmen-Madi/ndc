@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, Fragment, Suspense, lazy } from 'react';
 import {
   Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,
   FileText, AlertTriangle, Eye, CheckCircle2, Settings, RefreshCw,
@@ -14,7 +14,7 @@ export interface EquipmentItem {
 }
 
 import { useCatalogueConfig } from '../hooks/useCatalogueConfig';
-import TerrainMap from './TerrainMap';
+const TerrainMap = lazy(() => import('./TerrainMap'));
 import type { GeocodingAddress } from '../utils/types';
 import { useGeocoding } from '../hooks/useGeocoding';
 import { useSiteNdcGenerator } from '../hooks/useSiteNdcGenerator';
@@ -36,8 +36,6 @@ import { AccordionStep } from './regular-user/AccordionStep';
 import { PortailHeader } from './regular-user/PortailHeader';
 import { calculateStepValidation } from './regular-user/validation';
 import { createResolvers } from './regular-user/resolvers';
-import { getTerrainDetails } from './regular-user/PdfGenerator';
-import { generateAndDownloadPdf } from './regular-user/PdfGenerator';
 import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData, ProjectData, defaultProjectData } from './regular-user/types';
 
 interface RegularUserViewProps {
@@ -700,11 +698,18 @@ export default function RegularUserView({
                   </button>
                 )}
               </div>
-              <TerrainMap
-                selectedCoordinates={selectedCoords ? { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude } : null}
-                flyToLocation={flyToLocation}
-                onMapClick={handleMapLocationSelect}
-              />
+              <Suspense fallback={
+                <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100/80">
+                  <Loader2 className="w-8 h-8 text-violet-600 animate-spin mb-2" />
+                  <span className="text-xs font-semibold text-slate-600">Chargement de la carte...</span>
+                </div>
+              }>
+                <TerrainMap
+                  selectedCoordinates={selectedCoords ? { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude } : null}
+                  flyToLocation={flyToLocation}
+                  onMapClick={handleMapLocationSelect}
+                />
+              </Suspense>
             </div>
           )}
 

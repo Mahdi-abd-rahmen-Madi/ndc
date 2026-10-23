@@ -5,7 +5,7 @@ import type {
   ZoneTechniqueData,
   SelectedBaieItem
 } from '../components/regular-user/types';
-import { getTerrainDetails } from '../components/regular-user/PdfGenerator';
+import { getTerrainDetails } from '../utils/terrainDetails';
 import { DEFAULT_ORANGE_BAIES } from '../components/regular-user/equipment/BaieEquipmentToggle';
 
 export interface UseSiteNdcGeneratorParams {

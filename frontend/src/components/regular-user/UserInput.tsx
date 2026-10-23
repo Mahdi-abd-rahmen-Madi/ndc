@@ -413,6 +413,7 @@ export default function UserInput({
                   value={selectedEchelle}
                   onChange={(val) => onChange({ selectedEchelle: val })}
                   options={[
+                    { value: "Pas d'échelle du sol", label: "Pas d'échelle du sol" },
                     { value: 'Echelle Söll', label: 'Echelle Söll' },
                     { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
                     { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' }

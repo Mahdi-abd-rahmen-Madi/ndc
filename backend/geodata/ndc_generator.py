@@ -327,14 +327,19 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
             context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
     else:
         context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
-        
     context['nombre_secteurs'] = structure_data.get('nombre_secteurs') or 3
-    context['echelle_name'] = (
+    raw_echelle = (
         structure_data.get('echelle')
         or active_data.get('echelle')
         or env.get('echelle')
         or 'Echelle Söll'
     )
+    if raw_echelle and ("pas d'echelle" in raw_echelle.lower() or "pas d'échelle" in raw_echelle.lower()):
+        context['echelle_name'] = None
+        context['has_echelle'] = False
+    else:
+        context['echelle_name'] = raw_echelle
+        context['has_echelle'] = True
 
     # Static Vb mapping
     vb_map = {1: 22, 2: 24, 3: 26, 4: 28}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   SectorData,
   SimilarityMode,
@@ -9,6 +9,9 @@ import {
 export const getCatalogueHash = (s: SectorData) => {
   return `${s.selectedHeight}-${s.selectedMontage4G}-${s.selectedMontage5G}`;
 };
+
+// In-memory cache for catalogue queries across sector changes
+const lookupCache = new Map<string, any>();
 
 interface UseSectorManagerOptions {
   apiBaseUrl: string;
@@ -65,22 +68,18 @@ export function useSectorManager({
     })));
   }, [operator, setZoneTechnique]);
 
-  const updateSector = (index: number, updates: Partial<SectorData>) => {
+  const updateSector = useCallback((index: number, updates: Partial<SectorData>) => {
     setSectors(prev => {
       const next = [...prev];
       next[index] = { ...next[index], ...updates };
 
-      if (index === 0) {
-        if (similarityMode === 'all_similar') {
-          next[1] = { ...next[1], ...updates };
-        }
-        if (similarityMode === 'all_similar') {
-          next[2] = { ...next[2], ...updates };
-        }
+      if (index === 0 && similarityMode === 'all_similar') {
+        next[1] = { ...next[1], ...updates };
+        next[2] = { ...next[2], ...updates };
       }
       return next;
     });
-  };
+  }, [similarityMode]);
 
   // Sync data when similarity mode changes
   useEffect(() => {
@@ -104,8 +103,8 @@ export function useSectorManager({
     }
   }, [nombreSecteurs, similarityMode]);
 
-  const activeSectors = sectors.slice(0, nombreSecteurs);
-  const sectorDependencies = activeSectors.map(s => getCatalogueHash(s)).join('|');
+  const activeSectors = useMemo(() => sectors.slice(0, nombreSecteurs), [sectors, nombreSecteurs]);
+  const sectorDependencies = useMemo(() => activeSectors.map(s => getCatalogueHash(s)).join('|'), [activeSectors]);
 
   // Fetch API Catalogue for distinct sectors
   useEffect(() => {
@@ -137,6 +136,10 @@ export function useSectorManager({
             url += `&montage=${encodeURIComponent(sector.selectedMontage4G)}`;
           }
 
+          if (lookupCache.has(url)) {
+            return { hash, data: lookupCache.get(url), error: null };
+          }
+
           try {
             const res = await fetch(url);
             if (!res.ok) throw new Error("Erreur de communication avec le catalogue.");
@@ -147,6 +150,8 @@ export function useSectorManager({
             } else {
               data.equipment = [];
             }
+
+            lookupCache.set(url, data);
             return { hash, data, error: null };
           } catch (e: any) {
             return { hash, data: null, error: e.message || "Erreur" };
@@ -177,34 +182,36 @@ export function useSectorManager({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCoords, selectedBuildingHeight, sectorDependencies, apiBaseUrl, config, nombreSecteurs]);
 
-  // Group unique configurations for calculations/PDF
-  const uniqueGroupsMap = new Map<string, { hash: string, indices: number[], sector: SectorData }>();
-  activeSectors.forEach((s, idx) => {
-    let hash = `${s.selectedHeight}_${s.selectedMontage4G}_${s.selectedMontage5G}_${s.matPrincipal}_${s.matSecondaire}_${s.brasDeDeport}_${s.plotMetallique}`;
-    if (s.selectedMontage4G === 'custom' || s.selectedMontage5G === 'custom') {
-      hash += `_4G${s.ant4gConfig.height}x${s.ant4gConfig.width}x${s.ant4gConfig.thickness}w${s.ant4gConfig.weight}`;
-      hash += `_5G${s.ant5gConfig.height}x${s.ant5gConfig.width}x${s.ant5gConfig.thickness}w${s.ant5gConfig.weight}`;
-    }
-    if (s.configMode === 'reference') {
-      hash += `_ref4G${s.selectedReference4G}_ref5G${s.selectedReference5G}`;
-    }
-    if (similarityMode === 'all_similar') {
-      hash = 'unified_group';
-    }
-    if (!uniqueGroupsMap.has(hash)) {
-      uniqueGroupsMap.set(hash, { hash, indices: [idx], sector: s });
-    } else {
-      uniqueGroupsMap.get(hash)!.indices.push(idx);
-    }
-  });
-  const uniqueGroups = Array.from(uniqueGroupsMap.values());
+  // Group unique configurations for calculations/PDF (memoized to prevent cascade re-renders)
+  const uniqueGroups = useMemo(() => {
+    const uniqueGroupsMap = new Map<string, { hash: string; indices: number[]; sector: SectorData }>();
+    activeSectors.forEach((s, idx) => {
+      let hash = `${s.selectedHeight}_${s.selectedMontage4G}_${s.selectedMontage5G}_${s.matPrincipal}_${s.matSecondaire}_${s.brasDeDeport}_${s.plotMetallique}`;
+      if (s.selectedMontage4G === 'custom' || s.selectedMontage5G === 'custom') {
+        hash += `_4G${s.ant4gConfig.height}x${s.ant4gConfig.width}x${s.ant4gConfig.thickness}w${s.ant4gConfig.weight}`;
+        hash += `_5G${s.ant5gConfig.height}x${s.ant5gConfig.width}x${s.ant5gConfig.thickness}w${s.ant5gConfig.weight}`;
+      }
+      if (s.configMode === 'reference') {
+        hash += `_ref4G${s.selectedReference4G}_ref5G${s.selectedReference5G}`;
+      }
+      if (similarityMode === 'all_similar') {
+        hash = 'unified_group';
+      }
+      if (!uniqueGroupsMap.has(hash)) {
+        uniqueGroupsMap.set(hash, { hash, indices: [idx], sector: s });
+      } else {
+        uniqueGroupsMap.get(hash)!.indices.push(idx);
+      }
+    });
+    return Array.from(uniqueGroupsMap.values());
+  }, [activeSectors, similarityMode]);
 
   const anyLoading = activeSectors.some(s => s.loading);
   const anyError = activeSectors.find(s => s.error)?.error;
 
-  const clearLookupResults = () => {
+  const clearLookupResults = useCallback(() => {
     setSectors(prev => prev.map(s => ({ ...s, lookupResult: null })));
-  };
+  }, []);
 
   return {
     sectors,

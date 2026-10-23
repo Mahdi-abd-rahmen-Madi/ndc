@@ -52,7 +52,7 @@ export interface RightPreviewPanelProps {
   resolveBaieItems: (items: SelectedBaieItem[]) => any[];
 }
 
-export default function RightPreviewPanel({
+function RightPreviewPanel({
   showMap,
   setShowMap,
   selectedCoords,
@@ -649,3 +649,5 @@ export default function RightPreviewPanel({
     </div>
   );
 }
+
+export default React.memo(RightPreviewPanel);

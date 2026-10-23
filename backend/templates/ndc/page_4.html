@@ -42,6 +42,7 @@
         <td>{{ ant_5g_weight }}</td>
         <td>Projet</td>
     </tr>
+    {% if has_echelle %}
     <tr>
         <td>{{ echelle_name|default:"Echelle Söll" }}</td>
         <td>1</td>
@@ -49,4 +50,5 @@
         <td>15 (h)</td>
         <td>Projet</td>
     </tr>
+    {% endif %}
 </table>

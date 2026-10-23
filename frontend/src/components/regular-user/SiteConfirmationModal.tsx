@@ -103,10 +103,12 @@ export function SiteConfirmationModal({
 }: SiteConfirmationModalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [isEquipmentValidated, setIsEquipmentValidated] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setHasScrolledToBottom(false);
+      setIsEquipmentValidated(false);
       setTimeout(() => {
         if (scrollRef.current) {
           const { scrollHeight, clientHeight } = scrollRef.current;
@@ -419,6 +421,24 @@ export function SiteConfirmationModal({
               En cliquant sur <strong>Confirmer et Générer</strong>, vous acceptez que nous n'assumons aucune responsabilité en cas de mauvaise utilisation de cette note de calcul ou de non-respect des hypothèses structurelles.
             </p>
           </div>
+
+          {/* Validation des équipements - Case à cocher */}
+          <div className="bg-violet-50/70 border border-violet-200/90 rounded-xl p-3.5 flex items-start gap-3 transition-colors hover:bg-violet-50">
+            <input
+              id="confirm-equipments-checkbox"
+              type="checkbox"
+              checked={isEquipmentValidated}
+              onChange={(e) => setIsEquipmentValidated(e.target.checked)}
+              className="mt-0.5 w-4 h-4 text-violet-600 bg-white border-slate-300 rounded focus:ring-violet-500 focus:ring-2 cursor-pointer transition-all"
+            />
+            <label
+              htmlFor="confirm-equipments-checkbox"
+              className="text-xs text-slate-800 leading-snug cursor-pointer select-none font-medium"
+            >
+              <strong className="text-violet-950 font-bold block mb-0.5">Validation des équipements</strong>
+              Je confirme et valide l'ensemble des équipements et paramètres sélectionnés pour cette note de calcul.
+            </label>
+          </div>
         </div>
 
         {/* Footer */}
@@ -429,10 +449,15 @@ export function SiteConfirmationModal({
                 <ChevronDown className="w-3.5 h-3.5 animate-bounce text-amber-600 shrink-0" />
                 <span>Faites défiler le récapitulatif jusqu'en bas pour débloquer la validation</span>
               </div>
+            ) : !isEquipmentValidated ? (
+              <div className="flex items-center gap-1.5 text-xs text-violet-700 bg-violet-50 px-3 py-1.5 rounded-lg border border-violet-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                <span>Veuillez cocher la case de validation des équipements</span>
+              </div>
             ) : (
               <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="font-medium">Récapitulatif entièrement consulté</span>
+                <span className="font-medium">Équipements validés</span>
               </div>
             )}
           </div>
@@ -440,18 +465,24 @@ export function SiteConfirmationModal({
           <div className="flex items-center justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-5 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-xl transition-colors font-semibold text-sm"
+              className="px-5 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 rounded-xl transition-colors font-semibold text-sm cursor-pointer"
             >
               Annuler
             </button>
             <button
-              disabled={!hasScrolledToBottom}
+              disabled={!hasScrolledToBottom || !isEquipmentValidated}
               onClick={onConfirm}
-              className={`px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${hasScrolledToBottom
+              className={`px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${hasScrolledToBottom && isEquipmentValidated
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 hover:shadow-lg cursor-pointer active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60 shadow-none'
               }`}
-              title={!hasScrolledToBottom ? "Veuillez faire défiler le récapitulatif jusqu'en bas pour confirmer" : undefined}
+              title={
+                !hasScrolledToBottom
+                  ? "Veuillez faire défiler le récapitulatif jusqu'en bas pour confirmer"
+                  : !isEquipmentValidated
+                    ? "Veuillez cocher la case de validation des équipements"
+                    : undefined
+              }
             >
               <FileText className="w-4 h-4" />
               Confirmer et Générer

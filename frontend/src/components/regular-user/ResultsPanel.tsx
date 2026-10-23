@@ -43,7 +43,7 @@ export interface ResultsPanelProps {
   operator?: string;
 }
 
-export default function ResultsPanel({
+function ResultsPanel({
   lookupResult,
   selectedAddress,
   isSearching,
@@ -157,3 +157,5 @@ export default function ResultsPanel({
     </div>
   );
 }
+
+export default React.memo(ResultsPanel);
