@@ -25,7 +25,9 @@ import AddressSearchSection from './regular-user/AddressSearchSection';
 import UserInput from './regular-user/UserInput';
 import UserProfileModal from './regular-user/UserProfileModal';
 import SectorConfigurator from './regular-user/SectorConfigurator';
-import FHEquipmentToggle, { RRHEquipmentToggle, RRUEquipmentToggle, TDEquipmentToggle, BoitierLovageEquipmentToggle, GPSEquipmentToggle, CoffretEquipmentToggle, BaieEquipmentToggle, DEFAULT_ORANGE_BAIES, CabEquipmentToggle, AtelierEnergieEquipmentToggle, BCubeEquipmentToggle, ConvertisseurMdeaEquipmentToggle } from './regular-user/EquipmentToggle';
+import SectorEquipmentGrid from './regular-user/SectorEquipmentGrid';
+import ZoneTechniqueGrid from './regular-user/ZoneTechniqueGrid';
+import { DEFAULT_ORANGE_BAIES } from './regular-user/equipment/BaieEquipmentToggle';
 import ResultsPanel from './regular-user/ResultsPanel';
 import HeightRequestModal from './regular-user/HeightRequestModal';
 import DocumentPreviewModal from './regular-user/DocumentPreviewModal';
@@ -2071,82 +2073,26 @@ export default function RegularUserView({
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <FHEquipmentToggle
-                                  hasFhEquipment={sector.hasFhEquipment ?? hasFhEquipment}
-                                  setHasFhEquipment={(val) => {
-                                    updateSector(idx, { hasFhEquipment: val });
-                                    if (idx === 0) setHasFhEquipment(val);
-                                  }}
-                                  fhDiameter={sector.fhDiameter ?? fhDiameter}
-                                  setFhDiameter={(val) => {
-                                    updateSector(idx, { fhDiameter: val });
-                                    if (idx === 0) setFhDiameter(val);
-                                  }}
-                                  fhReference={sector.fhReference ?? fhReference}
-                                  setFhReference={(val) => {
-                                    updateSector(idx, { fhReference: val });
-                                    if (idx === 0) setFhReference(val);
-                                  }}
-                                  fhQuantity={sector.fhQuantity ?? fhQuantity}
-                                  setFhQuantity={(val) => {
-                                    updateSector(idx, { fhQuantity: val });
-                                    if (idx === 0) setFhQuantity(val);
-                                  }}
-                                  fhOptions={config?.fh_references || []}
-                                  nombreSecteurs={nombreSecteurs}
-                                />
-                                {operator !== 'bouygues' && (
-                                  <RRHEquipmentToggle
-                                    hasRrhEquipment={sector.hasRrhEquipment ?? hasRrhEquipment}
-                                    setHasRrhEquipment={(val) => {
-                                      updateSector(idx, { hasRrhEquipment: val });
-                                      if (idx === 0) setHasRrhEquipment(val);
-                                    }}
-                                    rrhItems={sector.rrhItems ?? rrhItems}
-                                    setRrhItems={(val) => {
-                                      const newItems = typeof val === 'function' ? val(sector.rrhItems ?? rrhItems) : val;
-                                      updateSector(idx, { rrhItems: newItems });
-                                      if (idx === 0) setRrhItems(newItems);
-                                    }}
-                                    rrhOptions={config?.rrh_references || []}
-                                    operator={operator}
-                                    nombreSecteurs={nombreSecteurs}
-                                  />
-                                )}
-                                <RRUEquipmentToggle
-                                  hasRruEquipment={sector.hasRruEquipment ?? hasRruEquipment}
-                                  setHasRruEquipment={(val) => {
-                                    updateSector(idx, { hasRruEquipment: val });
-                                    if (idx === 0) setHasRruEquipment(val);
-                                  }}
-                                  rruItems={sector.rruItems ?? rruItems}
-                                  setRruItems={(val) => {
-                                    const newItems = typeof val === 'function' ? val(sector.rruItems ?? rruItems) : val;
-                                    updateSector(idx, { rruItems: newItems });
-                                    if (idx === 0) setRruItems(newItems);
-                                  }}
-                                  rruOptions={config?.rru_references || []}
-                                  isRfmMode={operator === 'free'}
-                                  operator={operator}
-                                  nombreSecteurs={nombreSecteurs}
-                                />
-                                <CoffretEquipmentToggle
-                                  hasCoffret={sector.hasCoffret ?? hasCoffret}
-                                  setHasCoffret={(val) => {
-                                    updateSector(idx, { hasCoffret: val });
-                                    if (idx === 0) setHasCoffret(val);
-                                  }}
-                                  coffretReference={sector.coffretReference ?? coffretReference}
-                                  setCoffretReference={(val) => {
-                                    updateSector(idx, { coffretReference: val });
-                                    if (idx === 0) setCoffretReference(val);
-                                  }}
-                                  coffretOptions={config?.coffret_references || []}
-                                  operator={operator}
-                                  nombreSecteurs={nombreSecteurs}
-                                />
-                              </div>
+                              <SectorEquipmentGrid
+                                sector={sector}
+                                sectorIndex={idx}
+                                updateSector={updateSector}
+                                config={config}
+                                operator={operator}
+                                nombreSecteurs={nombreSecteurs}
+                                onRootSync={(updates) => {
+                                  if (updates.hasFhEquipment !== undefined) setHasFhEquipment(updates.hasFhEquipment);
+                                  if (updates.fhDiameter !== undefined) setFhDiameter(updates.fhDiameter);
+                                  if (updates.fhReference !== undefined) setFhReference(updates.fhReference);
+                                  if (updates.fhQuantity !== undefined) setFhQuantity(updates.fhQuantity);
+                                  if (updates.hasRrhEquipment !== undefined) setHasRrhEquipment(updates.hasRrhEquipment);
+                                  if (updates.rrhItems !== undefined) setRrhItems(updates.rrhItems);
+                                  if (updates.hasRruEquipment !== undefined) setHasRruEquipment(updates.hasRruEquipment);
+                                  if (updates.rruItems !== undefined) setRruItems(updates.rruItems);
+                                  if (updates.hasCoffret !== undefined) setHasCoffret(updates.hasCoffret);
+                                  if (updates.coffretReference !== undefined) setCoffretReference(updates.coffretReference);
+                                }}
+                              />
                             </div>
                           </SectorConfigurator>
                         </Fragment>
@@ -2192,91 +2138,66 @@ export default function RegularUserView({
                 <div className="space-y-4">
 
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <TDEquipmentToggle
-                      hasTdEquipment={hasTdEquipment}
-                      setHasTdEquipment={setHasTdEquipment}
-                      tdType={tdType}
-                      setTdType={setTdType}
-                      tdReference={tdReference}
-                      setTdReference={setTdReference}
-                      tgbtReference={tgbtReference}
-                      setTgbtReference={setTgbtReference}
-                      tdOptions={config?.td_references || []}
-                      operator={operator}
-                    />
-                    <GPSEquipmentToggle
-                      hasGps={hasGps} setHasGps={setHasGps}
-                      gpsReference={gpsReference} setGpsReference={setGpsReference}
-                      gpsMarque={gpsMarque} setGpsMarque={setGpsMarque}
-                      operator={operator}
-                    />
-                    <BoitierLovageEquipmentToggle
-                      hasBoitierLovage={hasBoitierLovage} setHasBoitierLovage={setHasBoitierLovage}
-                      boitierLovageReference={boitierLovageReference} setBoitierLovageReference={setBoitierLovageReference}
-                      boitierLovageQuantity={boitierLovageQuantity} setBoitierLovageQuantity={setBoitierLovageQuantity}
-                      boitierOptions={config?.boitier_lovage_references || []}
-                      operator={operator}
-                    />
-                    {operator === 'bouygues' && (
-                      <BCubeEquipmentToggle
-                        hasAtelierEnergie={hasAtelierEnergie}
-                        setHasAtelierEnergie={setHasAtelierEnergie}
-                        bcubeReference={bcubeReference}
-                        setBcubeReference={setBcubeReference}
-                        options={config?.atelier_energie_references || []}
-                      />
-                    )}
-                    {operator === 'orange' && (
-                      <div className="lg:col-span-2">
-                        <BaieEquipmentToggle
-                          hasBaie={hasBaie}
-                          setHasBaie={setHasBaie}
-                          baieItems={baieItems}
-                          setBaieItems={setBaieItems}
-                          baieOptions={config?.baie_references || DEFAULT_ORANGE_BAIES}
-                          baieRadio={baieRadio}
-                          setBaieRadio={setBaieRadio}
-                          baieEnergie={baieEnergie}
-                          setBaieEnergie={setBaieEnergie}
-                        />
-                      </div>
-                    )}
-                    {operator === 'free' && (
-                      <>
-                        <CabEquipmentToggle
-                          hasCab={hasCab}
-                          setHasCab={setHasCab}
-                          cabOne={cabOne}
-                          setCabOne={setCabOne}
-                          cabTwo={cabTwo}
-                          setCabTwo={setCabTwo}
-                          cabThree={cabThree}
-                          setCabThree={setCabThree}
-                          cabSupport={cabSupport}
-                          setCabSupport={setCabSupport}
-                        />
-                        <AtelierEnergieEquipmentToggle
-                          hasAtelierEnergie={hasAtelierEnergie}
-                          setHasAtelierEnergie={setHasAtelierEnergie}
-                          atelierFprb={atelierFprb}
-                          setAtelierFprb={setAtelierFprb}
-                          atelierFprbQuantity={atelierFprbQuantity}
-                          setAtelierFprbQuantity={setAtelierFprbQuantity}
-                          atelierFpbc={atelierFpbc}
-                          setAtelierFpbc={setAtelierFpbc}
-                          atelierFpbcQuantity={atelierFpbcQuantity}
-                          setAtelierFpbcQuantity={setAtelierFpbcQuantity}
-                        />
-                        <ConvertisseurMdeaEquipmentToggle
-                          hasConvertisseurMdea={hasConvertisseurMdea}
-                          setHasConvertisseurMdea={setHasConvertisseurMdea}
-                          convertisseurMdeaQuantity={convertisseurMdeaQuantity}
-                          setConvertisseurMdeaQuantity={setConvertisseurMdeaQuantity}
-                        />
-                      </>
-                    )}
-                  </div>
+                  <ZoneTechniqueGrid
+                    state={{
+                      hasTdEquipment,
+                      setHasTdEquipment,
+                      tdType,
+                      setTdType,
+                      tdReference,
+                      setTdReference,
+                      tgbtReference,
+                      setTgbtReference,
+                      hasGps,
+                      setHasGps,
+                      gpsReference,
+                      setGpsReference,
+                      gpsMarque,
+                      setGpsMarque,
+                      hasBoitierLovage,
+                      setHasBoitierLovage,
+                      boitierLovageReference,
+                      setBoitierLovageReference,
+                      boitierLovageQuantity,
+                      setBoitierLovageQuantity,
+                      hasAtelierEnergie,
+                      setHasAtelierEnergie,
+                      bcubeReference,
+                      setBcubeReference,
+                      hasBaie,
+                      setHasBaie,
+                      baieItems,
+                      setBaieItems,
+                      baieRadio,
+                      setBaieRadio,
+                      baieEnergie,
+                      setBaieEnergie,
+                      hasCab,
+                      setHasCab,
+                      cabOne,
+                      setCabOne,
+                      cabTwo,
+                      setCabTwo,
+                      cabThree,
+                      setCabThree,
+                      cabSupport,
+                      setCabSupport,
+                      atelierFprb,
+                      setAtelierFprb,
+                      atelierFprbQuantity,
+                      setAtelierFprbQuantity,
+                      atelierFpbc,
+                      setAtelierFpbc,
+                      atelierFpbcQuantity,
+                      setAtelierFpbcQuantity,
+                      hasConvertisseurMdea,
+                      setHasConvertisseurMdea,
+                      convertisseurMdeaQuantity,
+                      setConvertisseurMdeaQuantity
+                    }}
+                    config={config}
+                    operator={operator}
+                  />
                 </div>
               </AccordionStep>
 
