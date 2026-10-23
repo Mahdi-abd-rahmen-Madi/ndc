@@ -12,8 +12,6 @@ export interface SectorEquipmentGridProps {
   config: CatalogueConfig | null;
   operator?: string;
   nombreSecteurs?: number;
-  // Optional root sync callbacks if sectorIndex === 0
-  onRootSync?: (updates: Partial<SectorData>) => void;
 }
 
 export function SectorEquipmentGrid({
@@ -22,14 +20,10 @@ export function SectorEquipmentGrid({
   updateSector,
   config,
   operator = 'bouygues',
-  nombreSecteurs = 1,
-  onRootSync
+  nombreSecteurs = 1
 }: SectorEquipmentGridProps) {
   const syncUpdates = (updates: Partial<SectorData>) => {
     updateSector(sectorIndex, updates);
-    if (sectorIndex === 0 && onRootSync) {
-      onRootSync(updates);
-    }
   };
 
   return (

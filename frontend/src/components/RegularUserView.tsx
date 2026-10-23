@@ -240,16 +240,19 @@ export default function RegularUserView({
   const [fausseDalleThickness, setFausseDalleThickness] = useState<number | string>('');
   const [selectedEchelle, setSelectedEchelle] = useState<string>('');
 
-  const [hasFhEquipment, setHasFhEquipment] = useState<boolean>(false);
-  const [fhDiameter, setFhDiameter] = useState<number>(300);
-  const [fhReference, setFhReference] = useState<string>('');
-  const [fhQuantity, setFhQuantity] = useState<number>(1);
-  const [hasRrhEquipment, setHasRrhEquipment] = useState<boolean>(false);
-  const [hasRruEquipment, setHasRruEquipment] = useState<boolean>(false);
-  const [rrhItems, setRrhItems] = useState<EquipmentItem[]>([{ id: crypto.randomUUID(), reference: '', quantity: 1 }]);
-  const [rruItems, setRruItems] = useState<EquipmentItem[]>([{ id: crypto.randomUUID(), reference: '', quantity: 1 }]);
-  const [hasCoffret, setHasCoffret] = useState<boolean>(false);
-  const [coffretReference, setCoffretReference] = useState<string>('');
+  // Mast equipment derived directly from Sector 1 (single source of truth)
+  const s1 = sectors[0];
+  const hasFhEquipment = !!s1?.hasFhEquipment;
+  const fhDiameter = s1?.fhDiameter ?? 300;
+  const fhReference = s1?.fhReference ?? '';
+  const fhQuantity = s1?.fhQuantity ?? 1;
+  const hasRrhEquipment = !!s1?.hasRrhEquipment;
+  const rrhItems = s1?.rrhItems ?? [];
+  const hasRruEquipment = !!s1?.hasRruEquipment;
+  const rruItems = s1?.rruItems ?? [];
+  const hasCoffret = !!s1?.hasCoffret;
+  const coffretReference = s1?.coffretReference ?? '';
+
 
   const [zoneTechnique, setZoneTechnique] = useState<ZoneTechniqueData>(defaultZoneTechniqueData);
   const {
@@ -314,9 +317,6 @@ export default function RegularUserView({
 
   // Reset operator-specific equipments when operator changes
   useEffect(() => {
-    if (operator === 'bouygues') {
-      setHasRrhEquipment(false);
-    }
     setZoneTechnique(prev => ({
       ...prev,
       ...(operator !== 'orange' ? { hasBaie: false, baieRadio: false, baieEnergie: false, baieItems: [] } : {}),
@@ -336,8 +336,6 @@ export default function RegularUserView({
       quantity: 1,
       vendor: operator === 'free' ? 'NOKIA' : operator === 'orange' ? 'ERICSSON' : undefined
     }];
-    setRrhItems(defaultRrh);
-    setRruItems(defaultRru);
     setSectors(prev => prev.map(s => ({
       ...s,
       hasRrhEquipment: operator === 'bouygues' ? false : s.hasRrhEquipment,
@@ -2059,18 +2057,6 @@ export default function RegularUserView({
                                 config={config}
                                 operator={operator}
                                 nombreSecteurs={nombreSecteurs}
-                                onRootSync={(updates) => {
-                                  if (updates.hasFhEquipment !== undefined) setHasFhEquipment(updates.hasFhEquipment);
-                                  if (updates.fhDiameter !== undefined) setFhDiameter(updates.fhDiameter);
-                                  if (updates.fhReference !== undefined) setFhReference(updates.fhReference);
-                                  if (updates.fhQuantity !== undefined) setFhQuantity(updates.fhQuantity);
-                                  if (updates.hasRrhEquipment !== undefined) setHasRrhEquipment(updates.hasRrhEquipment);
-                                  if (updates.rrhItems !== undefined) setRrhItems(updates.rrhItems);
-                                  if (updates.hasRruEquipment !== undefined) setHasRruEquipment(updates.hasRruEquipment);
-                                  if (updates.rruItems !== undefined) setRruItems(updates.rruItems);
-                                  if (updates.hasCoffret !== undefined) setHasCoffret(updates.hasCoffret);
-                                  if (updates.coffretReference !== undefined) setCoffretReference(updates.coffretReference);
-                                }}
                               />
                             </div>
                           </SectorConfigurator>
