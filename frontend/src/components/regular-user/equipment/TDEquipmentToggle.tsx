@@ -10,8 +10,8 @@ export interface TDEquipmentToggleProps {
   setTdType: (val: 'tetraphase' | 'monophase') => void;
   tdReference: string;
   setTdReference: (val: string) => void;
-  tgbtReference: string;
-  setTgbtReference: (val: string) => void;
+  tgbtReference?: string;
+  setTgbtReference?: (val: string) => void;
   tdOptions: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
   operator?: string;
 }
@@ -23,34 +23,27 @@ export function TDEquipmentToggle({
   setTdType,
   tdReference,
   setTdReference,
-  tgbtReference,
-  setTgbtReference,
   tdOptions,
   operator = 'bouygues'
 }: TDEquipmentToggleProps) {
-  const isBouygues = operator.toLowerCase() === 'bouygues';
+  const isMatchingType = (opt: any, type: 'tetraphase' | 'monophase') => {
+    if (opt.phase) return opt.phase === type;
+    if (type === 'tetraphase') return opt.reference === '68237' || opt.id === 'td_tri_free' || opt.id === 'td_68237';
+    return opt.reference !== '68237' && opt.id !== 'td_tri_free' && opt.id !== 'td_68237';
+  };
 
   React.useEffect(() => {
     if (hasTdEquipment) {
-      const validOptions = tdOptions.filter(o =>
-        tdType === 'tetraphase' ? o.reference === '68237' : o.reference === '68236'
-      );
+      const validOptions = tdOptions.filter(o => isMatchingType(o, tdType));
       if (!validOptions.some(o => o.id === tdReference)) {
         if (validOptions.length > 0) {
           setTdReference(validOptions[0].id);
         }
       }
-      if (isBouygues && !tgbtReference) {
-        setTgbtReference('TGBT ACTIA');
-      }
     }
-  }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference, isBouygues, tgbtReference, setTgbtReference]);
+  }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference]);
 
-  const filteredTdOptions = tdOptions.filter(opt => {
-    if (tdType === 'tetraphase') return opt.reference === '68237';
-    if (tdType === 'monophase') return opt.reference === '68236';
-    return true;
-  });
+  const filteredTdOptions = tdOptions.filter(opt => isMatchingType(opt, tdType));
 
   return (
     <EquipmentToggleCard
@@ -78,7 +71,7 @@ export function TDEquipmentToggle({
             onChange={() => setTdType('monophase')}
             className="text-violet-600 focus:ring-violet-500"
           />
-          TD Monophasé + TGBT
+          TD Monophasé
         </label>
       </div>
 
@@ -96,37 +89,6 @@ export function TDEquipmentToggle({
             placeholder="Sélectionner un équipement"
           />
         </div>
-
-        {tdType === 'monophase' && (
-          <div className="flex flex-col flex-1 mt-2">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">TGBT</label>
-              {isBouygues && (
-                <span className="text-[10px] font-bold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full border border-violet-200">
-                  Bouygues
-                </span>
-              )}
-            </div>
-
-            {isBouygues && (
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 block">Modèle TGBT</label>
-                  <CustomSelect
-                    value={tgbtReference || 'TGBT ACTIA'}
-                    onChange={(val) => setTgbtReference(val)}
-                    className="focus:ring-2 focus:ring-violet-500"
-                    options={[
-                      { value: 'TGBT ACTIA', label: 'TGBT ACTIA' },
-                      { value: 'TGBT TLTI', label: 'TGBT TLTI' }
-                    ]}
-                    placeholder="Sélectionner un TGBT"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </EquipmentToggleCard>
   );

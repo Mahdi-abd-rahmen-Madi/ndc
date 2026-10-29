@@ -119,7 +119,7 @@ function RightPreviewPanel({
   const coffretReference = s1?.coffretReference ?? '';
 
   const {
-    hasTdEquipment, tdType, tdReference, tgbtReference,
+    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
@@ -432,7 +432,8 @@ function RightPreviewPanel({
                     baie: operator === 'orange' && hasBaie,
                     cab: operator === 'free' && hasCab,
                     atelier_energie: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
-                    convertisseur_mdea: operator === 'free' && hasConvertisseurMdea
+                    convertisseur_mdea: operator === 'free' && hasConvertisseurMdea,
+                    tgbt: operator === 'bouygues' && hasTgbt
                   }}
                   equipmentValues={{
                     fh: {
@@ -452,9 +453,18 @@ function RightPreviewPanel({
                         weight: rruOpt?.weight ?? null
                       };
                     }) : null,
-                    td: tdType === 'monophase'
-                      ? { type: 'TD Monophasé', référence: resolveTd(tdReference) || 'N/A', tgbt: tgbtReference || 'N/A' }
-                      : { type: 'TD Tétraphasé', référence: resolveTd(tdReference) || 'N/A' },
+                    td: {
+                      type: tdType === 'monophase' ? 'TD Monophasé' : 'TD Tétraphasé',
+                      référence: resolveTd(tdReference) || 'N/A'
+                    },
+                    tgbt: (operator === 'bouygues' && hasTgbt) ? (() => {
+                      const tgbtItem = config?.tgbt_references?.find(r => r.id === tgbtReference || r.name === tgbtReference || r.reference === tgbtReference);
+                      return {
+                        modèle: tgbtItem?.name || tgbtReference || 'TGBT ACTIA',
+                        dimensions: tgbtItem?.dimensions || '500x400x230mm',
+                        poids: tgbtItem?.weight ? `${tgbtItem.weight} kg` : '15 kg'
+                      };
+                    })() : null,
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
                     boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
                     coffrets_fibre: { référence: coffretReference || 'N/A' },
@@ -516,7 +526,7 @@ function RightPreviewPanel({
                         <span className="text-[10px] font-bold uppercase tracking-wider text-violet-700 bg-violet-100/80 px-2 py-0.5 rounded-full inline-block mb-1">
                           Étape 3 : Aériens
                         </span>
-                        <h4 className="text-sm font-bold text-slate-900">Équipements sur mât</h4>
+                        <h4 className="text-sm font-bold text-slate-900">Équipements</h4>
                         <p className="text-xs text-slate-500 mt-0.5">
                           Sélectionnez vos équipements ci-contre ou passez à l'étape suivante.
                         </p>
@@ -557,10 +567,10 @@ function RightPreviewPanel({
                     onClick={handleGenerateSiteNdc}
                     disabled={isGeneratingSiteNdc || !canGenerate}
                     className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${!canGenerate
-                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                        : isFullyStandard()
-                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
-                          : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                      : isFullyStandard()
+                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                        : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
                       } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
                   >
                     {isGeneratingSiteNdc ? (

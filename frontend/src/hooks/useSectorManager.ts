@@ -43,7 +43,7 @@ export function useSectorManager({
       ...(operator !== 'orange' ? { hasBaie: false, baieRadio: false, baieEnergie: false, baieItems: [] } : {}),
       ...(operator !== 'free' ? { hasCab: false, cabOne: false, cabTwo: false, cabThree: false, cabSupport: 'plinthes' } : {}),
       ...((operator !== 'free' && operator !== 'bouygues') ? { hasAtelierEnergie: false } : {}),
-      ...(operator !== 'bouygues' ? { bcubeReference: '' } : {})
+      ...(operator !== 'bouygues' ? { bcubeReference: '', hasTgbt: false, tgbtReference: '' } : {})
     }));
 
     const defaultRrh = [{

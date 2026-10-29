@@ -99,6 +99,9 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
   if (operator === 'bouygues' && zoneTechnique.hasAtelierEnergie && !zoneTechnique.bcubeReference) {
     missingStep4Equipments.push('Modèle BCube');
   }
+  if (operator === 'bouygues' && zoneTechnique.hasTgbt && !zoneTechnique.tgbtReference) {
+    missingStep4Equipments.push('Modèle TGBT');
+  }
 
   const isStep1Complete = !!selectedCoords && !pendingGenericAddress;
   const isStep2Complete = canGenerate;

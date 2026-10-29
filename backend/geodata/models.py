@@ -576,6 +576,11 @@ class CatalogueConfig(models.Model):
         help_text=_("List of Baie equipment references with category, dimensions and weight"),
         verbose_name=_("Baie References")
     )
+    tgbt_references = models.JSONField(
+        default=list,
+        help_text=_("List of TGBT equipment references with weight and dimensions"),
+        verbose_name=_("TGBT References")
+    )
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
 
     class Meta:
@@ -617,6 +622,11 @@ class CatalogueConfig(models.Model):
                 'td_references': [
                     { "id": "td_mono_free", "vendor": "FREE", "name": "TD mono", "reference": "68236", "weight": 60, "dimensions": "1055x850x350mm" },
                     { "id": "td_tri_free", "vendor": "FREE", "name": "TD triphasé", "reference": "68237", "weight": 60, "dimensions": "1055x850x350mm" }
+                ],
+                'tgbt_references': [
+                    { "id": "tgbt_standard_300", "name": "TGBT 300x255x160mm", "reference": "300x255x160mm", "vendor": "", "dimensions": "300x255x160mm", "weight": 4.75 },
+                    { "id": "tgbt_actia", "name": "TGBT ACTIA", "reference": "TGBT ACTIA", "vendor": "ACTIA", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 },
+                    { "id": "tgbt_tlti", "name": "TGBT TLTI", "reference": "TGBT TLTI", "vendor": "TLTI", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 }
                 ],
                 'rru_references': [
                     { "id": "rru_eri_4486", "vendor": "ERICSSON", "operator": "bouygues", "reference": "Radio 4486", "dimensions": "444x384x143mm", "weight": 27.1 },

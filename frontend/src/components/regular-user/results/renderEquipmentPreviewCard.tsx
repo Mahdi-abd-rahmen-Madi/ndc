@@ -216,7 +216,6 @@ export function renderEquipmentPreviewCard({
     const tdVal = equipmentValues.td || {};
     const typeLabel = tdVal.type || 'TD Tétraphasé';
     const refLabel = tdVal.référence || 'N/A';
-    const tgbtVal = tdVal.tgbt;
 
     return (
       <EquipmentPreviewCard
@@ -241,7 +240,6 @@ export function renderEquipmentPreviewCard({
           total: 1
         }}
         modele={refLabel}
-        extraSpecs={tgbtVal ? { TGBT: tgbtVal } : undefined}
       />
     );
   }
@@ -453,6 +451,40 @@ export function renderEquipmentPreviewCard({
           total: qty
         }}
         modele="MDEA"
+      />
+    );
+  }
+
+  // 12. TGBT (Bouygues)
+  if (config.id === 'tgbt') {
+    const tgbtVal = equipmentValues.tgbt || {};
+    return (
+      <EquipmentPreviewCard
+        key={config.id}
+        title="TGBT"
+        icon={IconComponent}
+        color="purple"
+        typeBadge={{
+          text: 'TGBT',
+          bg: 'bg-purple-50',
+          textCol: 'text-purple-700',
+          border: 'border-purple-200'
+        }}
+        scopeBadge={{
+          text: 'Bouygues',
+          bg: 'bg-purple-50',
+          textCol: 'text-purple-700',
+          border: 'border-purple-200'
+        }}
+        quantityInfo={{
+          label: 'x1',
+          total: 1
+        }}
+        modele={tgbtVal.modèle || 'TGBT ACTIA'}
+        extraSpecs={{
+          Dimensions: tgbtVal.dimensions || '500x400x230mm',
+          Poids: tgbtVal.poids || '15 kg'
+        }}
       />
     );
   }

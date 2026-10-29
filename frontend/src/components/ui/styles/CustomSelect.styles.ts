@@ -4,7 +4,7 @@ export const styles = {
   optionEnabled: "cursor-pointer hover:bg-violet-50 text-slate-700 hover:text-violet-900",
   optionSelected: "bg-violet-50 text-violet-700 font-semibold",
   
-  optionLabel: "truncate",
+  optionLabel: "whitespace-nowrap pr-2",
   optionCheckIcon: "w-3.5 h-3.5 text-violet-600 shrink-0 ml-2",
   
   selectContainer: "relative w-full min-w-0",

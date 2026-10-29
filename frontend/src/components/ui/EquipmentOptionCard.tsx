@@ -143,7 +143,7 @@ export function EquipmentOptionCard({
           )}
 
           <span
-            className={`text-xs font-bold truncate ${
+            className={`text-xs font-bold leading-snug break-words ${
               isSelected ? `${c.selectedText} font-extrabold` : 'text-slate-800'
             }`}
             title={title}

@@ -494,6 +494,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'coffret_references': config.coffret_references,
             'fh_references': config.fh_references,
             'td_references': config.td_references,
+            'tgbt_references': getattr(config, 'tgbt_references', []),
             'rru_references': config.rru_references,
             'rrh_references': config.rrh_references,
             'atelier_energie_references': getattr(config, 'atelier_energie_references', []),
@@ -2251,6 +2252,20 @@ def test_catalogue_equipment_view(request):
             'montage_id': '',
             'specs': f"Dim: {td.get('dimensions', 'N/A')} | Poids: {td.get('weight', 0)} kg",
             'raw': td
+        })
+
+    # 6b. TGBT references
+    for tgbt in fields.get('tgbt_references', []):
+        op = tgbt.get('operator')
+        items.append({
+            'category': 'TGBT',
+            'operator': (op or 'all').lower().strip(),
+            'id': tgbt.get('id', ''),
+            'reference': tgbt.get('name') or tgbt.get('reference', ''),
+            'vendor': tgbt.get('vendor', '') or tgbt.get('supplier', ''),
+            'montage_id': '',
+            'specs': f"Dim: {tgbt.get('dimensions', 'N/A')} | Poids: {tgbt.get('weight', 0)} kg",
+            'raw': tgbt
         })
 
     # 7. Montages standards

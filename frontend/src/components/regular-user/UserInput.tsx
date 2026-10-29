@@ -106,28 +106,25 @@ export default function UserInput({
   return (
     <div className="flex flex-col gap-4">
       {/* 1. Informations du Projet */}
-      <div className={`p-5 bg-white border rounded-2xl relative overflow-hidden group shadow-sm transition-all duration-300 ${
-        operator === 'orange'
+      <div className={`p-5 bg-white border rounded-2xl relative overflow-hidden group shadow-sm transition-all duration-300 ${operator === 'orange'
           ? 'border-orange-200/90 hover:border-orange-300 ring-1 ring-orange-500/5'
           : operator === 'free'
             ? 'border-red-200/90 hover:border-red-300 ring-1 ring-red-500/5'
             : operator === 'bouygues'
               ? 'border-sky-200/90 hover:border-sky-300 ring-1 ring-sky-500/5'
               : 'border-slate-200 hover:border-violet-300'
-      }`}>
-        <div className={`absolute right-0 top-0 w-36 h-36 rounded-bl-full -z-10 transition-colors pointer-events-none ${
-          operator === 'orange'
+        }`}>
+        <div className={`absolute right-0 top-0 w-36 h-36 rounded-bl-full -z-10 transition-colors pointer-events-none ${operator === 'orange'
             ? 'bg-gradient-to-bl from-orange-500/10 via-amber-500/5 to-transparent'
             : operator === 'free'
               ? 'bg-gradient-to-bl from-red-500/10 via-rose-500/5 to-transparent'
               : operator === 'bouygues'
                 ? 'bg-gradient-to-bl from-sky-500/10 via-blue-500/5 to-transparent'
                 : 'bg-violet-500/5 group-hover:bg-violet-500/10'
-        }`}></div>
+          }`}></div>
         <h3 className="text-sm font-bold text-slate-900 mb-5 flex items-center gap-2">
-          <MapPin className={`w-4 h-4 transition-colors ${
-            operator === 'orange' ? 'text-orange-500' : operator === 'free' ? 'text-red-500' : operator === 'bouygues' ? 'text-sky-600' : 'text-violet-600'
-          }`} />
+          <MapPin className={`w-4 h-4 transition-colors ${operator === 'orange' ? 'text-orange-500' : operator === 'free' ? 'text-red-500' : operator === 'bouygues' ? 'text-sky-600' : 'text-violet-600'
+            }`} />
           Informations du Projet
         </h3>
 
@@ -152,50 +149,50 @@ export default function UserInput({
                 </button>
               )}
             </label>
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                {siteImageUrl && (
-                  <div className="w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center shadow-sm">
-                    <img
-                      src={siteImageUrl.startsWith('http') || siteImageUrl.startsWith('data:') ? siteImageUrl : `${apiBaseUrl}${siteImageUrl.startsWith('/') ? '' : '/'}${siteImageUrl}`}
-                      alt="Site"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div className="relative group/upload w-full">
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={handleImageUpload}
-                    disabled={isUploading}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              {siteImageUrl && (
+                <div className="w-11 h-11 shrink-0 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center shadow-sm">
+                  <img
+                    src={siteImageUrl.startsWith('http') || siteImageUrl.startsWith('data:') ? siteImageUrl : `${apiBaseUrl}${siteImageUrl.startsWith('/') ? '' : '/'}${siteImageUrl}`}
+                    alt="Site"
+                    className="w-full h-full object-cover"
                   />
-                  <div className={`w-full py-2.5 px-3 bg-slate-50 border ${uploadError ? 'border-red-400 bg-red-50/50' : (uploadSuccess || siteImageUrl) ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 border-dashed'} rounded-xl text-sm flex items-center justify-center gap-2 group-hover/upload:border-violet-400 group-hover/upload:bg-violet-50/30 transition-all`}>
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 text-violet-600 animate-spin" />
-                        <span className="text-slate-600 text-xs font-medium">Upload en cours...</span>
-                      </>
-                    ) : uploadError ? (
-                      <>
-                        <AlertCircle className="w-4 h-4 text-red-500" />
-                        <span className="text-red-600 font-medium text-xs truncate">{uploadError}</span>
-                      </>
-                    ) : (uploadSuccess || siteImageUrl) ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span className="text-emerald-700 font-medium text-xs">Image chargée</span>
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="w-4 h-4 text-slate-400 group-hover/upload:text-violet-600 transition-colors" />
-                        <span className="text-slate-600 text-xs font-medium group-hover/upload:text-violet-700 transition-colors">Ajouter une image</span>
-                      </>
-                    )}
-                  </div>
+                </div>
+              )}
+              <div className="relative group/upload w-full">
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-10"
+                />
+                <div className={`w-full py-2.5 px-3 bg-slate-50 border ${uploadError ? 'border-red-400 bg-red-50/50' : (uploadSuccess || siteImageUrl) ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300 border-dashed'} rounded-xl text-sm flex items-center justify-center gap-2 group-hover/upload:border-violet-400 group-hover/upload:bg-violet-50/30 transition-all`}>
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 text-violet-600 animate-spin" />
+                      <span className="text-slate-600 text-xs font-medium">Upload en cours...</span>
+                    </>
+                  ) : uploadError ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                      <span className="text-red-600 font-medium text-xs truncate">{uploadError}</span>
+                    </>
+                  ) : (uploadSuccess || siteImageUrl) ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span className="text-emerald-700 font-medium text-xs">Image chargée</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 text-slate-400 group-hover/upload:text-violet-600 transition-colors" />
+                      <span className="text-slate-600 text-xs font-medium group-hover/upload:text-violet-700 transition-colors">Ajouter une image</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
           <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex flex-col">
@@ -238,25 +235,23 @@ export default function UserInput({
               <label className="text-xs font-semibold text-slate-700 flex items-center justify-between mb-2 h-6">
                 <span className="flex items-center gap-1.5">Opérateur</span>
                 {operator && (
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors ${
-                    operator === 'orange' ? 'bg-orange-100 text-orange-800' :
-                    operator === 'free' ? 'bg-red-100 text-red-800' :
-                    'bg-sky-100 text-sky-800'
-                  }`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors ${operator === 'orange' ? 'bg-orange-100 text-orange-800' :
+                      operator === 'free' ? 'bg-red-100 text-red-800' :
+                        'bg-sky-100 text-sky-800'
+                    }`}>
                     {operator}
                   </span>
                 )}
               </label>
               <select
-                className={`w-full bg-white border rounded-lg py-2.5 px-3 text-sm font-medium shadow-sm transition-all cursor-pointer ${
-                  !operator 
+                className={`w-full bg-white border rounded-lg py-2.5 px-3 text-sm font-medium shadow-sm transition-all cursor-pointer ${!operator
                     ? 'text-slate-400 border-slate-300 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500'
                     : operator === 'orange'
                       ? 'text-slate-900 border-orange-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500'
                       : operator === 'free'
                         ? 'text-slate-900 border-red-300 focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
                         : 'text-slate-900 border-sky-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500'
-                }`}
+                  }`}
                 value={operator || ''}
                 onChange={(e) => onChange({ operator: e.target.value })}
               >
@@ -292,7 +287,7 @@ export default function UserInput({
                 <div className="flex flex-col gap-1">
                   <strong className="text-red-700 text-xs uppercase tracking-wider">⚠️ Action requise : Épaisseur dalle trop faible</strong>
                   <span>
-                    L'épaisseur saisie semble <b>trop faible</b> pour une dalle de structure portante. Veillez à indiquer uniquement l'épaisseur du béton armé de structure. 
+                    L'épaisseur saisie semble <b>trop faible</b> pour une dalle de structure portante. Veillez à indiquer uniquement l'épaisseur du béton armé de structure.
                     <span className="block mt-1 text-red-700">Une valeur insuffisante entraînera un résultat défavorable sur la note de calcul.</span>
                   </span>
                 </div>
@@ -413,7 +408,7 @@ export default function UserInput({
                   value={selectedEchelle}
                   onChange={(val) => onChange({ selectedEchelle: val })}
                   options={[
-                    { value: "Pas d'échelle du sol", label: "Pas d'échelle du sol" },
+                    { value: "Pas d'échelle", label: "Pas d'échelle" },
                     { value: 'Echelle Söll', label: 'Echelle Söll' },
                     { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
                     { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' }

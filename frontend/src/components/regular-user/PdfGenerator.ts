@@ -35,6 +35,7 @@ interface PdfGeneratorOptions {
   hasTdEquipment: boolean;
   tdType: 'tetraphase' | 'monophase';
   tdReference: string;
+  hasTgbt?: boolean;
   tgbtReference: string;
   hasGps: boolean;
   gpsMarque?: string;
@@ -103,6 +104,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasTdEquipment,
       tdType,
       tdReference,
+      hasTgbt,
       tgbtReference,
       hasGps, gpsMarque, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
@@ -303,12 +305,13 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       yPos += boxHeight + 8;
     }
 
-    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA)
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA, TGBT)
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
     const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);
     const showMdeaInPdf = operator === 'free' && hasConvertisseurMdea;
-    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf;
+    const showTgbtInPdf = operator === 'bouygues' && hasTgbt;
+    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf || showTgbtInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
 
@@ -322,6 +325,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showCabInPdf) techCount++;
       if (showAtelierInPdf) techCount++;
       if (showMdeaInPdf) techCount++;
+      if (showTgbtInPdf) techCount++;
 
       const boxHeight = 10 + techCount * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
@@ -333,14 +337,14 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
       if (hasTdEquipment) {
-        let tgbtDesc = 'TGBT 300x255x160mm';
-        if (operator === 'bouygues') {
-          tgbtDesc = `${tgbtReference || 'TGBT ACTIA'} (500x400x230mm, 15kg)`;
-        }
         const tdStr = tdType === 'monophase'
-          ? `• TD Monophasé : Réf TD ${tdReference || 'N/A'} - ${tgbtDesc}`
+          ? `• TD Monophasé : Référence ${tdReference || 'N/A'}`
           : `• TD Tétraphasé : Référence ${tdReference || 'N/A'}`;
         doc.text(tdStr, 28, lineY);
+        lineY += 8;
+      }
+      if (showTgbtInPdf) {
+        doc.text(`• TGBT : ${tgbtReference || 'TGBT ACTIA'} (500x400x230mm, 15kg)`, 28, lineY);
         lineY += 8;
       }
       if (hasGps) {

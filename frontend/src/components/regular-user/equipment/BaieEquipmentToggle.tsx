@@ -291,6 +291,7 @@ export function BaieEquipmentToggle({
           const sel = baieItems.find(i => i.referenceId === item.id);
           const isSelected = !!sel;
           const qty = sel?.quantity || 1;
+          const isWalkyrie = item.id === 'orange_baie_energie_walkyrie_t3_18kw' || item.name.toLowerCase().includes('walkyrie') || item.name.toLowerCase().includes('valkyrie');
 
           return (
             <EquipmentOptionCard
@@ -304,6 +305,7 @@ export function BaieEquipmentToggle({
               quantity={qty}
               onQuantityChange={(val) => handleSetItemQty(item, val)}
               color="orange"
+              className={isWalkyrie ? 'col-span-full' : ''}
             />
           );
         })}

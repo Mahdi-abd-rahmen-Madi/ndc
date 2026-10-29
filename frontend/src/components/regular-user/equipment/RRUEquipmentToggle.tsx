@@ -102,7 +102,7 @@ export function RRUEquipmentToggle({
           ? 'bg-amber-50/20 border-amber-200'
           : 'bg-slate-50 border-slate-200'
           }`}>
-          <div className="flex gap-3">
+          <div className={operator === 'orange' ? 'flex flex-col gap-3' : 'flex gap-3'}>
             {/* Marque */}
             <div className="flex flex-col flex-1 min-w-0">
               <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
@@ -130,6 +130,7 @@ export function RRUEquipmentToggle({
                 onChange={(val) => updateRruItem(item.id, 'reference', val)}
                 disabled={!item.vendor}
                 className="focus:ring-2 focus:ring-emerald-500"
+                dropdownClassName="min-w-max"
                 options={actualOptions.filter(o => o.vendor === item.vendor).map(opt => {
                   const isSelectedElsewhere = rruItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
                   return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };

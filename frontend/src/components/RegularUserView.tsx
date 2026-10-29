@@ -92,7 +92,7 @@ export default function RegularUserView({
 
   const [zoneTechnique, setZoneTechnique] = useState<ZoneTechniqueData>(defaultZoneTechniqueData);
   const {
-    hasTdEquipment, tdType, tdReference, tgbtReference,
+    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
@@ -483,7 +483,7 @@ export default function RegularUserView({
                                     <Radio className="w-3.5 h-3.5" />
                                   </div>
                                   <div>
-                                    <h4 className="text-xs font-bold text-slate-900 tracking-tight">Équipements sur mât</h4>
+                                    <h4 className="text-xs font-bold text-slate-900 tracking-tight">Équipements</h4>
                                   </div>
                                 </div>
                                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
@@ -527,7 +527,7 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)}
+                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
                   hasTdEquipment ? 'TD' : null,
@@ -537,7 +537,8 @@ export default function RegularUserView({
                   (operator === 'free' && hasCab) ? 'CAB' : null,
                   (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
                   (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
-                  (operator === 'bouygues' && hasAtelierEnergie) ? 'BCube (TD + AE)' : null
+                  (operator === 'bouygues' && hasAtelierEnergie) ? 'BCube (TD + AE)' : null,
+                  (operator === 'bouygues' && hasTgbt) ? 'TGBT' : null
                 ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}
                 hideContinue={true}
               >
@@ -626,10 +627,10 @@ export default function RegularUserView({
                     }}
                     disabled={isGeneratingSiteNdc || !allSectionsFilled}
                     className={`w-full py-3.5 px-6 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-sm sm:text-base ${!allSectionsFilled
-                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                        : isConfirmed
-                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
-                          : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                      : isConfirmed
+                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
+                        : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
                       } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.99]' : ''}`}
                   >
                     {isGeneratingSiteNdc ? (
@@ -658,8 +659,8 @@ export default function RegularUserView({
                     <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
                       <div
                         className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard()
-                            ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
-                            : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
+                          ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
+                          : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
                           }`}
                         style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
                       />

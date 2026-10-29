@@ -3,6 +3,7 @@ import { TDEquipmentToggle } from './equipment/TDEquipmentToggle';
 import { GPSEquipmentToggle } from './equipment/GPSEquipmentToggle';
 import { BoitierLovageEquipmentToggle } from './equipment/BoitierLovageEquipmentToggle';
 import { BCubeEquipmentToggle } from './equipment/BCubeEquipmentToggle';
+import { TGBTEquipmentToggle } from './equipment/TGBTEquipmentToggle';
 import { BaieEquipmentToggle, DEFAULT_ORANGE_BAIES } from './equipment/BaieEquipmentToggle';
 import { CabEquipmentToggle } from './equipment/CabEquipmentToggle';
 import { AtelierEnergieEquipmentToggle } from './equipment/AtelierEnergieEquipmentToggle';
@@ -32,8 +33,6 @@ export function ZoneTechniqueGrid({
         setTdType={(val) => onChange({ tdType: val })}
         tdReference={data.tdReference}
         setTdReference={(val) => onChange({ tdReference: val })}
-        tgbtReference={data.tgbtReference}
-        setTgbtReference={(val) => onChange({ tgbtReference: val })}
         tdOptions={config?.td_references || []}
         operator={operator}
       />
@@ -49,7 +48,27 @@ export function ZoneTechniqueGrid({
         operator={operator}
       />
 
-      {/* 3. Boîtier Lovage */}
+      {/* 3. BCube & TGBT (Bouygues) */}
+      {operator === 'bouygues' && (
+        <>
+          <BCubeEquipmentToggle
+            hasAtelierEnergie={data.hasAtelierEnergie}
+            setHasAtelierEnergie={(val) => onChange({ hasAtelierEnergie: val })}
+            bcubeReference={data.bcubeReference}
+            setBcubeReference={(val) => onChange({ bcubeReference: val })}
+            options={config?.atelier_energie_references || []}
+          />
+          <TGBTEquipmentToggle
+            hasTgbt={data.hasTgbt}
+            setHasTgbt={(val) => onChange({ hasTgbt: val })}
+            tgbtReference={data.tgbtReference}
+            setTgbtReference={(val) => onChange({ tgbtReference: val })}
+            options={config?.tgbt_references || []}
+          />
+        </>
+      )}
+
+      {/* 4. Boîtier Lovage */}
       <BoitierLovageEquipmentToggle
         hasBoitierLovage={data.hasBoitierLovage}
         setHasBoitierLovage={(val) => onChange({ hasBoitierLovage: val })}
@@ -61,14 +80,13 @@ export function ZoneTechniqueGrid({
         operator={operator}
       />
 
-      {/* 4. BCube (Bouygues) */}
-      {operator === 'bouygues' && (
-        <BCubeEquipmentToggle
-          hasAtelierEnergie={data.hasAtelierEnergie}
-          setHasAtelierEnergie={(val) => onChange({ hasAtelierEnergie: val })}
-          bcubeReference={data.bcubeReference}
-          setBcubeReference={(val) => onChange({ bcubeReference: val })}
-          options={config?.atelier_energie_references || []}
+      {/* Convertisseur MDEA (Free) placed on the same row as Boîtier de lovage */}
+      {operator === 'free' && (
+        <ConvertisseurMdeaEquipmentToggle
+          hasConvertisseurMdea={data.hasConvertisseurMdea}
+          setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
+          convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
+          setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
         />
       )}
 
@@ -89,7 +107,7 @@ export function ZoneTechniqueGrid({
         </div>
       )}
 
-      {/* 6. CAB, Atelier Energie & Convertisseur MDEA (Free) */}
+      {/* 6. CAB & Atelier Energie (Free) */}
       {operator === 'free' && (
         <>
           <CabEquipmentToggle
@@ -115,12 +133,6 @@ export function ZoneTechniqueGrid({
             setAtelierFpbc={(val) => onChange({ atelierFpbc: val })}
             atelierFpbcQuantity={data.atelierFpbcQuantity}
             setAtelierFpbcQuantity={(val) => onChange({ atelierFpbcQuantity: val })}
-          />
-          <ConvertisseurMdeaEquipmentToggle
-            hasConvertisseurMdea={data.hasConvertisseurMdea}
-            setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
-            convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
-            setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
           />
         </>
       )}

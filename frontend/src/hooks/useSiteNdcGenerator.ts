@@ -117,7 +117,7 @@ export function useSiteNdcGenerator({
     const coffretReference = s1?.coffretReference ?? '';
 
     const {
-      hasTdEquipment, tdType, tdReference, tgbtReference,
+      hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
       hasGps, gpsReference, gpsMarque,
       hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
       hasAtelierEnergie, bcubeReference,
@@ -224,7 +224,11 @@ export function useSiteNdcGenerator({
             enabled: hasTdEquipment,
             type: hasTdEquipment ? tdType : null,
             reference: hasTdEquipment ? tdReference : null,
-            tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
+            tgbt_reference: operator === 'bouygues' ? (hasTgbt ? tgbtReference : null) : (hasTdEquipment && tdType === 'monophase' ? tgbtReference : null)
+          },
+          tgbt_equipment: {
+            enabled: operator === 'bouygues' && hasTgbt,
+            reference: operator === 'bouygues' && hasTgbt ? (tgbtReference || 'TGBT ACTIA') : null
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
@@ -372,7 +376,11 @@ export function useSiteNdcGenerator({
             enabled: hasTdEquipment,
             type: hasTdEquipment ? tdType : null,
             reference: hasTdEquipment ? tdReference : null,
-            tgbt_reference: hasTdEquipment && tdType === 'monophase' ? tgbtReference : null
+            tgbt_reference: operator === 'bouygues' ? (hasTgbt ? tgbtReference : null) : (hasTdEquipment && tdType === 'monophase' ? tgbtReference : null)
+          },
+          tgbt_equipment: {
+            enabled: operator === 'bouygues' && hasTgbt,
+            reference: operator === 'bouygues' && hasTgbt ? (tgbtReference || 'TGBT ACTIA') : null
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },

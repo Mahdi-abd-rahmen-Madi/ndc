@@ -31,7 +31,8 @@ export interface CatalogueConfig {
   real_world_references: RealWorldReference[];
   coffret_references: { id: string; name: string; operator?: string }[];
   fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
-  td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
+  td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string; phase?: 'monophase' | 'tetraphase' | string }[];
+  tgbt_references?: { id: string; vendor?: string; supplier?: string; name: string; reference: string; operator?: string; weight?: number; dimensions?: string }[];
   rru_references: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[];
   rrh_references: { id: string; vendor: string; reference: string; operator?: string }[];
   boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
@@ -153,6 +154,7 @@ export interface ZoneTechniqueData {
   hasTdEquipment: boolean;
   tdType: 'tetraphase' | 'monophase';
   tdReference: string;
+  hasTgbt: boolean;
   tgbtReference: string;
 
   hasGps: boolean;
@@ -190,6 +192,7 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
   hasTdEquipment: false,
   tdType: 'tetraphase',
   tdReference: '',
+  hasTgbt: false,
   tgbtReference: '',
 
   hasGps: false,

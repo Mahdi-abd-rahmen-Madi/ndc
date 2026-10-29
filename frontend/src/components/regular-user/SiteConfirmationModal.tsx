@@ -134,7 +134,7 @@ export function SiteConfirmationModal({
   const coffretReference = s1?.coffretReference ?? '';
 
   const {
-    hasTdEquipment, tdType, tdReference, tgbtReference,
+    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
@@ -259,7 +259,7 @@ export function SiteConfirmationModal({
             {/* Additional Aerial Equipments */}
             <div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                Équipements sur mât additionnels
+                Équipements additionnels
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {/* FH */}
@@ -318,7 +318,7 @@ export function SiteConfirmationModal({
           </div>
 
           {/* 3. Zone Technique */}
-          {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie)) && (
+          {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)) && (
             <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/60">
                 <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md">
@@ -334,7 +334,7 @@ export function SiteConfirmationModal({
                     <span className="text-xs font-bold text-slate-900 block truncate" title={resolveTd(tdReference) || tdReference}>
                       {resolveTd(tdReference) || tdReference || 'Sélectionné'}
                     </span>
-                    {tdType === 'monophase' && tgbtReference && (
+                    {operator !== 'bouygues' && tdType === 'monophase' && tgbtReference && (
                       <span className="text-[10px] text-slate-500 block mt-0.5">TGBT : {tgbtReference}</span>
                     )}
                   </ZoneTechniqueCard>
@@ -410,6 +410,14 @@ export function SiteConfirmationModal({
                     </span>
                   </ZoneTechniqueCard>
                 )}
+                {operator === 'bouygues' && hasTgbt && (
+                  <ZoneTechniqueCard title="TGBT">
+                    <span className="text-xs font-bold text-slate-900 block">
+                      {tgbtReference || 'TGBT ACTIA'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">500x400x230mm • 15kg</span>
+                  </ZoneTechniqueCard>
+                )}
               </div>
             </div>
           )}
@@ -475,7 +483,7 @@ export function SiteConfirmationModal({
               className={`px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 text-sm ${hasScrolledToBottom && isEquipmentValidated
                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 hover:shadow-lg cursor-pointer active:scale-95'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300/60 shadow-none'
-              }`}
+                }`}
               title={
                 !hasScrolledToBottom
                   ? "Veuillez faire défiler le récapitulatif jusqu'en bas pour confirmer"

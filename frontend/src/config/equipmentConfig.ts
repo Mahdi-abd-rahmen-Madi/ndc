@@ -78,7 +78,6 @@ export const equipmentConfigs: EquipmentConfig[] = [
     fields: [
       { label: 'Type', value: 'N/A' },
       { label: 'Référence', value: 'N/A' },
-      { label: 'TGBT', value: 'N/A' },
     ],
   },
   {
@@ -171,6 +170,19 @@ export const equipmentConfigs: EquipmentConfig[] = [
       { label: 'Modèle', value: 'MDEA' },
       { label: 'Dimensions', value: '338*295*140mm' },
       { label: 'Poids', value: '10kg' },
+    ],
+  },
+  {
+    id: 'tgbt',
+    name: 'TGBT',
+    enabled: false,
+    icon: 'Zap',
+    color: 'violet',
+    zone: 'technique',
+    fields: [
+      { label: 'Modèle', value: 'TGBT ACTIA' },
+      { label: 'Dimensions', value: '500x400x230mm' },
+      { label: 'Poids', value: '15kg' },
     ],
   },
 ];
