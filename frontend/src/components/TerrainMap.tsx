@@ -647,17 +647,15 @@ export default function TerrainMap({
       
       {/* Zoom guidance overlay */}
       {zoom < 13 && (
-        <div className="absolute top-2 left-12 right-2 pointer-events-none z-10 transition-all duration-300">
-          <div className="bg-white/95 border border-slate-200 rounded-xl p-2 px-3 shadow-lg flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-amber-600 shrink-0">
-              <Search className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Zoom requis (Min. 13)</span>
+        <div className="absolute bottom-10 left-3 pointer-events-none z-10 transition-all duration-300 max-w-sm">
+          <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-2 px-3 shadow-xl flex items-center gap-3 text-white">
+            <div className="flex items-center gap-1.5 text-amber-400 shrink-0">
+              <Search className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Zoom requis (Min. 13)</span>
             </div>
-            <p className="text-[10px] text-slate-600 leading-none truncate hidden sm:block">
-              Zoomer pour sélectionner un emplacement.
-            </p>
-            <div className="text-[9px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
-              Zoom : {Math.round(zoom)}/13
+            <span className="text-[10px] text-slate-300 hidden sm:inline">Zoomer pour sélectionner</span>
+            <div className="text-[10px] font-semibold text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-md border border-amber-500/30 shrink-0 ml-auto">
+              {Math.round(zoom)} / 13
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useAppStore } from './stores/useAppStore';
 import { cn } from './utils/cn';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Database } from 'lucide-react';
+import { Database, Map, Sliders, ExternalLink, ShieldCheck, Compass, Sparkles } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import TerrainMap from './components/TerrainMap';
 import CLCLegend from './components/CLCLegend';
@@ -263,64 +263,99 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
     <div className="h-screen flex flex-col overflow-hidden bg-gray-100">
       {/* Header (Only shown for engineer mode since portal has its own custom navbar) */}
       {userMode === 'engineer' && (
-        <header className="header bg-gradient-to-r from-primary to-secondary text-white p-4 px-8 shadow-lg flex-shrink-0 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-semibold">
-              Carte de Classification du Terrain - France ({selectedCivilMontage || 'Cas 1'})
-            </h1>
-            <p className="mt-1 opacity-90 text-sm">
-              Cliquez sur la carte pour analyser la classification du terrain (Département Génie Civil)
-            </p>
-          </div>
+        <header className="h-16 border-b border-slate-200/80 bg-white/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-20 shadow-xs">
+          {/* Brand & Context */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 flex items-center justify-center shadow-md shadow-indigo-500/20 ring-1 ring-white/20">
+                <Compass className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base font-bold text-slate-900 tracking-tight leading-none">
+                    Espace Ingénieur
+                  </h1>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Génie Civil
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1.5">
+                  <span>Classification de terrain</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded text-[10px]">
+                    {selectedCivilMontage || 'Cas 1'}
+                  </span>
+                </p>
+              </div>
+            </div>
 
-          {/* Toggle Mode & Sub-tabs */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-white/10 rounded-lg p-0.5 mr-2">
+            <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+            {/* Sub-tabs: Carte vs Base de données */}
+            <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
               <button
                 onClick={() => setEngineerSubTab('map')}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-sm font-medium transition",
-                  engineerSubTab === 'map' ? "bg-white text-primary shadow-sm" : "text-white/70 hover:text-white"
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+                  engineerSubTab === 'map'
+                    ? "bg-white text-indigo-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 )}
               >
-                Carte
+                <Map className="w-3.5 h-3.5" />
+                <span>Carte interactive</span>
               </button>
               <button
                 onClick={() => setEngineerSubTab('catalogue')}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-sm font-medium transition",
-                  engineerSubTab === 'catalogue' ? "bg-white text-primary shadow-sm" : "text-white/70 hover:text-white"
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer",
+                  engineerSubTab === 'catalogue'
+                    ? "bg-white text-indigo-700 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
                 )}
               >
-                Base de données
+                <Database className="w-3.5 h-3.5" />
+                <span>Base de données</span>
               </button>
             </div>
+          </div>
+
+          {/* Right Action Buttons */}
+          <div className="flex items-center gap-2">
             {engineerSubTab === 'map' && !showConfigPanel && (
               <button
                 onClick={() => setShowConfigPanel(true)}
-                className="px-4 py-2 bg-white text-primary hover:bg-white/90 active:bg-white/80 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer transition-all border border-slate-200 flex items-center gap-1.5"
               >
-                Configuration
+                <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                <span>Configuration</span>
               </button>
             )}
+
+            <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block" />
+
             <Link
               to="/ndc-portail-test"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white border border-blue-500 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm mr-2"
+              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5"
             >
-              Mode Test NDC
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Test NDC</span>
             </Link>
+
             <Link
               to="/test-catalogue"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white border border-emerald-500 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm mr-2 inline-flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5"
             >
-              <Database className="w-4 h-4" />
-              Test Catalogue
+              <Database className="w-3.5 h-3.5" />
+              <span>Catalogue</span>
             </Link>
+
             <Link
               to="/portal"
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 active:bg-white/40 border border-white/30 rounded-lg text-sm font-semibold cursor-pointer transition-all shadow-sm"
+              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-xs flex items-center gap-1.5"
             >
-              Passer au Catalogue Public
+              <span>Portail Client</span>
+              <ExternalLink className="w-3 h-3 text-slate-300" />
             </Link>
           </div>
         </header>

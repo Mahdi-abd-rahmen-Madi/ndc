@@ -83,11 +83,11 @@ export default function AddressSearch({
   return (
     <div
       ref={containerRef}
-      className="address-search-container absolute top-4 right-4 z-[1001] w-80 sm:w-96 max-w-[calc(100vw-2rem)]"
+      className="address-search-container absolute top-3 right-3 z-[1001] w-80 sm:w-96 max-w-[calc(100vw-2rem)]"
     >
-      <div className="relative flex items-center bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200/50 transition-all focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
-        <div className="pl-3.5 text-gray-400 pointer-events-none">
-          <Search className="w-5 h-5" />
+      <div className="relative flex items-center bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-slate-200/80 transition-all focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-indigo-500 hover:shadow-xl">
+        <div className="pl-3.5 text-slate-400 pointer-events-none">
+          <Search className="w-4 h-4" />
         </div>
         
         <input
@@ -95,23 +95,23 @@ export default function AddressSearch({
           value={query}
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
-          placeholder="Rechercher une adresse en France..."
-          className="w-full py-3 px-3 text-sm text-gray-800 placeholder-gray-400 bg-transparent border-none rounded-lg focus:outline-none"
+          placeholder="Rechercher une commune, adresse..."
+          className="w-full py-2.5 px-3 text-sm text-slate-800 placeholder-slate-400 bg-transparent border-none rounded-xl focus:outline-none"
         />
 
         {loading && (
-          <div className="pr-3 text-gray-400">
-            <Loader2 className="w-5 h-5 animate-spin" />
+          <div className="pr-3 text-indigo-500">
+            <Loader2 className="w-4 h-4 animate-spin" />
           </div>
         )}
 
         {!loading && query && (
           <button
             onClick={handleClear}
-            className="pr-3 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+            className="pr-3 text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
             type="button"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>

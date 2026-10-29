@@ -8,6 +8,7 @@ import { getTerrainTypeInfo } from '../utils/terrainTypes';
 
 export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedTerrainTypes, setExpandedTerrainTypes] = useState<Set<TerrainType>>(new Set(['0', 'II', 'IIIa', 'IIIb', 'IV']));
 
   const terrainTypes: TerrainType[] = ['0', 'II', 'IIIa', 'IIIb', 'IV'];
@@ -45,78 +46,109 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
 
     return codesToShow.map((item) => {
       const code = typeof item === 'string' ? item : item.code;
+      const detected = isCodeDetected(String(code));
       return (
         <div
           key={code}
-          className={`clc-code-item flex items-center gap-2 p-1 mb-1 rounded transition-colors cursor-pointer ${
-            isCodeDetected(code) ? 'bg-yellow-100 border border-yellow-300 animate-highlight-pulse' : 'hover:bg-gray-100'
+          className={`clc-code-item flex items-center gap-2 p-1.5 mb-1 rounded-lg transition-all cursor-pointer ${
+            detected ? 'bg-amber-50 border border-amber-300 shadow-xs' : 'hover:bg-slate-50'
           }`}
         >
           <div
-            className="clc-color-swatch w-4 h-4 rounded border border-gray-300 flex-shrink-0"
+            className="clc-color-swatch w-3.5 h-3.5 rounded-sm border border-slate-300/80 shadow-2xs flex-shrink-0"
             style={{ backgroundColor: getCLCColor(String(code)) }}
           />
-          <span className="clc-code-number font-semibold text-primary min-w-[35px] text-sm">
+          <span className="clc-code-number font-semibold text-indigo-700 min-w-[32px] text-xs">
             {code}
           </span>
-          <span className="clc-code-description flex-1 text-xs text-gray-600 leading-tight break-words">
+          <span className="clc-code-description flex-1 text-[11px] text-slate-600 leading-snug break-words">
             {getCLCDescription(String(code))}
           </span>
-          {isCodeDetected(String(code)) && (
-            <div className="clc-detected-indicator w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          {detected && (
+            <div className="w-2 h-2 bg-emerald-500 rounded-full shrink-0 shadow-xs ring-2 ring-emerald-200 animate-pulse" />
           )}
         </div>
       );
     });
   };
 
-  return (
-    <div className="clc-legend-panel w-[300px] flex-shrink-0 bg-white shadow-lg overflow-y-auto transition-transform z-[1001]">
-      <div className="clc-legend-content p-6">
-        <div className="clc-legend-header flex justify-between items-center mb-4 pb-2 border-b-2 border-primary">
-          <h2 className="clc-legend-title text-xl font-semibold text-gray-800">Légende CLC</h2>
-        </div>
+  if (isCollapsed) {
+    return (
+      <div className="relative z-[1001] flex items-center">
+        <button
+          onClick={() => setIsCollapsed(false)}
+          className="absolute left-3 top-3 bg-white/95 backdrop-blur-md shadow-md border border-slate-200/80 p-2.5 rounded-xl text-slate-700 hover:text-indigo-600 hover:bg-slate-50 transition-all flex items-center gap-2 text-xs font-semibold cursor-pointer group"
+          title="Ouvrir la légende CLC"
+        >
+          <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+          <span>Légende CLC</span>
+        </button>
+      </div>
+    );
+  }
 
-        <div className="clc-search-box relative mb-4">
+  return (
+    <div className="clc-legend-panel w-[320px] flex-shrink-0 bg-white/95 backdrop-blur-md border-r border-slate-200/80 shadow-sm flex flex-col h-full z-[1001] transition-all duration-200">
+      <div className="p-4 pb-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-indigo-600" />
+          <h2 className="text-sm font-bold text-slate-900 tracking-tight">Légende CLC</h2>
+          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium border border-slate-200/60">
+            Corine Land Cover
+          </span>
+        </div>
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors text-xs font-medium cursor-pointer"
+          title="Réduire le panneau"
+        >
+          <ChevronDown className="w-4 h-4 rotate-90" />
+        </button>
+      </div>
+
+      <div className="p-3 border-b border-slate-100">
+        <div className="relative">
           <input
             type="text"
-            placeholder="Rechercher des codes CLC..."
+            placeholder="Filtrer un code (ex: 511, eau)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded text-sm pl-9"
+            className="w-full py-1.5 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 pl-8 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
           />
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5" />
         </div>
+      </div>
 
+      <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
         {!filteredCLCCodes && (
-          <div className="clc-terrain-section mb-6">
+          <div className="space-y-2">
             {terrainTypes.map(terrainType => {
               const terrainInfo = getTerrainTypeInfo(terrainType);
               const codes = getCodesForTerrain(terrainType);
               const isExpanded = expandedTerrainTypes.has(terrainType);
 
               return (
-                <div key={terrainType} className="mb-4">
+                <div key={terrainType} className="border border-slate-200/70 rounded-xl overflow-hidden bg-white shadow-2xs">
                   <div
-                    className="clc-terrain-header flex items-center gap-2 p-2 bg-gray-50 rounded cursor-pointer transition-colors hover:bg-gray-100"
+                    className="flex items-center gap-2 p-2.5 bg-slate-50/70 cursor-pointer transition-colors hover:bg-slate-100/70"
                     onClick={() => toggleTerrainType(terrainType)}
                   >
-                    <span className="clc-terrain-icon text-xl">{terrainInfo.icon}</span>
-                    <span className="clc-terrain-name font-semibold text-gray-800 flex-1">
+                    <span className="text-base">{terrainInfo.icon}</span>
+                    <span className="font-semibold text-xs text-slate-800 flex-1">
                       {terrainInfo.name}
                     </span>
-                    <span className="clc-terrain-count bg-primary text-white px-2 py-0.5 rounded-full text-xs font-semibold">
+                    <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-full">
                       {codes.length}
                     </span>
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     )}
                   </div>
                   {isExpanded && (
-                    <div className="clc-codes-container pl-4 mt-2">
-                       {renderCLCCodes(terrainType)}
+                    <div className="p-2 pt-1 border-t border-slate-100 space-y-0.5 bg-white">
+                      {renderCLCCodes(terrainType)}
                     </div>
                   )}
                 </div>
@@ -126,27 +158,29 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
         )}
 
         {filteredCLCCodes && filteredCLCCodes.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Résultats de recherche</h3>
+          <div className="space-y-1">
+            <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              {filteredCLCCodes.length} résultat{filteredCLCCodes.length > 1 ? 's' : ''}
+            </div>
             {filteredCLCCodes.map((item) => (
               <div
                 key={item.code}
-                className={`clc-code-item flex items-center gap-2 p-1 mb-1 rounded transition-colors cursor-pointer ${
-                  isCodeDetected(item.code) ? 'bg-yellow-100 border border-yellow-300 animate-highlight-pulse' : 'hover:bg-gray-100'
+                className={`flex items-center gap-2 p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  isCodeDetected(item.code) ? 'bg-amber-50 border border-amber-300' : 'hover:bg-slate-50'
                 }`}
               >
                 <div
-                  className="clc-color-swatch w-4 h-4 rounded border border-gray-300 flex-shrink-0"
+                  className="w-3.5 h-3.5 rounded-sm border border-slate-300 flex-shrink-0"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="clc-code-number font-semibold text-primary min-w-[35px] text-sm">
+                <span className="font-semibold text-indigo-700 min-w-[32px] text-xs">
                   {item.code}
                 </span>
-                <span className="clc-code-description flex-1 text-xs text-gray-600 leading-tight break-words">
+                <span className="flex-1 text-[11px] text-slate-600 leading-snug break-words">
                   {item.description}
                 </span>
                 {isCodeDetected(item.code) && (
-                  <div className="clc-detected-indicator w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                 )}
               </div>
             ))}
@@ -154,8 +188,8 @@ export default function CLCLegend({ detectedCodes, config }: CLCLegendProps) {
         )}
 
         {filteredCLCCodes && filteredCLCCodes.length === 0 && (
-          <div className="mt-4 text-center text-gray-500 text-sm">
-            Aucun code CLC trouvé correspondant à "{searchQuery}"
+          <div className="py-8 text-center text-slate-400 text-xs">
+            Aucun code CLC trouvé pour "{searchQuery}"
           </div>
         )}
       </div>

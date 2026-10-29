@@ -14,16 +14,18 @@ export default function BDTOPOControls({
   onHeightColoringToggle,
 }: BDTOPOControlsProps) {
   return (
-    <div className="bdtopo-control absolute top-[68px] right-4 bg-white rounded-lg shadow-lg z-[1000] min-w-[150px]">
+    <div className="bdtopo-control absolute top-16 right-3 bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-slate-200/80 z-[1000] min-w-[150px] overflow-hidden">
       <button
         onClick={onToggle}
-        className={`control-btn flex items-center gap-2 w-full p-2.5 bg-gradient-to-r from-primary to-secondary text-white border-none cursor-pointer font-semibold text-sm transition-all hover:-translate-y-px hover:shadow-lg ${
-          visible ? 'rounded-t-lg' : 'rounded-lg'
+        className={`control-btn flex items-center gap-2 w-full px-3.5 py-2 text-xs font-semibold cursor-pointer transition-all ${
+          visible 
+            ? 'bg-indigo-600 text-white shadow-xs' 
+            : 'bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900'
         }`}
       >
-        <Building className="icon text-base" />
+        <Building className="w-3.5 h-3.5" />
         <span>BDTOPO</span>
-        {visible ? <EyeOff className="w-4 h-4 ml-auto" /> : <Eye className="w-4 h-4 ml-auto" />}
+        {visible ? <EyeOff className="w-3.5 h-3.5 ml-auto opacity-80" /> : <Eye className="w-3.5 h-3.5 ml-auto text-slate-400" />}
       </button>
 
       {visible && (
