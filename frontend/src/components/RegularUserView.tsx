@@ -99,7 +99,8 @@ export default function RegularUserView({
     hasBaie, baieRadio, baieEnergie, baieItems,
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
-    hasConvertisseurMdea, convertisseurMdeaQuantity
+    hasConvertisseurMdea, convertisseurMdeaQuantity,
+    hasPileAmod, amodModules
   } = zoneTechnique;
 
   // Location Selection (geocoding, map picking, coords)
@@ -527,7 +528,7 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
+                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
                   hasTdEquipment ? 'TD' : null,
@@ -537,6 +538,7 @@ export default function RegularUserView({
                   (operator === 'free' && hasCab) ? 'CAB' : null,
                   (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
                   (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
+                  (operator === 'free' && hasPileAmod) ? 'Pile AMOD' : null,
                   (operator === 'bouygues' && hasAtelierEnergie) ? 'BCube (TD + AE)' : null,
                   (operator === 'bouygues' && hasTgbt) ? 'TGBT' : null
                 ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}

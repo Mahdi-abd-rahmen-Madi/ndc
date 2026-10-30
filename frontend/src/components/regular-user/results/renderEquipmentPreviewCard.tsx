@@ -489,5 +489,58 @@ export function renderEquipmentPreviewCard({
     );
   }
 
+  // 13. Pile système AMOD (Free)
+  if (config.id === 'pile_amod') {
+    const amod = equipmentValues.pile_amod || {};
+    const modulesObj = amod.modules || {};
+    const AMOD_LABELS: Record<string, string> = {
+      free_amod_asib_4g: 'ASIB (4G)',
+      free_amod_asik_5g: 'ASIK (5G)',
+      free_amod_abia_4g: 'ABIA (4G)',
+      free_amod_abil_5g: 'ABIL (5G)',
+      free_amod_abio_4g_5g: 'ABIO (4G/5G)',
+    };
+    const activeModules = Object.entries(modulesObj)
+      .filter(([_, m]: [string, any]) => m?.enabled)
+      .map(([id, m]: [string, any]) => {
+        const label = AMOD_LABELS[id] || id;
+        return (m.quantity && m.quantity > 1) ? `${m.quantity}x ${label}` : label;
+      });
+    const totalCount = Object.values(modulesObj)
+      .filter((m: any) => m?.enabled)
+      .reduce((sum: number, m: any) => sum + (m?.quantity || 1), 0);
+
+    return (
+      <EquipmentPreviewCard
+        key={config.id}
+        title="Pile système AMOD"
+        icon={IconComponent}
+        color="rose"
+        typeBadge={{
+          text: 'AMOD',
+          bg: 'bg-rose-50',
+          textCol: 'text-rose-700',
+          border: 'border-rose-200'
+        }}
+        scopeBadge={{
+          text: '1x par site',
+          bg: 'bg-rose-50',
+          textCol: 'text-rose-700',
+          border: 'border-rose-200'
+        }}
+        quantityInfo={{
+          label: `${totalCount} module${totalCount > 1 ? 's' : ''}`,
+          total: totalCount
+        }}
+        modele={activeModules.join(', ') || 'Sélectionné'}
+        extraSpecs={{
+          Marque: 'NOKIA',
+          Poids: `${(totalCount * 2.4).toFixed(1)} kg (${totalCount}x 2.4kg)`
+        }}
+      />
+    );
+  }
+
   return null;
 }
+

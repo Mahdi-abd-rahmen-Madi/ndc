@@ -8,6 +8,7 @@ import { BaieEquipmentToggle, DEFAULT_ORANGE_BAIES } from './equipment/BaieEquip
 import { CabEquipmentToggle } from './equipment/CabEquipmentToggle';
 import { AtelierEnergieEquipmentToggle } from './equipment/AtelierEnergieEquipmentToggle';
 import { ConvertisseurMdeaEquipmentToggle } from './equipment/ConvertisseurMdeaEquipmentToggle';
+import { PileAmodEquipmentToggle } from './equipment/PileAmodEquipmentToggle';
 import type { CatalogueConfig, ZoneTechniqueData } from './types';
 
 export interface ZoneTechniqueGridProps {
@@ -134,6 +135,14 @@ export function ZoneTechniqueGrid({
             atelierFpbcQuantity={data.atelierFpbcQuantity}
             setAtelierFpbcQuantity={(val) => onChange({ atelierFpbcQuantity: val })}
           />
+          <div className="lg:col-span-2">
+            <PileAmodEquipmentToggle
+              hasPileAmod={data.hasPileAmod}
+              setHasPileAmod={(val) => onChange({ hasPileAmod: val })}
+              amodModules={data.amodModules}
+              setAmodModules={(val) => onChange({ amodModules: val })}
+            />
+          </div>
         </>
       )}
     </div>

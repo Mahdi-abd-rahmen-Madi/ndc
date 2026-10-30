@@ -124,7 +124,8 @@ export function useSiteNdcGenerator({
       hasBaie, baieRadio, baieEnergie, baieItems,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
-      hasConvertisseurMdea, convertisseurMdeaQuantity
+      hasConvertisseurMdea, convertisseurMdeaQuantity,
+      hasPileAmod, amodModules
     } = zoneTechnique;
 
     try {
@@ -266,6 +267,10 @@ export function useSiteNdcGenerator({
             quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
             dimensions: '338*295*140mm',
             poids: 10
+          },
+          pile_amod: {
+            enabled: operator === 'free' && hasPileAmod,
+            modules: operator === 'free' && hasPileAmod ? amodModules : {}
           }
         };
 
@@ -418,6 +423,10 @@ export function useSiteNdcGenerator({
             quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
             dimensions: '338*295*140mm',
             poids: 10
+          },
+          pile_amod: {
+            enabled: operator === 'free' && hasPileAmod,
+            modules: operator === 'free' && hasPileAmod ? amodModules : {}
           },
           site_image_url: siteImageUrl
         };

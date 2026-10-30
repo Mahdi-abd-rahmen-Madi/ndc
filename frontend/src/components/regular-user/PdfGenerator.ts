@@ -63,6 +63,8 @@ interface PdfGeneratorOptions {
   atelierFpbcQuantity?: number;
   hasConvertisseurMdea?: boolean;
   convertisseurMdeaQuantity?: number;
+  hasPileAmod?: boolean;
+  amodModules?: Record<string, { enabled: boolean; quantity: number }>;
   bcubeItem?: { name: string; supplier?: string; dimensions?: string; weight?: number; power?: string; phase?: string };
   miniMapImage: string | null;
   nombreSecteurs: number;
@@ -113,6 +115,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       hasAtelierEnergie, atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity, bcubeItem,
       hasConvertisseurMdea, convertisseurMdeaQuantity,
+      hasPileAmod, amodModules,
       miniMapImage,
       nombreSecteurs,
       operator
@@ -305,13 +308,14 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       yPos += boxHeight + 8;
     }
 
-    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA, TGBT)
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA, TGBT, Pile AMOD)
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
     const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);
     const showMdeaInPdf = operator === 'free' && hasConvertisseurMdea;
+    const showAmodInPdf = operator === 'free' && hasPileAmod;
     const showTgbtInPdf = operator === 'bouygues' && hasTgbt;
-    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf || showTgbtInPdf;
+    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf || showAmodInPdf || showTgbtInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
 
@@ -325,6 +329,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showCabInPdf) techCount++;
       if (showAtelierInPdf) techCount++;
       if (showMdeaInPdf) techCount++;
+      if (showAmodInPdf) techCount++;
       if (showTgbtInPdf) techCount++;
 
       const boxHeight = 10 + techCount * 8;
@@ -413,6 +418,20 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         const qty = convertisseurMdeaQuantity || 1;
         const qtyPrefix = qty > 1 ? `${qty}x ` : '';
         doc.text(`• Présence convertisseur MDEA : ${qtyPrefix}MDEA (338*295*140mm - ${10 * qty}kg)`, 28, lineY);
+        lineY += 8;
+      }
+      if (showAmodInPdf) {
+        const labels: Record<string, string> = {
+          free_amod_asib_4g: 'ASIB (4G)',
+          free_amod_asik_5g: 'ASIK (5G)',
+          free_amod_abia_4g: 'ABIA (4G)',
+          free_amod_abil_5g: 'ABIL (5G)',
+          free_amod_abio_4g_5g: 'ABIO (4G/5G)',
+        };
+        const active = Object.entries(amodModules || {})
+          .filter(([_, m]) => m?.enabled)
+          .map(([id, m]) => (m.quantity > 1 ? `${m.quantity}x ` : '') + (labels[id] || id));
+        doc.text(`• Pile système AMOD : ${active.join(', ') || 'Sélectionnée'} (Nokia)`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 10;

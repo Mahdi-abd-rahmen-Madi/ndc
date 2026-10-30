@@ -141,7 +141,8 @@ export function SiteConfirmationModal({
     hasBaie, baieRadio, baieEnergie, baieItems,
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
-    hasConvertisseurMdea, convertisseurMdeaQuantity
+    hasConvertisseurMdea, convertisseurMdeaQuantity,
+    hasPileAmod, amodModules
   } = zoneTechnique;
 
   return (
@@ -401,6 +402,27 @@ export function SiteConfirmationModal({
                         Qté: {convertisseurMdeaQuantity}
                       </span>
                     </div>
+                  </ZoneTechniqueCard>
+                )}
+                {operator === 'free' && hasPileAmod && (
+                  <ZoneTechniqueCard title="Pile système AMOD (Nokia)">
+                    {(() => {
+                      const labels: Record<string, string> = {
+                        free_amod_asib_4g: 'ASIB (4G)',
+                        free_amod_asik_5g: 'ASIK (5G)',
+                        free_amod_abia_4g: 'ABIA (4G)',
+                        free_amod_abil_5g: 'ABIL (5G)',
+                        free_amod_abio_4g_5g: 'ABIO (4G/5G)',
+                      };
+                      const active = Object.entries(amodModules || {})
+                        .filter(([_, m]) => m?.enabled)
+                        .map(([id, m]) => (m.quantity > 1 ? `${m.quantity}x ` : '') + (labels[id] || id));
+                      return (
+                        <span className="text-xs font-bold text-slate-900 block">
+                          {active.join(', ') || 'Sélectionnée'}
+                        </span>
+                      );
+                    })()}
                   </ZoneTechniqueCard>
                 )}
                 {operator === 'bouygues' && hasAtelierEnergie && (

@@ -126,7 +126,8 @@ function RightPreviewPanel({
     hasBaie, baieRadio, baieEnergie, baieItems,
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
-    hasConvertisseurMdea, convertisseurMdeaQuantity
+    hasConvertisseurMdea, convertisseurMdeaQuantity,
+    hasPileAmod, amodModules
   } = zoneTechnique;
 
   return (
@@ -493,6 +494,9 @@ function RightPreviewPanel({
                       dimensions: '338*295*140mm',
                       poids: `${10 * (convertisseurMdeaQuantity || 1)} kg`,
                       quantité: convertisseurMdeaQuantity || 1
+                    } : null,
+                    pile_amod: (operator === 'free' && hasPileAmod) ? {
+                      modules: amodModules
                     } : null
                   }}
                   ndcPdfUrl={ndcPdfUrl}

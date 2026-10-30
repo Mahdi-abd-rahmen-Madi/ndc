@@ -282,6 +282,9 @@ export interface ZoneTechniqueData {
 
   hasConvertisseurMdea: boolean;
   convertisseurMdeaQuantity: number;
+
+  hasPileAmod: boolean;
+  amodModules: Record<string, { enabled: boolean; quantity: number }>;
 }
 
 export const defaultZoneTechniqueData: ZoneTechniqueData = {
@@ -320,6 +323,9 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
 
   hasConvertisseurMdea: false,
   convertisseurMdeaQuantity: 1,
+
+  hasPileAmod: false,
+  amodModules: {},
 };
 
 export interface ProjectData {

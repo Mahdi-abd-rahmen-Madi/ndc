@@ -185,6 +185,17 @@ export const equipmentConfigs: EquipmentConfig[] = [
       { label: 'Poids', value: '15kg' },
     ],
   },
+  {
+    id: 'pile_amod',
+    name: 'Pile système AMOD',
+    enabled: false,
+    icon: 'Layers',
+    color: 'rose',
+    zone: 'technique',
+    fields: [
+      { label: 'Modules', value: 'N/A' },
+    ],
+  },
 ];
 
 export const getEnabledConfigs = (enabledToggles?: Record<string, boolean>): EquipmentConfig[] => {
