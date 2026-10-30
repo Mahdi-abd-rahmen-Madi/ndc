@@ -68,6 +68,7 @@ def load_catalogue_dict() -> dict:
             'description': 'Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)'
         }),
         'bouygues_antennas': standards.get('bouygues_antennas', []),
+        'free_antennas': standards.get('free_antennas', []),
         'updated_at': datetime.datetime.utcnow().isoformat() + 'Z'
     }
     return catalogue
