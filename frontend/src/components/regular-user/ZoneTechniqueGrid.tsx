@@ -64,7 +64,7 @@ export function ZoneTechniqueGrid({
             setHasTgbt={(val) => onChange({ hasTgbt: val })}
             tgbtReference={data.tgbtReference}
             setTgbtReference={(val) => onChange({ tgbtReference: val })}
-            options={config?.tgbt_references || []}
+            options={(config?.tgbt_references || []).filter(item => item.id !== 'tgbt_standard_300' && item.reference !== 'TGBT 300x255x160mm' && item.reference !== '300x255x160mm')}
           />
         </>
       )}

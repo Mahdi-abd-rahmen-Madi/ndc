@@ -1,13 +1,5 @@
 [
   {
-    "id": "tgbt_standard_300",
-    "name": "TGBT 300x255x160mm",
-    "reference": "TGBT 300x255x160mm",
-    "vendor": "Standard",
-    "dimensions": "300x255x160mm",
-    "weight": 4.75
-  },
-  {
     "id": "tgbt_actia",
     "name": "TGBT ACTIA",
     "reference": "TGBT ACTIA",

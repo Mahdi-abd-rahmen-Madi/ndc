@@ -25,8 +25,7 @@ export interface TGBTEquipmentToggleProps {
 
 const DEFAULT_TGBT_OPTIONS: TGBTItem[] = [
   { id: 'tgbt_actia', name: 'TGBT ACTIA', reference: 'TGBT ACTIA', vendor: 'ACTIA', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 },
-  { id: 'tgbt_tlti', name: 'TGBT TLTI', reference: 'TGBT TLTI', vendor: 'TLTI', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 },
-  { id: 'tgbt_standard_300', name: 'TGBT 300x255x160mm', reference: 'TGBT 300x255x160mm', vendor: 'Standard', dimensions: '300x255x160mm', weight: 4.75 }
+  { id: 'tgbt_tlti', name: 'TGBT TLTI', reference: 'TGBT TLTI', vendor: 'TLTI', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 }
 ];
 
 export function TGBTEquipmentToggle({

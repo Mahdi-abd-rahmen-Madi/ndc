@@ -624,7 +624,6 @@ class CatalogueConfig(models.Model):
                     { "id": "td_tri_free", "vendor": "FREE", "name": "TD triphasé", "reference": "68237", "weight": 60, "dimensions": "1055x850x350mm" }
                 ],
                 'tgbt_references': [
-                    { "id": "tgbt_standard_300", "name": "TGBT 300x255x160mm", "reference": "300x255x160mm", "vendor": "", "dimensions": "300x255x160mm", "weight": 4.75 },
                     { "id": "tgbt_actia", "name": "TGBT ACTIA", "reference": "TGBT ACTIA", "vendor": "ACTIA", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 },
                     { "id": "tgbt_tlti", "name": "TGBT TLTI", "reference": "TGBT TLTI", "vendor": "TLTI", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 }
                 ],
