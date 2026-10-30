@@ -37,7 +37,25 @@ export function RRUEquipmentToggle({
   const filteredRruOptions = rruOptions.filter(o =>
     o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : (operator.toLowerCase() === 'bouygues')
   );
-  const actualOptions = isRfmMode ? rfmModels : filteredRruOptions;
+
+  // For Orange, prioritize references starting with 2212, 2217, and 4415 (e.g. Radio 2212..., Radio 2217..., Radio 4415...)
+  const sortedRruOptions = operator.toLowerCase() === 'orange'
+    ? [...filteredRruOptions].sort((a, b) => {
+      const getPriority = (ref: string = '') => {
+        const clean = ref.replace(/^Radio\s+/i, '').trim();
+        if (clean.startsWith('2212')) return 1;
+        if (clean.startsWith('2217')) return 2;
+        if (clean.startsWith('4415')) return 3;
+        return 10;
+      };
+      const pA = getPriority(a.reference);
+      const pB = getPriority(b.reference);
+      if (pA !== pB) return pA - pB;
+      return (a.reference || '').localeCompare(b.reference || '');
+    })
+    : filteredRruOptions;
+
+  const actualOptions = isRfmMode ? rfmModels : sortedRruOptions;
   const uniqueVendors = Array.from(new Set(actualOptions.map(o => o.vendor)));
 
   const addRruRow = () => {
