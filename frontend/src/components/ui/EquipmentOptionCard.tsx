@@ -25,6 +25,14 @@ export interface EquipmentOptionCardProps {
   badgeText?: string;
   badgeClass?: string;
   /**
+   * Optional vendor / marque badge (e.g. "ERICSSON", "TLTI", "WALKYRIE")
+   */
+  vendorBadge?: string;
+  /**
+   * Optional subtitle or secondary detail (e.g. dimensions, poids)
+   */
+  subtitle?: string;
+  /**
    * Optional quantity support. If quantity is specified and isSelected is true,
    * a QuantityInput is rendered.
    */
@@ -103,6 +111,8 @@ export function EquipmentOptionCard({
   selectionType = 'checkbox',
   badgeText,
   badgeClass = 'bg-slate-100 text-slate-700 border-slate-200',
+  vendorBadge,
+  subtitle,
   quantity,
   onQuantityChange,
   quantityLabel = 'Quantité',
@@ -120,11 +130,11 @@ export function EquipmentOptionCard({
           : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
       } ${className}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2.5 min-w-0">
           {selectionType === 'radio' ? (
             <div
-              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
+              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 mt-0.5 ${
                 isSelected ? `${c.selectedBorder} bg-white ring-2 ring-orange-200` : 'border-slate-300 bg-white'
               }`}
             >
@@ -138,18 +148,32 @@ export function EquipmentOptionCard({
                 e.stopPropagation();
                 onToggle(e.target.checked);
               }}
-              className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 shrink-0"
+              className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 shrink-0 mt-0.5"
             />
           )}
 
-          <span
-            className={`text-xs font-bold leading-snug break-words ${
-              isSelected ? `${c.selectedText} font-extrabold` : 'text-slate-800'
-            }`}
-            title={title}
-          >
-            {title}
-          </span>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span
+                className={`text-xs font-bold leading-snug break-words ${
+                  isSelected ? `${c.selectedText} font-extrabold` : 'text-slate-800'
+                }`}
+                title={title}
+              >
+                {title}
+              </span>
+              {vendorBadge && (
+                <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-slate-900 text-white uppercase tracking-wider shrink-0 shadow-2xs">
+                  {vendorBadge}
+                </span>
+              )}
+            </div>
+            {subtitle && (
+              <span className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
+                {subtitle}
+              </span>
+            )}
+          </div>
         </div>
 
         {badgeText && (

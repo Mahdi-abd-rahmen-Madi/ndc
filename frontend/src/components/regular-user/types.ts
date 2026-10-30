@@ -139,6 +139,7 @@ export interface BaieReference {
   id: string;
   name: string;
   reference: string;
+  vendor?: string;
   category: 'radio_trans' | 'energie' | 'distribution' | 'raccordement' | string;
   category_label?: string;
   dimensions?: string;

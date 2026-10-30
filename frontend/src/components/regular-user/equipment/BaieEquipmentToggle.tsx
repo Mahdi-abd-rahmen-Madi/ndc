@@ -10,6 +10,7 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     id: 'orange_baie_radio_rb6120_outdoor',
     name: 'Baie radio RB6120 OUTDOOR',
     reference: 'RB6120 OUTDOOR',
+    vendor: 'ERICSSON',
     category: 'radio_trans',
     category_label: 'Radio & Trans',
     dimensions: '1540x700x700mm',
@@ -20,69 +21,158 @@ export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
     operator: 'orange'
   },
   {
-    id: 'orange_baie_radio_rb6601_outdoor',
-    name: 'Baie radio RB6601 OUTDOOR',
-    reference: 'RB6601 OUTDOOR',
+    id: 'orange_baie_radio_rb6140',
+    name: 'Baie radio RB6140',
+    reference: 'RB6140',
+    vendor: 'ERICSSON',
     category: 'radio_trans',
     category_label: 'Radio & Trans',
-    dimensions: '1540x700x700mm',
-    height: 1540,
-    width: 700,
+    dimensions: '1650x650x700mm',
+    height: 1650,
+    width: 650,
     depth: 700,
-    weight: 380,
+    weight: 190,
     operator: 'orange'
   },
   {
-    id: 'orange_baie_radio_byod_indoor',
-    name: 'Baie radio BYOD INDOOR',
-    reference: 'BYOD INDOOR',
+    id: 'orange_baie_radio_rbs6330',
+    name: 'Baie radio RBS6330',
+    reference: 'RBS6330',
+    vendor: 'ERICSSON',
     category: 'radio_trans',
     category_label: 'Radio & Trans',
-    dimensions: '2000x600x600mm',
-    height: 2000,
+    dimensions: '650x900x425mm',
+    height: 650,
+    width: 900,
+    depth: 425,
+    weight: 50,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_radio_rbs6201',
+    name: 'Baie radio RBS 6201',
+    reference: 'RBS 6201',
+    vendor: 'ERICSSON',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '1435x600x483mm',
+    height: 1435,
     width: 600,
-    depth: 600,
-    weight: 150,
+    depth: 483,
+    weight: 70,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_radio_rbs6102',
+    name: 'Baie radio RBS 6102',
+    reference: 'RBS 6102',
+    vendor: 'ERICSSON',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '1450x1300x700mm',
+    height: 1450,
+    width: 1300,
+    depth: 700,
+    weight: 330,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_tlti_fg2_radio_trans',
+    name: 'Baie TLTI FG2 RADIO /TRANS',
+    reference: 'FG2 RADIO /TRANS',
+    vendor: 'TLTI',
+    category: 'radio_trans',
+    category_label: 'Radio & Trans',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: 93,
     operator: 'orange'
   },
   // 2. Énergie & Raccordement
   {
-    id: 'orange_baie_energie_delta_outdoor',
-    name: 'Baie énergie DELTA OUTDOOR',
-    reference: 'DELTA OUTDOOR',
+    id: 'orange_baie_energie_walkyrie_t3_18kw',
+    name: 'Baie énergie Outdoor WALKYRIE T3 18kw',
+    reference: 'WALKYRIE T3 18kw',
+    vendor: 'WALKYRIE',
     category: 'energie',
-    category_label: 'Énergie & Raccordement',
-    dimensions: '1600x750x750mm',
-    height: 1600,
-    width: 750,
-    depth: 750,
-    weight: 320,
+    category_label: 'Énergie (-48V)',
+    dimensions: '1550x700x770mm',
+    height: 1550,
+    width: 700,
+    depth: 770,
+    weight: 211,
     operator: 'orange'
   },
   {
-    id: 'orange_baie_energie_eltek_outdoor',
-    name: 'Baie énergie ELTEK OUTDOOR',
-    reference: 'ELTEK OUTDOOR',
+    id: 'orange_baie_energie_t3_10_8kw',
+    name: 'Baie énergie Outdoor T3 10.8kw',
+    reference: 'T3 10.8kw',
+    vendor: 'ELTEK',
     category: 'energie',
-    category_label: 'Énergie & Raccordement',
-    dimensions: '1600x750x750mm',
-    height: 1600,
-    width: 750,
-    depth: 750,
-    weight: 310,
+    category_label: 'Énergie (-48V)',
+    dimensions: '1200x700x770mm',
+    height: 1200,
+    width: 700,
+    depth: 770,
+    weight: 150,
     operator: 'orange'
   },
   {
-    id: 'orange_coffret_ac_distribution',
-    name: 'Coffret AC Distribution',
-    reference: 'COFFRET AC',
-    category: 'distribution',
-    category_label: 'Énergie & Raccordement',
-    dimensions: '600x400x250mm',
-    height: 600,
-    width: 400,
-    depth: 250,
-    weight: 25,
+    id: 'orange_baie_tlti_fg2_tgbt_48v',
+    name: 'Baie TLTI FG2 TGBT /48V',
+    reference: 'FG2 TGBT /48V',
+    vendor: 'TLTI',
+    category: 'energie',
+    category_label: 'Énergie',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: null,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_tlti_fg2_tgbt_trans',
+    name: 'Baie TLTI FG2 TGBT /TRANS',
+    reference: 'FG2 TGBT /TRANS',
+    vendor: 'TLTI',
+    category: 'energie',
+    category_label: 'Énergie',
+    dimensions: '1650x855x750mm',
+    height: 1650,
+    width: 855,
+    depth: 750,
+    weight: 95,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_baie_seifel',
+    name: 'Baie SEIFEL',
+    reference: 'SEIFEL',
+    vendor: 'SEIFEL',
+    category: 'energie',
+    category_label: 'Énergie',
+    dimensions: '1485x885x540mm',
+    height: 1485,
+    width: 885,
+    depth: 540,
+    weight: 86,
+    operator: 'orange'
+  },
+  {
+    id: 'orange_coffret_outdoor_trans_tlti_2015',
+    name: 'Coffret Outdoor Trans TLTI 2015',
+    reference: 'Trans TLTI 2015',
+    vendor: 'TLTI',
+    category: 'energie',
+    category_label: 'Énergie',
+    dimensions: '1600x900x620mm',
+    height: 1600,
+    width: 900,
+    depth: 620,
+    weight: 65,
     operator: 'orange'
   }
 ];
@@ -293,6 +383,11 @@ export function BaieEquipmentToggle({
           const qty = sel?.quantity || 1;
           const isWalkyrie = item.id === 'orange_baie_energie_walkyrie_t3_18kw' || item.name.toLowerCase().includes('walkyrie') || item.name.toLowerCase().includes('valkyrie');
 
+          const subtitleParts: string[] = [];
+          if (item.dimensions) subtitleParts.push(item.dimensions);
+          if (item.weight) subtitleParts.push(`${item.weight} kg`);
+          const subtitle = subtitleParts.join(' • ');
+
           return (
             <EquipmentOptionCard
               key={item.id}
@@ -300,6 +395,8 @@ export function BaieEquipmentToggle({
               isSelected={isSelected}
               onToggle={() => handleToggleItem(item)}
               selectionType="radio"
+              vendorBadge={item.vendor}
+              subtitle={subtitle || undefined}
               badgeText={item.category_label || item.category}
               badgeClass={getCategoryColor(item.category)}
               quantity={qty}

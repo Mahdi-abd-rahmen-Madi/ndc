@@ -4012,7 +4012,8 @@
           "operator": "orange",
           "reference": "RB6120 OUTDOOR",
           "dimensions": "1540x700x700mm",
-          "category_label": "Radio & Trans"
+          "category_label": "Radio & Trans",
+          "vendor": "ERICSSON"
         },
         {
           "id": "orange_baie_radio_rb6140",
@@ -4025,7 +4026,8 @@
           "operator": "orange",
           "reference": "RB6140",
           "dimensions": "1650x650x700mm",
-          "category_label": "Radio & Trans"
+          "category_label": "Radio & Trans",
+          "vendor": "ERICSSON"
         },
         {
           "id": "orange_baie_radio_rbs6330",
@@ -4038,7 +4040,8 @@
           "operator": "orange",
           "reference": "RBS6330",
           "dimensions": "650x900x425mm",
-          "category_label": "Radio & Trans"
+          "category_label": "Radio & Trans",
+          "vendor": "ERICSSON"
         },
         {
           "id": "orange_baie_tlti_fg2_radio_trans",
@@ -4051,7 +4054,8 @@
           "operator": "orange",
           "reference": "FG2 RADIO /TRANS",
           "dimensions": "1650x855x750mm",
-          "category_label": "Radio & Trans"
+          "category_label": "Radio & Trans",
+          "vendor": "TLTI"
         },
         {
           "id": "orange_baie_energie_walkyrie_t3_18kw",
@@ -4064,7 +4068,8 @@
           "operator": "orange",
           "reference": "WALKYRIE T3 18kw",
           "dimensions": "1550x700x770mm",
-          "category_label": "Énergie (-48V)"
+          "category_label": "Énergie (-48V)",
+          "vendor": "WALKYRIE"
         },
         {
           "id": "orange_baie_energie_t3_10_8kw",
@@ -4077,7 +4082,8 @@
           "operator": "orange",
           "reference": "T3 10.8kw",
           "dimensions": "1200x700x770mm",
-          "category_label": "Énergie (-48V)"
+          "category_label": "Énergie (-48V)",
+          "vendor": "ELTEK"
         },
         {
           "id": "orange_baie_energie_gbox",
@@ -4103,7 +4109,8 @@
           "operator": "orange",
           "reference": "FG2 TGBT /48V",
           "dimensions": "1650x855x750mm",
-          "category_label": "Énergie"
+          "category_label": "Énergie",
+          "vendor": "TLTI"
         },
         {
           "id": "orange_baie_tlti_fg2_tgbt_trans",
@@ -4116,7 +4123,8 @@
           "operator": "orange",
           "reference": "FG2 TGBT /TRANS",
           "dimensions": "1650x855x750mm",
-          "category_label": "Énergie"
+          "category_label": "Énergie",
+          "vendor": "TLTI"
         },
         {
           "id": "orange_baie_seifel",
@@ -4129,7 +4137,8 @@
           "operator": "orange",
           "reference": "SEIFEL",
           "dimensions": "1485x885x540mm",
-          "category_label": "Énergie"
+          "category_label": "Énergie",
+          "vendor": "SEIFEL"
         },
         {
           "id": "orange_coffret_outdoor_trans_tlti_2015",
@@ -4142,7 +4151,8 @@
           "operator": "orange",
           "reference": "Trans TLTI 2015",
           "dimensions": "1600x900x620mm",
-          "category_label": "Énergie"
+          "category_label": "Énergie",
+          "vendor": "TLTI"
         },
         {
           "id": "free_cab_one",
@@ -4184,6 +4194,34 @@
           "reference": "CAB THREE",
           "dimensions": "810*730*700",
           "weight_detail": "90+65+130"
+        },
+        {
+          "id": "orange_baie_radio_rbs6201",
+          "name": "Baie radio RBS 6201",
+          "reference": "RBS 6201",
+          "vendor": "ERICSSON",
+          "category": "radio_trans",
+          "category_label": "Radio & Trans",
+          "dimensions": "1435x600x483mm",
+          "height": 1435,
+          "width": 600,
+          "depth": 483,
+          "weight": 70,
+          "operator": "orange"
+        },
+        {
+          "id": "orange_baie_radio_rbs6102",
+          "name": "Baie radio RBS 6102",
+          "reference": "RBS 6102",
+          "vendor": "ERICSSON",
+          "category": "radio_trans",
+          "category_label": "Radio & Trans",
+          "dimensions": "1450x1300x700mm",
+          "height": 1450,
+          "width": 1300,
+          "depth": 700,
+          "weight": 330,
+          "operator": "orange"
         }
       ],
       "wind_calculation_rules": {
@@ -5231,7 +5269,7 @@
           "cx_lat": 0.0744
         }
       ],
-      "updated_at": "2026-10-30T10:04:01.887189Z"
+      "updated_at": "2026-10-30T10:08:16.835549Z"
     }
   }
 ]
