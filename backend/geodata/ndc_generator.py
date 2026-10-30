@@ -939,12 +939,44 @@ def generate_auxiliary_pdfs(job, start_page=1):
     # Check for RRU
     rru_eq = input_data.get('rru_equipment', {})
     if rru_eq.get('enabled'):
+        from .catalogue_loader import find_rru_reference
         items = rru_eq.get('items', [])
         qty = sum(item.get('quantity', 1) for item in items) if items else 1
+
+        rru_spec = None
+        op = input_data.get('site', {}).get('operator')
+        for it in items:
+            ref = it.get('reference')
+            if ref:
+                found = find_rru_reference(ref, op)
+                if found:
+                    rru_spec = found
+                    break
+
+        eq_dims = rru_spec.get('dimensions', '[RRU_DIMS]') if rru_spec else '[RRU_DIMS]'
+        eq_weight = rru_spec.get('weight', '[RRU_WEIGHT]') if rru_spec else '[RRU_WEIGHT]'
+        cx_front = rru_spec.get('cx_front', 0.14) if rru_spec else 0.14
+        cx_lat = rru_spec.get('cx_lat', 0.055) if rru_spec else 0.055
+
+        try:
+            qp_val = float(context.get('qp_z', 0))
+            fw_front = round(cx_front * qp_val, 2)
+            fw_lat = round(cx_lat * qp_val, 2)
+            fw_mat = round(1.0 * 1.0 * 0.088 * qp_val, 2)
+        except (ValueError, TypeError):
+            fw_front = '[Fw,Front]'
+            fw_lat = '[Fw,Lat]'
+            fw_mat = '[Fw,Mat]'
+
         generated_pdfs.append(_render_and_save('rru', {
             'eq_qty': qty,
-            'eq_dims': '[RRU_DIMS]',
-            'eq_weight': '[RRU_WEIGHT]'
+            'eq_dims': eq_dims,
+            'eq_weight': eq_weight,
+            'cx_front': cx_front,
+            'cx_lat': cx_lat,
+            'fw_front': fw_front,
+            'fw_lat': fw_lat,
+            'fw_mat': fw_mat
         }))
 
     return generated_pdfs

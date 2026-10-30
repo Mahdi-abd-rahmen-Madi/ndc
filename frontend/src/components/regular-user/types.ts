@@ -33,7 +33,23 @@ export interface CatalogueConfig {
   fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
   td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string; phase?: 'monophase' | 'tetraphase' | string }[];
   tgbt_references?: { id: string; vendor?: string; supplier?: string; name: string; reference: string; operator?: string; weight?: number; dimensions?: string }[];
-  rru_references: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[];
+  rru_references: {
+    id: string;
+    vendor: string;
+    reference: string;
+    operator?: string;
+    dimensions?: string;
+    height?: number;
+    width?: number;
+    thickness?: number;
+    weight?: number;
+    cf_front?: number;
+    cf_lat?: number;
+    surf_front?: number;
+    surf_lat?: number;
+    cx_front?: number;
+    cx_lat?: number;
+  }[];
   rrh_references: {
     id: string;
     vendor: string;

@@ -215,3 +215,34 @@ def find_rrh_reference(identifier_or_ref: str, operator: str = None) -> dict:
                 return item
 
     return None
+
+
+def find_rru_reference(identifier_or_ref: str, operator: str = None) -> dict:
+    """
+    Helper to search for an RRU reference in rru.json by ID, reference, or name.
+    """
+    rru_list = load_raw_file(FILE_MAPPING['rru']) or []
+    query = (identifier_or_ref or '').strip().lower()
+
+    # 1. Exact ID match
+    for item in rru_list:
+        if item.get('id', '').lower() == query:
+            if not operator or item.get('operator') == operator.lower():
+                return item
+
+    # 2. Exact reference match
+    for item in rru_list:
+        ref = item.get('reference', '').lower()
+        if query == ref:
+            if not operator or item.get('operator') == operator.lower():
+                return item
+
+    # 3. Partial match
+    for item in rru_list:
+        ref = item.get('reference', '').lower()
+        if (query in ref or ref in query):
+            if not operator or item.get('operator') == operator.lower():
+                return item
+
+    return None
+

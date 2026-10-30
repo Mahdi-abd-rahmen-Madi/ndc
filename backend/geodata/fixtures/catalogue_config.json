@@ -2032,7 +2032,16 @@
           "weight": 12.9,
           "operator": "orange",
           "reference": "Radio 2217 B28",
-          "dimensions": "351x298x138mm"
+          "dimensions": "351*298*138mm",
+          "height": 351,
+          "width": 298,
+          "thickness": 138,
+          "cf_front": 1.34,
+          "cf_lat": 1.14,
+          "surf_front": 0.1046,
+          "surf_lat": 0.0484,
+          "cx_front": 0.1402,
+          "cx_lat": 0.0552
         },
         {
           "id": "rru_eri_radio_2217_b20",
@@ -2040,7 +2049,16 @@
           "weight": 12.9,
           "operator": "orange",
           "reference": "Radio 2217 B20",
-          "dimensions": "351x298x138mm"
+          "dimensions": "351*298*138mm",
+          "height": 351,
+          "width": 298,
+          "thickness": 138,
+          "cf_front": 1.34,
+          "cf_lat": 1.14,
+          "surf_front": 0.1046,
+          "surf_lat": 0.0484,
+          "cx_front": 0.1402,
+          "cx_lat": 0.0552
         },
         {
           "id": "rru_eri_radio_2212_b8",
@@ -2048,7 +2066,16 @@
           "weight": 18.2,
           "operator": "orange",
           "reference": "Radio 2212 B8",
-          "dimensions": "420x342x149mm"
+          "dimensions": "420*342*149mm",
+          "height": 420,
+          "width": 342,
+          "thickness": 149,
+          "cf_front": 1.56,
+          "cf_lat": 1.4,
+          "surf_front": 0.1436,
+          "surf_lat": 0.0626,
+          "cx_front": 0.224,
+          "cx_lat": 0.0876
         },
         {
           "id": "rru_eri_radio_2262_b20b28",
@@ -2056,7 +2083,16 @@
           "weight": 21.0,
           "operator": "orange",
           "reference": "Radio 2262 B20B28",
-          "dimensions": "447x398x143mm"
+          "dimensions": "447*398*143mm",
+          "height": 447,
+          "width": 398,
+          "thickness": 143,
+          "cf_front": 1.56,
+          "cf_lat": 1.4,
+          "surf_front": 0.1779,
+          "surf_lat": 0.0639,
+          "cx_front": 0.2775,
+          "cx_lat": 0.0895
         },
         {
           "id": "rru_eri_radio_2260_b8b20",
@@ -2064,7 +2100,16 @@
           "weight": 21.0,
           "operator": "orange",
           "reference": "Radio 2260 B8B20",
-          "dimensions": "447x398x143mm"
+          "dimensions": "447*398*143mm",
+          "height": 447,
+          "width": 398,
+          "thickness": 143,
+          "cf_front": 1.52,
+          "cf_lat": 1.48,
+          "surf_front": 0.1779,
+          "surf_lat": 0.0639,
+          "cx_front": 0.2704,
+          "cx_lat": 0.0946
         },
         {
           "id": "rru_eri_radio_4486_b8b20b28",
@@ -2072,7 +2117,16 @@
           "weight": 27.1,
           "operator": "orange",
           "reference": "Radio 4486 B8B20B28",
-          "dimensions": "522x397x149mm"
+          "dimensions": "522*397*149mm",
+          "height": 522,
+          "width": 397,
+          "thickness": 149,
+          "cf_front": 1.38,
+          "cf_lat": 1.12,
+          "surf_front": 0.2072,
+          "surf_lat": 0.0778,
+          "cx_front": 0.2859,
+          "cx_lat": 0.0871
         },
         {
           "id": "rru_eri_radio_2217_b3",
@@ -2080,7 +2134,16 @@
           "weight": 12.6,
           "operator": "orange",
           "reference": "Radio 2217 B3",
-          "dimensions": "351x298x138mm"
+          "dimensions": "351*298*138mm",
+          "height": 351,
+          "width": 298,
+          "thickness": 138,
+          "cf_front": 1.34,
+          "cf_lat": 1.14,
+          "surf_front": 0.1046,
+          "surf_lat": 0.0484,
+          "cx_front": 0.1402,
+          "cx_lat": 0.0552
         },
         {
           "id": "rru_eri_radio_2212_b3",
@@ -2088,7 +2151,16 @@
           "weight": 18.0,
           "operator": "orange",
           "reference": "Radio 2212 B3",
-          "dimensions": "420x342x149mm"
+          "dimensions": "420*342*149mm",
+          "height": 420,
+          "width": 342,
+          "thickness": 149,
+          "cf_front": 1.56,
+          "cf_lat": 1.4,
+          "surf_front": 0.1436,
+          "surf_lat": 0.0626,
+          "cx_front": 0.224,
+          "cx_lat": 0.0876
         },
         {
           "id": "rru_eri_radio_4415_b3",
@@ -2096,7 +2168,16 @@
           "weight": 17.5,
           "operator": "orange",
           "reference": "Radio 4415 B3",
-          "dimensions": "420x342x131mm"
+          "dimensions": "420*342*131mm",
+          "height": 420,
+          "width": 342,
+          "thickness": 131,
+          "cf_front": 1.36,
+          "cf_lat": 1.12,
+          "surf_front": 0.1436,
+          "surf_lat": 0.055,
+          "cx_front": 0.1953,
+          "cx_lat": 0.0616
         },
         {
           "id": "rru_eri_radio_2271_b1",
@@ -2104,7 +2185,16 @@
           "weight": 9.4,
           "operator": "orange",
           "reference": "Radio 2271 B1",
-          "dimensions": "409x269x110mm"
+          "dimensions": "409*269*110mm",
+          "height": 409,
+          "width": 269,
+          "thickness": 110,
+          "cf_front": 1.36,
+          "cf_lat": 1.12,
+          "surf_front": 0.11,
+          "surf_lat": 0.045,
+          "cx_front": 0.1496,
+          "cx_lat": 0.0504
         },
         {
           "id": "rru_eri_radio_2260_b1b3",
@@ -2112,7 +2202,16 @@
           "weight": 19.5,
           "operator": "orange",
           "reference": "Radio 2260 B1B3",
-          "dimensions": "447x398x137mm"
+          "dimensions": "447*398*137mm",
+          "height": 447,
+          "width": 398,
+          "thickness": 137,
+          "cf_front": 1.52,
+          "cf_lat": 1.48,
+          "surf_front": 0.1779,
+          "surf_lat": 0.0612,
+          "cx_front": 0.2704,
+          "cx_lat": 0.0906
         },
         {
           "id": "rru_eri_radio_4490_b1b3",
@@ -2120,7 +2219,16 @@
           "weight": 23.0,
           "operator": "orange",
           "reference": "Radio 4490 B1B3",
-          "dimensions": "522x397x130mm"
+          "dimensions": "522*397*130mm",
+          "height": 522,
+          "width": 397,
+          "thickness": 130,
+          "cf_front": 1.38,
+          "cf_lat": 1.12,
+          "surf_front": 0.2072,
+          "surf_lat": 0.0679,
+          "cx_front": 0.2859,
+          "cx_lat": 0.076
         },
         {
           "id": "rru_eri_radio_2271_b7",
@@ -2128,7 +2236,16 @@
           "weight": 10.0,
           "operator": "orange",
           "reference": "Radio 2271 B7",
-          "dimensions": "409x269x110mm"
+          "dimensions": "409*269*110mm",
+          "height": 409,
+          "width": 269,
+          "thickness": 110,
+          "cf_front": 1.36,
+          "cf_lat": 1.12,
+          "surf_front": 0.11,
+          "surf_lat": 0.045,
+          "cx_front": 0.1496,
+          "cx_lat": 0.0504
         },
         {
           "id": "rru_eri_radio_4415_b7",
@@ -2136,7 +2253,16 @@
           "weight": 19.0,
           "operator": "orange",
           "reference": "Radio 4415 B7",
-          "dimensions": "420x342x150mm"
+          "dimensions": "420*342*150mm",
+          "height": 420,
+          "width": 342,
+          "thickness": 150,
+          "cf_front": 1.36,
+          "cf_lat": 1.12,
+          "surf_front": 0.1436,
+          "surf_lat": 0.063,
+          "cx_front": 0.1953,
+          "cx_lat": 0.0706
         },
         {
           "id": "rru_eri_radio_4471_b7",
@@ -2144,7 +2270,16 @@
           "weight": 13.0,
           "operator": "orange",
           "reference": "Radio 4471 B7",
-          "dimensions": "419x269x136mm"
+          "dimensions": "419*269*136mm",
+          "height": 419,
+          "width": 269,
+          "thickness": 136,
+          "cf_front": 1.36,
+          "cf_lat": 1.12,
+          "surf_front": 0.1127,
+          "surf_lat": 0.057,
+          "cx_front": 0.1533,
+          "cx_lat": 0.0638
         },
         {
           "id": "rru_eri_radio_4485_b1b3b7",
@@ -2152,7 +2287,16 @@
           "weight": 24.0,
           "operator": "orange",
           "reference": "Radio 4485 B1B3B7",
-          "dimensions": "533x398x145mm"
+          "dimensions": "533*398*145mm",
+          "height": 533,
+          "width": 398,
+          "thickness": 145,
+          "cf_front": 1.38,
+          "cf_lat": 1.12,
+          "surf_front": 0.2121,
+          "surf_lat": 0.0773,
+          "cx_front": 0.2927,
+          "cx_lat": 0.0866
         },
         {
           "id": "rru_eri_radio_4823_b1b3b7",
@@ -2160,7 +2304,16 @@
           "weight": 31.4,
           "operator": "orange",
           "reference": "Radio 4823 B1B3B7",
-          "dimensions": "572x398x168mm"
+          "dimensions": "572*398*168mm",
+          "height": 572,
+          "width": 398,
+          "thickness": 168,
+          "cf_front": 1.38,
+          "cf_lat": 1.12,
+          "surf_front": 0.2277,
+          "surf_lat": 0.0961,
+          "cx_front": 0.3142,
+          "cx_lat": 0.1076
         },
         {
           "id": "rru_eri_orange_radio_2460",
@@ -2168,7 +2321,16 @@
           "weight": 37.0,
           "operator": "orange",
           "reference": "Radio 2460",
-          "dimensions": "553x398x190mm"
+          "dimensions": "553*398*190mm",
+          "height": 553,
+          "width": 398,
+          "thickness": 190,
+          "cf_front": 1.37,
+          "cf_lat": 1.14,
+          "surf_front": 0.2201,
+          "surf_lat": 0.1051,
+          "cx_front": 0.3015,
+          "cx_lat": 0.1198
         },
         {
           "id": "rru_eri_orange_radio_4480",
@@ -2176,7 +2338,16 @@
           "weight": 38.0,
           "operator": "orange",
           "reference": "Radio 4480",
-          "dimensions": "553x398x151mm"
+          "dimensions": "553*398*151mm",
+          "height": 553,
+          "width": 398,
+          "thickness": 151,
+          "cf_front": 1.34,
+          "cf_lat": 1.15,
+          "surf_front": 0.2201,
+          "surf_lat": 0.0835,
+          "cx_front": 0.2949,
+          "cx_lat": 0.096
         }
       ],
       "rrh_references": [
@@ -3184,7 +3355,7 @@
         "surf_lat_formula": "height * thickness",
         "description": "Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)"
       },
-      "updated_at": "2026-10-30T09:12:23.596262Z"
+      "updated_at": "2026-10-30T09:16:30.846645Z"
     }
   }
 ]
