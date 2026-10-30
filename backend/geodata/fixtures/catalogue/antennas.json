@@ -7,7 +7,11 @@
       "width": 430,
       "height": 2769,
       "weight": 49.5,
-      "thickness": 197
+      "thickness": 197,
+      "cf_front": 1.32,
+      "cf_lat": 1.66,
+      "cx_front": 1.5717,
+      "cx_lat": 0.9055
     },
     "ant5g": {
       "model": "",
@@ -47,7 +51,11 @@
       "width": 469,
       "height": 2009,
       "weight": 34.5,
-      "thickness": 206
+      "thickness": 206,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "cx_front": 1.2249,
+      "cx_lat": 0.6871
     },
     "ant5g": {
       "model": "",
@@ -67,7 +75,11 @@
       "width": 430,
       "height": 2100,
       "weight": 37.5,
-      "thickness": 197
+      "thickness": 197,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "cx_front": 1.1739,
+      "cx_lat": 0.6867
     },
     "ant5g": {
       "model": "",
@@ -87,7 +99,11 @@
       "width": 430,
       "height": 1599,
       "weight": 33.2,
-      "thickness": 197
+      "thickness": 197,
+      "cf_front": 1.22,
+      "cf_lat": 1.6,
+      "cx_front": 0.8389,
+      "cx_lat": 0.504
     },
     "ant5g": {
       "model": "",
@@ -127,7 +143,11 @@
       "width": 469,
       "height": 2009,
       "weight": 37.9,
-      "thickness": 229
+      "thickness": 229,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "cx_front": 1.2249,
+      "cx_lat": 0.7638
     },
     "ant5g": {
       "model": "",
@@ -147,7 +167,11 @@
       "width": 469,
       "height": 1509,
       "weight": 31.5,
-      "thickness": 229
+      "thickness": 229,
+      "cf_front": 1.22,
+      "cf_lat": 1.6,
+      "cx_front": 0.8634,
+      "cx_lat": 0.553
     },
     "ant5g": {
       "model": "",
@@ -227,7 +251,11 @@
       "width": 468,
       "height": 2769,
       "weight": 38.5,
-      "thickness": 228
+      "thickness": 228,
+      "cf_front": 1.32,
+      "cf_lat": 1.66,
+      "cx_front": 1.7106,
+      "cx_lat": 1.048
     },
     "ant5g": {
       "model": "",
@@ -247,7 +275,11 @@
       "width": 468,
       "height": 2100,
       "weight": 40.2,
-      "thickness": 228
+      "thickness": 228,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "cx_front": 1.2776,
+      "cx_lat": 0.7948
     },
     "ant5g": {
       "model": "",
@@ -267,14 +299,22 @@
       "width": 469,
       "height": 1509,
       "weight": 34.0,
-      "thickness": 206
+      "thickness": 206,
+      "cf_front": 1.22,
+      "cf_lat": 1.6,
+      "cx_front": 0.8634,
+      "cx_lat": 0.4974
     },
     "ant5g": {
       "model": "AAU5636w",
       "width": 395,
       "height": 730,
       "weight": 28.0,
-      "thickness": 180
+      "thickness": 180,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.3027,
+      "cx_lat": 0.1813
     },
     "operator": "bouygues",
     "montageId": "A4"
@@ -287,7 +327,11 @@
       "width": 469,
       "height": 2249,
       "weight": 45.0,
-      "thickness": 206
+      "thickness": 206,
+      "cf_front": 1.31,
+      "cf_lat": 1.68,
+      "cx_front": 1.3818,
+      "cx_lat": 0.7783
     },
     "ant5g": {
       "model": "",
@@ -307,7 +351,11 @@
       "width": 469,
       "height": 2249,
       "weight": 45.0,
-      "thickness": 206
+      "thickness": 206,
+      "cf_front": 1.31,
+      "cf_lat": 1.68,
+      "cx_front": 1.3818,
+      "cx_lat": 0.7783
     },
     "ant5g": {
       "model": "",
@@ -354,7 +402,11 @@
       "width": 395,
       "height": 730,
       "weight": 27,
-      "thickness": 160
+      "thickness": 160,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.3027,
+      "cx_lat": 0.1612
     },
     "operator": "bouygues",
     "montageId": "Custom"
@@ -374,7 +426,11 @@
       "width": 408,
       "height": 717,
       "weight": 22,
-      "thickness": 155
+      "thickness": 155,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.3071,
+      "cx_lat": 0.1533
     },
     "operator": "bouygues",
     "montageId": "Custom"
@@ -394,7 +450,11 @@
       "width": 408,
       "height": 717,
       "weight": 28,
-      "thickness": 189
+      "thickness": 189,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.3071,
+      "cx_lat": 0.187
     },
     "operator": "bouygues",
     "montageId": "Custom"
@@ -414,7 +474,11 @@
       "width": 403,
       "height": 778,
       "weight": 37.5,
-      "thickness": 268
+      "thickness": 268,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.3292,
+      "cx_lat": 0.2877
     },
     "operator": "bouygues",
     "montageId": "Custom"
@@ -434,7 +498,11 @@
       "width": 400,
       "height": 819,
       "weight": 44,
-      "thickness": 220
+      "thickness": 220,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.344,
+      "cx_lat": 0.2487
     },
     "operator": "bouygues",
     "montageId": "Custom"
@@ -1478,5 +1546,179 @@
     },
     "operator": "orange",
     "montageId": "Custom"
+  },
+  {
+    "id": "ANT_BYG_ant_byg_4g_2800",
+    "name": "BOUYGUES 4G 2800*500*250mm",
+    "operator": "bouygues",
+    "vendor": "BOUYGUES",
+    "montageId": "Standard",
+    "ant4g": {
+      "model": "Antenne 4G 2800*500*250mm",
+      "width": 500,
+      "height": 2800,
+      "thickness": 250,
+      "weight": 55.0,
+      "cf_front": 1.32,
+      "cf_lat": 1.66,
+      "cx_front": 1.848,
+      "cx_lat": 1.162
+    },
+    "ant5g": {
+      "model": "",
+      "width": 0,
+      "height": 0,
+      "thickness": 0,
+      "weight": 0,
+      "cf_front": 0,
+      "cf_lat": 0,
+      "cx_front": 0,
+      "cx_lat": 0
+    }
+  },
+  {
+    "id": "ANT_BYG_ant_byg_4g_2100",
+    "name": "BOUYGUES 4G 2100*500*250mm",
+    "operator": "bouygues",
+    "vendor": "BOUYGUES",
+    "montageId": "Standard",
+    "ant4g": {
+      "model": "Antenne 4G 2100*500*250mm",
+      "width": 500,
+      "height": 2100,
+      "thickness": 250,
+      "weight": 45.0,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "cx_front": 1.365,
+      "cx_lat": 0.8715
+    },
+    "ant5g": {
+      "model": "",
+      "width": 0,
+      "height": 0,
+      "thickness": 0,
+      "weight": 0,
+      "cf_front": 0,
+      "cf_lat": 0,
+      "cx_front": 0,
+      "cx_lat": 0
+    }
+  },
+  {
+    "id": "ANT_BYG_ant_byg_4g_1600",
+    "name": "BOUYGUES 4G 1600*500*250mm",
+    "operator": "bouygues",
+    "vendor": "BOUYGUES",
+    "montageId": "Standard",
+    "ant4g": {
+      "model": "Antenne 4G 1600*500*250mm",
+      "width": 500,
+      "height": 1600,
+      "thickness": 250,
+      "weight": 35.0,
+      "cf_front": 1.22,
+      "cf_lat": 1.6,
+      "cx_front": 0.976,
+      "cx_lat": 0.64
+    },
+    "ant5g": {
+      "model": "",
+      "width": 0,
+      "height": 0,
+      "thickness": 0,
+      "weight": 0,
+      "cf_front": 0,
+      "cf_lat": 0,
+      "cx_front": 0,
+      "cx_lat": 0
+    }
+  },
+  {
+    "id": "ANT_BYG_ant_byg_5g_800",
+    "name": "BOUYGUES 5G 800*500*220mm",
+    "operator": "bouygues",
+    "vendor": "BOUYGUES",
+    "montageId": "Standard",
+    "ant4g": {
+      "model": "",
+      "width": 0,
+      "height": 0,
+      "thickness": 0,
+      "weight": 0,
+      "cf_front": 0,
+      "cf_lat": 0,
+      "cx_front": 0,
+      "cx_lat": 0
+    },
+    "ant5g": {
+      "model": "Antenne 5G 800*500*220mm",
+      "width": 500,
+      "height": 800,
+      "thickness": 220,
+      "weight": 35.0,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "cx_front": 0.42,
+      "cx_lat": 0.2429
+    }
+  },
+  {
+    "id": "ANT_BYG_ant_byg_4g_2300",
+    "name": "BOUYGUES 4G 2300*500*250mm",
+    "operator": "bouygues",
+    "vendor": "BOUYGUES",
+    "montageId": "Standard",
+    "ant4g": {
+      "model": "Antenne 4G 2300*500*250mm",
+      "width": 500,
+      "height": 2300,
+      "thickness": 250,
+      "weight": 45.0,
+      "cf_front": 1.31,
+      "cf_lat": 1.68,
+      "cx_front": 1.5065,
+      "cx_lat": 0.966
+    },
+    "ant5g": {
+      "model": "",
+      "width": 0,
+      "height": 0,
+      "thickness": 0,
+      "weight": 0,
+      "cf_front": 0,
+      "cf_lat": 0,
+      "cx_front": 0,
+      "cx_lat": 0
+    }
+  },
+  {
+    "id": "ANT_BYG_ant_byg_5g_1010",
+    "name": "BOUYGUES 5G 1010*500*250mm",
+    "operator": "bouygues",
+    "vendor": "BOUYGUES",
+    "montageId": "Standard",
+    "ant4g": {
+      "model": "",
+      "width": 0,
+      "height": 0,
+      "thickness": 0,
+      "weight": 0,
+      "cf_front": 0,
+      "cf_lat": 0,
+      "cx_front": 0,
+      "cx_lat": 0
+    },
+    "ant5g": {
+      "model": "Antenne 5G 1010*500*250mm",
+      "width": 500,
+      "height": 1010,
+      "thickness": 250,
+      "weight": 50.0,
+      "cf_front": 1.08,
+      "cf_lat": 1.43,
+      "cx_front": 0.5454,
+      "cx_lat": 0.3611
+    }
   }
 ]

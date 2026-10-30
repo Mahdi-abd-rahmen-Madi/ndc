@@ -74,6 +74,29 @@ export interface CatalogueConfig {
   boitier_lovage_references?: { id: string; vendor: string; reference: string }[];
   atelier_energie_references?: { id: string; vendor?: string; supplier?: string; name: string; reference: string; operator?: string; power?: string; phase?: string; height?: number; width?: number; thickness?: number; weight?: number; dimensions?: string }[];
   baie_references?: BaieReference[];
+  bouygues_antennas?: Array<{
+    id: string;
+    type: '4G' | '5G' | string;
+    operator: string;
+    dimensions: string;
+    height: number;
+    width: number;
+    thickness: number;
+    weight: number;
+    cf_front: number;
+    cf_lat: number;
+    surf_front: number;
+    surf_lat: number;
+    cx_front: number;
+    cx_lat: number;
+  }>;
+  wind_calculation_rules?: {
+    cscd: number;
+    fw_formula: string;
+    surf_front_formula: string;
+    surf_lat_formula: string;
+    description?: string;
+  };
 }
 
 export interface BaieReference {

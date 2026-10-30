@@ -67,6 +67,7 @@ def load_catalogue_dict() -> dict:
             'surf_lat_formula': 'height * thickness',
             'description': 'Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)'
         }),
+        'bouygues_antennas': standards.get('bouygues_antennas', []),
         'updated_at': datetime.datetime.utcnow().isoformat() + 'Z'
     }
     return catalogue

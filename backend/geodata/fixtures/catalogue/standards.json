@@ -40,7 +40,11 @@
         "width": 500,
         "height": 1010,
         "weight": 50,
-        "thickness": 250
+        "thickness": 250,
+        "cf_front": 1.08,
+        "cf_lat": 1.43,
+        "cx_front": 0.5454,
+        "cx_lat": 0.3611
       },
       "abbreviation": "A1a / A1b"
     },
@@ -51,13 +55,21 @@
         "width": 500,
         "height": 2800,
         "weight": 60,
-        "thickness": 250
+        "thickness": 250,
+        "cf_front": 1.32,
+        "cf_lat": 1.66,
+        "cx_front": 1.848,
+        "cx_lat": 1.162
       },
       "ant5g": {
         "width": 500,
         "height": 1010,
         "weight": 50,
-        "thickness": 240
+        "thickness": 240,
+        "cf_front": 1.08,
+        "cf_lat": 1.43,
+        "cx_front": 0.5454,
+        "cx_lat": 0.3611
       },
       "abbreviation": "A2a / A2b"
     },
@@ -68,7 +80,11 @@
         "width": 500,
         "height": 2100,
         "weight": 50,
-        "thickness": 250
+        "thickness": 250,
+        "cf_front": 1.3,
+        "cf_lat": 1.66,
+        "cx_front": 1.365,
+        "cx_lat": 0.8715
       },
       "ant5g": {
         "width": 500,
@@ -187,5 +203,103 @@
     "surf_front_formula": "height * width",
     "surf_lat_formula": "height * thickness",
     "description": "Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)"
-  }
+  },
+  "bouygues_antennas": [
+    {
+      "id": "ant_byg_4g_2800",
+      "type": "4G",
+      "operator": "bouygues",
+      "dimensions": "2800*500*250mm",
+      "height": 2800,
+      "width": 500,
+      "thickness": 250,
+      "weight": 55.0,
+      "cf_front": 1.32,
+      "cf_lat": 1.66,
+      "surf_front": 1.4,
+      "surf_lat": 0.7,
+      "cx_front": 1.848,
+      "cx_lat": 1.162
+    },
+    {
+      "id": "ant_byg_4g_2100",
+      "type": "4G",
+      "operator": "bouygues",
+      "dimensions": "2100*500*250mm",
+      "height": 2100,
+      "width": 500,
+      "thickness": 250,
+      "weight": 45.0,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "surf_front": 1.05,
+      "surf_lat": 0.525,
+      "cx_front": 1.365,
+      "cx_lat": 0.8715
+    },
+    {
+      "id": "ant_byg_4g_1600",
+      "type": "4G",
+      "operator": "bouygues",
+      "dimensions": "1600*500*250mm",
+      "height": 1600,
+      "width": 500,
+      "thickness": 250,
+      "weight": 35.0,
+      "cf_front": 1.22,
+      "cf_lat": 1.6,
+      "surf_front": 0.8,
+      "surf_lat": 0.4,
+      "cx_front": 0.976,
+      "cx_lat": 0.64
+    },
+    {
+      "id": "ant_byg_5g_800",
+      "type": "5G",
+      "operator": "bouygues",
+      "dimensions": "800*500*220mm",
+      "height": 800,
+      "width": 500,
+      "thickness": 220,
+      "weight": 35.0,
+      "cf_front": 1.05,
+      "cf_lat": 1.38,
+      "surf_front": 0.4,
+      "surf_lat": 0.176,
+      "cx_front": 0.42,
+      "cx_lat": 0.2429
+    },
+    {
+      "id": "ant_byg_4g_2300",
+      "type": "4G",
+      "operator": "bouygues",
+      "dimensions": "2300*500*250mm",
+      "height": 2300,
+      "width": 500,
+      "thickness": 250,
+      "weight": 45.0,
+      "cf_front": 1.31,
+      "cf_lat": 1.68,
+      "surf_front": 1.15,
+      "surf_lat": 0.575,
+      "cx_front": 1.5065,
+      "cx_lat": 0.966
+    },
+    {
+      "id": "ant_byg_5g_1010",
+      "type": "5G",
+      "operator": "bouygues",
+      "dimensions": "1010*500*250mm",
+      "height": 1010,
+      "width": 500,
+      "thickness": 250,
+      "weight": 50.0,
+      "cf_front": 1.08,
+      "cf_lat": 1.43,
+      "surf_front": 0.505,
+      "surf_lat": 0.2525,
+      "cx_front": 0.5454,
+      "cx_lat": 0.3611
+    }
+  ]
 }
