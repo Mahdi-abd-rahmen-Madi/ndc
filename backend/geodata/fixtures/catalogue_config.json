@@ -2192,14 +2192,12 @@
           "thickness": 141,
           "dimensions": "337*295*141mm",
           "weight": 15.7,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.1,
           "surf_front": 0.0994,
           "surf_lat": 0.0475,
           "cx_front": 0.1352,
-          "cx_lat": 0.0523,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0523
         },
         {
           "id": "rrh_nok_free_ahda",
@@ -2213,14 +2211,12 @@
           "thickness": 130,
           "dimensions": "336*309*130mm",
           "weight": 14.0,
-          "cscd": 1.0,
           "cf_front": 1.32,
           "cf_lat": 1.12,
           "surf_front": 0.1038,
           "surf_lat": 0.0437,
           "cx_front": 0.137,
-          "cx_lat": 0.0489,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0489
         },
         {
           "id": "rrh_nok_free_ahpd",
@@ -2234,14 +2230,12 @@
           "thickness": 131,
           "dimensions": "336*295*131mm",
           "weight": 14.0,
-          "cscd": 1.0,
           "cf_front": 1.32,
           "cf_lat": 1.12,
           "surf_front": 0.0991,
           "surf_lat": 0.044,
           "cx_front": 0.1308,
-          "cx_lat": 0.0493,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0493
         },
         {
           "id": "rrh_nok_free_azoj_3500",
@@ -2255,14 +2249,12 @@
           "thickness": 190,
           "dimensions": "350*395*190mm",
           "weight": 23.7,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1382,
           "surf_lat": 0.0665,
           "cx_front": 0.188,
-          "cx_lat": 0.0745,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0745
         },
         {
           "id": "rrh_nok_free_3500_azqj",
@@ -2276,14 +2268,12 @@
           "thickness": 190,
           "dimensions": "350*395*190mm",
           "weight": 23.7,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1382,
           "surf_lat": 0.0665,
           "cx_front": 0.188,
           "cx_lat": 0.0745,
-          "fw_formula": "cscd * cf * qp(z) * Are",
           "is_alias": true
         },
         {
@@ -2298,14 +2288,12 @@
           "thickness": 142,
           "dimensions": "701*342*142mm",
           "weight": 39.0,
-          "cscd": 1.0,
           "cf_front": 1.4,
           "cf_lat": 1.14,
           "surf_front": 0.2397,
           "surf_lat": 0.0995,
           "cx_front": 0.3356,
-          "cx_lat": 0.1134,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.1134
         },
         {
           "id": "rrh_nok_free_ahegc",
@@ -2319,14 +2307,12 @@
           "thickness": 162,
           "dimensions": "701*327*162mm",
           "weight": 34.0,
-          "cscd": 1.0,
           "cf_front": 1.4,
           "cf_lat": 1.14,
           "surf_front": 0.2292,
           "surf_lat": 0.1136,
           "cx_front": 0.3209,
-          "cx_lat": 0.1295,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.1295
         },
         {
           "id": "rrh_nok_free_ahpmdb",
@@ -2340,14 +2326,12 @@
           "thickness": 169,
           "dimensions": "512*368*169mm",
           "weight": 31.0,
-          "cscd": 1.0,
           "cf_front": 1.11,
           "cf_lat": 1.41,
           "surf_front": 0.1884,
           "surf_lat": 0.0865,
           "cx_front": 0.2091,
-          "cx_lat": 0.122,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.122
         },
         {
           "id": "rrh_nok_free_ahpmda",
@@ -2361,14 +2345,12 @@
           "thickness": 130,
           "dimensions": "512*308*130mm",
           "weight": 24.0,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1577,
           "surf_lat": 0.0666,
           "cx_front": 0.2145,
-          "cx_lat": 0.0746,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0746
         },
         {
           "id": "rrh_nok_free_ahpmd",
@@ -2382,14 +2364,12 @@
           "thickness": 130,
           "dimensions": "512*308*130mm",
           "weight": 24.0,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1577,
           "surf_lat": 0.0666,
           "cx_front": 0.2145,
           "cx_lat": 0.0746,
-          "fw_formula": "cscd * cf * qp(z) * Are",
           "is_alias": true
         },
         {
@@ -2404,14 +2384,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 23.5,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_free_aera",
@@ -2425,14 +2403,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 25.0,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_free_arga",
@@ -2446,14 +2422,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 23.0,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_free_arpa",
@@ -2467,14 +2441,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 25.0,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_orange_ahhb",
@@ -2488,14 +2460,12 @@
           "thickness": 141,
           "dimensions": "337*295*141mm",
           "weight": 15.7,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.1,
           "surf_front": 0.0994,
           "surf_lat": 0.0475,
           "cx_front": 0.1352,
-          "cx_lat": 0.0523,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0523
         },
         {
           "id": "rrh_nok_orange_ahda",
@@ -2509,14 +2479,12 @@
           "thickness": 130,
           "dimensions": "336*309*130mm",
           "weight": 14.0,
-          "cscd": 1.0,
           "cf_front": 1.32,
           "cf_lat": 1.12,
           "surf_front": 0.1038,
           "surf_lat": 0.0437,
           "cx_front": 0.137,
-          "cx_lat": 0.0489,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0489
         },
         {
           "id": "rrh_nok_orange_ahpd",
@@ -2530,14 +2498,12 @@
           "thickness": 131,
           "dimensions": "336*295*131mm",
           "weight": 14.0,
-          "cscd": 1.0,
           "cf_front": 1.32,
           "cf_lat": 1.12,
           "surf_front": 0.0991,
           "surf_lat": 0.044,
           "cx_front": 0.1308,
-          "cx_lat": 0.0493,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0493
         },
         {
           "id": "rrh_nok_orange_azoj_3500",
@@ -2551,14 +2517,12 @@
           "thickness": 190,
           "dimensions": "350*395*190mm",
           "weight": 23.7,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1382,
           "surf_lat": 0.0665,
           "cx_front": 0.188,
-          "cx_lat": 0.0745,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0745
         },
         {
           "id": "rrh_nok_orange_3500_azqj",
@@ -2572,14 +2536,12 @@
           "thickness": 190,
           "dimensions": "350*395*190mm",
           "weight": 23.7,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1382,
           "surf_lat": 0.0665,
           "cx_front": 0.188,
           "cx_lat": 0.0745,
-          "fw_formula": "cscd * cf * qp(z) * Are",
           "is_alias": true
         },
         {
@@ -2594,14 +2556,12 @@
           "thickness": 142,
           "dimensions": "701*342*142mm",
           "weight": 39.0,
-          "cscd": 1.0,
           "cf_front": 1.4,
           "cf_lat": 1.14,
           "surf_front": 0.2397,
           "surf_lat": 0.0995,
           "cx_front": 0.3356,
-          "cx_lat": 0.1134,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.1134
         },
         {
           "id": "rrh_nok_orange_ahegc",
@@ -2615,14 +2575,12 @@
           "thickness": 162,
           "dimensions": "701*327*162mm",
           "weight": 34.0,
-          "cscd": 1.0,
           "cf_front": 1.4,
           "cf_lat": 1.14,
           "surf_front": 0.2292,
           "surf_lat": 0.1136,
           "cx_front": 0.3209,
-          "cx_lat": 0.1295,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.1295
         },
         {
           "id": "rrh_nok_orange_ahpmdb",
@@ -2636,14 +2594,12 @@
           "thickness": 169,
           "dimensions": "512*368*169mm",
           "weight": 31.0,
-          "cscd": 1.0,
           "cf_front": 1.11,
           "cf_lat": 1.41,
           "surf_front": 0.1884,
           "surf_lat": 0.0865,
           "cx_front": 0.2091,
-          "cx_lat": 0.122,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.122
         },
         {
           "id": "rrh_nok_orange_ahpmda",
@@ -2657,14 +2613,12 @@
           "thickness": 130,
           "dimensions": "512*308*130mm",
           "weight": 24.0,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1577,
           "surf_lat": 0.0666,
           "cx_front": 0.2145,
-          "cx_lat": 0.0746,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0746
         },
         {
           "id": "rrh_nok_orange_ahpmd",
@@ -2678,14 +2632,12 @@
           "thickness": 130,
           "dimensions": "512*308*130mm",
           "weight": 24.0,
-          "cscd": 1.0,
           "cf_front": 1.36,
           "cf_lat": 1.12,
           "surf_front": 0.1577,
           "surf_lat": 0.0666,
           "cx_front": 0.2145,
           "cx_lat": 0.0746,
-          "fw_formula": "cscd * cf * qp(z) * Are",
           "is_alias": true
         },
         {
@@ -2700,14 +2652,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 23.5,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_orange_aera",
@@ -2721,14 +2671,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 25.0,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_orange_arga",
@@ -2742,14 +2690,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 23.0,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         },
         {
           "id": "rrh_nok_orange_arpa",
@@ -2763,14 +2709,12 @@
           "thickness": 118,
           "dimensions": "441*402*118mm",
           "weight": 25.0,
-          "cscd": 1.0,
           "cf_front": 1.38,
           "cf_lat": 1.1,
           "surf_front": 0.1773,
           "surf_lat": 0.052,
           "cx_front": 0.2447,
-          "cx_lat": 0.0572,
-          "fw_formula": "cscd * cf * qp(z) * Are"
+          "cx_lat": 0.0572
         }
       ],
       "atelier_energie_references": [
@@ -3233,7 +3177,14 @@
           "weight_detail": "90+65+130"
         }
       ],
-      "updated_at": "2026-10-30T08:44:25.428707Z"
+      "wind_calculation_rules": {
+        "cscd": 1.0,
+        "fw_formula": "cscd * cf * qp(z) * Are",
+        "surf_front_formula": "height * width",
+        "surf_lat_formula": "height * thickness",
+        "description": "Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)"
+      },
+      "updated_at": "2026-10-30T09:12:23.596262Z"
     }
   }
 ]

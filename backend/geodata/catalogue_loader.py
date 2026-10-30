@@ -60,6 +60,13 @@ def load_catalogue_dict() -> dict:
         'rrh_references': load_raw_file(FILE_MAPPING['rrh']) or [],
         'atelier_energie_references': load_raw_file(FILE_MAPPING['atelier_energie']) or [],
         'baie_references': load_raw_file(FILE_MAPPING['baies']) or [],
+        'wind_calculation_rules': standards.get('wind_calculation_rules', {
+            'cscd': 1.0,
+            'fw_formula': 'cscd * cf * qp(z) * Are',
+            'surf_front_formula': 'height * width',
+            'surf_lat_formula': 'height * thickness',
+            'description': 'Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)'
+        }),
         'updated_at': datetime.datetime.utcnow().isoformat() + 'Z'
     }
     return catalogue

@@ -180,5 +180,12 @@
       },
       "abbreviation": "A9"
     }
-  ]
+  ],
+  "wind_calculation_rules": {
+    "cscd": 1.0,
+    "fw_formula": "cscd * cf * qp(z) * Are",
+    "surf_front_formula": "height * width",
+    "surf_lat_formula": "height * thickness",
+    "description": "Calcul des efforts de vent selon NF EN 1991-1-4 (EC1)"
+  }
 }
