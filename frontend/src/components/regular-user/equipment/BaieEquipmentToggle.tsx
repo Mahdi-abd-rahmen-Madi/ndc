@@ -375,11 +375,6 @@ export function BaieEquipmentToggle({
           const qty = sel?.quantity || 1;
           const isWalkyrie = item.id === 'orange_baie_energie_walkyrie_t3_18kw' || item.name.toLowerCase().includes('walkyrie') || item.name.toLowerCase().includes('valkyrie');
 
-          const subtitleParts: string[] = [];
-          if (item.dimensions) subtitleParts.push(item.dimensions);
-          if (item.weight) subtitleParts.push(`${item.weight} kg`);
-          const subtitle = subtitleParts.join(' • ');
-
           return (
             <EquipmentOptionCard
               key={item.id}
@@ -388,7 +383,6 @@ export function BaieEquipmentToggle({
               onToggle={() => handleToggleItem(item)}
               selectionType="radio"
               vendorBadge={item.vendor}
-              subtitle={subtitle || undefined}
               badgeText={item.category_label || item.category}
               badgeClass={getCategoryColor(item.category)}
               quantity={qty}
