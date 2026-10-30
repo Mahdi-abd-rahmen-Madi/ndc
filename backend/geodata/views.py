@@ -2282,7 +2282,54 @@ def test_catalogue_equipment_view(request):
             'raw': tgbt
         })
 
-    # 7. Montages standards
+    # 7. Baies de télécommunication / énergie
+    for baie in fields.get('baie_references', []):
+        cat_label = baie.get('category_label') or baie.get('category') or 'Baie'
+        op = baie.get('operator')
+        dim = baie.get('dimensions') or ''
+        wt = baie.get('weight')
+        specs_p = []
+        if dim:
+            specs_p.append(f"Dim: {dim}")
+        if wt:
+            specs_p.append(f"Poids: {wt}kg")
+        if baie.get('category_label'):
+            specs_p.append(f"Type: {baie.get('category_label')}")
+        items.append({
+            'category': 'Baie',
+            'operator': (op or 'all').lower().strip(),
+            'id': baie.get('id', ''),
+            'reference': baie.get('name') or baie.get('reference', ''),
+            'vendor': baie.get('vendor', ''),
+            'montage_id': '',
+            'specs': ' | '.join(specs_p) if specs_p else 'Baie standard',
+            'raw': baie
+        })
+
+    # 8. Atelier d'Énergie & modules Free
+    for at in fields.get('atelier_energie_references', []):
+        op = at.get('operator') or 'free'
+        dim = at.get('dimensions') or ''
+        wt = at.get('weight')
+        specs_p = []
+        if dim:
+            specs_p.append(f"Dim: {dim}")
+        if wt:
+            specs_p.append(f"Poids: {wt}kg")
+        if at.get('category'):
+            specs_p.append(f"Cat: {at.get('category')}")
+        items.append({
+            'category': 'Atelier Énergie',
+            'operator': (op or 'free').lower().strip(),
+            'id': at.get('id', ''),
+            'reference': at.get('name') or at.get('reference', ''),
+            'vendor': at.get('vendor', ''),
+            'montage_id': '',
+            'specs': ' | '.join(specs_p) if specs_p else 'Module énergie',
+            'raw': at
+        })
+
+    # 9. Montages standards
     for m in fields.get('standard_montages', []):
         items.append({
             'category': 'Montage Standard',
@@ -2306,9 +2353,12 @@ def test_catalogue_equipment_view(request):
             'antennes': cat_counts.get('Antenne', 0),
             'rru': cat_counts.get('RRU', 0),
             'rrh': cat_counts.get('RRH', 0),
+            'baies': cat_counts.get('Baie', 0),
+            'atelier_energie': cat_counts.get('Atelier Énergie', 0),
             'coffrets': cat_counts.get('Coffret', 0),
             'fh': cat_counts.get('FH', 0),
             'td': cat_counts.get('TD', 0),
+            'tgbt': cat_counts.get('TGBT', 0),
             'montages': cat_counts.get('Montage Standard', 0),
             'categories': dict(cat_counts)
         }

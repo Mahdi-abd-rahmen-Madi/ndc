@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Search, RefreshCw, Download, Copy, Check, Filter, 
   Layers, Database, FileText, ArrowUpDown, ChevronRight,
-  Radio, Cpu, Box, Activity, AlertCircle, X, ExternalLink, ArrowLeft
+  Radio, Cpu, Box, Activity, AlertCircle, X, ExternalLink, ArrowLeft,
+  Server, Zap, BatteryCharging, HardDrive, ShieldCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -37,9 +38,12 @@ interface OperatorStats {
   antennes: number;
   rru: number;
   rrh: number;
+  baies?: number;
+  atelier_energie?: number;
   coffrets: number;
   fh: number;
   td: number;
+  tgbt?: number;
   montages: number;
   categories: Record<string, number>;
 }
@@ -226,14 +230,51 @@ export default function CatalogueTestView() {
             Free
           </span>
         );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-50 text-violet-700 border border-violet-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
-            Commun
-          </span>
-        );
     }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Antenne':
+        return Radio;
+      case 'RRU':
+        return Cpu;
+      case 'RRH':
+        return Activity;
+      case 'Baie':
+        return Server;
+      case 'Atelier Énergie':
+        return BatteryCharging;
+      case 'TD':
+      case 'TGBT':
+        return Zap;
+      case 'FH':
+        return HardDrive;
+      case 'Coffret':
+        return Box;
+      default:
+        return Layers;
+    }
+  };
+
+  const renderCategoryBadge = (category: string) => {
+    const Icon = getCategoryIcon(category);
+    let colorClass = 'bg-slate-100 text-slate-700 border-slate-200';
+    if (category === 'Antenne') colorClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    else if (category === 'RRU') colorClass = 'bg-cyan-50 text-cyan-700 border-cyan-200';
+    else if (category === 'RRH') colorClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    else if (category === 'Baie') colorClass = 'bg-amber-50 text-amber-700 border-amber-200';
+    else if (category === 'Atelier Énergie') colorClass = 'bg-yellow-50 text-yellow-800 border-yellow-200';
+    else if (category === 'TD' || category === 'TGBT') colorClass = 'bg-orange-50 text-orange-700 border-orange-200';
+    else if (category === 'FH') colorClass = 'bg-teal-50 text-teal-700 border-teal-200';
+    else if (category === 'Coffret') colorClass = 'bg-purple-50 text-purple-700 border-purple-200';
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold border ${colorClass}`}>
+        <Icon className="w-3.5 h-3.5 shrink-0" />
+        {category}
+      </span>
+    );
   };
 
   if (loading && !data) {
@@ -411,6 +452,9 @@ export default function CatalogueTestView() {
                 Antennes: <strong className="text-slate-900">{stats?.orange.antennes ?? 0}</strong>
               </span>
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                Baies: <strong className="text-slate-900">{stats?.orange.baies ?? 0}</strong>
+              </span>
+              <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
                 RRU: <strong className="text-slate-900">{stats?.orange.rru ?? 0}</strong>
               </span>
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
@@ -443,7 +487,10 @@ export default function CatalogueTestView() {
                 RRU: <strong className="text-slate-900">{stats?.bouygues.rru ?? 0}</strong>
               </span>
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                RRH: <strong className="text-slate-900">{stats?.bouygues.rrh ?? 0}</strong>
+                Atelier Énergie: <strong className="text-slate-900">{stats?.bouygues.atelier_energie ?? 0}</strong>
+              </span>
+              <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                TGBT: <strong className="text-slate-900">{stats?.bouygues.tgbt ?? 0}</strong>
               </span>
             </div>
           </div>
@@ -472,7 +519,10 @@ export default function CatalogueTestView() {
                 RRH: <strong className="text-slate-900">{stats?.free.rrh ?? 0}</strong>
               </span>
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                TD: <strong className="text-slate-900">{stats?.free.td ?? 0}</strong>
+                Baies CAB: <strong className="text-slate-900">{stats?.free.baies ?? 0}</strong>
+              </span>
+              <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                Atelier Énergie: <strong className="text-slate-900">{stats?.free.atelier_energie ?? 0}</strong>
               </span>
             </div>
           </div>
@@ -518,16 +568,16 @@ export default function CatalogueTestView() {
             </div>
             <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 text-xs text-slate-600">
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                Montages: <strong className="text-slate-900">{stats?.all.montages ?? 0}</strong>
-              </span>
-              <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
                 FH: <strong className="text-slate-900">{stats?.all.fh ?? 0}</strong>
               </span>
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                Coffrets: <strong className="text-slate-900">{stats?.all.coffrets ?? 0}</strong>
+                TD: <strong className="text-slate-900">{stats?.all.td ?? 0}</strong>
               </span>
               <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                TD: <strong className="text-slate-900">{stats?.all.td ?? 0}</strong>
+                TGBT: <strong className="text-slate-900">{stats?.all.tgbt ?? 0}</strong>
+              </span>
+              <span className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                Montages: <strong className="text-slate-900">{stats?.all.montages ?? 0}</strong>
               </span>
             </div>
           </div>
@@ -823,9 +873,7 @@ export default function CatalogueTestView() {
                         <td className="py-3 px-4 text-xs font-mono text-slate-400">{idx + 1}</td>
                         <td className="py-3 px-4 whitespace-nowrap">{renderOperatorBadge(item.operator)}</td>
                         <td className="py-3 px-4 whitespace-nowrap">
-                          <span className="bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium px-2 py-0.5 rounded">
-                            {item.category}
-                          </span>
+                          {renderCategoryBadge(item.category)}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -903,38 +951,77 @@ export default function CatalogueTestView() {
                   </div>
 
                   <div className="space-y-5">
-                    {Object.entries(byCategory).map(([category, items]) => (
-                      <div key={category}>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
-                          <span>{category}</span>
-                          <span className="bg-slate-100 text-slate-600 px-2 py-0.2 rounded-full text-[10px]">
-                            {items.length}
-                          </span>
-                        </h4>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {items.map((it) => (
-                            <div
-                              key={it.id}
-                              className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 hover:border-slate-300 transition-all"
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <h5 className="text-sm font-bold text-slate-900">{it.reference}</h5>
-                                {it.vendor && (
-                                  <span className="bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0">
-                                    {it.vendor}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="font-mono text-xs text-slate-500 mb-2 truncate">
-                                {it.id}
-                              </div>
-                              <p className="text-xs text-slate-600 leading-relaxed">{it.specs || '-'}</p>
+                    {Object.entries(byCategory).map(([category, items]) => {
+                      const CatIcon = getCategoryIcon(category);
+                      return (
+                        <div key={category} className="bg-slate-50/50 border border-slate-200/80 rounded-xl p-4">
+                          <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200/60">
+                            <div className="flex items-center gap-2">
+                              <span className="p-1.5 rounded-lg bg-white border border-slate-200 shadow-2xs text-slate-700">
+                                <CatIcon className="w-4 h-4 text-violet-600" />
+                              </span>
+                              <h4 className="text-sm font-bold text-slate-800">
+                                {category}
+                              </h4>
                             </div>
-                          ))}
+                            <span className="bg-white border border-slate-200 text-slate-700 font-bold px-2.5 py-0.5 rounded-full text-xs shadow-2xs">
+                              {items.length} {items.length > 1 ? 'équipements' : 'équipement'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {items.map((it) => (
+                              <div
+                                key={it.id}
+                                className="bg-white border border-slate-200/90 rounded-xl p-3.5 hover:border-violet-300 hover:shadow-xs transition-all flex flex-col justify-between"
+                              >
+                                <div>
+                                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {it.vendor && (
+                                        <span className="bg-slate-900 text-white text-[10px] font-extrabold px-1.5 py-0.2 rounded uppercase tracking-wider shrink-0 shadow-2xs">
+                                          {it.vendor}
+                                        </span>
+                                      )}
+                                      <h5 className="text-sm font-bold text-slate-900 leading-snug">
+                                        {it.reference}
+                                      </h5>
+                                    </div>
+                                    <button
+                                      onClick={() => copyToClipboard(it.reference)}
+                                      className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors shrink-0"
+                                      title="Copier la référence"
+                                    >
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 mb-2">
+                                    <span className="font-mono text-[11px] text-slate-400 bg-slate-50 border border-slate-150 px-1.5 py-0.5 rounded truncate max-w-[200px]">
+                                      {it.id}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 border-t border-slate-100 mt-1">
+                                  <div className="text-xs text-slate-600 flex flex-wrap gap-1">
+                                    {it.specs ? (
+                                      it.specs.split('|').map((part, pIdx) => (
+                                        <span key={pIdx} className="bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded text-[11px] font-medium text-slate-700">
+                                          {part.trim()}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-slate-400 italic text-[11px]">Aucune spécification</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
