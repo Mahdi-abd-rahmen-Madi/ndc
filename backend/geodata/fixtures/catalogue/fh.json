@@ -1,0 +1,58 @@
+[
+  {
+    "id": "fh_ericsson_60",
+    "name": "BFZ 622 32/3S03H Ø 600 mm",
+    "vendor": "ERICSSON",
+    "weight": 7.6,
+    "diameter": 600,
+    "reference": "BFZ 622 32/3S03H Ø 600 mm"
+  },
+  {
+    "id": "fh_ericsson_90",
+    "name": "BFZ 622 33/3S03H Ø 900 mm",
+    "vendor": "ERICSSON",
+    "weight": 17,
+    "diameter": 900,
+    "reference": "BFZ 622 33/3S03H Ø 900 mm"
+  },
+  {
+    "id": "fh_ericsson_120",
+    "name": "BFZ 622 34/3S03H Ø 1200 mm",
+    "vendor": "ERICSSON",
+    "weight": 32,
+    "diameter": 1200,
+    "reference": "BFZ 622 34/3S03H Ø 1200 mm"
+  },
+  {
+    "id": "fh_huawei_30",
+    "name": "30cm Ø 300 mm",
+    "vendor": "HUAWEI",
+    "weight": 6,
+    "diameter": 300,
+    "reference": "30cm Ø 300 mm"
+  },
+  {
+    "id": "fh_huawei_60",
+    "name": "60cm Ø 600 mm",
+    "vendor": "HUAWEI",
+    "weight": 14.5,
+    "diameter": 600,
+    "reference": "60cm Ø 600 mm"
+  },
+  {
+    "id": "fh_commscope_30",
+    "name": "30cm Ø 300 mm",
+    "vendor": "COMMSCOPE",
+    "weight": 6,
+    "diameter": 300,
+    "reference": "30cm Ø 300 mm"
+  },
+  {
+    "id": "fh_commscope_60",
+    "name": "60cm Ø 600 mm",
+    "vendor": "COMMSCOPE",
+    "weight": 14.5,
+    "diameter": 600,
+    "reference": "60cm Ø 600 mm"
+  }
+]

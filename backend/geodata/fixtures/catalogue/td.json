@@ -1,0 +1,56 @@
+[
+  {
+    "id": "td_68236",
+    "name": "68236",
+    "vendor": "",
+    "weight": 60.0,
+    "reference": "68236",
+    "phase": "monophase",
+    "dimensions": "1055x850x350mm"
+  },
+  {
+    "id": "td_68237",
+    "name": "68237",
+    "vendor": "",
+    "weight": 60.0,
+    "reference": "68237",
+    "phase": "tetraphase",
+    "dimensions": "1055x850x350mm"
+  },
+  {
+    "id": "td_5g",
+    "name": "TD 5G",
+    "vendor": "",
+    "weight": 60.0,
+    "reference": "TD 5G",
+    "phase": "monophase",
+    "dimensions": "1055x850x350mm"
+  },
+  {
+    "id": "td_3g_4g",
+    "name": "TD 3G/4G",
+    "vendor": "",
+    "weight": 50.0,
+    "reference": "TD 3G/4G",
+    "phase": "monophase",
+    "dimensions": "536x300x747mm"
+  },
+  {
+    "id": "mini_td_700",
+    "name": "Mini TD radio 700",
+    "vendor": "",
+    "weight": 8.0,
+    "reference": "Mini TD radio 700",
+    "phase": "monophase",
+    "dimensions": "430x330x200mm"
+  },
+  {
+    "id": "mini_td_5g",
+    "name": "Mini TD 5G",
+    "vendor": "",
+    "weight": 15.0,
+    "reference": "Mini TD 5G",
+    "phase": "monophase",
+    "dimensions": "530x430x200mm"
+  }
+]

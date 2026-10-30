@@ -2129,26 +2129,18 @@ def test_catalogue_equipment_view(request):
     """
     import datetime
     from collections import Counter
+    from .catalogue_loader import load_catalogue_dict, get_catalogue_files_info, FIXTURE_PATH
 
-    fixture_path = os.path.join(settings.BASE_DIR, 'geodata', 'fixtures', 'catalogue_config.json')
-    if not os.path.exists(fixture_path):
-        return JsonResponse({'error': f'Fixture file not found: {fixture_path}'}, status=404)
-
-    try:
-        with open(fixture_path, 'r', encoding='utf-8') as f:
-            raw_data = json.load(f)
-    except Exception as e:
-        return JsonResponse({'error': f'Failed to parse JSON: {str(e)}'}, status=500)
-
-    # Extract fields from fixture
-    fields = raw_data[0]['fields'] if isinstance(raw_data, list) and len(raw_data) > 0 and 'fields' in raw_data[0] else raw_data
+    fields = load_catalogue_dict()
+    modular_files = get_catalogue_files_info()
 
     file_metadata = {
-        'full_path': fixture_path,
+        'full_path': FIXTURE_PATH,
         'relative_path': 'geodata/fixtures/catalogue_config.json',
-        'file_size_kb': round(os.path.getsize(fixture_path) / 1024, 1),
-        'last_modified': datetime.datetime.fromtimestamp(os.path.getmtime(fixture_path)).strftime('%d/%m/%Y %H:%M:%S'),
-        'updated_at': fields.get('updated_at', '')
+        'file_size_kb': round(os.path.getsize(FIXTURE_PATH) / 1024, 1) if os.path.exists(FIXTURE_PATH) else 0,
+        'last_modified': datetime.datetime.fromtimestamp(os.path.getmtime(FIXTURE_PATH)).strftime('%d/%m/%Y %H:%M:%S') if os.path.exists(FIXTURE_PATH) else '',
+        'updated_at': fields.get('updated_at', ''),
+        'modular_files': modular_files
     }
 
     items = []
@@ -2186,6 +2178,15 @@ def test_catalogue_equipment_view(request):
     for rru in fields.get('rru_references', []):
         vendor = rru.get('vendor', '')
         ref = rru.get('reference', '')
+        dim = rru.get('dimensions', '')
+        weight = rru.get('weight', '')
+        specs_parts = []
+        if vendor:
+            specs_parts.append(f"Vendeur: {vendor}")
+        if dim:
+            specs_parts.append(f"Dim: {dim}")
+        if weight:
+            specs_parts.append(f"Poids: {weight}kg")
         items.append({
             'category': 'RRU',
             'operator': (rru.get('operator') or 'all').lower().strip(),
@@ -2193,7 +2194,7 @@ def test_catalogue_equipment_view(request):
             'reference': ref,
             'vendor': vendor,
             'montage_id': '',
-            'specs': f"Vendeur: {vendor}" if vendor else '',
+            'specs': ' | '.join(specs_parts) if specs_parts else (f"Vendeur: {vendor}" if vendor else ''),
             'raw': rru
         })
 
@@ -2201,6 +2202,19 @@ def test_catalogue_equipment_view(request):
     for rrh in fields.get('rrh_references', []):
         vendor = rrh.get('vendor', '')
         ref = rrh.get('reference', '')
+        dim = rrh.get('dimensions', '')
+        weight = rrh.get('weight', '')
+        cx_f = rrh.get('cx_front', '')
+        cx_l = rrh.get('cx_lat', '')
+        specs_parts = []
+        if vendor:
+            specs_parts.append(f"Vendeur: {vendor}")
+        if dim:
+            specs_parts.append(f"Dim: {dim}")
+        if weight:
+            specs_parts.append(f"Poids: {weight}kg")
+        if cx_f is not None and cx_l is not None and cx_f != '':
+            specs_parts.append(f"Cx (F/L): {cx_f}/{cx_l}")
         items.append({
             'category': 'RRH',
             'operator': (rrh.get('operator') or 'all').lower().strip(),
@@ -2208,7 +2222,7 @@ def test_catalogue_equipment_view(request):
             'reference': ref,
             'vendor': vendor,
             'montage_id': '',
-            'specs': f"Vendeur: {vendor}" if vendor else '',
+            'specs': ' | '.join(specs_parts) if specs_parts else (f"Vendeur: {vendor}" if vendor else ''),
             'raw': rrh
         })
 

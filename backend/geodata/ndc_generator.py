@@ -759,7 +759,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
     import re
     def parse_dimensions(section_str):
         if section_str:
-            match = re.search(r'(\d+)\s*[xX]\s*(\d+(\.\d+)?)', section_str)
+            match = re.search(r'(\d+(?:\.\d+)?)\s*[xX*]\s*(\d+(?:\.\d+)?)', section_str)
             if match:
                 return match.group(1), match.group(2)
         return None, None
@@ -896,12 +896,44 @@ def generate_auxiliary_pdfs(job, start_page=1):
     # Check for RRH
     rrh_eq = input_data.get('rrh_equipment', {})
     if rrh_eq.get('enabled'):
+        from .catalogue_loader import find_rrh_reference
         items = rrh_eq.get('items', [])
         qty = sum(item.get('quantity', 1) for item in items) if items else 1
+        
+        rrh_spec = None
+        op = input_data.get('site', {}).get('operator')
+        for it in items:
+            ref = it.get('reference')
+            if ref:
+                found = find_rrh_reference(ref, op)
+                if found:
+                    rrh_spec = found
+                    break
+
+        eq_dims = rrh_spec.get('dimensions', '[RRH_DIMS]') if rrh_spec else '[RRH_DIMS]'
+        eq_weight = rrh_spec.get('weight', '[RRH_WEIGHT]') if rrh_spec else '[RRH_WEIGHT]'
+        cx_front = rrh_spec.get('cx_front', 0.1352) if rrh_spec else 0.1352
+        cx_lat = rrh_spec.get('cx_lat', 0.0523) if rrh_spec else 0.0523
+        
+        try:
+            qp_val = float(context.get('qp_z', 0))
+            fw_front = round(cx_front * qp_val, 2)
+            fw_lat = round(cx_lat * qp_val, 2)
+            fw_mat = round(1.0 * 1.0 * 0.088 * qp_val, 2)
+        except (ValueError, TypeError):
+            fw_front = '[Fw,Front]'
+            fw_lat = '[Fw,Lat]'
+            fw_mat = '[Fw,Mat]'
+
         generated_pdfs.append(_render_and_save('rrh', {
             'eq_qty': qty,
-            'eq_dims': '[RRH_DIMS]',
-            'eq_weight': '[RRH_WEIGHT]'
+            'eq_dims': eq_dims,
+            'eq_weight': eq_weight,
+            'cx_front': cx_front,
+            'cx_lat': cx_lat,
+            'fw_front': fw_front,
+            'fw_lat': fw_lat,
+            'fw_mat': fw_mat
         }))
 
     # Check for RRU
