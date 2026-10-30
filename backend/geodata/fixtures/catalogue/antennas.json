@@ -826,8 +826,14 @@
       "model": "AQU4519R1v06",
       "width": 429,
       "height": 2550,
-      "weight": 34,
-      "thickness": 196
+      "weight": 34.0,
+      "thickness": 196,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 1.0939,
+      "surf_lat": 0.4998,
+      "cx_front": 1.4768,
+      "cx_lat": 0.5598
     },
     "ant5g": {
       "model": "",
@@ -846,8 +852,14 @@
       "model": "A04220PA04v06",
       "width": 429,
       "height": 2550,
-      "weight": 37,
-      "thickness": 196
+      "weight": 37.0,
+      "thickness": 196,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 1.0939,
+      "surf_lat": 0.4998,
+      "cx_front": 1.4768,
+      "cx_lat": 0.5598
     },
     "ant5g": {
       "model": "",
@@ -866,8 +878,14 @@
       "model": "RRZZ-65D-R4N43V1",
       "width": 430,
       "height": 2770,
-      "weight": 43,
-      "thickness": 200
+      "weight": 43.0,
+      "thickness": 200,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 1.1911,
+      "surf_lat": 0.554,
+      "cx_front": 1.608,
+      "cx_lat": 0.6205
     },
     "ant5g": {
       "model": "",
@@ -886,8 +904,14 @@
       "model": "AQU4518R36v06",
       "width": 449,
       "height": 2099,
-      "weight": 37,
-      "thickness": 196
+      "weight": 37.0,
+      "thickness": 196,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.9425,
+      "surf_lat": 0.4114,
+      "cx_front": 1.2724,
+      "cx_lat": 0.4608
     },
     "ant5g": {
       "model": "",
@@ -906,8 +930,14 @@
       "model": "AQU4519R05v06",
       "width": 469,
       "height": 1383,
-      "weight": 26,
-      "thickness": 206
+      "weight": 26.0,
+      "thickness": 206,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 0.6486,
+      "surf_lat": 0.2849,
+      "cx_front": 0.8756,
+      "cx_lat": 0.4729
     },
     "ant5g": {
       "model": "",
@@ -926,8 +956,14 @@
       "model": "RRZZ-65A-R4N43",
       "width": 430,
       "height": 1599,
-      "weight": 26,
-      "thickness": 197
+      "weight": 26.0,
+      "thickness": 197,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.6876,
+      "surf_lat": 0.315,
+      "cx_front": 0.9283,
+      "cx_lat": 0.3528
     },
     "ant5g": {
       "model": "",
@@ -947,7 +983,13 @@
       "width": 750,
       "height": 2550,
       "weight": 71.5,
-      "thickness": 230
+      "thickness": 230,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.9125,
+      "surf_lat": 0.5865,
+      "cx_front": 2.5819,
+      "cx_lat": 0.9736
     },
     "ant5g": {
       "model": "",
@@ -966,8 +1008,14 @@
       "model": "5961470PG",
       "width": 430,
       "height": 2690,
-      "weight": 43,
-      "thickness": 180
+      "weight": 43.0,
+      "thickness": 180,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.1567,
+      "surf_lat": 0.4842,
+      "cx_front": 1.5615,
+      "cx_lat": 0.8038
     },
     "ant5g": {
       "model": "",
@@ -986,8 +1034,14 @@
       "model": "APE4518R25V07",
       "width": 470,
       "height": 2770,
-      "weight": 46,
-      "thickness": 200
+      "weight": 46.0,
+      "thickness": 200,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.3019,
+      "surf_lat": 0.554,
+      "cx_front": 1.7576,
+      "cx_lat": 0.9196
     },
     "ant5g": {
       "model": "",
@@ -1007,7 +1061,13 @@
       "width": 470,
       "height": 1990,
       "weight": 41.5,
-      "thickness": 210
+      "thickness": 210,
+      "cf_front": 1.3,
+      "cf_lat": 1.66,
+      "surf_front": 0.9353,
+      "surf_lat": 0.4179,
+      "cx_front": 1.2159,
+      "cx_lat": 0.6937
     },
     "ant5g": {
       "model": "",
@@ -1026,8 +1086,14 @@
       "model": "5980400PG",
       "width": 432,
       "height": 2683,
-      "weight": 48,
-      "thickness": 175
+      "weight": 48.0,
+      "thickness": 175,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.1591,
+      "surf_lat": 0.4695,
+      "cx_front": 1.5648,
+      "cx_lat": 0.7794
     },
     "ant5g": {
       "model": "",
@@ -1046,8 +1112,14 @@
       "model": "A06240PA04v06",
       "width": 469,
       "height": 2550,
-      "weight": 44,
-      "thickness": 229
+      "weight": 44.0,
+      "thickness": 229,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.1959,
+      "surf_lat": 0.5839,
+      "cx_front": 1.6145,
+      "cx_lat": 0.9693
     },
     "ant5g": {
       "model": "",
@@ -1066,8 +1138,14 @@
       "model": "RRZZVV-65D-R6NV3",
       "width": 430,
       "height": 2769,
-      "weight": 46,
-      "thickness": 197
+      "weight": 46.0,
+      "thickness": 197,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 1.1907,
+      "surf_lat": 0.5455,
+      "cx_front": 1.6074,
+      "cx_lat": 0.611
     },
     "ant5g": {
       "model": "",
@@ -1087,7 +1165,13 @@
       "width": 469,
       "height": 2008,
       "weight": 39.8,
-      "thickness": 229
+      "thickness": 229,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 0.9418,
+      "surf_lat": 0.4598,
+      "cx_front": 1.2714,
+      "cx_lat": 0.7633
     },
     "ant5g": {
       "model": "",
@@ -1107,7 +1191,13 @@
       "width": 430,
       "height": 2100,
       "weight": 37.5,
-      "thickness": 197
+      "thickness": 197,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.903,
+      "surf_lat": 0.4137,
+      "cx_front": 1.2191,
+      "cx_lat": 0.4633
     },
     "ant5g": {
       "model": "",
@@ -1126,8 +1216,14 @@
       "model": "RRZZVV-65A-R6N43",
       "width": 430,
       "height": 1599,
-      "weight": 32,
-      "thickness": 197
+      "weight": 32.0,
+      "thickness": 197,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.6876,
+      "surf_lat": 0.315,
+      "cx_front": 0.9283,
+      "cx_lat": 0.3528
     },
     "ant5g": {
       "model": "",
@@ -1147,7 +1243,13 @@
       "width": 469,
       "height": 1509,
       "weight": 31.5,
-      "thickness": 229
+      "thickness": 229,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.7077,
+      "surf_lat": 0.3456,
+      "cx_front": 0.9554,
+      "cx_lat": 0.3871
     },
     "ant5g": {
       "model": "",
@@ -1166,8 +1268,14 @@
       "model": "AOC4518R0V06",
       "width": 470,
       "height": 2770,
-      "weight": 53,
-      "thickness": 210
+      "weight": 53.0,
+      "thickness": 210,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.3019,
+      "surf_lat": 0.5817,
+      "cx_front": 1.7576,
+      "cx_lat": 0.9656
     },
     "ant5g": {
       "model": "",
@@ -1186,8 +1294,14 @@
       "model": "EGRZV4-65D-R8N43",
       "width": 430,
       "height": 2770,
-      "weight": 56,
-      "thickness": 200
+      "weight": 56.0,
+      "thickness": 200,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 1.1911,
+      "surf_lat": 0.554,
+      "cx_front": 1.608,
+      "cx_lat": 0.6205
     },
     "ant5g": {
       "model": "",
@@ -1206,8 +1320,14 @@
       "model": "5798470G",
       "width": 470,
       "height": 1950,
-      "weight": 49,
-      "thickness": 210
+      "weight": 49.0,
+      "thickness": 210,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 0.9165,
+      "surf_lat": 0.4095,
+      "cx_front": 1.2373,
+      "cx_lat": 0.6798
     },
     "ant5g": {
       "model": "",
@@ -1226,8 +1346,14 @@
       "model": "RRZZV4-65B-R8H4",
       "width": 498,
       "height": 2100,
-      "weight": 43,
-      "thickness": 197
+      "weight": 43.0,
+      "thickness": 197,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 1.0458,
+      "surf_lat": 0.4137,
+      "cx_front": 1.4118,
+      "cx_lat": 0.4633
     },
     "ant5g": {
       "model": "",
@@ -1247,7 +1373,13 @@
       "width": 399,
       "height": 1509,
       "weight": 22.5,
-      "thickness": 196
+      "thickness": 196,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.6021,
+      "surf_lat": 0.2958,
+      "cx_front": 0.8128,
+      "cx_lat": 0.3313
     },
     "ant5g": {
       "model": "",
@@ -1266,8 +1398,14 @@
       "model": "3UPX0605P",
       "width": 1256,
       "height": 1400,
-      "weight": 74,
-      "thickness": 210
+      "weight": 74.0,
+      "thickness": 210,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.7584,
+      "surf_lat": 0.294,
+      "cx_front": 2.3738,
+      "cx_lat": 0.488
     },
     "ant5g": {
       "model": "",
@@ -1287,7 +1425,13 @@
       "width": 448,
       "height": 1200,
       "weight": 32.5,
-      "thickness": 200
+      "thickness": 200,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 0.5376,
+      "surf_lat": 0.24,
+      "cx_front": 0.7258,
+      "cx_lat": 0.3984
     },
     "ant5g": {
       "model": "",
@@ -1307,7 +1451,13 @@
       "width": 1076,
       "height": 761,
       "weight": 43.5,
-      "thickness": 1360
+      "thickness": 1360,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 0.8188,
+      "surf_lat": 1.035,
+      "cx_front": 1.1054,
+      "cx_lat": 1.7181
     },
     "ant5g": {
       "model": "",
@@ -1326,8 +1476,14 @@
       "model": "AMB4519R2V06",
       "width": 359,
       "height": 2685,
-      "weight": 35,
-      "thickness": 178
+      "weight": 35.0,
+      "thickness": 178,
+      "cf_front": 1.35,
+      "cf_lat": 1.12,
+      "surf_front": 0.9639,
+      "surf_lat": 0.4779,
+      "cx_front": 1.3013,
+      "cx_lat": 0.5352
     },
     "ant5g": {
       "model": "",
@@ -1346,8 +1502,14 @@
       "model": "AMB4519R9V06",
       "width": 499,
       "height": 2550,
-      "weight": 49,
-      "thickness": 206
+      "weight": 49.0,
+      "thickness": 206,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.2724,
+      "surf_lat": 0.5253,
+      "cx_front": 1.7177,
+      "cx_lat": 0.872
     },
     "ant5g": {
       "model": "",
@@ -1367,7 +1529,13 @@
       "width": 499,
       "height": 2009,
       "weight": 40.5,
-      "thickness": 206
+      "thickness": 206,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.0025,
+      "surf_lat": 0.4139,
+      "cx_front": 1.3534,
+      "cx_lat": 0.6871
     },
     "ant5g": {
       "model": "",
@@ -1386,8 +1554,14 @@
       "model": "AMB4519R18V06",
       "width": 499,
       "height": 2009,
-      "weight": 47,
-      "thickness": 206
+      "weight": 47.0,
+      "thickness": 206,
+      "cf_front": 1.35,
+      "cf_lat": 1.66,
+      "surf_front": 1.0025,
+      "surf_lat": 0.4139,
+      "cx_front": 1.3534,
+      "cx_lat": 0.6871
     },
     "ant5g": {
       "model": "",

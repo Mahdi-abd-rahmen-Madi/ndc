@@ -69,6 +69,7 @@ def load_catalogue_dict() -> dict:
         }),
         'bouygues_antennas': standards.get('bouygues_antennas', []),
         'free_antennas': standards.get('free_antennas', []),
+        'orange_antennas': standards.get('orange_antennas', []),
         'updated_at': datetime.datetime.utcnow().isoformat() + 'Z'
     }
     return catalogue

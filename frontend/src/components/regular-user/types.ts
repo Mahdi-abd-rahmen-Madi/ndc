@@ -108,6 +108,24 @@ export interface CatalogueConfig {
     cx_front: number;
     cx_lat: number;
   }>;
+  orange_antennas?: Array<{
+    id: string;
+    type: '4G' | '5G' | string;
+    vendor?: string;
+    name?: string;
+    model?: string;
+    dimensions: string;
+    height: number;
+    width: number;
+    thickness: number;
+    weight: number;
+    cf_front: number;
+    cf_lat: number;
+    surf_front: number;
+    surf_lat: number;
+    cx_front: number;
+    cx_lat: number;
+  }>;
   wind_calculation_rules?: {
     cscd: number;
     fw_formula: string;
