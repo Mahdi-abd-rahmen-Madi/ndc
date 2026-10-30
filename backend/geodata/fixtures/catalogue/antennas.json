@@ -1587,8 +1587,14 @@
       "model": "AIR6488 B43",
       "width": 400,
       "height": 819,
+      "thickness": 256,
       "weight": 45.5,
-      "thickness": 256
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.3276,
+      "surf_lat": 0.2097,
+      "cx_front": 0.4521,
+      "cx_lat": 0.2349
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1607,8 +1613,14 @@
       "model": "AIR 3227 B42 AS",
       "width": 370,
       "height": 568,
+      "thickness": 225,
       "weight": 21.5,
-      "thickness": 225
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2102,
+      "surf_lat": 0.1278,
+      "cx_front": 0.2901,
+      "cx_lat": 0.1431
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1627,8 +1639,14 @@
       "model": "AIR 3227 B43",
       "width": 370,
       "height": 568,
+      "thickness": 225,
       "weight": 21.5,
-      "thickness": 225
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2102,
+      "surf_lat": 0.1278,
+      "cx_front": 0.2901,
+      "cx_lat": 0.1431
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1647,8 +1665,14 @@
       "model": "AIR 3227 B78T",
       "width": 370,
       "height": 539,
+      "thickness": 250,
       "weight": 24.5,
-      "thickness": 250
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.1994,
+      "surf_lat": 0.1348,
+      "cx_front": 0.2752,
+      "cx_lat": 0.151
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1667,8 +1691,14 @@
       "model": "AIR 3268 B42",
       "width": 370,
       "height": 567,
+      "thickness": 118,
       "weight": 12.5,
-      "thickness": 118
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2098,
+      "surf_lat": 0.0669,
+      "cx_front": 0.2895,
+      "cx_lat": 0.0749
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1687,8 +1717,14 @@
       "model": "AIR 3268 B78Y",
       "width": 370,
       "height": 567,
-      "weight": 15,
-      "thickness": 133
+      "thickness": 133,
+      "weight": 15.0,
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2098,
+      "surf_lat": 0.0754,
+      "cx_front": 0.2895,
+      "cx_lat": 0.0844
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1707,8 +1743,14 @@
       "model": "AIR 3255 B78AA",
       "width": 408,
       "height": 572,
+      "thickness": 101,
       "weight": 11.8,
-      "thickness": 101
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2334,
+      "surf_lat": 0.0578,
+      "cx_front": 0.3221,
+      "cx_lat": 0.0647
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1727,8 +1769,14 @@
       "model": "AIR 3255 B78T",
       "width": 408,
       "height": 572,
+      "thickness": 101,
       "weight": 11.8,
-      "thickness": 101
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2334,
+      "surf_lat": 0.0578,
+      "cx_front": 0.3221,
+      "cx_lat": 0.0647
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1747,8 +1795,14 @@
       "model": "AIR 3255 B78Y",
       "width": 408,
       "height": 572,
+      "thickness": 101,
       "weight": 11.8,
-      "thickness": 101
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2334,
+      "surf_lat": 0.0578,
+      "cx_front": 0.3221,
+      "cx_lat": 0.0647
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1767,8 +1821,14 @@
       "model": "AIR 3255 B79A",
       "width": 408,
       "height": 572,
+      "thickness": 116,
       "weight": 13.5,
-      "thickness": 116
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2334,
+      "surf_lat": 0.0664,
+      "cx_front": 0.3221,
+      "cx_lat": 0.0744
     },
     "operator": "orange",
     "montageId": "Custom"
@@ -1787,8 +1847,14 @@
       "model": "AIR 3255 B79E",
       "width": 408,
       "height": 572,
+      "thickness": 116,
       "weight": 13.5,
-      "thickness": 116
+      "cf_front": 1.38,
+      "cf_lat": 1.12,
+      "surf_front": 0.2334,
+      "surf_lat": 0.0664,
+      "cx_front": 0.3221,
+      "cx_lat": 0.0744
     },
     "operator": "orange",
     "montageId": "Custom"
