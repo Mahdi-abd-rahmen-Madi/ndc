@@ -154,6 +154,11 @@ export function EquipmentOptionCard({
 
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
+              {vendorBadge && (
+                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-900 text-white uppercase tracking-wider shrink-0 shadow-2xs">
+                  {vendorBadge}
+                </span>
+              )}
               <span
                 className={`text-xs font-bold leading-snug break-words ${
                   isSelected ? `${c.selectedText} font-extrabold` : 'text-slate-800'
@@ -162,11 +167,6 @@ export function EquipmentOptionCard({
               >
                 {title}
               </span>
-              {vendorBadge && (
-                <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-slate-900 text-white uppercase tracking-wider shrink-0 shadow-2xs">
-                  {vendorBadge}
-                </span>
-              )}
             </div>
             {subtitle && (
               <span className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">

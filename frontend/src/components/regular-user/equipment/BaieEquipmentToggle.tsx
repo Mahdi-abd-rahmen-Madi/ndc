@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Server, Radio, Zap, Check, Trash2 } from 'lucide-react';
+import { Server, Radio, Zap, Check } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { EquipmentOptionCard } from '../../ui/EquipmentOptionCard';
 import type { BaieReference, SelectedBaieItem } from '../types';
@@ -251,14 +251,6 @@ export function BaieEquipmentToggle({
     syncLegacyFlags(next);
   };
 
-  const handleClearAll = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (setBaieItems) {
-      setBaieItems([]);
-      syncLegacyFlags([]);
-    }
-  };
-
   const filteredOptions = options.filter(o => matchesCategory(o.category, activeCategory));
   const totalSelectedCount = baieItems.reduce((acc, i) => acc + (i.quantity || 1), 0);
 
@@ -439,19 +431,9 @@ export function BaieEquipmentToggle({
 
         {baieItems.length > 0 && (
           <div className="flex items-center justify-between pt-1 px-1 text-xs text-slate-600">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-800">
-                Total : {totalSelectedCount} {totalSelectedCount > 1 ? 'équipements configurés' : 'équipement configuré'}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleClearAll}
-              className="text-[11px] font-medium text-slate-500 hover:text-red-600 transition-colors flex items-center gap-1"
-            >
-              <Trash2 className="w-3 h-3" />
-              Réinitialiser tout
-            </button>
+            <span className="font-semibold text-slate-800">
+              Total : {totalSelectedCount} {totalSelectedCount > 1 ? 'équipements configurés' : 'équipement configuré'}
+            </span>
           </div>
         )}
       </div>
