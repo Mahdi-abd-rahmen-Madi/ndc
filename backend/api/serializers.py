@@ -40,8 +40,21 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class CalculationJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalculationJob
-        fields = ['id', 'user', 'input_hash', 'input_data', 'status', 'result_data', 'error_message', 'screenshot', 'verification_screenshot', 'note_de_calcul', 'assemblage_note', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'user', 'input_hash', 'status', 'result_data', 'error_message', 'screenshot', 'verification_screenshot', 'note_de_calcul', 'assemblage_note', 'created_at', 'updated_at']
+        fields = [
+            'id', 'user', 'client_id', 'calculation_type', 'ndc_hash', 'input_hash', 'is_cached',
+            'input_data', 'status', 'result_data', 'error_message',
+            'screenshot', 'verification_screenshot',
+            'note_de_calcul', 'note_mat', 'note_plot', 'assemblage_note', 'reactions_file',
+            'compiled_docx', 'compiled_pdf', 'credits_consumed',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'user', 'ndc_hash', 'input_hash', 'is_cached', 'status', 'result_data',
+            'error_message', 'screenshot', 'verification_screenshot',
+            'note_de_calcul', 'note_mat', 'note_plot', 'assemblage_note', 'reactions_file',
+            'compiled_docx', 'compiled_pdf', 'credits_consumed',
+            'created_at', 'updated_at'
+        ]
 
 
 class SiteSerializer(serializers.Serializer):
@@ -65,9 +78,10 @@ class EnvironmentSerializer(serializers.Serializer):
     plot_height_m = serializers.FloatField(required=False, allow_null=True)
 
 class StructureSerializer(serializers.Serializer):
-    hauteur_mat_m = serializers.FloatField()
-    montage_id = serializers.CharField()
-    is_custom_montage = serializers.BooleanField(default=False)
+    hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
+    hauteur_plot_m = serializers.FloatField(required=False, allow_null=True)
+    montage_id = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
+    is_custom_montage = serializers.BooleanField(default=False, required=False)
     mat_principal = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     plot_metallique = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     bras_de_deport_input = serializers.FloatField(required=False, allow_null=True)
@@ -80,15 +94,16 @@ class StructureSerializer(serializers.Serializer):
     nombre_secteurs = serializers.IntegerField(required=False, allow_null=True, default=3)
 
 class AntennaSerializer(serializers.Serializer):
-    model = serializers.CharField()
-    hauteur_mm = serializers.FloatField()
-    largeur_mm = serializers.FloatField()
-    epaisseur_mm = serializers.FloatField()
-    poids_kg = serializers.FloatField()
+    model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    quantite = serializers.IntegerField(required=False, allow_null=True, default=1)
+    hauteur_mm = serializers.FloatField(required=False, allow_null=True)
+    largeur_mm = serializers.FloatField(required=False, allow_null=True)
+    epaisseur_mm = serializers.FloatField(required=False, allow_null=True)
+    poids_kg = serializers.FloatField(required=False, allow_null=True)
     hauteur_mat_antenne_m = serializers.FloatField(required=False, allow_null=True)
 
 class FHEquipmentSerializer(serializers.Serializer):
-    enabled = serializers.BooleanField()
+    enabled = serializers.BooleanField(required=False, default=False)
     diameter_mm = serializers.FloatField(required=False, allow_null=True)
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     quantity = serializers.IntegerField(required=False, allow_null=True)
@@ -98,27 +113,42 @@ class EquipmentItemSerializer(serializers.Serializer):
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     quantity = serializers.IntegerField(required=False, allow_null=True)
 
+class EquipmentPayloadSerializer(serializers.Serializer):
+    model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    quantite = serializers.IntegerField(required=False, allow_null=True, default=1)
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    poids_kg = serializers.FloatField(required=False, allow_null=True)
+    hauteur_mm = serializers.FloatField(required=False, allow_null=True)
+    largeur_mm = serializers.FloatField(required=False, allow_null=True)
+    epaisseur_mm = serializers.FloatField(required=False, allow_null=True)
+
 class RRHEquipmentSerializer(serializers.Serializer):
-    enabled = serializers.BooleanField()
+    enabled = serializers.BooleanField(required=False, default=False)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class RRUEquipmentSerializer(serializers.Serializer):
-    enabled = serializers.BooleanField()
+    enabled = serializers.BooleanField(required=False, default=False)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class CatalogueMatchSerializer(serializers.Serializer):
-    found = serializers.BooleanField()
+    found = serializers.BooleanField(required=False, default=False)
     equipment_id = serializers.IntegerField(required=False, allow_null=True)
     material_specification = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 class CalculationPayloadSerializer(serializers.Serializer):
-    schema_version = serializers.CharField(default="1.0")
-    site = SiteSerializer()
+    schema_version = serializers.CharField(default="1.0", required=False)
+    client_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    is_rrh = serializers.BooleanField(required=False, default=False)
+    calculation_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    force_recalculate = serializers.BooleanField(required=False, default=False)
+
+    site = SiteSerializer(required=False, allow_null=True)
     environment = EnvironmentSerializer()
     structure = StructureSerializer()
-    antenna_4g = AntennaSerializer()
-    antenna_5g = AntennaSerializer()
-    fh_equipment = FHEquipmentSerializer(required=False)
-    rrh_equipment = RRHEquipmentSerializer(required=False)
-    rru_equipment = RRUEquipmentSerializer(required=False)
-    catalogue_match = CatalogueMatchSerializer(required=False)
+    antenna_4g = AntennaSerializer(required=False, allow_null=True)
+    antenna_5g = AntennaSerializer(required=False, allow_null=True)
+    equipment = EquipmentPayloadSerializer(required=False, allow_null=True)
+    fh_equipment = FHEquipmentSerializer(required=False, allow_null=True)
+    rrh_equipment = RRHEquipmentSerializer(required=False, allow_null=True)
+    rru_equipment = RRUEquipmentSerializer(required=False, allow_null=True)
+    catalogue_match = CatalogueMatchSerializer(required=False, allow_null=True)

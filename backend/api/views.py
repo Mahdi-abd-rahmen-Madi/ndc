@@ -1,19 +1,23 @@
 from rest_framework import viewsets, permissions, status
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 import hashlib
 import json
+import threading
 from .models import UserProfile, CalculationJob
 from .serializers import UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer
 from .aps_service import get_aps_token
+from .tasks import send_job_to_worker
+from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 import os
@@ -175,9 +179,10 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        input_data = payload_serializer.validated_data
-        
-        # Check quota if authenticated user has a subscription
+        input_data = dict(payload_serializer.validated_data)
+        force_recalculate = bool(input_data.get("force_recalculate") or request.data.get("force_recalculate"))
+
+        # Quota check if authenticated user has a subscription
         user = request.user if request.user.is_authenticated else None
         if user and hasattr(user, 'subscription'):
             if user.subscription.used_quota >= user.subscription.monthly_quota:
@@ -185,107 +190,151 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     {"error": "Monthly calculation quota exceeded. Please upgrade your plan."},
                     status=status.HTTP_402_PAYMENT_REQUIRED
                 )
-            # Embed client_id in input_data
-            input_data['client_id'] = f"client_{user.id}"
+            client_id = f"client_{user.id}"
+        else:
+            client_id = input_data.get("client_id") or "default_client"
+        input_data['client_id'] = client_id
 
-        # Hash the input data to identify identical calculation requests
-        # Sort keys to ensure consistent hashing
+        # 1. Detect type and compute unique deterministic NDC hash
+        calc_type = detect_calculation_type(input_data)
+        ndc_hash = compute_ndc_hash(calc_type, input_data)
 
-        data_string = json.dumps(input_data, sort_keys=True)
-        input_hash = hashlib.sha256(data_string.encode('utf-8')).hexdigest()
+        # 2. Check Database Cache for Instant Hit
+        if not force_recalculate:
+            cached_job = CalculationJob.objects.filter(
+                ndc_hash=ndc_hash,
+                status="COMPLETED"
+            ).order_by("-id").first()
 
-        # Check if a completed job with the same hash exists
-        existing_job = CalculationJob.objects.filter(input_hash=input_hash, status='COMPLETED').first()
-        if existing_job:
-            serializer = self.get_serializer(existing_job)
-            return Response({
-                'message': 'Found cached result in catalogue.',
-                'cached': True,
-                'data': serializer.data
-            }, status=status.HTTP_200_OK)
+            if cached_job and (cached_job.compiled_pdf or cached_job.result_data):
+                # Create a cloned record or return the cached calculation directly
+                new_job = CalculationJob.objects.create(
+                    user=user,
+                    client_id=client_id,
+                    calculation_type=calc_type,
+                    ndc_hash=ndc_hash,
+                    input_hash=ndc_hash,
+                    is_cached=True,
+                    status="COMPLETED",
+                    input_data=input_data,
+                    result_data=cached_job.result_data,
+                    screenshot=cached_job.screenshot,
+                    verification_screenshot=cached_job.verification_screenshot,
+                    note_de_calcul=cached_job.note_de_calcul,
+                    note_mat=cached_job.note_mat,
+                    note_plot=cached_job.note_plot,
+                    assemblage_note=cached_job.assemblage_note,
+                    reactions_file=cached_job.reactions_file,
+                    compiled_docx=cached_job.compiled_docx,
+                    compiled_pdf=cached_job.compiled_pdf,
+                )
+                serializer = self.get_serializer(new_job)
+                return Response({
+                    "message": "Instant Cache Hit! NDC loaded without recalculation.",
+                    "calculation_id": new_job.id,
+                    "cached": True,
+                    "ndc_hash": ndc_hash,
+                    "status": "COMPLETED",
+                    "data": serializer.data,
+                    "pdf_url": new_job.compiled_pdf.url if new_job.compiled_pdf else None,
+                    "result_data": new_job.result_data,
+                }, status=status.HTTP_200_OK)
 
-        # Create a new job
-        # Set user if authenticated
-        user = request.user if request.user.is_authenticated else None
-        
-        # Attach site_image_url if provided
-        site_image_url = input_data.get('site_image_url', '')
-        
-        import threading
-        from .tasks import send_job_to_worker
-
+        # 3. Create Pending Job
         job = CalculationJob.objects.create(
             user=user,
-            input_hash=input_hash,
-            input_data=input_data,
-            status='PENDING'
+            client_id=client_id,
+            calculation_type=calc_type,
+            ndc_hash=ndc_hash,
+            input_hash=ndc_hash,
+            is_cached=False,
+            status="PENDING",
+            input_data=input_data
         )
-        
-        # Directly dispatch to the Windows worker in a background thread
-        # (Zero polling, non-blocking, no worker container needed)
+
+        # 4. Dispatch to Unified Robot Worker in a background thread
         threading.Thread(
             target=send_job_to_worker,
             args=(job.id,),
             daemon=True
         ).start()
-        
+
         serializer = self.get_serializer(job)
         return Response({
-            'message': 'Calculation job dispatched to Windows worker.',
-            'cached': False,
-            'data': serializer.data
+            "message": f"{calc_type.upper()} Calculation enqueued successfully.",
+            "calculation_id": job.id,
+            "ndc_hash": ndc_hash,
+            "cached": False,
+            "status": "PENDING",
+            "data": serializer.data
         }, status=status.HTTP_201_CREATED)
-    # 'pending' endpoint has been completely removed in favor of push notifications via FastAPI
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser, JSONParser])
     def complete(self, request, pk=None):
         """
-        Endpoint for Windows Server to submit calculation results.
+        Endpoint for Unified Robot Worker to submit calculation results and artifacts.
+        Worker calls POST /api/calculations/<id>/complete/
         """
-        try:
-            job = CalculationJob.objects.get(pk=pk)
-        except CalculationJob.DoesNotExist:
-            return Response({'error': 'Job not found.'}, status=status.HTTP_404_NOT_FOUND)
-        
-        if job.status == 'COMPLETED':
-            return Response({'error': 'Job already completed.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        import json
-        
-        if 'screenshot' in request.FILES:
-            job.screenshot = request.FILES['screenshot']
+        job = get_object_or_404(CalculationJob, pk=pk)
 
-        if 'verification_screenshot' in request.FILES:
-            job.verification_screenshot = request.FILES['verification_screenshot']
-
-        if 'note_de_calcul' in request.FILES:
-            job.note_de_calcul = request.FILES['note_de_calcul']
-
-        if 'assemblage_note' in request.FILES:
-            job.assemblage_note = request.FILES['assemblage_note']
-            
-        if 'result_data' in request.POST:
+        # Parse result_data
+        raw_result_data = request.data.get('result_data') or request.POST.get('result_data')
+        if isinstance(raw_result_data, str) and raw_result_data.strip():
             try:
-                result_data = json.loads(request.POST['result_data'])
-            except json.JSONDecodeError:
-                result_data = request.POST['result_data']
-            error_message = request.POST.get('error_message')
-            job_status = request.POST.get('status', 'COMPLETED')
+                result_data = json.loads(raw_result_data)
+            except Exception:
+                result_data = {}
+        elif isinstance(raw_result_data, dict):
+            result_data = raw_result_data
         else:
-            result_data = request.data.get('result_data')
-            error_message = request.data.get('error_message')
-            job_status = request.data.get('status', 'COMPLETED')
-        
-        if job_status == 'COMPLETED' and job.status != 'COMPLETED':
-            if job.user and hasattr(job.user, 'subscription'):
-                job.user.subscription.used_quota += job.credits_consumed
-                job.user.subscription.save()
+            result_data = {}
+
+        error_message = request.data.get('error_message') or request.POST.get('error_message', '')
+        job_status = request.data.get('status') or request.POST.get('status', 'COMPLETED')
+
+        # Store ndc_hash and calculation_type reported by worker if present
+        if result_data and "ndc_hash" in result_data:
+            job.ndc_hash = result_data["ndc_hash"]
+        if result_data and "calculation_type" in result_data:
+            job.calculation_type = result_data["calculation_type"]
 
         job.status = job_status
         job.result_data = result_data
         job.error_message = error_message
+
+        # Save uploaded artifact files from worker
+        files = request.FILES
+        if 'screenshot' in files:
+            job.screenshot = files['screenshot']
+        if 'verification_screenshot' in files:
+            job.verification_screenshot = files['verification_screenshot']
+        if 'note_de_calcul' in files:
+            job.note_de_calcul = files['note_de_calcul']
+        if 'note_mat' in files:
+            job.note_mat = files['note_mat']
+        if 'note_plot' in files:
+            job.note_plot = files['note_plot']
+        if 'assemblage_note' in files:
+            job.assemblage_note = files['assemblage_note']
+        if 'reactions_file' in files:
+            job.reactions_file = files['reactions_file']
+
+        # Manage user quota if completed
+        if job_status == 'COMPLETED':
+            if job.user and hasattr(job.user, 'subscription'):
+                job.user.subscription.used_quota += job.credits_consumed
+                job.user.subscription.save()
+
         job.save()
-        
+
+        # Trigger backend document compilation (DOCX / PDF)
+        if job_status == 'COMPLETED':
+            try:
+                from .services import assemble_ndc_document
+                assemble_ndc_document(job.id)
+            except Exception as e:
+                print(f"Document compilation warning for Job {job.id}: {e}")
+
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

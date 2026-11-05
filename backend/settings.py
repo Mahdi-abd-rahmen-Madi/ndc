@@ -198,5 +198,10 @@ Q_CLUSTER = {
     'orm': 'default'
 }
 
-# FastAPI Worker
-WORKER_BASE_URL = config('WORKER_BASE_URL', default='http://127.0.0.1:8001')
+# Unified Robot Worker (Handles Antenna base, RRH, and future equipment)
+ROBOT_WORKER_BASE_URL = config('ROBOT_WORKER_URL', default=config('WORKER_BASE_URL', default='http://100.97.172.27:8001'))
+ROBOT_WORKER_JOBS_URL = f"{ROBOT_WORKER_BASE_URL.rstrip('/')}/api/jobs"
+ROBOT_WORKER_STATUS_URL = f"{ROBOT_WORKER_BASE_URL.rstrip('/')}/api/status"
+
+# Backwards compatibility alias
+WORKER_BASE_URL = ROBOT_WORKER_BASE_URL

@@ -5,7 +5,7 @@ from .models import CalculationJob
 
 def send_job_to_worker(job_id):
     """
-    Directly pushes the calculation job to the Windows FastAPI worker via HTTP POST.
+    Directly pushes the calculation job to the Unified Windows FastAPI worker via HTTP POST.
     Updates the job status directly without database polling queues.
     """
     try:
@@ -14,7 +14,7 @@ def send_job_to_worker(job_id):
         print(f"send_job_to_worker failed: Job {job_id} not found.")
         return False
 
-    url = f"{settings.WORKER_BASE_URL.rstrip('/')}/api/jobs"
+    url = getattr(settings, 'ROBOT_WORKER_JOBS_URL', f"{settings.WORKER_BASE_URL.rstrip('/')}/api/jobs")
     
     payload = {
         "id": job.id,
@@ -29,9 +29,9 @@ def send_job_to_worker(job_id):
         response = requests.post(url, json=payload, timeout=10.0)
         
         if response.status_code in [200, 201, 202]:
-            job.status = 'PROCESSING'
+            job.status = 'RUNNING'
             job.save(update_fields=['status'])
-            print(f"Successfully dispatched Job {job_id} to Windows worker.")
+            print(f"Successfully dispatched Job {job_id} to Unified Windows worker at {url}.")
             return True
         else:
             job.status = 'FAILED'

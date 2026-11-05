@@ -56,7 +56,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(CalculationJob)
 class CalculationJobAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'user', 'screenshot', 'verification_screenshot', 'note_de_calcul', 'created_at', 'updated_at')
-    list_filter = ('status', 'created_at', 'updated_at')
+    list_display = ('id', 'calculation_type', 'status', 'is_cached', 'ndc_hash', 'user', 'screenshot', 'compiled_pdf', 'created_at')
+    list_filter = ('status', 'calculation_type', 'is_cached', 'created_at', 'updated_at')
+    search_fields = ('id', 'ndc_hash', 'client_id', 'user__username')
     search_fields = ('id', 'input_hash', 'user__username')
     readonly_fields = ('created_at', 'updated_at')
