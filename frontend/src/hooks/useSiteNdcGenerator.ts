@@ -477,29 +477,79 @@ export function useSiteNdcGenerator({
         }
       }
 
-      setSiteNdcPollingMsg('Attente des résultats Robot...');
+      // Track all jobs with live interactive progress (WebSocket + polling fallback)
+      const totalJobs = jobIds.length;
+      for (let idx = 0; idx < totalJobs; idx++) {
+        const jobId = jobIds[idx];
+        const sectorPrefix = totalJobs > 1 ? `[Secteur ${idx + 1}/${totalJobs}] ` : '';
+        setSiteNdcPollingMsg(`${sectorPrefix}Démarrage du calcul Robot...`);
 
-      // Poll all jobs until COMPLETED
-      for (const jobId of jobIds) {
         let isCompleted = false;
         let attempts = 0;
-        while (!isCompleted && attempts < 120) {
-          await new Promise(r => setTimeout(r, 2000));
-          const pollRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/`, {
-            headers: { 'Authorization': `Token ${token}` }
-          });
-          if (pollRes.ok) {
-            const jobResult = await pollRes.json();
-            if (jobResult.status === 'COMPLETED' || (jobResult.status === 'PENDING' && jobResult.result_data)) {
-              isCompleted = true;
-            } else if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR') {
-              throw new Error("Calcul échoué sur le serveur pour l'un des secteurs.");
+        const maxAttempts = 180; // 6 minutes maximum
+
+        // Open WebSocket connection for real-time progress push
+        let ws: WebSocket | null = null;
+        try {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const host = window.location.host;
+          ws = new WebSocket(`${wsProtocol}//${host}/ws/calculations/${jobId}/`);
+          ws.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (data.message) {
+                const pctStr = typeof data.percent === 'number' ? ` (${data.percent}%)` : '';
+                setSiteNdcPollingMsg(`${sectorPrefix}${data.message}${pctStr}`);
+              }
+              if (data.status === 'COMPLETED' || data.is_completed) {
+                isCompleted = true;
+              }
+            } catch (_) {
+              // Ignore malformed WS frames
             }
-          }
-          attempts++;
+          };
+          ws.onerror = () => {
+            // Silently allow fallback to HTTP polling
+          };
+        } catch (_) {
+          // WebSocket not supported or blocked, will use polling
         }
+
+        try {
+          while (!isCompleted && attempts < maxAttempts) {
+            await new Promise(r => setTimeout(r, 2000));
+            const pollRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/`, {
+              headers: { 'Authorization': `Token ${token}` }
+            });
+            if (pollRes.ok) {
+              const jobResult = await pollRes.json();
+              
+              // Update visual progress from worker progress data if available
+              const prog = jobResult.result_data?.progress;
+              if (prog && prog.message) {
+                const pctStr = typeof prog.percent === 'number' ? ` (${prog.percent}%)` : '';
+                setSiteNdcPollingMsg(`${sectorPrefix}${prog.message}${pctStr}`);
+              } else if (jobResult.status === 'RUNNING' || jobResult.status === 'PROCESSING') {
+                setSiteNdcPollingMsg(`${sectorPrefix}Calcul Robot en cours d'exécution...`);
+              }
+
+              if (jobResult.status === 'COMPLETED' || (jobResult.status === 'PENDING' && jobResult.result_data?.ndc_pdf_url)) {
+                isCompleted = true;
+              } else if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR') {
+                const errMsg = jobResult.error_message || "Calcul échoué sur le serveur Robot pour l'un des secteurs.";
+                throw new Error(errMsg);
+              }
+            }
+            attempts++;
+          }
+        } finally {
+          if (ws) {
+            try { ws.close(); } catch (_) {}
+          }
+        }
+
         if (!isCompleted) {
-          throw new Error("Délai d'attente dépassé pour les calculs.");
+          throw new Error(`Délai d'attente dépassé pour le calcul du secteur ${idx + 1}.`);
         }
       }
 

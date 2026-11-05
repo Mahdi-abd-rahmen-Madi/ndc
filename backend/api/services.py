@@ -72,3 +72,4 @@ def _assemble_antenna(job):
         print(f"assemble_ndc_document: Successfully compiled Antenna NDC for Job {job.id}: {pdf_url}")
     except Exception as e:
         print(f"assemble_ndc_document error for Antenna Job {job.id}: {e}")
+

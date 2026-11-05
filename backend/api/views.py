@@ -327,6 +327,29 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         job.save()
 
+        # Broadcast completion to WebSocket listeners
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"calc_{job.id}",
+                    {
+                        "type": "calc_progress",
+                        "data": {
+                            "job_id": job.id,
+                            "stage": "COMPLETED" if job_status == "COMPLETED" else "FAILED",
+                            "percent": 100 if job_status == "COMPLETED" else 0,
+                            "message": "Calcul terminé avec succès" if job_status == "COMPLETED" else f"Échec: {error_message}",
+                            "status": job_status,
+                            "is_completed": job_status == "COMPLETED"
+                        }
+                    }
+                )
+        except Exception as ws_err:
+            print(f"WebSocket broadcast warning: {ws_err}")
+
         # Trigger backend document compilation (DOCX / PDF)
         if job_status == 'COMPLETED':
             try:
@@ -337,6 +360,65 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser, JSONParser])
+    def progress(self, request, pk=None):
+        """
+        Called by Windows Robot Worker during execution to push live milestones.
+        POST /api/calculations/<id>/progress/
+        Payload: { "stage": "SOLVING", "percent": 75, "message": "Calcul en cours...", "details": {...} }
+        """
+        job = get_object_or_404(CalculationJob, pk=pk)
+
+        stage = request.data.get('stage', 'RUNNING')
+        try:
+            percent = int(request.data.get('percent', 0))
+        except (ValueError, TypeError):
+            percent = 0
+
+        message = request.data.get('message', '')
+        details = request.data.get('details', {})
+
+        # Ensure status reflects active calculation
+        if job.status == 'PENDING':
+            job.status = 'RUNNING'
+
+        if not isinstance(job.result_data, dict):
+            job.result_data = {}
+
+        job.result_data['progress'] = {
+            'stage': stage,
+            'percent': percent,
+            'message': message,
+            'details': details
+        }
+        job.save(update_fields=['status', 'result_data', 'updated_at'])
+
+        # Broadcast event to WebSocket channel group
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"calc_{job.id}",
+                    {
+                        "type": "calc_progress",
+                        "data": {
+                            "job_id": job.id,
+                            "stage": stage,
+                            "percent": percent,
+                            "message": message,
+                            "details": details,
+                            "status": job.status,
+                            "is_completed": False
+                        }
+                    }
+                )
+        except Exception as ws_err:
+            print(f"WebSocket broadcast error: {ws_err}")
+
+        return Response({"status": "ok", "job_id": job.id, "stage": stage, "percent": percent})
 
     @action(detail=True, methods=['post'])
     def generate_pdf(self, request, pk=None):

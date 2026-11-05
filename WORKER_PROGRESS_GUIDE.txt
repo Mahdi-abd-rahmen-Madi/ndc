@@ -1,0 +1,199 @@
+========================================================================================
+ROBOT WORKER INTERACTIVE PROGRESS IMPLEMENTATION GUIDE
+========================================================================================
+
+This guide explains how to report real-time calculation progress from your Windows 
+Robot Worker to the Django backend, replacing blind waiting with live visual progress
+updates on the user frontend.
+
+----------------------------------------------------------------------------------------
+TABLE OF CONTENTS
+----------------------------------------------------------------------------------------
+1. Architecture Overview
+2. Progress API Endpoint Specification
+3. Standard Calculation Stages & Percentages
+4. Drop-in Python Helper for Worker
+5. Integration Example in Robot Worker Workflow
+6. Testing & Verification
+
+========================================================================================
+1. ARCHITECTURE OVERVIEW
+========================================================================================
+
+When the worker processes a calculation job, it sends periodic HTTP POST requests 
+to Django at each milestone. 
+
+Django stores the progress in the database and immediately broadcasts it over 
+WebSockets (with HTTP polling fallback) directly to the browser.
+
+Flow:
+[Windows Robot Worker]
+      │  HTTP POST: /api/calculations/<job_id>/progress/
+      ▼
+[Django Backend API]
+      │  Django Channels broadcast (ws/calculations/<job_id>/)
+      ▼
+[Frontend React UI] -> Updates status message and progress bar in real time!
+
+
+========================================================================================
+2. PROGRESS API ENDPOINT SPECIFICATION
+========================================================================================
+
+- METHOD: POST
+- URL: http://<DJANGO_HOST>:8000/api/calculations/<job_id>/progress/
+- HEADERS:
+    Content-Type: application/json
+
+- PAYLOAD SCHEMA (JSON):
+{
+    "stage": "CREATING_GEOMETRY",
+    "percent": 35,
+    "message": "Modélisation du support dans Robot Structural Analysis...",
+    "details": {
+        "bars_count": 8,
+        "nodes_count": 6
+    }
+}
+
+Field Descriptions:
+- "stage"   (string, required): Short identifier of current stage (e.g., SOLVING, EXTRACTING).
+- "percent" (int, required): Integer from 0 to 99 representing progress percentage.
+- "message" (string, required): Human-readable message displayed directly to user in French.
+- "details" (dict, optional): Extra debug or technical details (ignored by UI, stored in DB).
+
+
+========================================================================================
+3. STANDARD CALCULATION STAGES & PERCENTAGES
+========================================================================================
+
+Use these recommended milestones during Robot Structural Analysis execution:
+
+Stage                  %   Recommended French Message
+----------------------------------------------------------------------------------------
+INITIALIZING          10   "Démarrage de la session Robot Structural Analysis..."
+CREATING_GEOMETRY     30   "Modélisation de la structure (mât, plot, corbeaux)..."
+APPLYING_LOADS        50   "Application des charges de vent Eurocode 1 (Vb, qp)..."
+SOLVING               70   "Calcul des réactions et vérification des ratios..."
+EXTRACTING_ARTIFACTS  85   "Capture des vues 3D et extraction des notes RTF..."
+ASSEMBLING_NDC        95   "Finalisation et transmission des résultats..."
+
+Note: When the job is 100% finished, simply call your existing endpoint:
+POST /api/calculations/<job_id>/complete/
+Django will automatically broadcast 100% COMPLETED to the frontend.
+
+
+========================================================================================
+4. DROP-IN PYTHON HELPER FOR WORKER
+========================================================================================
+
+Copy and paste this helper function into your Windows Worker script:
+
+```python
+import os
+import requests
+
+# Base URL of Django Backend (set in environment or default)
+DJANGO_API_URL = os.environ.get("DJANGO_BACKEND_URL", "http://10.0.0.1:8000")
+
+def report_progress(job_id: int, stage: str, percent: int, message: str, details: dict = None):
+    """
+    Sends a non-blocking progress update to Django.
+    Safe against network timeouts or connection drops.
+    """
+    url = f"{DJANGO_API_URL.rstrip('/')}/api/calculations/{job_id}/progress/"
+    payload = {
+        "stage": stage,
+        "percent": max(0, min(99, int(percent))),
+        "message": message,
+        "details": details or {}
+    }
+    try:
+        # Short timeout (1.5s) ensures the Robot calculation is never delayed
+        requests.post(url, json=payload, timeout=1.5)
+    except Exception as e:
+        # Non-fatal: calculation continues uninterrupted even if Django is busy
+        print(f"⚠ Progress report warning for Job #{job_id}: {e}")
+```
+
+
+========================================================================================
+5. INTEGRATION EXAMPLE IN ROBOT WORKER WORKFLOW
+========================================================================================
+
+Here is how to call `report_progress` inside your main calculation function:
+
+```python
+def process_calculation_job(job_id, input_data):
+    try:
+        # 1. Initialization
+        report_progress(job_id, "INITIALIZING", 10, "Initialisation de la session Autodesk Robot...")
+        robot = initialize_robot_session()
+
+        # 2. Geometry Creation
+        report_progress(job_id, "CREATING_GEOMETRY", 30, "Modélisation de la structure (mât et plot)...")
+        create_nodes_and_bars(robot, input_data["structure"])
+
+        # 3. Wind Load Generation
+        report_progress(job_id, "APPLYING_LOADS", 50, "Application des combinaisons de vent Eurocode 1...")
+        apply_wind_and_dead_loads(robot, input_data["environment"])
+
+        # 4. Robot Solver Execution
+        report_progress(job_id, "SOLVING", 70, "Résolution des équations et vérification des ratios...")
+        robot.Project.CalcEngine.Calculate()
+
+        # 5. Extract Artifacts (Screenshots, RTF notes, Reactions)
+        report_progress(job_id, "EXTRACTING_ARTIFACTS", 85, "Extraction des captures 3D et notes de calcul...")
+        screenshot_path = capture_robot_view(robot, job_id)
+        note_rtf_path = extract_rtf_note(robot, job_id)
+        reactions_data = extract_reactions(robot)
+
+        # 6. Complete Job (Sends files to Django callback)
+        report_progress(job_id, "ASSEMBLING_NDC", 95, "Envoi des résultats au serveur...")
+        send_completion_to_django(
+            job_id=job_id,
+            status="COMPLETED",
+            result_data=reactions_data,
+            files={
+                "screenshot": screenshot_path,
+                "note_de_calcul": note_rtf_path
+            }
+        )
+
+    except Exception as exc:
+        report_progress(job_id, "FAILED", 0, f"Erreur de calcul: {str(exc)}")
+        send_completion_to_django(job_id=job_id, status="FAILED", error_message=str(exc))
+        raise
+```
+
+
+========================================================================================
+6. TESTING & VERIFICATION
+========================================================================================
+
+You can test the progress endpoint at any time from terminal or Postman using curl:
+
+```bash
+curl -X POST http://localhost:8000/api/calculations/1/progress/ \
+     -H "Content-Type: application/json" \
+     -d '{
+       "stage": "SOLVING",
+       "percent": 75,
+       "message": "Test: Résolution des équations statiques..."
+     }'
+```
+
+Expected Response:
+{"status":"ok","job_id":1,"stage":"SOLVING","percent":75}
+
+And on the frontend UI:
+The loading message will immediately change in real time to:
+"[Secteur 1/1] Test: Résolution des équations statiques... (75%)"
+
+========================================================================================
+SUMMARY
+========================================================================================
+- Add `report_progress(job_id, stage, percent, message)` to your worker code.
+- Call it at 4-5 key milestones in the Robot calculation loop.
+- Enjoy zero blind waiting and instant visual feedback on the frontend!
+========================================================================================

@@ -80,3 +80,4 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     canonical_json = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
     sha = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
     return f"ndc_{normalized_type}_{sha[:24]}"
+
