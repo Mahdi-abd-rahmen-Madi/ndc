@@ -24,7 +24,7 @@ export function TDEquipmentToggle({
   tdReference,
   setTdReference,
   tdOptions,
-  operator = 'bouygues'
+  operator = 'free'
 }: TDEquipmentToggleProps) {
   const isMatchingType = (opt: any, type: 'tetraphase' | 'monophase') => {
     if (opt.phase) return opt.phase === type;
@@ -62,7 +62,7 @@ export function TDEquipmentToggle({
             onChange={() => setTdType('tetraphase')}
             className="text-violet-600 focus:ring-violet-500"
           />
-          TD Tétraphasé
+          TD Tétrapolaire V5
         </label>
         <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-medium">
           <input

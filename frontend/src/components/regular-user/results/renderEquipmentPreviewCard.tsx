@@ -36,14 +36,10 @@ export function renderEquipmentPreviewCard({
         icon={IconComponent}
         color="amber"
         scopeBadge={{
-          text: '1x par site',
+          text: `${qVal} par site`,
           bg: 'bg-amber-50',
           textCol: 'text-amber-700',
           border: 'border-amber-200'
-        }}
-        quantityInfo={{
-          label: `x${qVal}`,
-          total: qVal
         }}
         marque={vendor}
         modele={model}
@@ -70,21 +66,17 @@ export function renderEquipmentPreviewCard({
             title={typeName}
             icon={IconComponent}
             color="rose"
-            typeBadge={{
-              text: typeName,
-              bg: 'bg-rose-50',
-              textCol: 'text-rose-700',
-              border: 'border-rose-200'
-            }}
             scopeBadge={{
-              text: 'Par secteur',
+              text: `${qty} par secteur`,
               bg: 'bg-violet-50',
               textCol: 'text-violet-700',
               border: 'border-violet-200'
             }}
-            quantityInfo={{
-              perSector: qty,
-              total: totalQty
+            totalBadge={{
+              text: `Total par site : ${totalQty}`,
+              bg: 'bg-purple-50',
+              textCol: 'text-purple-700',
+              border: 'border-purple-200'
             }}
             marque={vendor}
             modele={model || 'N/A'}
@@ -111,21 +103,17 @@ export function renderEquipmentPreviewCard({
           title={typeName}
           icon={IconComponent}
           color="emerald"
-          typeBadge={{
-            text: typeName,
-            bg: 'bg-emerald-50',
-            textCol: 'text-emerald-700',
-            border: 'border-emerald-200'
-          }}
           scopeBadge={{
-            text: 'Par secteur',
+            text: `${qty} par secteur`,
             bg: 'bg-violet-50',
             textCol: 'text-violet-700',
             border: 'border-violet-200'
           }}
-          quantityInfo={{
-            perSector: qty,
-            total: totalQty
+          totalBadge={{
+            text: `Total par site : ${totalQty}`,
+            bg: 'bg-purple-50',
+            textCol: 'text-purple-700',
+            border: 'border-purple-200'
           }}
           marque={vendor}
           modele={model || 'N/A'}
@@ -136,6 +124,7 @@ export function renderEquipmentPreviewCard({
 
   // 4. Coffrets fibre
   if (config.id === 'coffrets_fibre') {
+    if (operator === 'free') return null;
     const coffretVal = equipmentValues.coffrets_fibre || {};
     const totalQty = nombreSecteurs || 1;
     return (
@@ -145,16 +134,49 @@ export function renderEquipmentPreviewCard({
         icon={IconComponent}
         color="emerald"
         scopeBadge={{
-          text: 'Par secteur',
+          text: '1 par secteur',
           bg: 'bg-violet-50',
           textCol: 'text-violet-700',
           border: 'border-violet-200'
         }}
-        quantityInfo={{
-          perSector: 1,
-          total: totalQty
+        totalBadge={{
+          text: `Total par site : ${totalQty}`,
+          bg: 'bg-purple-50',
+          textCol: 'text-purple-700',
+          border: 'border-purple-200'
         }}
         modele={coffretVal.référence || 'Standard'}
+      />
+    );
+  }
+
+  // 4b. Coffret hybride TRANS FO (Free - Zone Technique)
+  if (config.id === 'coffret_trans_fo') {
+    const transFoVal = equipmentValues.coffret_trans_fo || {};
+    const qty = transFoVal.quantité || 1;
+    return (
+      <EquipmentPreviewCard
+        key={config.id}
+        title="Coffret hybride : TRANS FO"
+        icon={IconComponent}
+        color="purple"
+        typeBadge={{
+          text: 'TRANS FO',
+          bg: 'bg-violet-50',
+          textCol: 'text-violet-700',
+          border: 'border-violet-200'
+        }}
+        scopeBadge={{
+          text: `${qty} par site`,
+          bg: 'bg-violet-50',
+          textCol: 'text-violet-700',
+          border: 'border-violet-200'
+        }}
+        modele="Coffret TRANS FO"
+        extraSpecs={{
+          Dimensions: '260x380x97mm',
+          Poids: `${(2.1 * qty).toFixed(1)} kg (${qty}x 2.1kg)`
+        }}
       />
     );
   }
@@ -182,14 +204,10 @@ export function renderEquipmentPreviewCard({
               border: 'border-orange-200'
             }}
             scopeBadge={{
-              text: '1x par site',
+              text: `${qty} par site`,
               bg: 'bg-orange-50',
               textCol: 'text-orange-700',
               border: 'border-orange-200'
-            }}
-            quantityInfo={{
-              label: `x${qty}`,
-              total: qty
             }}
             modele={modelOrRef}
           />
@@ -213,8 +231,9 @@ export function renderEquipmentPreviewCard({
 
   // 6. TD
   if (config.id === 'td') {
+    if (operator === 'bouygues') return null;
     const tdVal = equipmentValues.td || {};
-    const typeLabel = tdVal.type || 'TD Tétraphasé';
+    const typeLabel = tdVal.type || 'TD Tétrapolaire V5';
     const refLabel = tdVal.référence || 'N/A';
 
     return (
@@ -230,14 +249,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-amber-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: '1 par site',
           bg: 'bg-amber-50',
           textCol: 'text-amber-700',
           border: 'border-amber-200'
-        }}
-        quantityInfo={{
-          label: 'x1',
-          total: 1
         }}
         modele={refLabel}
       />
@@ -263,14 +278,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-blue-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: '1 par site',
           bg: 'bg-blue-50',
           textCol: 'text-blue-700',
           border: 'border-blue-200'
-        }}
-        quantityInfo={{
-          label: 'x1',
-          total: 1
         }}
         marque={marque}
         modele={modele}
@@ -297,14 +308,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-purple-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: `${qVal} par site`,
           bg: 'bg-purple-50',
           textCol: 'text-purple-700',
           border: 'border-purple-200'
-        }}
-        quantityInfo={{
-          label: `x${qVal}`,
-          total: qVal
         }}
         modele={modele}
       />
@@ -338,14 +345,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-rose-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: '1 par site',
           bg: 'bg-rose-50',
           textCol: 'text-rose-700',
           border: 'border-rose-200'
-        }}
-        quantityInfo={{
-          label: 'x1',
-          total: 1
         }}
         modele={types.join(', ') || 'Sélectionnée'}
         extraSpecs={{ support: supportLabel }}
@@ -370,14 +373,10 @@ export function renderEquipmentPreviewCard({
             border: 'border-amber-200'
           }}
           scopeBadge={{
-            text: '1x par site',
+            text: '1 par site',
             bg: 'bg-amber-50',
             textCol: 'text-amber-700',
             border: 'border-amber-200'
-          }}
-          quantityInfo={{
-            label: 'x1',
-            total: 1
           }}
           marque={bcube?.supplier || undefined}
           modele={bcube?.name || 'BCube (TD + AE)'}
@@ -410,14 +409,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-amber-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: '1 par site',
           bg: 'bg-amber-50',
           textCol: 'text-amber-700',
           border: 'border-amber-200'
-        }}
-        quantityInfo={{
-          label: 'x1',
-          total: 1
         }}
         modele={modules.join(', ') || 'Sélectionné'}
       />
@@ -441,14 +436,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-purple-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: `${qty} par site`,
           bg: 'bg-purple-50',
           textCol: 'text-purple-700',
           border: 'border-purple-200'
-        }}
-        quantityInfo={{
-          label: `x${qty}`,
-          total: qty
         }}
         modele="MDEA"
       />
@@ -471,14 +462,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-purple-200'
         }}
         scopeBadge={{
-          text: 'Bouygues',
+          text: '1 par site',
           bg: 'bg-purple-50',
           textCol: 'text-purple-700',
           border: 'border-purple-200'
-        }}
-        quantityInfo={{
-          label: 'x1',
-          total: 1
         }}
         modele={tgbtVal.modèle || 'TGBT ACTIA'}
         extraSpecs={{
@@ -523,14 +510,10 @@ export function renderEquipmentPreviewCard({
           border: 'border-rose-200'
         }}
         scopeBadge={{
-          text: '1x par site',
+          text: '1 par site',
           bg: 'bg-rose-50',
           textCol: 'text-rose-700',
           border: 'border-rose-200'
-        }}
-        quantityInfo={{
-          label: `${totalCount} module${totalCount > 1 ? 's' : ''}`,
-          total: totalCount
         }}
         modele={activeModules.join(', ') || 'Sélectionné'}
         extraSpecs={{

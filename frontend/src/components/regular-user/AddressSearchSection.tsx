@@ -79,11 +79,10 @@ export default function AddressSearchSection({
         <button
           type="button"
           onClick={() => setShowMap(!showMap)}
-          className={`${styles.mapButtonBase} ${
-            showMap 
+          className={`${styles.mapButtonBase} ${showMap
               ? styles.mapButtonActive
               : styles.mapButtonInactive
-          }`}
+            }`}
         >
           <MapIcon className={styles.mapButtonIcon} />
           {showMap ? 'Masquer la carte' : 'Afficher la carte'}
@@ -125,7 +124,7 @@ export default function AddressSearchSection({
             <X className="w-4 h-4" />
           </button>
         )}
-        
+
         {/* Dropdown results */}
         {addressResults.length > 0 && (
           <div className={styles.dropdownContainer}>
@@ -158,7 +157,7 @@ export default function AddressSearchSection({
           <div className="flex-1">
             <p className="font-bold text-amber-900">Emplacement approximatif : {pendingGenericAddress.label}</p>
             <p className="mt-0.5 text-[11px] text-amber-700 leading-relaxed">
-              Veuillez cliquer sur la carte pour définir l'emplacement exact de votre pylône ou antenne.
+              Veuillez cliquer sur la carte pour définir l'emplacement exacte du site
             </p>
             {!showMap && (
               <button

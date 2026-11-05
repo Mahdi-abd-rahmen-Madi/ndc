@@ -874,9 +874,10 @@ def generate_auxiliary_pdfs(job, start_page=1):
 
         return pdf_path
 
-    # Check for TD
+    # Check for TD (disabled completely for Bouygues)
     td_eq = input_data.get('td_equipment', {})
-    if td_eq.get('enabled'):
+    operator = (input_data.get('site', {}).get('operator') or '').lower().strip()
+    if td_eq.get('enabled') and operator != 'bouygues':
         generated_pdfs.append(_render_and_save('td', {
             'eq_qty': 1,
             'eq_dims': '[TD_DIMS]',

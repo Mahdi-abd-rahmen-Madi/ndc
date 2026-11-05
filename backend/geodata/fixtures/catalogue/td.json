@@ -2,7 +2,8 @@
   {
     "id": "td_68236",
     "name": "68236",
-    "vendor": "",
+    "vendor": "FREE",
+    "operator": "free",
     "weight": 60.0,
     "reference": "68236",
     "phase": "monophase",
@@ -11,7 +12,8 @@
   {
     "id": "td_68237",
     "name": "68237",
-    "vendor": "",
+    "vendor": "FREE",
+    "operator": "free",
     "weight": 60.0,
     "reference": "68237",
     "phase": "tetraphase",
@@ -20,7 +22,8 @@
   {
     "id": "td_5g",
     "name": "TD 5G",
-    "vendor": "",
+    "vendor": "FREE",
+    "operator": "free",
     "weight": 60.0,
     "reference": "TD 5G",
     "phase": "monophase",
@@ -29,7 +32,8 @@
   {
     "id": "td_3g_4g",
     "name": "TD 3G/4G",
-    "vendor": "",
+    "vendor": "FREE",
+    "operator": "free",
     "weight": 50.0,
     "reference": "TD 3G/4G",
     "phase": "monophase",
@@ -38,7 +42,8 @@
   {
     "id": "mini_td_700",
     "name": "Mini TD radio 700",
-    "vendor": "",
+    "vendor": "FREE",
+    "operator": "free",
     "weight": 8.0,
     "reference": "Mini TD radio 700",
     "phase": "monophase",
@@ -47,7 +52,8 @@
   {
     "id": "mini_td_5g",
     "name": "Mini TD 5G",
-    "vendor": "",
+    "vendor": "FREE",
+    "operator": "free",
     "weight": 15.0,
     "reference": "Mini TD 5G",
     "phase": "monophase",

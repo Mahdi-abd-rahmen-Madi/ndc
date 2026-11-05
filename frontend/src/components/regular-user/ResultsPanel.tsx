@@ -76,7 +76,11 @@ function ResultsPanel({
     if (c.id === 'baie' && operator !== 'orange') return false;
     return true;
   });
-  const techniqueConfigs = enabledConfigs.filter(c => c.zone === 'technique');
+  const techniqueConfigs = enabledConfigs.filter(c => {
+    if (c.zone !== 'technique') return false;
+    if (c.id === 'td' && operator === 'bouygues') return false;
+    return true;
+  });
 
   const displaySectors: SectorData[] = (sectors && sectors.length > 0)
     ? sectors

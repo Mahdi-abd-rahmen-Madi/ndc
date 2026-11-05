@@ -125,6 +125,7 @@ export function useSiteNdcGenerator({
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
       hasConvertisseurMdea, convertisseurMdeaQuantity,
+      hasCoffretTransFo, coffretTransFoQuantity,
       hasPileAmod, amodModules
     } = zoneTechnique;
 
@@ -222,10 +223,10 @@ export function useSiteNdcGenerator({
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity * nombreSecteurs })) : []
           },
           td_equipment: {
-            enabled: hasTdEquipment,
-            type: hasTdEquipment ? tdType : null,
-            reference: hasTdEquipment ? tdReference : null,
-            tgbt_reference: operator === 'bouygues' ? (hasTgbt ? tgbtReference : null) : (hasTdEquipment && tdType === 'monophase' ? tgbtReference : null)
+            enabled: operator !== 'bouygues' && hasTdEquipment,
+            type: (operator !== 'bouygues' && hasTdEquipment) ? tdType : null,
+            reference: (operator !== 'bouygues' && hasTdEquipment) ? tdReference : null,
+            tgbt_reference: (operator !== 'bouygues' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
           },
           tgbt_equipment: {
             enabled: operator === 'bouygues' && hasTgbt,
@@ -233,8 +234,21 @@ export function useSiteNdcGenerator({
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
-          coffrets_fibre: { enabled: hasCoffret, quantity: hasCoffret ? nombreSecteurs : 1, reference: hasCoffret ? coffretReference : null },
-          coffrets_hybride: { enabled: false, quantity: null, reference: null },
+          coffrets_fibre: {
+            enabled: operator === 'free' ? !!hasCoffretTransFo : hasCoffret,
+            quantity: operator === 'free' ? (coffretTransFoQuantity || 1) : (hasCoffret ? nombreSecteurs : 1),
+            reference: operator === 'free' ? (hasCoffretTransFo ? 'TRANS_FO' : null) : (hasCoffret ? coffretReference : null)
+          },
+          coffrets_hybride: {
+            enabled: operator === 'free' && !!hasCoffretTransFo,
+            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
+            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
+          },
+          coffret_trans_fo: {
+            enabled: operator === 'free' && !!hasCoffretTransFo,
+            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
+            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
+          },
           baie: {
             enabled: operator === 'orange' && hasBaie,
             items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],
@@ -378,10 +392,10 @@ export function useSiteNdcGenerator({
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity * nombreSecteurs })) : []
           },
           td_equipment: {
-            enabled: hasTdEquipment,
-            type: hasTdEquipment ? tdType : null,
-            reference: hasTdEquipment ? tdReference : null,
-            tgbt_reference: operator === 'bouygues' ? (hasTgbt ? tgbtReference : null) : (hasTdEquipment && tdType === 'monophase' ? tgbtReference : null)
+            enabled: operator !== 'bouygues' && hasTdEquipment,
+            type: (operator !== 'bouygues' && hasTdEquipment) ? tdType : null,
+            reference: (operator !== 'bouygues' && hasTdEquipment) ? tdReference : null,
+            tgbt_reference: (operator !== 'bouygues' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
           },
           tgbt_equipment: {
             enabled: operator === 'bouygues' && hasTgbt,
@@ -389,8 +403,21 @@ export function useSiteNdcGenerator({
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
-          coffrets_fibre: { enabled: hasCoffret, quantity: hasCoffret ? nombreSecteurs : 1, reference: hasCoffret ? coffretReference : null },
-          coffrets_hybride: { enabled: false, quantity: null, reference: null },
+          coffrets_fibre: {
+            enabled: operator === 'free' ? !!hasCoffretTransFo : hasCoffret,
+            quantity: operator === 'free' ? (coffretTransFoQuantity || 1) : (hasCoffret ? nombreSecteurs : 1),
+            reference: operator === 'free' ? (hasCoffretTransFo ? 'TRANS_FO' : null) : (hasCoffret ? coffretReference : null)
+          },
+          coffrets_hybride: {
+            enabled: operator === 'free' && !!hasCoffretTransFo,
+            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
+            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
+          },
+          coffret_trans_fo: {
+            enabled: operator === 'free' && !!hasCoffretTransFo,
+            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
+            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
+          },
           baie: {
             enabled: operator === 'orange' && hasBaie,
             items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],

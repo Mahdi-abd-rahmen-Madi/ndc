@@ -426,7 +426,7 @@ export default function RegularUserView({
                 isCompleted={!!siteName || !!clientName}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={`Site: ${siteName || 'N/A'} | Client: ${clientName || 'N/A'}`}
-                hideContinue={(foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')) || !selectedEchelle}
+                hideContinue={foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')}
               >
                 <UserInput
                   project={project}
@@ -453,10 +453,11 @@ export default function RegularUserView({
                   isStep3Complete
                     ? [
                       `${nombreSecteurs} secteur(s)`,
+                      selectedEchelle && selectedEchelle !== "Pas d'échelle" ? selectedEchelle : null,
                       hasFhEquipment ? 'FH' : null,
                       (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
                       hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
-                      hasCoffret ? 'Fibre' : null
+                      (operator !== 'free' && hasCoffret) ? 'Fibre' : null
                     ].filter(Boolean).join(' • ')
                     : undefined
                 }
@@ -499,6 +500,8 @@ export default function RegularUserView({
                                 config={config}
                                 operator={operator}
                                 nombreSecteurs={nombreSecteurs}
+                                selectedEchelle={selectedEchelle}
+                                setSelectedEchelle={(val) => setProject(prev => ({ ...prev, selectedEchelle: val }))}
                               />
                             </div>
                           </SectorConfigurator>
@@ -528,16 +531,17 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
+                isCompleted={(operator !== 'bouygues' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod || !!zoneTechnique.hasCoffretTransFo)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
-                  hasTdEquipment ? 'TD' : null,
+                  (operator !== 'bouygues' && hasTdEquipment) ? 'TD' : null,
                   hasGps ? 'GPS' : null,
                   hasBoitierLovage ? 'Lovage' : null,
                   (operator === 'orange' && hasBaie) ? 'Baie' : null,
                   (operator === 'free' && hasCab) ? 'CAB' : null,
                   (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
                   (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
+                  (operator === 'free' && zoneTechnique.hasCoffretTransFo) ? 'Coffret TRANS FO' : null,
                   (operator === 'free' && hasPileAmod) ? 'Pile AMOD' : null,
                   (operator === 'bouygues' && hasAtelierEnergie) ? 'BCube (TD + AE)' : null,
                   (operator === 'bouygues' && hasTgbt) ? 'TGBT' : null
@@ -559,7 +563,7 @@ export default function RegularUserView({
             </div>
 
             {/* Launch Calculation Button after Section 4 */}
-            {(activeStep >= 4 || allSectionsFilled) && (
+            {(activeStep >= 4 || allSectionsFilled) && !ndcPdfUrl && (
               <div className="mt-4 p-4 sm:p-5 bg-white rounded-2xl border border-violet-200/90 shadow-md shadow-violet-500/5 transition-all animate-fadeIn">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2.5">
@@ -575,7 +579,7 @@ export default function RegularUserView({
                       </p>
                     </div>
                   </div>
-                  {allSectionsFilled && !ndcPdfUrl && (
+                  {allSectionsFilled && (
                     <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                       Prêt pour le calcul
@@ -597,78 +601,33 @@ export default function RegularUserView({
                   </div>
                 )}
 
-                {ndcPdfUrl ? (
-                  <div className="flex flex-col gap-2.5">
-                    <button
-                      onClick={() => setShowPdfPreview(!showPdfPreview)}
-                      className="w-full py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md shadow-emerald-500/20 transition-all text-sm sm:text-base cursor-pointer"
-                    >
-                      <Eye className="w-5 h-5" />
-                      <span>{showPdfPreview ? 'Fermer la Note de Calcul' : 'Voir la Note de Calcul'}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNdcPdfUrl(null);
-                        setShowPdfPreview(false);
-                        setSiteNdcError(null);
-                      }}
-                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-xs border border-slate-200/80 cursor-pointer"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                      <span>Modifier les paramètres</span>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      if (!isConfirmed) {
-                        setIsInfoConfirmed(true);
-                      } else {
-                        handleGenerateSiteNdc();
-                      }
-                    }}
-                    disabled={isGeneratingSiteNdc || !allSectionsFilled}
-                    className={`w-full py-3.5 px-6 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-sm sm:text-base ${!allSectionsFilled
-                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                      : isConfirmed
-                        ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
-                        : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
-                      } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.99]' : ''}`}
-                  >
-                    {isGeneratingSiteNdc ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>{siteNdcPollingMsg || 'Calcul en cours...'}</span>
-                      </>
-                    ) : isConfirmed ? (
-                      <>
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Informations confirmées (Lancer le calcul)</span>
-                        <ArrowRight className="w-4 h-4 ml-1" />
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Confirmer les informations</span>
-                        <ArrowRight className="w-4 h-4 ml-1" />
-                      </>
-                    )}
-                  </button>
-                )}
-
-                {isGeneratingSiteNdc && (
-                  <div className="w-full mt-3 animate-fadeIn">
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden relative shadow-inner">
-                      <div
-                        className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard()
-                          ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
-                          : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
-                          }`}
-                        style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
-                      />
-                    </div>
-                  </div>
-                )}
+                <button
+                  onClick={() => {
+                    if (!isConfirmed) {
+                      setIsInfoConfirmed(true);
+                    }
+                  }}
+                  disabled={isGeneratingSiteNdc || !allSectionsFilled || isConfirmed}
+                  className={`w-full py-3.5 px-6 rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-sm sm:text-base ${!allSectionsFilled
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                    : isConfirmed
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-none cursor-default'
+                      : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-500/25 hover:shadow-violet-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] cursor-pointer'
+                    } ${isGeneratingSiteNdc ? 'opacity-80' : ''}`}
+                >
+                  {isConfirmed ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                      <span>Informations confirmées</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span>Confirmer les informations</span>
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>

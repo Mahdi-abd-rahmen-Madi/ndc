@@ -102,8 +102,7 @@ function RightPreviewPanel({
     buildingHeight,
     dalleThickness,
     etancheite,
-    plotHeight,
-    selectedEchelle,
+    plotHeight
   } = project;
 
   const s1 = sectors[0];
@@ -127,6 +126,7 @@ function RightPreviewPanel({
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
     hasConvertisseurMdea, convertisseurMdeaQuantity,
+    hasCoffretTransFo, coffretTransFoQuantity,
     hasPileAmod, amodModules
   } = zoneTechnique;
 
@@ -258,13 +258,6 @@ function RightPreviewPanel({
                     ) : (
                       <span className="text-slate-400 italic font-normal">À ajouter</span>
                     )}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col col-span-2 sm:col-span-3">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Présence echelle + Palier de repos rabattable + PA</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                    {selectedEchelle ? selectedEchelle : <span className="text-slate-400 italic font-normal">À renseigner</span>}
                   </span>
                 </div>
               </div>
@@ -425,10 +418,11 @@ function RightPreviewPanel({
                     fh: hasFhEquipment,
                     rrh: operator !== 'bouygues' && hasRrhEquipment,
                     rru: hasRruEquipment,
-                    td: hasTdEquipment,
+                    td: operator !== 'bouygues' && hasTdEquipment,
                     gps: hasGps,
                     boitier_lovage: hasBoitierLovage,
-                    coffrets_fibre: hasCoffret,
+                    coffrets_fibre: operator !== 'free' && hasCoffret,
+                    coffret_trans_fo: operator === 'free' && !!hasCoffretTransFo,
                     coffrets_hybride: false,
                     baie: operator === 'orange' && hasBaie,
                     cab: operator === 'free' && hasCab,
@@ -454,10 +448,10 @@ function RightPreviewPanel({
                         weight: rruOpt?.weight ?? null
                       };
                     }) : null,
-                    td: {
-                      type: tdType === 'monophase' ? 'TD Monophasé' : 'TD Tétraphasé',
+                    td: (operator !== 'bouygues' && hasTdEquipment) ? {
+                      type: tdType === 'monophase' ? 'TD Monophasé' : 'TD Tétrapolaire V5',
                       référence: resolveTd(tdReference) || 'N/A'
-                    },
+                    } : null,
                     tgbt: (operator === 'bouygues' && hasTgbt) ? (() => {
                       const tgbtItem = config?.tgbt_references?.find(r => r.id === tgbtReference || r.name === tgbtReference || r.reference === tgbtReference);
                       return {
@@ -469,6 +463,12 @@ function RightPreviewPanel({
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
                     boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
                     coffrets_fibre: { référence: coffretReference || 'N/A' },
+                    coffret_trans_fo: (operator === 'free' && hasCoffretTransFo) ? {
+                      modèle: 'Coffret TRANS FO',
+                      dimensions: '260x380x97mm',
+                      poids: `${(2.1 * (coffretTransFoQuantity || 1)).toFixed(1)} kg`,
+                      quantité: coffretTransFoQuantity || 1
+                    } : null,
                     coffrets_hybride: { référence: 'N/A', quantité: 0 },
                     baie: (operator === 'orange' && hasBaie) ? {
                       baieRadio,

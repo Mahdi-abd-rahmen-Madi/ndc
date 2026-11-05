@@ -116,74 +116,6 @@ export default function SectorConfigurator({
       </div>
 
       <div className={styles.contentSpace}>
-        {/* Hauteur du Mât */}
-        <div className={styles.mastContainer}>
-          <div className={styles.mastDecoStandard}></div>
-
-          <label className={styles.mastLabel}>
-            <span className={styles.mastLabelInner}>
-              <ArrowDownToLine className={styles.mastIcon} />
-              <span>3. Hauteur du mât :</span>
-            </span>
-          </label>
-          <div className={styles.mastInputsContainer}>
-            <div className={styles.standardCol}>
-              <label className={styles.standardLabel}>Standard</label>
-              <div className={styles.standardButtonsContainer}>
-                {recommendedMastHeights.map(h => {
-                  const isSelected = sectorData.selectedHeight === h && customInputText === '';
-                  return (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => {
-                        setCustomInputText('');
-                        updateSector(index, { selectedHeight: h });
-                      }}
-                      className={`${styles.standardButtonBase} ${isSelected
-                          ? styles.standardButtonActive
-                          : styles.standardButtonInactive
-                        }`}
-                    >
-                      {h}m
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className={styles.customCol}>
-              <label className={customInputText !== '' ? styles.customLabelActive : styles.customLabel}>
-                <span>Personnalisé</span>
-              </label>
-              <div className={styles.customInputContainer}>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="Ex: 3.5"
-                  value={customInputText}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(',', '.');
-                    // Allow numbers and decimal points only
-                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                      setCustomInputText(val);
-                      const num = parseFloat(val);
-                      if (!isNaN(num) && num > 0) {
-                        updateSector(index, { selectedHeight: num });
-                      } else if (val === '') {
-                        updateSector(index, { selectedHeight: 3 }); // default fallback or keep 3
-                      }
-                    }
-                  }}
-                  className={customInputText !== '' ? styles.customInputActive : styles.customInput}
-                />
-                <span className={customInputText !== '' ? styles.customUnitActive : styles.customUnit}>m</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
         {/* Configuration de l'Antenne */}
         <MontageSelector
           selectedMontage4G={sectorData.selectedMontage4G}
@@ -206,6 +138,73 @@ export default function SectorConfigurator({
           setSelectedVendor4G={(vendor) => updateSector(index, { selectedVendor4G: vendor })}
           setSelectedVendor5G={(vendor) => updateSector(index, { selectedVendor5G: vendor })}
           operator={operator}
+          mastHeightControl={
+            <div className={styles.mastContainer}>
+              <div className={styles.mastDecoStandard}></div>
+
+              <label className={styles.mastLabel}>
+                <span className={styles.mastLabelInner}>
+                  <ArrowDownToLine className={styles.mastIcon} />
+                  <span>Hauteur du mât :</span>
+                </span>
+              </label>
+              <div className={styles.mastInputsContainer}>
+                <div className={styles.standardCol}>
+                  <label className={styles.standardLabel}>Standard</label>
+                  <div className={styles.standardButtonsContainer}>
+                    {recommendedMastHeights.map(h => {
+                      const isSelected = sectorData.selectedHeight === h && customInputText === '';
+                      return (
+                        <button
+                          key={h}
+                          type="button"
+                          onClick={() => {
+                            setCustomInputText('');
+                            updateSector(index, { selectedHeight: h });
+                          }}
+                          className={`${styles.standardButtonBase} ${isSelected
+                              ? styles.standardButtonActive
+                              : styles.standardButtonInactive
+                            }`}
+                        >
+                          {h}m
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className={styles.customCol}>
+                  <label className={customInputText !== '' ? styles.customLabelActive : styles.customLabel}>
+                    <span>Personnalisé</span>
+                  </label>
+                  <div className={styles.customInputContainer}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ex: 3.5"
+                      value={customInputText}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(',', '.');
+                        // Allow numbers and decimal points only
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                          setCustomInputText(val);
+                          const num = parseFloat(val);
+                          if (!isNaN(num) && num > 0) {
+                            updateSector(index, { selectedHeight: num });
+                          } else if (val === '') {
+                            updateSector(index, { selectedHeight: 3 }); // default fallback or keep 3
+                          }
+                        }
+                      }}
+                      className={customInputText !== '' ? styles.customInputActive : styles.customInput}
+                    />
+                    <span className={customInputText !== '' ? styles.customUnitActive : styles.customUnit}>m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         >
           {children}
         </MontageSelector>

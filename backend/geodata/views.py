@@ -2255,14 +2255,14 @@ def test_catalogue_equipment_view(request):
     # 6. TD references (Tableaux de distribution)
     for td in fields.get('td_references', []):
         op = td.get('operator')
-        if not op and 'free' in td.get('id', '').lower():
+        if not op:
             op = 'free'
         items.append({
             'category': 'TD',
-            'operator': (op or 'all').lower().strip(),
+            'operator': (op or 'free').lower().strip(),
             'id': td.get('id', ''),
             'reference': td.get('name') or td.get('reference', ''),
-            'vendor': td.get('vendor', ''),
+            'vendor': td.get('vendor', '') or ('FREE' if op == 'free' else ''),
             'montage_id': '',
             'specs': f"Dim: {td.get('dimensions', 'N/A')} | Poids: {td.get('weight', 0)} kg",
             'raw': td

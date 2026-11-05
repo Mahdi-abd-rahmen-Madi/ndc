@@ -13,3 +13,4 @@ export * from './TGBTEquipmentToggle';
 export * from './ConvertisseurMdeaEquipmentToggle';
 export * from './BoitierLovageEquipmentToggle';
 export * from './PileAmodEquipmentToggle';
+export * from './CoffretTransFoEquipmentToggle';

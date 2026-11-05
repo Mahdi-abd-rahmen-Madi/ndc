@@ -12,7 +12,7 @@ export const styles = {
   
   contentSpace: "space-y-6",
   
-  mastContainer: "flex flex-col space-y-3 p-4 bg-slate-50/80 border border-slate-200 rounded-xl relative overflow-hidden group hover:border-violet-300 transition-all duration-300",
+  mastContainer: "flex flex-col space-y-3 p-4 bg-white border border-slate-200 rounded-xl relative overflow-hidden group hover:border-violet-300 transition-all duration-300 mb-4 shadow-2xs",
   mastContainerCustom: "flex flex-col space-y-3 p-4 bg-slate-50/80 border border-slate-200 rounded-xl relative overflow-hidden group hover:border-violet-300 transition-all duration-300",
   mastDecoStandard: "absolute right-0 top-0 w-24 h-24 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors pointer-events-none",
   mastDecoCustom: "absolute right-0 top-0 w-24 h-24 bg-violet-500/5 rounded-bl-full -z-10 group-hover:bg-violet-500/10 transition-colors pointer-events-none",

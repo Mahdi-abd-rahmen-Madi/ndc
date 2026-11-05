@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Server, Radio, Zap, Check } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { EquipmentOptionCard } from '../../ui/EquipmentOptionCard';
+import { QuantityInput } from '../../ui/QuantityInput';
 import type { BaieReference, SelectedBaieItem } from '../types';
 
 export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
@@ -347,7 +348,7 @@ export function BaieEquipmentToggle({
       </div>
 
       {/* Bannière de la catégorie active */}
-      <div className="flex items-center justify-between bg-slate-50/80 border border-slate-200/80 rounded-lg px-3 py-2 text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/80 border border-slate-200/80 rounded-lg px-3 py-2 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-bold text-slate-800">
             {currentCategoryInfo?.label}
@@ -356,13 +357,22 @@ export function BaieEquipmentToggle({
             1 référence max
           </span>
         </div>
-        <div className="text-[11px] text-slate-600">
-          {currentCategorySelection ? (
-            <span className="text-emerald-700 font-semibold flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" /> Modèle sélectionné : {currentCategorySelection.ref?.name}
-            </span>
-          ) : (
-            <span className="text-slate-400 italic">Aucun modèle sélectionné (cliquez pour en choisir un)</span>
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <div className="text-[11px] text-slate-600">
+            {currentCategorySelection ? (
+              <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Modèle sélectionné : {currentCategorySelection.ref?.name}
+              </span>
+            ) : (
+              <span className="text-slate-400 italic">Aucun modèle sélectionné (cliquez pour en choisir un)</span>
+            )}
+          </div>
+          {currentCategorySelection && currentCategorySelection.ref && (
+            <QuantityInput
+              value={currentCategorySelection.sel.quantity || 1}
+              onChange={(val) => handleSetItemQty(currentCategorySelection.ref!, val)}
+              size="sm"
+            />
           )}
         </div>
       </div>

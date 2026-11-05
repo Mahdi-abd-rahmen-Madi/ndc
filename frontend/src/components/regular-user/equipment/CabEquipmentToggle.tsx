@@ -37,7 +37,7 @@ export function CabEquipmentToggle({
 
   return (
     <EquipmentToggleCard
-      title="Présence Baie CAB"
+      title="Présence Baie CAB X"
       enabled={hasCab}
       onToggle={(checked) => {
         setHasCab(checked);

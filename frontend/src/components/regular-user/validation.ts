@@ -56,11 +56,13 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
     if (dalleThickness === '') missingRequirements.push('Épaisseur dalle');
     if (etancheite === '') missingRequirements.push('Étanchéité');
   }
-  if (!selectedEchelle.trim()) missingRequirements.push('Échelle');
   const canGenerate = missingRequirements.length === 0;
 
   const activeSectors = sectors.slice(0, nombreSecteurs);
   const missingStep3Equipments: string[] = [];
+  if (!selectedEchelle.trim()) {
+    missingStep3Equipments.push('Présence échelle + Palier');
+  }
   activeSectors.forEach((sector, idx) => {
     const secLabel = nombreSecteurs > 1 ? ` (Secteur ${idx + 1})` : '';
     if (sector.hasFhEquipment && !sector.fhReference) {
@@ -81,13 +83,13 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
       }
     }
 
-    if (sector.hasCoffret && !sector.coffretReference) {
+    if (operator !== 'free' && sector.hasCoffret && !sector.coffretReference) {
       missingStep3Equipments.push(`Référence Coffret fibre${secLabel}`);
     }
   });
 
   const missingStep4Equipments: string[] = [];
-  if (zoneTechnique.hasTdEquipment && !zoneTechnique.tdReference) {
+  if (operator !== 'bouygues' && zoneTechnique.hasTdEquipment && !zoneTechnique.tdReference) {
     missingStep4Equipments.push('Référence TD');
   }
   if (zoneTechnique.hasGps && !zoneTechnique.gpsReference) {

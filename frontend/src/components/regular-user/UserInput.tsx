@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { ArrowUpToLine, Layers, FileStack, GitMerge, Camera, Loader2, CheckCircle2, AlertCircle, MapPin, Settings2, AlignJustify } from 'lucide-react';
+import { ArrowUpToLine, Layers, FileStack, GitMerge, Camera, Loader2, CheckCircle2, AlertCircle, MapPin, Settings2 } from 'lucide-react';
 import imageCompression from 'browser-image-compression';
 import { SimilarityMode, ProjectData } from './types';
-import { CustomSelect } from '../ui/CustomSelect';
 
 interface UserInputProps {
   project: ProjectData;
@@ -37,8 +36,7 @@ export default function UserInput({
     dalleThickness,
     etancheite,
     hasChauffageAuSol,
-    fausseDalleThickness,
-    selectedEchelle
+    fausseDalleThickness
   } = project;
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -397,26 +395,6 @@ export default function UserInput({
                   </div>
                 </div>
               )}
-
-              {/* Échelle au sol */}
-              <div className="flex flex-col space-y-2">
-                <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
-                  <AlignJustify className="w-3.5 h-3.5 text-violet-600 shrink-0" />
-                  <span>Présence echelle + Palier de repos rabattable + PA <span className="text-red-500 font-bold">*</span></span>
-                </label>
-                <CustomSelect
-                  value={selectedEchelle}
-                  onChange={(val) => onChange({ selectedEchelle: val })}
-                  options={[
-                    { value: "Pas d'échelle", label: "Pas d'échelle" },
-                    { value: 'Echelle Söll', label: 'Echelle Söll' },
-                    { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
-                    { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' }
-                  ]}
-                  placeholder="Sélectionner une échelle"
-                  className="w-full"
-                />
-              </div>
 
             </div>
           </div>

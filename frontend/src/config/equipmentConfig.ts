@@ -126,6 +126,19 @@ export const equipmentConfigs: EquipmentConfig[] = [
     ],
   },
   {
+    id: 'coffret_trans_fo',
+    name: 'Coffret hybride : TRANS FO',
+    enabled: false,
+    icon: 'Activity',
+    color: 'violet',
+    zone: 'technique',
+    fields: [
+      { label: 'Modèle', value: 'Coffret TRANS FO' },
+      { label: 'Dimensions', value: '260x380x97mm' },
+      { label: 'Poids', value: '2.1kg' },
+    ],
+  },
+  {
     id: 'baie',
     name: 'Présence Baie',
     enabled: false,
@@ -138,7 +151,7 @@ export const equipmentConfigs: EquipmentConfig[] = [
   },
   {
     id: 'cab',
-    name: 'Présence Baie CAB',
+    name: 'Présence Baie CAB X',
     enabled: false,
     icon: 'Server',
     color: 'rose',

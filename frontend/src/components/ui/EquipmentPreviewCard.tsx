@@ -24,6 +24,15 @@ export interface EquipmentPreviewCardProps {
     border?: string;
   };
   /**
+   * Total badge displayed on the 2nd line next to the scope badge (e.g. { text: 'Total par site : 3' })
+   */
+  totalBadge?: {
+    text: string;
+    bg?: string;
+    textCol?: string;
+    border?: string;
+  };
+  /**
    * Type badge displayed on the 2nd line on the left (e.g. { text: 'RRU' })
    */
   typeBadge?: {
@@ -97,6 +106,7 @@ export function EquipmentPreviewCard({
   icon: Icon,
   color = 'emerald',
   scopeBadge,
+  totalBadge,
   typeBadge,
   quantityInfo,
   marque,
@@ -143,10 +153,19 @@ export function EquipmentPreviewCard({
                 {scopeBadge.text}
               </span>
             )}
+            {totalBadge && (
+              <span
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                  totalBadge.bg || 'bg-purple-50'
+                } ${totalBadge.textCol || 'text-purple-700'} border ${totalBadge.border || 'border-purple-200'}`}
+              >
+                {totalBadge.text}
+              </span>
+            )}
           </div>
 
-          {/* Right side: number / total per secteur ou par site */}
-          {quantityInfo && (
+          {/* Right side: only render if quantityInfo is provided and totalBadge is not present */}
+          {quantityInfo && !totalBadge && (
             <div className="flex flex-col items-end shrink-0">
               {quantityInfo.perSector !== undefined ? (
                 <>

@@ -9,6 +9,7 @@ import { CabEquipmentToggle } from './equipment/CabEquipmentToggle';
 import { AtelierEnergieEquipmentToggle } from './equipment/AtelierEnergieEquipmentToggle';
 import { ConvertisseurMdeaEquipmentToggle } from './equipment/ConvertisseurMdeaEquipmentToggle';
 import { PileAmodEquipmentToggle } from './equipment/PileAmodEquipmentToggle';
+import { CoffretTransFoEquipmentToggle } from './equipment/CoffretTransFoEquipmentToggle';
 import type { CatalogueConfig, ZoneTechniqueData } from './types';
 
 export interface ZoneTechniqueGridProps {
@@ -27,16 +28,18 @@ export function ZoneTechniqueGrid({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* 1. TD Equipment */}
-      <TDEquipmentToggle
-        hasTdEquipment={data.hasTdEquipment}
-        setHasTdEquipment={(val) => onChange({ hasTdEquipment: val })}
-        tdType={data.tdType}
-        setTdType={(val) => onChange({ tdType: val })}
-        tdReference={data.tdReference}
-        setTdReference={(val) => onChange({ tdReference: val })}
-        tdOptions={config?.td_references || []}
-        operator={operator}
-      />
+      {operator !== 'bouygues' && (
+        <TDEquipmentToggle
+          hasTdEquipment={data.hasTdEquipment}
+          setHasTdEquipment={(val) => onChange({ hasTdEquipment: val })}
+          tdType={data.tdType}
+          setTdType={(val) => onChange({ tdType: val })}
+          tdReference={data.tdReference}
+          setTdReference={(val) => onChange({ tdReference: val })}
+          tdOptions={config?.td_references || []}
+          operator={operator}
+        />
+      )}
 
       {/* 2. GPS */}
       <GPSEquipmentToggle
@@ -81,14 +84,23 @@ export function ZoneTechniqueGrid({
         operator={operator}
       />
 
-      {/* Convertisseur MDEA (Free) placed on the same row as Boîtier de lovage */}
+      {/* Convertisseur MDEA & Coffret TRANS FO (Free) */}
       {operator === 'free' && (
-        <ConvertisseurMdeaEquipmentToggle
-          hasConvertisseurMdea={data.hasConvertisseurMdea}
-          setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
-          convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
-          setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
-        />
+        <>
+          <ConvertisseurMdeaEquipmentToggle
+            hasConvertisseurMdea={data.hasConvertisseurMdea}
+            setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
+            convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
+            setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
+          />
+          <CoffretTransFoEquipmentToggle
+            hasCoffretTransFo={!!data.hasCoffretTransFo}
+            setHasCoffretTransFo={(val) => onChange({ hasCoffretTransFo: val })}
+            coffretTransFoQuantity={data.coffretTransFoQuantity ?? 1}
+            setCoffretTransFoQuantity={(val) => onChange({ coffretTransFoQuantity: val })}
+            coffretOptions={config?.coffret_references || []}
+          />
+        </>
       )}
 
       {/* 5. Baies (Orange) */}

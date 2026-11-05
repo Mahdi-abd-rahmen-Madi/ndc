@@ -142,6 +142,7 @@ export function SiteConfirmationModal({
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
     hasConvertisseurMdea, convertisseurMdeaQuantity,
+    hasCoffretTransFo, coffretTransFoQuantity,
     hasPileAmod, amodModules
   } = zoneTechnique;
 
@@ -220,10 +221,6 @@ export function SiteConfirmationModal({
                 <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Épaisseur Étanchéité</span>
                 <span className="font-bold text-slate-900">{etancheite || 'Non spécifié'} cm</span>
               </div>
-              <div className="bg-white p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-[10px] text-slate-400 font-semibold uppercase block mb-0.5">Présence échelle + Palier</span>
-                <span className="font-bold text-slate-900">{selectedEchelle || 'Non spécifié'}</span>
-              </div>
             </div>
           </div>
 
@@ -263,6 +260,19 @@ export function SiteConfirmationModal({
                 Équipements additionnels
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Échelle */}
+                {selectedEchelle && (
+                  <MastEquipmentCard
+                    borderClass="border-l-indigo-500"
+                    title="Échelle + Palier"
+                    badgeText="1x par site"
+                    badgeClass="bg-indigo-50 text-indigo-700 border-indigo-200"
+                    quantityText={selectedEchelle === "Pas d'échelle" ? "0" : "1"}
+                    detailLabel="Modèle"
+                    detailValue={selectedEchelle}
+                  />
+                )}
+
                 {/* FH */}
                 {hasFhEquipment && fhQuantity > 0 && (
                   <MastEquipmentCard
@@ -303,7 +313,7 @@ export function SiteConfirmationModal({
                 ))}
 
                 {/* Coffrets */}
-                {hasCoffret && (
+                {operator !== 'free' && hasCoffret && (
                   <MastEquipmentCard
                     borderClass="border-l-pink-500"
                     title="Coffret Fibre / Hybride"
@@ -319,7 +329,7 @@ export function SiteConfirmationModal({
           </div>
 
           {/* 3. Zone Technique */}
-          {(hasTdEquipment || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)) && (
+          {((operator !== 'bouygues' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasCoffretTransFo || hasPileAmod)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)) && (
             <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/60">
                 <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md">
@@ -330,7 +340,7 @@ export function SiteConfirmationModal({
                 </h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {hasTdEquipment && (
+                {(operator !== 'bouygues' && hasTdEquipment) && (
                   <ZoneTechniqueCard title={`Équipement TD (${tdType === 'monophase' ? 'Monophasé' : 'Tétraphasé'})`}>
                     <span className="text-xs font-bold text-slate-900 block truncate" title={resolveTd(tdReference) || tdReference}>
                       {resolveTd(tdReference) || tdReference || 'Sélectionné'}
@@ -400,6 +410,18 @@ export function SiteConfirmationModal({
                       </span>
                       <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">
                         Qté: {convertisseurMdeaQuantity}
+                      </span>
+                    </div>
+                  </ZoneTechniqueCard>
+                )}
+                {operator === 'free' && hasCoffretTransFo && (
+                  <ZoneTechniqueCard title="Coffret hybride : TRANS FO">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">
+                        Coffret TRANS FO (2.1 kg)
+                      </span>
+                      <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0">
+                        Qté: {coffretTransFoQuantity || 1}
                       </span>
                     </div>
                   </ZoneTechniqueCard>

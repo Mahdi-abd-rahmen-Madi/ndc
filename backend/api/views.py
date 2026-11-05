@@ -375,6 +375,10 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         except json.JSONDecodeError:
                             pass
 
+                operator_name = (preview_data.get('site', {}).get('operator') or request.data.get('operator') or '').lower().strip()
+                if operator_name == 'bouygues' and 'td_equipment' in preview_data and isinstance(preview_data['td_equipment'], dict):
+                    preview_data['td_equipment']['enabled'] = False
+
                 code_val = request.data.get('code_site') or request.data.get('ref_site') or ''
                 if 'site' not in preview_data or not isinstance(preview_data['site'], dict):
                     preview_data['site'] = {
@@ -434,6 +438,8 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 for eq_key in ['fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre']:
                     eq = preview_data.get(eq_key, {})
                     if isinstance(eq, dict) and eq.get('enabled'):
+                        if eq_key == 'td_equipment' and operator_name == 'bouygues':
+                            continue
                         has_any_eq = True
                         break
                         

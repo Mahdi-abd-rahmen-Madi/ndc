@@ -24,6 +24,7 @@ interface MontageSelectorProps {
   setSelectedVendor4G?: (vendor: string) => void;
   setSelectedVendor5G?: (vendor: string) => void;
   operator?: string;
+  mastHeightControl?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -48,10 +49,11 @@ export default function MontageSelector({
   setSelectedVendor4G,
   setSelectedVendor5G,
   operator = 'bouygues',
+  mastHeightControl,
   children
 }: MontageSelectorProps) {
   const montages = config?.standard_montages || [];
-  const realWorldReferences = (config?.real_world_references || []).filter(r => 
+  const realWorldReferences = (config?.real_world_references || []).filter(r =>
     !r.ant4g.model.toLowerCase().includes('agile') &&
     !r.ant5g.model.toLowerCase().includes('agile') &&
     !r.name.toLowerCase().includes('agile') &&
@@ -93,11 +95,11 @@ export default function MontageSelector({
     }))).sort();
   }, [unique5GMap]);
 
-  const unique4GRefs = Array.from(unique4GMap.values()).filter(r => 
+  const unique4GRefs = Array.from(unique4GMap.values()).filter(r =>
     r.name.toUpperCase().startsWith(selectedVendor4G.toUpperCase()) ||
     r.name.toUpperCase().includes(selectedVendor4G.toUpperCase())
   );
-  const unique5GRefs = Array.from(unique5GMap.values()).filter(r => 
+  const unique5GRefs = Array.from(unique5GMap.values()).filter(r =>
     r.name.toUpperCase().startsWith(selectedVendor5G.toUpperCase()) ||
     r.name.toUpperCase().includes(selectedVendor5G.toUpperCase())
   );
@@ -127,7 +129,7 @@ export default function MontageSelector({
       return;
     }
 
-    const vRefs = Array.from(unique4GMap.values()).filter(r => 
+    const vRefs = Array.from(unique4GMap.values()).filter(r =>
       r.name.toUpperCase().startsWith(selectedVendor4G.toUpperCase()) ||
       r.name.toUpperCase().includes(selectedVendor4G.toUpperCase())
     );
@@ -151,7 +153,7 @@ export default function MontageSelector({
       return;
     }
 
-    const vRefs = Array.from(unique5GMap.values()).filter(r => 
+    const vRefs = Array.from(unique5GMap.values()).filter(r =>
       r.name.toUpperCase().startsWith(selectedVendor5G.toUpperCase()) ||
       r.name.toUpperCase().includes(selectedVendor5G.toUpperCase())
     );
@@ -219,33 +221,33 @@ export default function MontageSelector({
       <div className={styles.configContainer}>
         <label className={styles.configHeader}>
           <Settings className={styles.configIcon} />
-          4. Configuration de l'Antenne
+          Configuration de l'Antenne
         </label>
+
+        {mastHeightControl}
 
         {/* Segmented Control */}
         <div className={styles.segmentedControlContainer}>
-          <div 
+          <div
             className={styles.segmentedControlSlider}
-            style={{ 
-              width: 'calc(50% - 4px)', 
-              left: configMode === 'agile' ? '4px' : 'calc(50%)' 
+            style={{
+              width: 'calc(50% - 4px)',
+              left: configMode === 'agile' ? '4px' : 'calc(50%)'
             }}
           />
           <button
             type="button"
             onClick={() => handleConfigModeChange('agile')}
-            className={`${styles.segmentedControlButtonBase} ${
-              configMode === 'agile' ? styles.segmentedControlButtonActive : styles.segmentedControlButtonInactive
-            }`}
+            className={`${styles.segmentedControlButtonBase} ${configMode === 'agile' ? styles.segmentedControlButtonActive : styles.segmentedControlButtonInactive
+              }`}
           >
             Dimensions Agiles
           </button>
           <button
             type="button"
             onClick={() => handleConfigModeChange('reference')}
-            className={`${styles.segmentedControlButtonBase} ${
-              configMode === 'reference' ? styles.segmentedControlButtonActive : styles.segmentedControlButtonInactive
-            }`}
+            className={`${styles.segmentedControlButtonBase} ${configMode === 'reference' ? styles.segmentedControlButtonActive : styles.segmentedControlButtonInactive
+              }`}
           >
             Références (Dimensions réelles)
           </button>
@@ -260,9 +262,9 @@ export default function MontageSelector({
               <div className={styles.iconContainer4G}>
                 <Radio className={styles.icon4G} />
               </div>
-              Antenne 4G
+              Antenne 3G/4G
             </h4>
-            
+
             {/* Dropdown 4G */}
             <div className={styles.dropdownContainer}>
               {configMode === 'agile' ? (
@@ -328,7 +330,7 @@ export default function MontageSelector({
               </div>
               Antenne 5G
             </h4>
-            
+
             {/* Dropdown 5G */}
             <div className={styles.dropdownContainer}>
               {configMode === 'agile' ? (

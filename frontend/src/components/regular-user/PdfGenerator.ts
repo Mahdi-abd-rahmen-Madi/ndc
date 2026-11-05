@@ -63,6 +63,8 @@ interface PdfGeneratorOptions {
   atelierFpbcQuantity?: number;
   hasConvertisseurMdea?: boolean;
   convertisseurMdeaQuantity?: number;
+  hasCoffretTransFo?: boolean;
+  coffretTransFoQuantity?: number;
   hasPileAmod?: boolean;
   amodModules?: Record<string, { enabled: boolean; quantity: number }>;
   bcubeItem?: { name: string; supplier?: string; dimensions?: string; weight?: number; power?: string; phase?: string };
@@ -115,6 +117,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       hasAtelierEnergie, atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity, bcubeItem,
       hasConvertisseurMdea, convertisseurMdeaQuantity,
+      hasCoffretTransFo, coffretTransFoQuantity,
       hasPileAmod, amodModules,
       miniMapImage,
       nombreSecteurs,
@@ -298,7 +301,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           lineY += 8;
         });
       }
-      if (hasCoffret) {
+      if (hasCoffret && operator !== 'free') {
         const refObj = coffretOptions.find((r: any) => r.id === coffretReference);
         const refName = refObj ? `${refObj.name.replace(/\s*\([^)]*\)/g, '').trim()} - Réf: ${refObj.id}` : (coffretReference || 'Standard');
         const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${nombreSecteurs})` : '';
@@ -308,19 +311,21 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       yPos += boxHeight + 8;
     }
 
-    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA, TGBT, Pile AMOD)
+    // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA, Coffret TRANS FO, TGBT, Pile AMOD)
+    const showTdInPdf = operator !== 'bouygues' && hasTdEquipment;
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
     const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);
     const showMdeaInPdf = operator === 'free' && hasConvertisseurMdea;
+    const showTransFoInPdf = operator === 'free' && hasCoffretTransFo;
     const showAmodInPdf = operator === 'free' && hasPileAmod;
     const showTgbtInPdf = operator === 'bouygues' && hasTgbt;
-    const hasTechniqueEquipment = hasTdEquipment || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf || showAmodInPdf || showTgbtInPdf;
+    const hasTechniqueEquipment = showTdInPdf || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf || showTransFoInPdf || showAmodInPdf || showTgbtInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
 
       let techCount = 0;
-      if (hasTdEquipment) techCount++;
+      if (showTdInPdf) techCount++;
       if (hasGps) techCount++;
       if (hasBoitierLovage) techCount++;
       if (showBaieInPdf) {
@@ -329,6 +334,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showCabInPdf) techCount++;
       if (showAtelierInPdf) techCount++;
       if (showMdeaInPdf) techCount++;
+      if (showTransFoInPdf) techCount++;
       if (showAmodInPdf) techCount++;
       if (showTgbtInPdf) techCount++;
 
@@ -341,10 +347,10 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
 
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
-      if (hasTdEquipment) {
+      if (showTdInPdf) {
         const tdStr = tdType === 'monophase'
           ? `• TD Monophasé : Référence ${tdReference || 'N/A'}`
-          : `• TD Tétraphasé : Référence ${tdReference || 'N/A'}`;
+          : `• TD Tétrapolaire V5 : Référence ${tdReference || 'N/A'}`;
         doc.text(tdStr, 28, lineY);
         lineY += 8;
       }
@@ -391,7 +397,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         };
         const suppLabel = (cabSupport && supportMap[cabSupport]) ? supportMap[cabSupport] : (cabSupport || '');
         const suppText = suppLabel ? ` (Support: ${suppLabel})` : '';
-        doc.text(`• Présence Baie CAB : ${cabs.join(', ') || 'Sélectionnée'}${suppText}`, 28, lineY);
+        doc.text(`• Présence Baie CAB X : ${cabs.join(', ') || 'Sélectionnée'}${suppText}`, 28, lineY);
         lineY += 8;
       }
       if (showAtelierInPdf) {
@@ -418,6 +424,12 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         const qty = convertisseurMdeaQuantity || 1;
         const qtyPrefix = qty > 1 ? `${qty}x ` : '';
         doc.text(`• Présence convertisseur MDEA : ${qtyPrefix}MDEA (338*295*140mm - ${10 * qty}kg)`, 28, lineY);
+        lineY += 8;
+      }
+      if (showTransFoInPdf) {
+        const qty = coffretTransFoQuantity || 1;
+        const qtyPrefix = qty > 1 ? `${qty}x ` : '';
+        doc.text(`• Coffret hybride : TRANS FO : ${qtyPrefix}Coffret TRANS FO (260x380x97mm - ${(2.1 * qty).toFixed(1)}kg)`, 28, lineY);
         lineY += 8;
       }
       if (showAmodInPdf) {
