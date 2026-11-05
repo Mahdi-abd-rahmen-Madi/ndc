@@ -894,9 +894,16 @@ def generate_auxiliary_pdfs(job, start_page=1):
             'eq_weight': fh_eq.get('weight_kg') or '[FH_WEIGHT]'
         }))
 
-    # Check for RRH
+    # Check for RRH (Enabled via toggle, standalone RRH job, or composite Antenna+RRH)
     rrh_eq = input_data.get('rrh_equipment', {})
-    if rrh_eq.get('enabled'):
+    res_data = getattr(job, 'result_data', {}) if job else {}
+    if not isinstance(res_data, dict):
+        res_data = {}
+    has_rrh_result = res_data.get('has_rrh') is True or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
+    calc_type = getattr(job, 'calculation_type', '') if job else ''
+    is_rrh_calc = bool(input_data.get('is_rrh') or calc_type in ['rrh', 'antenna_with_rrh'] or getattr(job, 'note_de_calcul_rrh', None))
+
+    if rrh_eq.get('enabled') or has_rrh_result or is_rrh_calc:
         from .catalogue_loader import find_rrh_reference
         items = rrh_eq.get('items', [])
         qty = sum(item.get('quantity', 1) for item in items) if items else 1
@@ -926,15 +933,68 @@ def generate_auxiliary_pdfs(job, start_page=1):
             fw_lat = '[Fw,Lat]'
             fw_mat = '[Fw,Mat]'
 
+        # Override/Enrich with genuine Worker results if available
+        worker_rrh = res_data.get('rrh', {})
+        wind_p = worker_rrh.get('wind_params', {})
+        equip_p = worker_rrh.get('equipment_params', {})
+        extremes = worker_rrh.get('extremes', {})
+
+        if equip_p:
+            qty = equip_p.get('qty', qty)
+            if equip_p.get('h_mm') and equip_p.get('w_mm'):
+                eq_dims = f"{equip_p.get('h_mm')}x{equip_p.get('w_mm')}x{equip_p.get('t_mm', 0)} mm"
+            if equip_p.get('weight_kg'):
+                eq_weight = equip_p.get('weight_kg')
+            if equip_p.get('cf_front'):
+                cx_front = equip_p.get('cf_front')
+            if equip_p.get('cf_lat'):
+                cx_lat = equip_p.get('cf_lat')
+
+        if wind_p:
+            if wind_p.get('fw_front'): fw_front = wind_p.get('fw_front')
+            if wind_p.get('fw_lat'): fw_lat = wind_p.get('fw_lat')
+            if wind_p.get('fw_mast'): fw_mat = wind_p.get('fw_mast')
+            if wind_p.get('qp_dan'): context['qp_z'] = wind_p.get('qp_dan')
+
+        # Locate genuine screenshot artifacts from job
+        rrh_screenshot_abs = None
+        if job and getattr(job, 'rrh_screenshot', None) and job.rrh_screenshot:
+            try:
+                if os.path.exists(job.rrh_screenshot.path):
+                    rrh_screenshot_abs = job.rrh_screenshot.path
+            except Exception:
+                pass
+
+        rrh_tableau_charges_abs = None
+        if job and getattr(job, 'rrh_tableau_charges', None) and job.rrh_tableau_charges:
+            try:
+                if os.path.exists(job.rrh_tableau_charges.path):
+                    rrh_tableau_charges_abs = job.rrh_tableau_charges.path
+            except Exception:
+                pass
+
+        rrh_verification_screenshot_abs = None
+        if job and getattr(job, 'rrh_verification_screenshot', None) and job.rrh_verification_screenshot:
+            try:
+                if os.path.exists(job.rrh_verification_screenshot.path):
+                    rrh_verification_screenshot_abs = job.rrh_verification_screenshot.path
+            except Exception:
+                pass
+
         generated_pdfs.append(_render_and_save('rrh', {
             'eq_qty': qty,
+            'rrh_name': equip_p.get('name', 'RRH'),
             'eq_dims': eq_dims,
             'eq_weight': eq_weight,
             'cx_front': cx_front,
             'cx_lat': cx_lat,
             'fw_front': fw_front,
             'fw_lat': fw_lat,
-            'fw_mat': fw_mat
+            'fw_mat': fw_mat,
+            'extremes': extremes,
+            'rrh_screenshot_abs': rrh_screenshot_abs,
+            'rrh_tableau_charges_abs': rrh_tableau_charges_abs,
+            'rrh_verification_screenshot_abs': rrh_verification_screenshot_abs
         }))
 
     # Check for RRU

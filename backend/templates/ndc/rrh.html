@@ -62,15 +62,95 @@
 <p>Pas de point d’ancrage sur le mât</p>
 
 <h2>Modélisation en 3D</h2>
-<p>Géométrie des pièces<br>
-Tableau des valeurs de chargements<br>
-PP : Poids propre<br>
-PE : Poids équipements<br>
-Tableau des combinaisons<br>
-Vérification à l’ELU et à l’ELS<br>
-Vérification de mat principal {{ mat_section }} mm<br>
-Vérification de plot {{ plot_section }} mm<br>
-Assemblage Mat/Plot métallique</p>
+{% if rrh_screenshot_abs %}
+<div style="text-align: center; margin: 10px 0;">
+    <img src="file://{{ rrh_screenshot_abs }}" style="max-width: 90%; max-height: 220px; object-fit: contain; border: 1px solid #ddd;" alt="Modélisation 3D Robot Support RRH" />
+</div>
+{% else %}
+<p>Géométrie des pièces : Mât {{ mat_section }} mm sur plot {{ plot_section }} mm.</p>
+{% endif %}
+
+<h2>Tableau des valeurs de chargements & combinaisons</h2>
+{% if rrh_tableau_charges_abs %}
+<div style="text-align: center; margin: 10px 0;">
+    <img src="file://{{ rrh_tableau_charges_abs }}" style="max-width: 95%; max-height: 220px; object-fit: contain; border: 1px solid #ddd;" alt="Tableau des charges Eurocode 1" />
+</div>
+{% else %}
+<p>
+    PP : Poids propre de la structure<br>
+    PE : Poids équipements ({{ eq_qty }}x {{ rrh_name|default:"RRH" }})<br>
+    Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
+</p>
+{% endif %}
+
+<h2>Vérification des ratios acier (Eurocode 3)</h2>
+{% if rrh_verification_screenshot_abs %}
+<div style="text-align: center; margin: 10px 0;">
+    <img src="file://{{ rrh_verification_screenshot_abs }}" style="max-width: 95%; max-height: 220px; object-fit: contain; border: 1px solid #ddd;" alt="Vérification Ratios Robot Structural Analysis" />
+</div>
+{% endif %}
+
+{% if extremes %}
+<h2>Réactions extrêmes globales à la base</h2>
+<table>
+    <thead>
+        <tr class="bg-green">
+            <th>Composante</th>
+            <th>Max (daN / daNm)</th>
+            <th>Cas Max</th>
+            <th>Min (daN / daNm)</th>
+            <th>Cas Min</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if extremes.FX %}
+        <tr>
+            <td><strong>FX</strong> (Effort horizontal)</td>
+            <td class="text-center"><strong>{{ extremes.FX.max }}</strong></td>
+            <td class="text-center">{{ extremes.FX.max_case }}</td>
+            <td class="text-center">{{ extremes.FX.min }}</td>
+            <td class="text-center">{{ extremes.FX.min_case }}</td>
+        </tr>
+        {% endif %}
+        {% if extremes.FY %}
+        <tr>
+            <td><strong>FY</strong> (Effort horizontal)</td>
+            <td class="text-center"><strong>{{ extremes.FY.max }}</strong></td>
+            <td class="text-center">{{ extremes.FY.max_case }}</td>
+            <td class="text-center">{{ extremes.FY.min }}</td>
+            <td class="text-center">{{ extremes.FY.min_case }}</td>
+        </tr>
+        {% endif %}
+        {% if extremes.FZ %}
+        <tr>
+            <td><strong>FZ</strong> (Compression / Poids)</td>
+            <td class="text-center"><strong>{{ extremes.FZ.max }}</strong></td>
+            <td class="text-center">{{ extremes.FZ.max_case }}</td>
+            <td class="text-center">{{ extremes.FZ.min }}</td>
+            <td class="text-center">{{ extremes.FZ.min_case }}</td>
+        </tr>
+        {% endif %}
+        {% if extremes.MX %}
+        <tr>
+            <td><strong>MX</strong> (Moment de renversement)</td>
+            <td class="text-center"><strong>{{ extremes.MX.max }}</strong></td>
+            <td class="text-center">{{ extremes.MX.max_case }}</td>
+            <td class="text-center">{{ extremes.MX.min }}</td>
+            <td class="text-center">{{ extremes.MX.min_case }}</td>
+        </tr>
+        {% endif %}
+        {% if extremes.MY %}
+        <tr>
+            <td><strong>MY</strong> (Moment de renversement)</td>
+            <td class="text-center"><strong>{{ extremes.MY.max }}</strong></td>
+            <td class="text-center">{{ extremes.MY.max_case }}</td>
+            <td class="text-center">{{ extremes.MY.min }}</td>
+            <td class="text-center">{{ extremes.MY.min_case }}</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endif %}
 
 <h2>CONCLUSION</h2>
 <p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de vent, types d’antennes…). On peut assurer la bonne tenue de la structure du RRH.</p>

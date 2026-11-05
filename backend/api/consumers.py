@@ -38,3 +38,4 @@ class CalculationProgressConsumer(AsyncWebsocketConsumer):
         Receives broadcasted progress events and forwards them to the client.
         """
         await self.send(text_data=json.dumps(event.get("data", {})))
+

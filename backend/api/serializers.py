@@ -45,6 +45,8 @@ class CalculationJobSerializer(serializers.ModelSerializer):
             'input_data', 'status', 'result_data', 'error_message',
             'screenshot', 'verification_screenshot',
             'note_de_calcul', 'note_mat', 'note_plot', 'assemblage_note', 'reactions_file',
+            'note_de_calcul_rrh', 'rrh_assemblage_note', 'rrh_verification_screenshot',
+            'rrh_tableau_charges', 'rrh_reactions_file', 'rrh_screenshot',
             'compiled_docx', 'compiled_pdf', 'credits_consumed',
             'created_at', 'updated_at'
         ]
@@ -52,6 +54,8 @@ class CalculationJobSerializer(serializers.ModelSerializer):
             'id', 'user', 'ndc_hash', 'input_hash', 'is_cached', 'status', 'result_data',
             'error_message', 'screenshot', 'verification_screenshot',
             'note_de_calcul', 'note_mat', 'note_plot', 'assemblage_note', 'reactions_file',
+            'note_de_calcul_rrh', 'rrh_assemblage_note', 'rrh_verification_screenshot',
+            'rrh_tableau_charges', 'rrh_reactions_file', 'rrh_screenshot',
             'compiled_docx', 'compiled_pdf', 'credits_consumed',
             'created_at', 'updated_at'
         ]

@@ -302,22 +302,49 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         job.result_data = result_data
         job.error_message = error_message
 
-        # Save uploaded artifact files from worker
+        # Save uploaded artifact files from worker (Base Antenna & Dedicated RRH)
         files = request.FILES
+        
+        # 1. Base Antenna Files
         if 'screenshot' in files:
             job.screenshot = files['screenshot']
         if 'verification_screenshot' in files:
             job.verification_screenshot = files['verification_screenshot']
         if 'note_de_calcul' in files:
             job.note_de_calcul = files['note_de_calcul']
-        if 'note_mat' in files:
-            job.note_mat = files['note_mat']
-        if 'note_plot' in files:
-            job.note_plot = files['note_plot']
         if 'assemblage_note' in files:
             job.assemblage_note = files['assemblage_note']
         if 'reactions_file' in files:
             job.reactions_file = files['reactions_file']
+
+        # 2. RRH Support Files (Accepts both primary and alias keys)
+        rrh_ndc = files.get("note_de_calcul_rrh") or files.get("rrh_note_de_calcul")
+        if rrh_ndc:
+            job.note_de_calcul_rrh = rrh_ndc
+
+        note_mat = files.get("note_mat") or files.get("rrh_note_mat")
+        if note_mat:
+            job.note_mat = note_mat
+
+        note_plot = files.get("note_plot") or files.get("rrh_note_plot")
+        if note_plot:
+            job.note_plot = note_plot
+
+        if 'rrh_assemblage_note' in files:
+            job.rrh_assemblage_note = files['rrh_assemblage_note']
+
+        if 'rrh_verification_screenshot' in files:
+            job.rrh_verification_screenshot = files['rrh_verification_screenshot']
+
+        charges_img = files.get("rrh_tableau_charges") or files.get("loads_table")
+        if charges_img:
+            job.rrh_tableau_charges = charges_img
+
+        if 'rrh_reactions_file' in files:
+            job.rrh_reactions_file = files['rrh_reactions_file']
+
+        if 'rrh_screenshot' in files:
+            job.rrh_screenshot = files['rrh_screenshot']
 
         # Manage user quota if completed
         if job_status == 'COMPLETED':
