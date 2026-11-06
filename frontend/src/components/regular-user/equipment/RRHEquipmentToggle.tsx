@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
@@ -28,10 +28,15 @@ export function RRHEquipmentToggle({
   disabled = false,
   disabledReason
 }: RRHEquipmentToggleProps) {
-  const filteredRrhOptions = rrhOptions.filter(o =>
-    o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false
-  );
-  const uniqueVendors = Array.from(new Set(filteredRrhOptions.map(o => o.vendor)));
+  const filteredRrhOptions = useMemo(() => {
+    return rrhOptions.filter(o =>
+      o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false
+    );
+  }, [rrhOptions, operator]);
+
+  const uniqueVendors = useMemo(() => {
+    return Array.from(new Set(filteredRrhOptions.map(o => o.vendor)));
+  }, [filteredRrhOptions]);
 
   const addRrhRow = () => {
     setRrhItems(prev => [...prev, {
@@ -42,25 +47,47 @@ export function RRHEquipmentToggle({
     }]);
   };
 
+  // Only validate & sanitize if items actually changed or became invalid for current operator options
+  const rrhItemsRef = useRef(rrhItems);
+  rrhItemsRef.current = rrhItems;
+
   useEffect(() => {
-    setRrhItems(prev => prev.map(item => {
+    const current = rrhItemsRef.current;
+    let hasChanges = false;
+
+    const sanitized = current.map(item => {
       let updated = { ...item };
+      let itemChanged = false;
+
       if (uniqueVendors.length === 1 && updated.vendor !== uniqueVendors[0]) {
         updated.vendor = uniqueVendors[0];
         updated.reference = '';
+        itemChanged = true;
       } else if (updated.vendor && !uniqueVendors.includes(updated.vendor)) {
         updated.vendor = uniqueVendors.length === 1 ? uniqueVendors[0] : undefined;
         updated.reference = '';
+        itemChanged = true;
       }
+
       if (updated.reference) {
         const exists = filteredRrhOptions.some(o => o.id === updated.reference && (!updated.vendor || o.vendor === updated.vendor));
         if (!exists) {
           updated.reference = '';
+          itemChanged = true;
         }
       }
-      return updated;
-    }));
-  }, [operator, filteredRrhOptions, uniqueVendors, setRrhItems]);
+
+      if (itemChanged) {
+        hasChanges = true;
+        return updated;
+      }
+      return item;
+    });
+
+    if (hasChanges) {
+      setRrhItems(sanitized);
+    }
+  }, [operator, filteredRrhOptions, uniqueVendors]);
 
   const removeRrhRow = (id: string) => {
     if (rrhItems.length > 1) {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
@@ -30,37 +30,46 @@ export function RRUEquipmentToggle({
   disabled = false,
   disabledReason
 }: RRUEquipmentToggleProps) {
-  const rfmModels: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[] = [
+  const rfmModels = useMemo(() => [
     { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
     { id: 'ARDB', vendor: 'NOKIA', reference: 'ARDB' },
     { id: 'ARHA', vendor: 'NOKIA', reference: 'ARHA' },
     { id: 'AREA', vendor: 'NOKIA', reference: 'AREA' },
     { id: 'ARPA', vendor: 'NOKIA', reference: 'ARPA' },
-  ];
+  ], []);
 
-  const filteredRruOptions = rruOptions.filter(o =>
-    o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : (operator.toLowerCase() === 'bouygues')
-  );
+  const filteredRruOptions = useMemo(() => {
+    return rruOptions.filter(o =>
+      o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : (operator.toLowerCase() === 'bouygues')
+    );
+  }, [rruOptions, operator]);
 
-  // For Orange, prioritize references starting with 2212, 2217, and 4415 (e.g. Radio 2212..., Radio 2217..., Radio 4415...)
-  const sortedRruOptions = operator.toLowerCase() === 'orange'
-    ? [...filteredRruOptions].sort((a, b) => {
-      const getPriority = (ref: string = '') => {
-        const clean = ref.replace(/^Radio\s+/i, '').trim();
-        if (clean.startsWith('2212')) return 1;
-        if (clean.startsWith('2217')) return 2;
-        if (clean.startsWith('4415')) return 3;
-        return 10;
-      };
-      const pA = getPriority(a.reference);
-      const pB = getPriority(b.reference);
-      if (pA !== pB) return pA - pB;
-      return (a.reference || '').localeCompare(b.reference || '');
-    })
-    : filteredRruOptions;
+  // For Orange, prioritize references starting with 2212, 2217, and 4415
+  const sortedRruOptions = useMemo(() => {
+    return operator.toLowerCase() === 'orange'
+      ? [...filteredRruOptions].sort((a, b) => {
+        const getPriority = (ref: string = '') => {
+          const clean = ref.replace(/^Radio\s+/i, '').trim();
+          if (clean.startsWith('2212')) return 1;
+          if (clean.startsWith('2217')) return 2;
+          if (clean.startsWith('4415')) return 3;
+          return 10;
+        };
+        const pA = getPriority(a.reference);
+        const pB = getPriority(b.reference);
+        if (pA !== pB) return pA - pB;
+        return (a.reference || '').localeCompare(b.reference || '');
+      })
+      : filteredRruOptions;
+  }, [operator, filteredRruOptions]);
 
-  const actualOptions = isRfmMode ? rfmModels : sortedRruOptions;
-  const uniqueVendors = Array.from(new Set(actualOptions.map(o => o.vendor)));
+  const actualOptions = useMemo(() => {
+    return isRfmMode ? rfmModels : sortedRruOptions;
+  }, [isRfmMode, rfmModels, sortedRruOptions]);
+
+  const uniqueVendors = useMemo(() => {
+    return Array.from(new Set(actualOptions.map(o => o.vendor)));
+  }, [actualOptions]);
 
   const addRruRow = () => {
     setRruItems(prev => [...prev, {
@@ -71,25 +80,46 @@ export function RRUEquipmentToggle({
     }]);
   };
 
+  const rruItemsRef = useRef(rruItems);
+  rruItemsRef.current = rruItems;
+
   useEffect(() => {
-    setRruItems(prev => prev.map(item => {
+    const current = rruItemsRef.current;
+    let hasChanges = false;
+
+    const sanitized = current.map(item => {
       let updated = { ...item };
+      let itemChanged = false;
+
       if (uniqueVendors.length === 1 && updated.vendor !== uniqueVendors[0]) {
         updated.vendor = uniqueVendors[0];
         updated.reference = '';
+        itemChanged = true;
       } else if (updated.vendor && !uniqueVendors.includes(updated.vendor)) {
         updated.vendor = uniqueVendors.length === 1 ? uniqueVendors[0] : undefined;
         updated.reference = '';
+        itemChanged = true;
       }
+
       if (updated.reference) {
         const exists = actualOptions.some(o => o.id === updated.reference && (!updated.vendor || o.vendor === updated.vendor));
         if (!exists) {
           updated.reference = '';
+          itemChanged = true;
         }
       }
-      return updated;
-    }));
-  }, [operator, actualOptions, uniqueVendors, setRruItems]);
+
+      if (itemChanged) {
+        hasChanges = true;
+        return updated;
+      }
+      return item;
+    });
+
+    if (hasChanges) {
+      setRruItems(sanitized);
+    }
+  }, [operator, actualOptions, uniqueVendors]);
 
   const removeRruRow = (id: string) => {
     if (rruItems.length > 1) {
