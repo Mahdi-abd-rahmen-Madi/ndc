@@ -8,7 +8,18 @@ import type {
 import { getTerrainDetails } from '../utils/terrainDetails';
 import { DEFAULT_ORANGE_BAIES } from '../components/regular-user/equipment/BaieEquipmentToggle';
 
-export interface UseSiteNdcGeneratorParams {
+/**
+ * DEVELOPMENT FLAG:
+ * When true, forces ALL Note de Calcul calculations to be sent to the Robot worker,
+ * completely disabling the Instant Catalogue (Fast-Track) path.
+ * In development, this ensures Robot actually calculates the structure, generates screenshots,
+ * and verifies all equipment notes.
+ *
+ * Set to false when you want standard configurations to use precalculated catalogue documents.
+ */
+export const FORCE_WORKER_CALCULATION = true;
+
+interface UseSiteNdcGeneratorParams {
   apiBaseUrl: string;
   config: CatalogueConfig | null;
   foundationType: string;
@@ -70,6 +81,13 @@ export function useSiteNdcGenerator({
 
   // Determine if all sectors match the catalogue perfectly (Fast-Track eligible)
   const isFullyStandard = useCallback(() => {
+    // If development flag is set to force worker execution, bypass catalogue fast-track
+    if (FORCE_WORKER_CALCULATION) return false;
+
+    // Any auxiliary equipment requiring dedicated Robot simulation (e.g. RRH mast/structure)
+    const s1 = activeSectors[0];
+    if (s1?.hasRrhEquipment && operator !== 'bouygues') return false;
+
     if (uniqueGroups.length === 0) return false;
     for (const group of uniqueGroups) {
       const sector = group.sector;
@@ -98,7 +116,7 @@ export function useSiteNdcGenerator({
       }
     }
     return true;
-  }, [uniqueGroups, config, foundationType, selectedBuildingHeight]);
+  }, [uniqueGroups, config, foundationType, selectedBuildingHeight, activeSectors, operator]);
 
   const confirmGenerateSiteNdc = useCallback(async () => {
     setIsGeneratingSiteNdc(true);
@@ -134,7 +152,7 @@ export function useSiteNdcGenerator({
       const token = localStorage.getItem('ndc_auth_token') || '';
 
       // --- FAST TRACK (INSTANT NDC) ---
-      if (isFullyStandard()) {
+      if (!FORCE_WORKER_CALCULATION && isFullyStandard()) {
         setSiteNdcPollingMsg('Génération du document Standard (Instantané)...');
 
         // Extract the correct catalogue PDF URLs from the terrain details

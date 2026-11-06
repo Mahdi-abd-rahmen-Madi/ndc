@@ -24,6 +24,12 @@
             }
         }
 
+        {% if start_page %}
+        @page :first {
+            counter-reset: page {{ start_page }};
+        }
+        {% endif %}
+
         body {
             font-family: 'Calibri', Arial, sans-serif;
             font-size: 11pt;
@@ -53,6 +59,14 @@
             margin-top: 10mm;
             margin-bottom: 5mm;
             text-decoration: underline;
+        }
+
+        h3 {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #000;
+            margin-top: 5mm;
+            margin-bottom: 3mm;
         }
 
         table {

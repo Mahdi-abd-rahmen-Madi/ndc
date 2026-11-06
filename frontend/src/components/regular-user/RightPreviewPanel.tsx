@@ -611,9 +611,6 @@ function RightPreviewPanel({
                           style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
                         ></div>
                       </div>
-                      <p className="text-center text-xs text-slate-500 mt-3 animate-pulse font-medium">
-                        {isFullyStandard() ? 'Assemblage des documents en cours...' : 'Nos serveurs calculent votre structure, cela peut prendre 1 à 2 minutes...'}
-                      </p>
                     </div>
                   )}
                 </div>

@@ -1,18 +1,26 @@
 {% extends 'ndc/aux_base.html' %}
 
 {% block content %}
+<style>
+    .rrh-page-1 h1 { margin-top: 0; margin-bottom: 4mm; font-size: 20pt; }
+    .rrh-page-1 h2 { margin-top: 4mm; margin-bottom: 2mm; font-size: 13pt; }
+    .rrh-page-1 p { margin: 2mm 0; font-size: 10.5pt; line-height: 1.3; }
+    .rrh-page-1 table { margin-bottom: 3mm; }
+</style>
+
+<div class="rrh-page-1">
 <h1 id="etude-rrh">ÉTUDE RRH</h1>
 
 <h2>Description</h2>
 <p>
     Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
-    Ajout d’un mât en tube {{ mat_diam }} mm, d’épaisseur {{ mat_epaisseur }} mm et de longueur {{ mat_longueur }} mm supportant un RRH. Le mât sera fixé sur un plot métallique {{ plot_section }} mm ancrés dans la dalle existante en respectant la norme du DTU.
+    Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:mat_longueur|default:"1500" }} mm supportant un RRH. Le mât sera fixé sur un plot métallique {{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
 </p>
 
 <h2>Equipements considérés :</h2>
 <table>
     <thead>
-        <tr class="bg-green">
+        <tr>
             <th>Désignation</th>
             <th>Quantité</th>
             <th>Dimensions (mm)</th>
@@ -22,7 +30,7 @@
     </thead>
     <tbody>
         <tr>
-            <td>RRH</td>
+            <td>{{ rrh_name|default:"RRH" }}</td>
             <td class="text-center">{{ eq_qty|default:"1" }}</td>
             <td class="text-center">{{ eq_dims|default:"N/A" }}</td>
             <td class="text-center">{{ eq_weight|default:"N/A" }}</td>
@@ -53,27 +61,60 @@
 
 <h2>Les forces exercées par le vent :</h2>
 <p>
-    Mât : F<sub>w</sub> = 1 * 1 * 0.088 * {{ qp_z }} = <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
+    Mât : F<sub>w</sub> = 1 * 1 * {{ rrh_cf_mat|default:"0.088" }} * {{ qp_z }} = <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
     RRH : F<sub>w,Frontale</sub> = 1 * {{ cx_front|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_front|default:"N/A" }}</strong> daN<br>
     RRH : F<sub>w,Latéral</sub> = 1 * {{ cx_lat|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_lat|default:"N/A" }}</strong> daN
 </p>
 
 <h2>Calcul de chute</h2>
 <p>Pas de point d’ancrage sur le mât</p>
-
-<h2>Modélisation en 3D</h2>
-{% if rrh_screenshot_abs %}
-<div style="text-align: center; margin: 10px 0;">
-    <img src="file://{{ rrh_screenshot_abs }}" style="max-width: 90%; max-height: 220px; object-fit: contain; border: 1px solid #ddd;" alt="Modélisation 3D Robot Support RRH" />
 </div>
-{% else %}
-<p>Géométrie des pièces : Mât {{ mat_section }} mm sur plot {{ plot_section }} mm.</p>
-{% endif %}
 
+<div class="page-break"></div>
+
+<!-- Page 2: MODELISATION 3D & Géométrie des pièces -->
+<h2>MODELISATION 3D</h2>
+<h3>Vue structure 3D</h3>
+<div style="width: 100%; height: 95mm; text-align: center; margin-bottom: 5mm; display: flex; align-items: center; justify-content: center; background-color: #f9f9f9; padding: 5px;">
+    {% if rrh_screenshot_abs %}
+        <img src="file://{{ rrh_screenshot_abs }}" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="Vue 3D Robot Support RRH" />
+    {% else %}
+        <div style="width: 100%; height: 60mm; border: 1px dashed #ccc; text-align: center; display: flex; align-items: center; justify-content: center;">
+            <em>[Emplacement Vue 3D - En attente de calcul Robot]</em>
+        </div>
+    {% endif %}
+</div>
+
+<h2>Géométrie des pièces</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Section</th>
+            <th>Longueur (m)</th>
+            <th>Type de barre</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ rrh_mat_section|default:mat_section|default:"TRON 88x3.2" }}</td>
+            <td class="text-center">{{ rrh_mat_longueur_m|default:mat_longueur_m|default:"1.5" }}</td>
+            <td class="text-center">Mat principal</td>
+        </tr>
+        <tr>
+            <td>{{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }}</td>
+            <td class="text-center">{{ rrh_plot_longueur_m|default:plot_longueur_m|default:"0.5" }}</td>
+            <td class="text-center">Plot</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- Page 3: Tableau des valeurs de chargements & combinaisons -->
 <h2>Tableau des valeurs de chargements & combinaisons</h2>
 {% if rrh_tableau_charges_abs %}
-<div style="text-align: center; margin: 10px 0;">
-    <img src="file://{{ rrh_tableau_charges_abs }}" style="max-width: 95%; max-height: 220px; object-fit: contain; border: 1px solid #ddd;" alt="Tableau des charges Eurocode 1" />
+<div style="text-align: center; margin: 15mm -12mm 0 -12mm;">
+    <img src="file://{{ rrh_tableau_charges_abs }}" style="width: 100%; max-width: 194mm; height: auto; display: block; margin: 0 auto;" alt="Tableau des charges Eurocode 1" />
 </div>
 {% else %}
 <p>
@@ -83,98 +124,82 @@
 </p>
 {% endif %}
 
-<h2>Vérification des ratios acier (Eurocode 3)</h2>
+<div class="page-break"></div>
+
+<!-- Page 4: Vérification ratios acier -->
+<h2>Vérification à l’ELU et à l’ELS</h2>
 {% if rrh_verification_screenshot_abs %}
-<div style="text-align: center; margin: 10px 0;">
-    <img src="file://{{ rrh_verification_screenshot_abs }}" style="max-width: 95%; max-height: 220px; object-fit: contain; border: 1px solid #ddd;" alt="Vérification Ratios Robot Structural Analysis" />
+<div style="text-align: center; margin: 5px 0 10px 0;">
+    <img src="file://{{ rrh_verification_screenshot_abs }}" style="max-width: 100%; max-height: 120mm; object-fit: contain;" alt="Vérification Ratios Robot Structural Analysis" />
 </div>
 {% endif %}
 
-{% if extremes %}
-<h2>Réactions extrêmes globales à la base</h2>
-<table>
-    <thead>
-        <tr class="bg-green">
-            <th>Composante</th>
-            <th>Max (daN / daNm)</th>
-            <th>Cas Max</th>
-            <th>Min (daN / daNm)</th>
-            <th>Cas Min</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% if extremes.FX %}
-        <tr>
-            <td><strong>FX</strong> (Effort horizontal)</td>
-            <td class="text-center"><strong>{{ extremes.FX.max }}</strong></td>
-            <td class="text-center">{{ extremes.FX.max_case }}</td>
-            <td class="text-center">{{ extremes.FX.min }}</td>
-            <td class="text-center">{{ extremes.FX.min_case }}</td>
-        </tr>
+<!-- Pages 4 & 5: Vérification mât principal (x2 pages) -->
+{% if rrh_note_mat_images %}
+<div class="page-break"></div>
+<h2>Vérification mât principal supérieur Ø {{ rrh_mat_diam|default:mat_diam|default:"88" }}mm</h2>
+<h3>Section : {{ rrh_mat_section|default:mat_section|default:"TRON 88x3.2" }}</h3>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% for img in rrh_note_mat_images %}
+        {% if forloop.first %}
+        <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul mât RRH">
+        {% else %}
+        <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul mât RRH">
         {% endif %}
-        {% if extremes.FY %}
-        <tr>
-            <td><strong>FY</strong> (Effort horizontal)</td>
-            <td class="text-center"><strong>{{ extremes.FY.max }}</strong></td>
-            <td class="text-center">{{ extremes.FY.max_case }}</td>
-            <td class="text-center">{{ extremes.FY.min }}</td>
-            <td class="text-center">{{ extremes.FY.min_case }}</td>
-        </tr>
+        
+        {% if not forloop.last %}
+        <div class="page-break"></div>
         {% endif %}
-        {% if extremes.FZ %}
-        <tr>
-            <td><strong>FZ</strong> (Compression / Poids)</td>
-            <td class="text-center"><strong>{{ extremes.FZ.max }}</strong></td>
-            <td class="text-center">{{ extremes.FZ.max_case }}</td>
-            <td class="text-center">{{ extremes.FZ.min }}</td>
-            <td class="text-center">{{ extremes.FZ.min_case }}</td>
-        </tr>
-        {% endif %}
-        {% if extremes.MX %}
-        <tr>
-            <td><strong>MX</strong> (Moment de renversement)</td>
-            <td class="text-center"><strong>{{ extremes.MX.max }}</strong></td>
-            <td class="text-center">{{ extremes.MX.max_case }}</td>
-            <td class="text-center">{{ extremes.MX.min }}</td>
-            <td class="text-center">{{ extremes.MX.min_case }}</td>
-        </tr>
-        {% endif %}
-        {% if extremes.MY %}
-        <tr>
-            <td><strong>MY</strong> (Moment de renversement)</td>
-            <td class="text-center"><strong>{{ extremes.MY.max }}</strong></td>
-            <td class="text-center">{{ extremes.MY.max_case }}</td>
-            <td class="text-center">{{ extremes.MY.min }}</td>
-            <td class="text-center">{{ extremes.MY.min_case }}</td>
-        </tr>
-        {% endif %}
-    </tbody>
-</table>
+    {% endfor %}
+</div>
 {% endif %}
 
+<!-- Pages: Vérification plot métallique -->
+{% if rrh_note_plot_images %}
+<div class="page-break"></div>
+<h2>Vérification plot métallique {{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }}</h2>
+<h3>Section : {{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }}</h3>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% for img in rrh_note_plot_images %}
+        {% if forloop.first %}
+        <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul plot RRH">
+        {% else %}
+        <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul plot RRH">
+        {% endif %}
+        
+        {% if not forloop.last %}
+        <div class="page-break"></div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pages 6, 7 & 8: VERIFICATION D’ASSEMBLAGES DE LA STRUCTURE (x3 pages) -->
+{% if rrh_assemblage_images %}
+<div class="page-break"></div>
+<h2>VERIFICATION D’ASSEMBLAGES DE LA STRUCTURE</h2>
+<h3>Assemblage entre tube/tube par platine</h3>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% for img in rrh_assemblage_images %}
+        {% if forloop.first %}
+        <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note d'assemblage RRH">
+        {% else %}
+        <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note d'assemblage RRH">
+        {% endif %}
+        
+        {% if not forloop.last %}
+        <div class="page-break"></div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Page finale: CONCLUSION -->
+<div class="page-break"></div>
 <h2>CONCLUSION</h2>
 <p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de vent, types d’antennes…). On peut assurer la bonne tenue de la structure du RRH.</p>
-
-<table>
-    <thead>
-        <tr class="bg-green">
-            <th>Section</th>
-            <th>Longueur (m)</th>
-            <th>Type de barre</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>{{ mat_section }}</td>
-            <td class="text-center">{{ mat_longueur_m }}</td>
-            <td class="text-center">Mat principal</td>
-        </tr>
-        <tr>
-            <td>{{ plot_section }}</td>
-            <td class="text-center">{{ plot_longueur_m }}</td>
-            <td class="text-center">Plot</td>
-        </tr>
-    </tbody>
-</table>
 
 {% endblock %}

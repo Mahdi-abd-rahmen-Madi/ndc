@@ -173,6 +173,78 @@ def sanitize_assemblage_rtf(rtf_text: str) -> str:
     return rtf_text
 
 
+def _convert_rtf_file_to_images(rtf_path, convert_dir, prefix, is_assemblage=False):
+    """
+    Converts an RTF calculation note into cropped PNG images per page.
+    Handles Symbol font/cell width sanitization for assemblage notes.
+    """
+    import subprocess
+    import glob
+    from PIL import Image, ImageChops
+    import fitz
+
+    os.makedirs(convert_dir, exist_ok=True)
+    clean_rtf = rtf_path
+    if is_assemblage:
+        with open(rtf_path, 'r', encoding='latin1') as rf:
+            raw_rtf = rf.read()
+        cleaned_rtf = sanitize_assemblage_rtf(raw_rtf)
+        clean_rtf = os.path.join(convert_dir, f"{prefix}_clean.rtf")
+        with open(clean_rtf, 'w', encoding='latin1') as wf:
+            wf.write(cleaned_rtf)
+
+    # Clean old page images for this prefix
+    for old_img in glob.glob(os.path.join(convert_dir, f"{prefix}_page_*.png")):
+        try:
+            os.remove(old_img)
+        except Exception:
+            pass
+
+    cmd = [
+        'soffice', '-env:UserInstallation=file:///tmp/libreoffice_ndc',
+        '--headless', '--convert-to', 'pdf',
+        '--outdir', convert_dir, clean_rtf
+    ]
+    subprocess.run(cmd, timeout=45, check=True, capture_output=True)
+    pdf_output = os.path.join(convert_dir, f"{os.path.splitext(os.path.basename(clean_rtf))[0]}.pdf")
+    
+    images = []
+    if os.path.exists(pdf_output):
+        doc = fitz.open(pdf_output)
+        for page_num in range(len(doc)):
+            page = doc.load_page(page_num)
+            zoom = 2.0
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat)
+            
+            mode = "RGBA" if pix.alpha else "RGB"
+            img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+            
+            bg = Image.new(img.mode, img.size, (255, 255, 255) if not pix.alpha else (255, 255, 255, 255))
+            diff = ImageChops.difference(img, bg)
+            diff = ImageChops.add(diff, diff, 2.0, -100)
+            bbox = diff.getbbox()
+            
+            if bbox:
+                pad = 20
+                bbox = (
+                    max(0, bbox[0] - pad),
+                    max(0, bbox[1] - pad),
+                    min(img.width, bbox[2] + pad),
+                    min(img.height, bbox[3] + pad)
+                )
+                img = img.crop(bbox)
+            
+            img_path = os.path.join(convert_dir, f"{prefix}_page_{page_num+1}.png")
+            img.save(img_path)
+            images.append(img_path)
+        doc.close()
+    return images
+
+
+
+
+
 def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False, start_page=1):
     """
     Generates a PDF from HTML templates using WeasyPrint based on job calculation results.
@@ -514,70 +586,46 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
             note_de_calcul_found = True
         # 2. Fallback to django uploaded file
         elif hasattr(job, 'note_de_calcul') and job.note_de_calcul:
-            ndc_path = job.note_de_calcul.path
-            if os.path.exists(ndc_path):
-                context['note_de_calcul_abs'] = ndc_path
+            try:
+                ndc_path = job.note_de_calcul.path
+                if os.path.exists(ndc_path):
+                    context['note_de_calcul_abs'] = ndc_path
+                    note_de_calcul_found = True
+            except Exception:
+                pass
+        # 3. Fallback to media/notes_de_calcul default path
+        if not note_de_calcul_found:
+            fallback_media_path = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_note_de_calcul.rtf')
+            if os.path.exists(fallback_media_path):
+                context['note_de_calcul_abs'] = fallback_media_path
                 note_de_calcul_found = True
+        # 4. Fallback to worker result_data path if provided
+        if not note_de_calcul_found and isinstance(job.result_data, dict):
+            raw_path = job.result_data.get('note_de_calcul_path') or job.result_data.get('note_mat_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', basename)
+                ]:
+                    if os.path.exists(cp):
+                        context['note_de_calcul_abs'] = cp
+                        note_de_calcul_found = True
+                        break
                 
     if not note_de_calcul_found:
         context['note_de_calcul_abs'] = None
 
     # Convert RTF to Images (for embedding directly in the HTML template)
     context['note_de_calcul_images'] = []
-    if context.get('note_de_calcul_abs'):
-        import subprocess
-        import tempfile
-        rtf_path = context['note_de_calcul_abs']
-        # Use LibreOffice to convert RTF → PDF
+    if context.get('note_de_calcul_abs') and os.path.exists(context['note_de_calcul_abs']):
         convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul')
-        os.makedirs(convert_dir, exist_ok=True)
+        job_prefix = f"job_{job.id if job else 'preview'}_note_de_calcul"
         try:
-            subprocess.run([
-                'soffice', '--headless', '--convert-to', 'pdf',
-                '--outdir', convert_dir, rtf_path
-            ], timeout=30, check=True, capture_output=True)
-            # The output PDF has the same basename with .pdf extension
-            rtf_basename = os.path.splitext(os.path.basename(rtf_path))[0]
-            pdf_output = os.path.join(convert_dir, f"{rtf_basename}.pdf")
-            if os.path.exists(pdf_output):
-                # Convert PDF to images using PyMuPDF
-                import fitz
-                doc = fitz.open(pdf_output)
-                for page_num in range(len(doc)):
-                    page = doc.load_page(page_num)
-                    # Higher resolution (e.g. 2x zoom)
-                    zoom = 2.0
-                    mat = fitz.Matrix(zoom, zoom)
-                    pix = page.get_pixmap(matrix=mat)
-                    
-                    # Convert fitz pixmap to PIL Image to crop white space
-                    from PIL import Image, ImageChops
-                    mode = "RGBA" if pix.alpha else "RGB"
-                    img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-                    
-                    # Trim white space
-                    bg = Image.new(img.mode, img.size, (255, 255, 255) if not pix.alpha else (255, 255, 255, 255))
-                    diff = ImageChops.difference(img, bg)
-                    diff = ImageChops.add(diff, diff, 2.0, -100)
-                    bbox = diff.getbbox()
-                    
-                    if bbox:
-                        # Add a small padding of 20 pixels
-                        pad = 20
-                        bbox = (
-                            max(0, bbox[0] - pad),
-                            max(0, bbox[1] - pad),
-                            min(img.width, bbox[2] + pad),
-                            min(img.height, bbox[3] + pad)
-                        )
-                        img = img.crop(bbox)
-                    
-                    img_path = os.path.join(convert_dir, f"{rtf_basename}_page_{page_num+1}.png")
-                    img.save(img_path)
-                    context['note_de_calcul_images'].append(img_path)
-                doc.close()
+            context['note_de_calcul_images'] = _convert_rtf_file_to_images(context['note_de_calcul_abs'], convert_dir, job_prefix)
         except Exception as e:
-            print(f"Warning: Failed to convert RTF to Images: {e}")
+            print(f"Warning: Failed to convert RTF note de calcul to Images: {e}")
 
     # Assemblage Note (RTF) Path
     assemblage_note_found = False
@@ -956,6 +1004,31 @@ def generate_auxiliary_pdfs(job, start_page=1):
             if wind_p.get('fw_mast'): fw_mat = wind_p.get('fw_mast')
             if wind_p.get('qp_dan'): context['qp_z'] = wind_p.get('qp_dan')
 
+        # Structure params for RRH
+        struct_p = worker_rrh.get('structure_params', {})
+        rrh_mat_section = struct_p.get('mast_section') or context.get('mat_section')
+        rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
+        rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
+        rrh_mat_longueur_m = struct_p.get('hauteur_mat_m') or context.get('mat_longueur_m')
+        
+        try:
+            rrh_mat_longueur = int(float(rrh_mat_longueur_m) * 1000) if rrh_mat_longueur_m else context.get('mat_longueur')
+        except (ValueError, TypeError):
+            rrh_mat_longueur = context.get('mat_longueur')
+
+        m_diam, m_ep = parse_dimensions(rrh_mat_section)
+        try:
+            rrh_mat_diam = m_diam or (int(float(struct_p.get('mast_d_m')) * 1000) if struct_p.get('mast_d_m') else context.get('mat_diam'))
+        except (ValueError, TypeError):
+            rrh_mat_diam = context.get('mat_diam')
+
+        try:
+            rrh_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else context.get('mat_epaisseur'))
+        except (ValueError, TypeError):
+            rrh_mat_epaisseur = context.get('mat_epaisseur')
+
+        rrh_cf_mat = struct_p.get('cf_mast', 0.088)
+
         # Locate genuine screenshot artifacts from job
         rrh_screenshot_abs = None
         if job and getattr(job, 'rrh_screenshot', None) and job.rrh_screenshot:
@@ -964,7 +1037,31 @@ def generate_auxiliary_pdfs(job, start_page=1):
                     rrh_screenshot_abs = job.rrh_screenshot.path
             except Exception:
                 pass
+        if not rrh_screenshot_abs and job:
+            for cp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_3d_view.jpg",
+                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_3d_view.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg')
+            ]:
+                if os.path.exists(cp):
+                    rrh_screenshot_abs = cp
+                    break
+        if not rrh_screenshot_abs and isinstance(res_data, dict):
+            raw_path = res_data.get('rrh', {}).get('screenshot_path') or res_data.get('rrh_screenshot_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', basename)
+                ]:
+                    if os.path.exists(cp):
+                        rrh_screenshot_abs = cp
+                        break
 
+        # Preserve genuine 3D view screenshot directly without cropping out pieces definition
+
+        # Locate RRH tableau charges
         rrh_tableau_charges_abs = None
         if job and getattr(job, 'rrh_tableau_charges', None) and job.rrh_tableau_charges:
             try:
@@ -972,7 +1069,29 @@ def generate_auxiliary_pdfs(job, start_page=1):
                     rrh_tableau_charges_abs = job.rrh_tableau_charges.path
             except Exception:
                 pass
+        if not rrh_tableau_charges_abs and job:
+            for cp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_tableau_charges.png",
+                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_tableau_charges.png",
+                os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png')
+            ]:
+                if os.path.exists(cp):
+                    rrh_tableau_charges_abs = cp
+                    break
+        if not rrh_tableau_charges_abs and isinstance(res_data, dict):
+            raw_path = res_data.get('rrh', {}).get('loads_table_path') or res_data.get('rrh_loads_table_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'charges_rrh', basename)
+                ]:
+                    if os.path.exists(cp):
+                        rrh_tableau_charges_abs = cp
+                        break
 
+        # Locate RRH verification screenshot
         rrh_verification_screenshot_abs = None
         if job and getattr(job, 'rrh_verification_screenshot', None) and job.rrh_verification_screenshot:
             try:
@@ -980,6 +1099,157 @@ def generate_auxiliary_pdfs(job, start_page=1):
                     rrh_verification_screenshot_abs = job.rrh_verification_screenshot.path
             except Exception:
                 pass
+        if not rrh_verification_screenshot_abs and job:
+            for cp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_verification.jpg",
+                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_verification.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg')
+            ]:
+                if os.path.exists(cp):
+                    rrh_verification_screenshot_abs = cp
+                    break
+        if not rrh_verification_screenshot_abs and isinstance(res_data, dict):
+            raw_path = res_data.get('rrh', {}).get('rrh_verification_screenshot_path') or res_data.get('rrh_verification_screenshot_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'verif_rrh', basename)
+                ]:
+                    if os.path.exists(cp):
+                        rrh_verification_screenshot_abs = cp
+                        break
+
+        # Locate RRH note mat (RTF)
+        rrh_note_mat_abs = None
+        if job and getattr(job, 'note_de_calcul_rrh', None) and job.note_de_calcul_rrh:
+            try:
+                if os.path.exists(job.note_de_calcul_rrh.path):
+                    rrh_note_mat_abs = job.note_de_calcul_rrh.path
+            except Exception:
+                pass
+        if not rrh_note_mat_abs and job and getattr(job, 'note_mat', None) and job.note_mat:
+            try:
+                if os.path.exists(job.note_mat.path):
+                    rrh_note_mat_abs = job.note_mat.path
+            except Exception:
+                pass
+        if not rrh_note_mat_abs and job:
+            for cp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_note_mat.rtf",
+                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_note_mat.rtf",
+                os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_note_mat.rtf'),
+                os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rrh_note_mat.rtf')
+            ]:
+                if os.path.exists(cp):
+                    rrh_note_mat_abs = cp
+                    break
+        if not rrh_note_mat_abs and isinstance(res_data, dict):
+            raw_path = res_data.get('rrh', {}).get('note_mat_path') or res_data.get('rrh_note_mat_path') or res_data.get('note_de_calcul_rrh_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'notes_rrh', basename),
+                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', basename)
+                ]:
+                    if os.path.exists(cp):
+                        rrh_note_mat_abs = cp
+                        break
+
+        # Locate RRH note plot (RTF)
+        rrh_note_plot_abs = None
+        if job and getattr(job, 'note_plot', None) and job.note_plot:
+            try:
+                if os.path.exists(job.note_plot.path):
+                    rrh_note_plot_abs = job.note_plot.path
+            except Exception:
+                pass
+        if not rrh_note_plot_abs and job:
+            for cp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_note_plot.rtf",
+                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_note_plot.rtf",
+                os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_note_plot.rtf'),
+                os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rrh_note_plot.rtf')
+            ]:
+                if os.path.exists(cp):
+                    rrh_note_plot_abs = cp
+                    break
+        if not rrh_note_plot_abs and isinstance(res_data, dict):
+            raw_path = res_data.get('rrh', {}).get('note_plot_path') or res_data.get('rrh_note_plot_path') or res_data.get('note_plot_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'notes_rrh', basename),
+                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', basename)
+                ]:
+                    if os.path.exists(cp):
+                        rrh_note_plot_abs = cp
+                        break
+
+        # Locate RRH assemblage note (RTF)
+        rrh_assemblage_note_abs = None
+        if job and getattr(job, 'rrh_assemblage_note', None) and job.rrh_assemblage_note:
+            try:
+                if os.path.exists(job.rrh_assemblage_note.path):
+                    rrh_assemblage_note_abs = job.rrh_assemblage_note.path
+            except Exception:
+                pass
+        if not rrh_assemblage_note_abs and job:
+            for cp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_assemblage_note.rtf",
+                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_assemblage_note.rtf",
+                os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_assemblage_note.rtf'),
+                os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_rrh_assemblage_note.rtf')
+            ]:
+                if os.path.exists(cp):
+                    rrh_assemblage_note_abs = cp
+                    break
+        if not rrh_assemblage_note_abs and isinstance(res_data, dict):
+            raw_path = res_data.get('rrh_assemblage_note_path') or res_data.get('rrh', {}).get('rrh_assemblage_note_path')
+            if raw_path:
+                basename = os.path.basename(raw_path.replace('\\', '/'))
+                for cp in [
+                    f"/home/mahdi/worker_share/screenshots/{basename}",
+                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
+                    os.path.join(settings.MEDIA_ROOT, 'notes_rrh', basename),
+                    os.path.join(settings.MEDIA_ROOT, 'assemblages', basename)
+                ]:
+                    if os.path.exists(cp):
+                        rrh_assemblage_note_abs = cp
+                        break
+
+        # Convert RTF notes to images for embedding
+        rrh_note_mat_images = []
+        if rrh_note_mat_abs and os.path.exists(rrh_note_mat_abs):
+            convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
+            job_prefix = f"job_{job.id if job else 'preview'}_rrh_note_mat"
+            try:
+                rrh_note_mat_images = _convert_rtf_file_to_images(rrh_note_mat_abs, convert_dir, job_prefix)
+            except Exception as e:
+                print(f"Warning: Failed to convert RRH note_mat RTF to images: {e}")
+
+        rrh_note_plot_images = []
+        if rrh_note_plot_abs and os.path.exists(rrh_note_plot_abs):
+            convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
+            job_prefix = f"job_{job.id if job else 'preview'}_rrh_note_plot"
+            try:
+                rrh_note_plot_images = _convert_rtf_file_to_images(rrh_note_plot_abs, convert_dir, job_prefix)
+            except Exception as e:
+                print(f"Warning: Failed to convert RRH note_plot RTF to images: {e}")
+
+        rrh_assemblage_images = []
+        if rrh_assemblage_note_abs and os.path.exists(rrh_assemblage_note_abs):
+            convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
+            job_prefix = f"job_{job.id if job else 'preview'}_rrh_assemblage"
+            try:
+                rrh_assemblage_images = _convert_rtf_file_to_images(rrh_assemblage_note_abs, convert_dir, job_prefix, is_assemblage=True)
+            except Exception as e:
+                print(f"Warning: Failed to convert RRH assemblage RTF to images: {e}")
 
         generated_pdfs.append(_render_and_save('rrh', {
             'eq_qty': qty,
@@ -992,9 +1262,20 @@ def generate_auxiliary_pdfs(job, start_page=1):
             'fw_lat': fw_lat,
             'fw_mat': fw_mat,
             'extremes': extremes,
+            'rrh_mat_section': rrh_mat_section,
+            'rrh_mat_diam': rrh_mat_diam,
+            'rrh_mat_epaisseur': rrh_mat_epaisseur,
+            'rrh_mat_longueur': rrh_mat_longueur,
+            'rrh_mat_longueur_m': rrh_mat_longueur_m,
+            'rrh_plot_section': rrh_plot_section,
+            'rrh_plot_longueur_m': rrh_plot_longueur_m,
+            'rrh_cf_mat': rrh_cf_mat,
             'rrh_screenshot_abs': rrh_screenshot_abs,
             'rrh_tableau_charges_abs': rrh_tableau_charges_abs,
-            'rrh_verification_screenshot_abs': rrh_verification_screenshot_abs
+            'rrh_verification_screenshot_abs': rrh_verification_screenshot_abs,
+            'rrh_note_mat_images': rrh_note_mat_images,
+            'rrh_note_plot_images': rrh_note_plot_images,
+            'rrh_assemblage_images': rrh_assemblage_images,
         }))
 
     # Check for RRU
