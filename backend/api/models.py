@@ -145,3 +145,27 @@ class CalculationJob(models.Model):
 
     def __str__(self):
         return f"Job {self.id} [{self.calculation_type}] - {self.status}"
+
+
+class GeneratedSiteNdc(models.Model):
+    """
+    Stores merged Site Note de Calcul documents generated for a user.
+    Enables users to view and re-download past calculation reports in their account profile.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='site_ndcs', verbose_name=_("User"))
+    site_name = models.CharField(max_length=255, blank=True, verbose_name=_("Nom du Site"))
+    code_site = models.CharField(max_length=100, blank=True, verbose_name=_("Code Site"))
+    client_name = models.CharField(max_length=255, blank=True, verbose_name=_("Client"))
+    address = models.CharField(max_length=500, blank=True, verbose_name=_("Adresse"))
+    operator = models.CharField(max_length=50, blank=True, verbose_name=_("Opérateur"))
+    pdf_url = models.CharField(max_length=500, verbose_name=_("URL du PDF"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de Génération"))
+
+    class Meta:
+        verbose_name = _("Note de Calcul Générée")
+        verbose_name_plural = _("Notes de Calcul Générées")
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"NDC - {self.code_site or self.site_name or 'Site'} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+

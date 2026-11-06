@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import UserProfile, Role, EngineerProfile, CalculationJob
+from .models import UserProfile, Role, EngineerProfile, CalculationJob, GeneratedSiteNdc
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -59,6 +59,17 @@ class CalculationJobSerializer(serializers.ModelSerializer):
             'compiled_docx', 'compiled_pdf', 'credits_consumed',
             'created_at', 'updated_at'
         ]
+
+
+class GeneratedSiteNdcSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneratedSiteNdc
+        fields = [
+            'id', 'user', 'site_name', 'code_site', 'client_name',
+            'address', 'operator', 'pdf_url', 'created_at'
+        ]
+        read_only_fields = ['id', 'user', 'created_at']
+
 
 
 class SiteSerializer(serializers.Serializer):

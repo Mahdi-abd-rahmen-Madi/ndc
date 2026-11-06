@@ -299,8 +299,10 @@ export default function RegularUserView({
           clientLogoUrl={clientLogoUrl}
           onClientLogoUploaded={setClientLogoUrl}
           apiBaseUrl={apiBaseUrl}
+          onSelectCalculation={(url) => setNdcPdfUrl(url)}
         />
       )}
+
 
       <SiteConfirmationModal
         isOpen={showConfirmationModal}

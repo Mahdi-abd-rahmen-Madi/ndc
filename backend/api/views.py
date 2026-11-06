@@ -13,8 +13,11 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 import hashlib
 import json
 import threading
-from .models import UserProfile, CalculationJob
-from .serializers import UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer
+from .models import UserProfile, CalculationJob, GeneratedSiteNdc
+from .serializers import (
+    UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer,
+    GeneratedSiteNdcSerializer
+)
 from .aps_service import get_aps_token
 from .tasks import send_job_to_worker
 from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
@@ -67,6 +70,15 @@ class UserProfileViewSet(viewsets.ModelViewSet):
         profile.save()
         
         serializer = self.get_serializer(profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def calculations_history(self, request):
+        """
+        Returns the history of generated Site Notes de Calcul for the current authenticated user.
+        """
+        history = GeneratedSiteNdc.objects.filter(user=request.user).order_by('-created_at')
+        serializer = GeneratedSiteNdcSerializer(history, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -619,6 +631,19 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 merger.close()
                 
                 final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+
+                # Persist to history if user is authenticated
+                if request.user and request.user.is_authenticated:
+                    GeneratedSiteNdc.objects.create(
+                        user=request.user,
+                        site_name=request.data.get('site_name', '') or preview_data.get('site', {}).get('name', ''),
+                        code_site=request.data.get('code_site', '') or request.data.get('ref_site', '') or preview_data.get('site', {}).get('code_site', ''),
+                        client_name=request.data.get('client_name', '') or preview_data.get('site', {}).get('client', ''),
+                        address=request.data.get('address', '') or preview_data.get('site', {}).get('address', ''),
+                        operator=request.data.get('operator', '') or preview_data.get('site', {}).get('operator', ''),
+                        pdf_url=final_pdf_url
+                    )
+
                 return Response({'ndc_pdf_url': final_pdf_url}, status=status.HTTP_200_OK)
 
             job_ids = request.data.get('job_ids', [])
@@ -682,6 +707,19 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             # Clean up temp pdfs if we want to, but it's fine to leave them since they are in uploads
             
             final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+
+            # Persist to history if user is authenticated
+            if request.user and request.user.is_authenticated:
+                GeneratedSiteNdc.objects.create(
+                    user=request.user,
+                    site_name=request.data.get('site_name', ''),
+                    code_site=request.data.get('code_site', '') or request.data.get('ref_site', ''),
+                    client_name=request.data.get('client_name', ''),
+                    address=request.data.get('address', ''),
+                    operator=request.data.get('operator', ''),
+                    pdf_url=final_pdf_url
+                )
+
             return Response({'ndc_pdf_url': final_pdf_url}, status=status.HTTP_200_OK)
 
         except Exception as e:
