@@ -233,7 +233,7 @@ export function renderEquipmentPreviewCard({
   if (config.id === 'td') {
     if (operator === 'bouygues') return null;
     const tdVal = equipmentValues.td || {};
-    const typeLabel = tdVal.type || 'TD Tétrapolaire V5';
+    const typeLabel = tdVal.type || 'TD 5G V5';
     const refLabel = tdVal.référence || 'N/A';
 
     return (
@@ -356,18 +356,18 @@ export function renderEquipmentPreviewCard({
     );
   }
 
-  // 10. Atelier d'énergie / BCube
+  // 10. Atelier d'énergie / B-cube énergie ACTIA
   if (config.id === 'atelier_energie') {
     if (operator === 'bouygues') {
       const bcube = equipmentValues.atelier_energie?.bcube;
       return (
         <EquipmentPreviewCard
           key={config.id}
-          title="BCube (TD + AE)"
+          title="B-cube énergie ACTIA"
           icon={IconComponent}
           color="amber"
           typeBadge={{
-            text: 'BCube',
+            text: 'B-cube énergie ACTIA',
             bg: 'bg-amber-50',
             textCol: 'text-amber-700',
             border: 'border-amber-200'
@@ -378,11 +378,7 @@ export function renderEquipmentPreviewCard({
             textCol: 'text-amber-700',
             border: 'border-amber-200'
           }}
-          marque={bcube?.supplier || undefined}
-          modele={bcube?.name || 'BCube (TD + AE)'}
-          extraSpecs={[bcube?.power, bcube?.phase].filter(Boolean).length > 0 ? {
-            puissance: [bcube?.power, bcube?.phase].filter(Boolean).join(' ')
-          } : undefined}
+          modele={bcube?.name || 'AE ELTEK 9KW'}
         />
       );
     }
@@ -472,6 +468,32 @@ export function renderEquipmentPreviewCard({
           Dimensions: tgbtVal.dimensions || '500x400x230mm',
           Poids: tgbtVal.poids || '15 kg'
         }}
+      />
+    );
+  }
+
+  // 13. BCube RADIO (Bouygues)
+  if (config.id === 'bcube_radio') {
+    const radioVal = equipmentValues.bcube_radio || {};
+    return (
+      <EquipmentPreviewCard
+        key={config.id}
+        title="BCube RADIO"
+        icon={IconComponent}
+        color="purple"
+        typeBadge={{
+          text: 'Radio',
+          bg: 'bg-purple-50',
+          textCol: 'text-purple-700',
+          border: 'border-purple-200'
+        }}
+        scopeBadge={{
+          text: '1 par site',
+          bg: 'bg-purple-50',
+          textCol: 'text-purple-700',
+          border: 'border-purple-200'
+        }}
+        modele={radioVal.modèle || radioVal.reference || 'RP6647 5G TDD'}
       />
     );
   }

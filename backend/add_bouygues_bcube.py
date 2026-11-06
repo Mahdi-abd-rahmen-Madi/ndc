@@ -11,167 +11,30 @@ from geodata.models import CatalogueConfig
 config = CatalogueConfig.objects.get(pk=1)
 atelier_refs = config.atelier_energie_references or []
 
-# BCube equipments for Bouygues
+# B-cube énergie ACTIA equipments for Bouygues (no dimensions or weight)
 bcube_specs = [
-    # ELTEK - ACTIA
     {
-        "id": "bcube_eltek_actia_6kw_mono",
-        "name": "BCube 6kW mono(TD+AE)",
-        "reference": "BCube 6kW mono(TD+AE)",
-        "vendor": "ELTEK",
-        "supplier": "ACTIA",
+        "id": "bcube_actia_ae_eltek_9kw",
+        "name": "AE ELTEK 9KW",
         "operator": "bouygues",
-        "power": "6kW",
-        "phase": "mono",
-        "height": 1000,
-        "width": 600,
-        "thickness": 600,
-        "weight": 50.0,
-        "dimensions": "1000x600x600mm"
+        "supplier": "ACTIA"
     },
     {
-        "id": "bcube_eltek_actia_6kw_tri",
-        "name": "BCube 6kW tri (TD+AE)",
-        "reference": "BCube 6kW tri (TD+AE)",
-        "vendor": "ELTEK",
-        "supplier": "ACTIA",
+        "id": "bcube_actia_ae_huawei_15kw",
+        "name": "AE HUAWEI 15KW",
         "operator": "bouygues",
-        "power": "6kW",
-        "phase": "tri",
-        "height": 1000,
-        "width": 600,
-        "thickness": 600,
-        "weight": 50.0,
-        "dimensions": "1000x600x600mm"
-    },
-    # ELTEK - TLTI
-    {
-        "id": "bcube_eltek_tlti_9kw_mono",
-        "name": "BCube NRJ 9kW mono(TD+AE)",
-        "reference": "BCube NRJ 9kW mono(TD+AE)",
-        "vendor": "ELTEK",
-        "supplier": "TLTI",
-        "operator": "bouygues",
-        "power": "9kW",
-        "phase": "mono",
-        "height": 830,
-        "width": 700,
-        "thickness": 730,
-        "weight": 50.0,
-        "dimensions": "830x700x730mm"
+        "supplier": "ACTIA"
     },
     {
-        "id": "bcube_eltek_tlti_9kw_tri",
-        "name": "BCube NRJ 9kW tri (TD+AE)",
-        "reference": "BCube NRJ 9kW tri (TD+AE)",
-        "vendor": "ELTEK",
-        "supplier": "TLTI",
+        "id": "bcube_actia_ae_huawei_9kw_15kw",
+        "name": "AE HUAWEI 9KW / 15KW",
         "operator": "bouygues",
-        "power": "9kW",
-        "phase": "tri",
-        "height": 830,
-        "width": 700,
-        "thickness": 730,
-        "weight": 50.0,
-        "dimensions": "830x700x730mm"
-    },
-    # HUAWEI - TLTI
-    {
-        "id": "bcube_huawei_tlti_9kw_mono",
-        "name": "BCube NRJ 9kW mono (TD+AE)",
-        "reference": "BCube NRJ 9kW mono (TD+AE)",
-        "vendor": "HUAWEI",
-        "supplier": "TLTI",
-        "operator": "bouygues",
-        "power": "9kW",
-        "phase": "mono",
-        "height": 830,
-        "width": 700,
-        "thickness": 730,
-        "weight": 50.0,
-        "dimensions": "830x700x730mm"
-    },
-    {
-        "id": "bcube_huawei_tlti_9kw_tri",
-        "name": "BCube NRJ 9kW tri (TD+AE)",
-        "reference": "BCube NRJ 9kW tri (TD+AE)",
-        "vendor": "HUAWEI",
-        "supplier": "TLTI",
-        "operator": "bouygues",
-        "power": "9kW",
-        "phase": "tri",
-        "height": 830,
-        "width": 700,
-        "thickness": 730,
-        "weight": 50.0,
-        "dimensions": "830x700x730mm"
-    },
-    {
-        "id": "bcube_huawei_tlti_15kw_mono",
-        "name": "BCube NJR15kW mono (TD+AE)",
-        "reference": "BCube NJR15kW mono (TD+AE)",
-        "vendor": "HUAWEI",
-        "supplier": "TLTI",
-        "operator": "bouygues",
-        "power": "15kW",
-        "phase": "mono",
-        "height": 830,
-        "width": 700,
-        "thickness": 730,
-        "weight": 50.0,
-        "dimensions": "830x700x730mm"
-    },
-    {
-        "id": "bcube_huawei_tlti_15kw_tri",
-        "name": "BCube NJR15kW tri (TD+AE)",
-        "reference": "BCube NJR15kW tri (TD+AE)",
-        "vendor": "HUAWEI",
-        "supplier": "TLTI",
-        "operator": "bouygues",
-        "power": "15kW",
-        "phase": "tri",
-        "height": 830,
-        "width": 700,
-        "thickness": 730,
-        "weight": 50.0,
-        "dimensions": "830x700x730mm"
-    },
-    # HUAWEI - ACTIA
-    {
-        "id": "bcube_huawei_actia_15kw_mono",
-        "name": "ACTIA BCUBE 15KW MONO (TD+AE)",
-        "reference": "ACTIA BCUBE 15KW MONO (TD+AE)",
-        "vendor": "HUAWEI",
-        "supplier": "ACTIA",
-        "operator": "bouygues",
-        "power": "15kW",
-        "phase": "mono",
-        "height": 1000,
-        "width": 600,
-        "thickness": 600,
-        "weight": 50.0,
-        "dimensions": "1000x600x600mm"
-    },
-    {
-        "id": "bcube_huawei_actia_15kw_tri",
-        "name": "ACTIA BCUBE 15KW TRI (TD+AE)",
-        "reference": "ACTIA BCUBE 15KW TRI (TD+AE)",
-        "vendor": "HUAWEI",
-        "supplier": "ACTIA",
-        "operator": "bouygues",
-        "power": "15kW",
-        "phase": "tri",
-        "height": 1000,
-        "width": 600,
-        "thickness": 600,
-        "weight": 50.0,
-        "dimensions": "1000x600x600mm"
+        "supplier": "ACTIA"
     }
 ]
 
-# Keep non-bouygues atelier items (e.g. Free FPRB/FPBC) and replace/add bouygues items
-existing_ids = {item["id"] for item in bcube_specs}
-updated_atelier = [item for item in atelier_refs if item.get("id") not in existing_ids and item.get("operator") != "bouygues"]
+# Keep non-bouygues atelier items (e.g. Free FPRB/FPBC) and replace bouygues items
+updated_atelier = [item for item in atelier_refs if item.get("operator") != "bouygues"]
 updated_atelier.extend(bcube_specs)
 
 config.atelier_energie_references = updated_atelier

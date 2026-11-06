@@ -264,6 +264,9 @@ export interface ZoneTechniqueData {
   hasAtelierEnergie: boolean;
   bcubeReference: string;
 
+  hasBcubeRadio: boolean;
+  bcubeRadioReference: string;
+
   hasBaie: boolean;
   baieItems: SelectedBaieItem[];
   baieRadio: boolean;
@@ -288,6 +291,7 @@ export interface ZoneTechniqueData {
 
   hasPileAmod: boolean;
   amodModules: Record<string, { enabled: boolean; quantity: number }>;
+  freeConfigMode?: 'standard' | 'alternative';
 }
 
 export const defaultZoneTechniqueData: ZoneTechniqueData = {
@@ -307,6 +311,9 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
 
   hasAtelierEnergie: false,
   bcubeReference: '',
+
+  hasBcubeRadio: false,
+  bcubeRadioReference: '',
 
   hasBaie: false,
   baieItems: [],
@@ -332,6 +339,7 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
 
   hasPileAmod: false,
   amodModules: {},
+  freeConfigMode: 'standard',
 };
 
 export interface ProjectData {

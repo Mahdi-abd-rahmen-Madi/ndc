@@ -39,6 +39,7 @@ export interface EquipmentOptionCardProps {
   quantity?: number;
   onQuantityChange?: (qty: number) => void;
   quantityLabel?: string;
+  badgePosition?: 'top-right' | 'below-title';
   /**
    * Color theme: 'orange' | 'amber' | 'violet' | 'red' | 'emerald' | 'blue'
    */
@@ -116,6 +117,7 @@ export function EquipmentOptionCard({
   quantity,
   onQuantityChange,
   quantityLabel = 'Quantité',
+  badgePosition = 'top-right',
   color = 'orange',
   className = ''
 }: EquipmentOptionCardProps) {
@@ -168,6 +170,13 @@ export function EquipmentOptionCard({
                 {title}
               </span>
             </div>
+            {badgeText && badgePosition === 'below-title' && (
+              <div className="mt-1">
+                <span className={`inline-block text-[9px] font-semibold px-2 py-0.5 rounded border ${badgeClass}`}>
+                  {badgeText}
+                </span>
+              </div>
+            )}
             {subtitle && (
               <span className="text-[10px] text-slate-500 font-medium leading-tight mt-0.5">
                 {subtitle}
@@ -176,7 +185,7 @@ export function EquipmentOptionCard({
           </div>
         </div>
 
-        {badgeText && (
+        {badgeText && badgePosition === 'top-right' && (
           <span className={`text-[9px] font-semibold px-2 py-0.5 rounded border shrink-0 ${badgeClass}`}>
             {badgeText}
           </span>

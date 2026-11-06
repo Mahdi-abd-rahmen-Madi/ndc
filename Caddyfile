@@ -1,0 +1,57 @@
+# Caddyfile for NDC (Reverse Proxy & Edge Server)
+# Automatically provides HTTPS, HTTP/2, HTTP/3, and Zstandard/Gzip compression.
+
+{
+    email admin@heliosys.io
+}
+
+# Production Frontend & Reverse Proxy
+ndc.heliosys.io {
+    encode zstd gzip
+
+    # Proxy API and Admin calls directly to backend if on same domain
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    handle /admin/* {
+        reverse_proxy backend:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # All other traffic directed to frontend container
+    handle {
+        reverse_proxy frontend:80
+    }
+}
+
+# Production Backend API Domain
+api-ndc.heliosys.io {
+    encode zstd gzip
+
+    reverse_proxy backend:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+# Local development / Docker host fallback (e.g. http://localhost)
+:80 {
+    encode zstd gzip
+
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    handle /admin/* {
+        reverse_proxy backend:8000
+    }
+    handle {
+        reverse_proxy frontend:80
+    }
+}
+

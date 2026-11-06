@@ -9,6 +9,7 @@ export * from './BaieEquipmentToggle';
 export * from './CabEquipmentToggle';
 export * from './AtelierEnergieEquipmentToggle';
 export * from './BCubeEquipmentToggle';
+export * from './BCubeRadioEquipmentToggle';
 export * from './TGBTEquipmentToggle';
 export * from './ConvertisseurMdeaEquipmentToggle';
 export * from './BoitierLovageEquipmentToggle';

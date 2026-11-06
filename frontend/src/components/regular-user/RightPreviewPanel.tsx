@@ -122,6 +122,7 @@ function RightPreviewPanel({
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
+    hasBcubeRadio, bcubeRadioReference,
     hasBaie, baieRadio, baieEnergie, baieItems,
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
@@ -449,7 +450,7 @@ function RightPreviewPanel({
                       };
                     }) : null,
                     td: (operator !== 'bouygues' && hasTdEquipment) ? {
-                      type: tdType === 'monophase' ? 'TD Monophasé' : 'TD Tétrapolaire V5',
+                      type: tdType === 'monophase' ? 'TD Monophasé' : 'TD 5G V5',
                       référence: resolveTd(tdReference) || 'N/A'
                     } : null,
                     tgbt: (operator === 'bouygues' && hasTgbt) ? (() => {
@@ -487,7 +488,11 @@ function RightPreviewPanel({
                       atelierFpbc,
                       atelierFpbcQuantity
                     } : (operator === 'bouygues' && hasAtelierEnergie) ? {
-                      bcube: config?.atelier_energie_references?.find(r => r.id === bcubeReference)
+                      bcube: config?.atelier_energie_references?.find(r => r.id === bcubeReference || r.reference === bcubeReference || r.name === bcubeReference)
+                    } : null,
+                    bcube_radio: (operator === 'bouygues' && hasBcubeRadio) ? {
+                      modèle: bcubeRadioReference || 'RP6647 5G TDD',
+                      reference: bcubeRadioReference || 'RP6647 5G TDD'
                     } : null,
                     convertisseur_mdea: (operator === 'free' && hasConvertisseurMdea) ? {
                       modèle: 'MDEA',

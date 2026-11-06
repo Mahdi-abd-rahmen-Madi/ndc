@@ -199,6 +199,17 @@ export const equipmentConfigs: EquipmentConfig[] = [
     ],
   },
   {
+    id: 'bcube_radio',
+    name: 'BCube RADIO',
+    enabled: false,
+    icon: 'Radio',
+    color: 'violet',
+    zone: 'technique',
+    fields: [
+      { label: 'Modèle', value: 'RP6647 5G TDD' },
+    ],
+  },
+  {
     id: 'pile_amod',
     name: 'Pile système AMOD',
     enabled: false,

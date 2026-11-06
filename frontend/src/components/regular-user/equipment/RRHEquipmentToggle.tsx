@@ -13,6 +13,8 @@ export interface RRHEquipmentToggleProps {
   rrhOptions: { id: string; vendor: string; reference: string; operator?: string }[];
   operator?: string;
   nombreSecteurs?: number;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export function RRHEquipmentToggle({
@@ -22,7 +24,9 @@ export function RRHEquipmentToggle({
   setRrhItems,
   rrhOptions,
   operator = 'free',
-  nombreSecteurs = 1
+  nombreSecteurs = 1,
+  disabled = false,
+  disabledReason
 }: RRHEquipmentToggleProps) {
   const filteredRrhOptions = rrhOptions.filter(o =>
     o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false
@@ -83,6 +87,8 @@ export function RRHEquipmentToggle({
       title="Présence RRH"
       enabled={hasRrhEquipment}
       onToggle={setHasRrhEquipment}
+      disabled={disabled}
+      disabledReason={disabledReason}
       color="violet"
       scopeBadgeText="Par secteur"
       isIncomplete={isRrhIncomplete}

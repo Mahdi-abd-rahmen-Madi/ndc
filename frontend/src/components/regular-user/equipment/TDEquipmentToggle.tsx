@@ -54,17 +54,17 @@ export function TDEquipmentToggle({
       color="violet"
       scopeBadgeText="1x par site"
     >
-      <div className="flex gap-4">
-        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-medium">
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer font-medium whitespace-nowrap">
           <input
             type="radio"
             checked={tdType === 'tetraphase'}
             onChange={() => setTdType('tetraphase')}
             className="text-violet-600 focus:ring-violet-500"
           />
-          TD Tétrapolaire V5
+          TD 5G V5
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer font-medium">
+        <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer font-medium whitespace-nowrap">
           <input
             type="radio"
             checked={tdType === 'monophase'}
@@ -76,7 +76,7 @@ export function TDEquipmentToggle({
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col w-full md:w-1/2 min-w-0">
+        <div className="flex flex-col w-full min-w-0">
           <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Équipement</label>
           <CustomSelect
             value={tdReference}

@@ -121,6 +121,7 @@ export function useSiteNdcGenerator({
       hasGps, gpsReference, gpsMarque,
       hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
       hasAtelierEnergie, bcubeReference,
+      hasBcubeRadio, bcubeRadioReference,
       hasBaie, baieRadio, baieEnergie, baieItems,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
@@ -275,6 +276,10 @@ export function useSiteNdcGenerator({
             module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
             module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
             bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
+          },
+          bcube_radio: {
+            enabled: operator === 'bouygues' && hasBcubeRadio,
+            reference: (operator === 'bouygues' && hasBcubeRadio) ? (bcubeRadioReference || 'RP6647 5G TDD') : null
           },
           convertisseur_mdea: {
             enabled: operator === 'free' && hasConvertisseurMdea,
@@ -444,6 +449,10 @@ export function useSiteNdcGenerator({
             module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
             module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
             bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
+          },
+          bcube_radio: {
+            enabled: operator === 'bouygues' && hasBcubeRadio,
+            reference: (operator === 'bouygues' && hasBcubeRadio) ? (bcubeRadioReference || 'RP6647 5G TDD') : null
           },
           convertisseur_mdea: {
             enabled: operator === 'free' && hasConvertisseurMdea,

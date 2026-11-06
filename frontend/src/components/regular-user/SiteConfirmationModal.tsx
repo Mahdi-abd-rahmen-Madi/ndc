@@ -138,6 +138,7 @@ export function SiteConfirmationModal({
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
+    hasBcubeRadio, bcubeRadioReference,
     hasBaie, baieRadio, baieEnergie, baieItems,
     hasCab, cabOne, cabTwo, cabThree, cabSupport,
     atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
@@ -336,7 +337,7 @@ export function SiteConfirmationModal({
                   <Server className="w-3.5 h-3.5" />
                 </div>
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Zone Technique & Baies
+                  Zone Technique & Baies {operator === 'free' ? `(${zoneTechnique.freeConfigMode === 'alternative' ? 'Alternative' : 'Standard'})` : ''}
                 </h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -448,9 +449,16 @@ export function SiteConfirmationModal({
                   </ZoneTechniqueCard>
                 )}
                 {operator === 'bouygues' && hasAtelierEnergie && (
-                  <ZoneTechniqueCard title="BCube (TD + AE)">
+                  <ZoneTechniqueCard title="B-cube énergie ACTIA">
                     <span className="text-xs font-bold text-slate-900 block">
-                      {config?.atelier_energie_references?.find(r => r.id === bcubeReference)?.name || bcubeReference || 'Sélectionné'}
+                      {config?.atelier_energie_references?.find(r => r.id === bcubeReference || r.reference === bcubeReference || r.name === bcubeReference)?.name || bcubeReference || 'Sélectionné'}
+                    </span>
+                  </ZoneTechniqueCard>
+                )}
+                {operator === 'bouygues' && hasBcubeRadio && (
+                  <ZoneTechniqueCard title="BCube RADIO">
+                    <span className="text-xs font-bold text-slate-900 block">
+                      {bcubeRadioReference || 'RP6647 5G TDD'}
                     </span>
                   </ZoneTechniqueCard>
                 )}

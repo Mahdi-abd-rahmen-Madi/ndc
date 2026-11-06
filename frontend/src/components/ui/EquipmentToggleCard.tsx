@@ -15,6 +15,14 @@ export interface EquipmentToggleCardProps {
    */
   onToggle: (enabled: boolean) => void;
   /**
+   * Whether the toggle is disabled
+   */
+  disabled?: boolean;
+  /**
+   * Reason or badge to display when disabled
+   */
+  disabledReason?: string;
+  /**
    * Icon displayed beside the title
    */
   icon?: LucideIcon;
@@ -88,6 +96,8 @@ export function EquipmentToggleCard({
   title,
   enabled,
   onToggle,
+  disabled = false,
+  disabledReason,
   icon: Icon,
   color = 'violet',
   scopeBadgeText,
@@ -101,50 +111,76 @@ export function EquipmentToggleCard({
 
   return (
     <div
-      className={`bg-white border rounded-xl p-4 shadow-sm transition-all ${
-        enabled
-          ? isIncomplete
-            ? 'border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10'
-            : `${theme.borderActive} ${theme.ring}`
-          : 'border-slate-200 hover:border-slate-300'
+      className={`border rounded-xl p-4 transition-all ${
+        disabled
+          ? 'bg-slate-50/80 border-slate-200 opacity-60 cursor-not-allowed select-none'
+          : enabled
+            ? isIncomplete
+              ? 'bg-white border-amber-300 ring-2 ring-amber-400/20 bg-amber-50/10 shadow-sm'
+              : `bg-white ${theme.borderActive} ${theme.ring} shadow-sm`
+            : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
       } ${className}`}
     >
       <div className="flex flex-col space-y-3">
         {/* Header row */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <label className="text-sm font-semibold text-slate-800 flex items-center gap-2 cursor-pointer select-none shrink-0">
+          <label
+            className={`text-sm font-semibold flex items-center gap-2 select-none shrink-0 ${
+              disabled ? 'cursor-not-allowed text-slate-400' : 'cursor-pointer text-slate-800'
+            }`}
+          >
             <div className="relative flex items-center shrink-0">
               <input
                 type="checkbox"
-                checked={enabled}
-                onChange={(e) => onToggle(e.target.checked)}
+                checked={enabled && !disabled}
+                disabled={disabled}
+                onChange={(e) => {
+                  if (!disabled) {
+                    onToggle(e.target.checked);
+                  }
+                }}
                 className="sr-only"
               />
               <div
                 className={`w-9 h-5 rounded-full transition-colors ${
-                  enabled ? theme.active : 'bg-slate-300'
+                  disabled
+                    ? 'bg-slate-200'
+                    : enabled
+                      ? theme.active
+                      : 'bg-slate-300'
                 }`}
               />
               <div
                 className={`absolute left-0.5 top-0.5 bg-white shadow-sm w-4 h-4 rounded-full transition-transform ${
-                  enabled ? 'transform translate-x-4' : ''
+                  enabled && !disabled ? 'transform translate-x-4' : ''
                 }`}
               />
             </div>
-            {Icon && <Icon className={`w-4 h-4 ${theme.icon} shrink-0`} />}
-            <span className="font-semibold text-slate-800 whitespace-nowrap">{title}</span>
+            {Icon && <Icon className={`w-4 h-4 ${disabled ? 'text-slate-400' : theme.icon} shrink-0`} />}
+            <span className={`font-semibold whitespace-nowrap ${disabled ? 'text-slate-400' : 'text-slate-800'}`}>
+              {title}
+            </span>
           </label>
 
-          {/* Right Header items: Incomplete warning, scope badge, custom content */}
+          {/* Right Header items: Incomplete warning, disabled reason, scope badge, custom content */}
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
-            {isIncomplete && (
+            {disabled && disabledReason && (
+              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/80 whitespace-nowrap">
+                {disabledReason}
+              </span>
+            )}
+            {!disabled && isIncomplete && (
               <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1 animate-pulse whitespace-nowrap">
                 <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
                 Sélection requise
               </span>
             )}
             {scopeBadgeText && (
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2.5 py-0.5 rounded-full border border-blue-200/80 whitespace-nowrap shadow-2xs">
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap shadow-2xs ${
+                disabled
+                  ? 'text-slate-400 bg-slate-100 border-slate-200'
+                  : 'text-blue-700 bg-blue-50/80 border-blue-200/80'
+              }`}>
                 {scopeBadgeText}
               </span>
             )}
@@ -159,7 +195,7 @@ export function EquipmentToggleCard({
         )}
 
         {/* Content body rendered when enabled */}
-        {enabled && children && (
+        {enabled && !disabled && children && (
           <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
             {children}
           </div>

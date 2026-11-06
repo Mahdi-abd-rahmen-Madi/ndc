@@ -32,6 +32,10 @@ export function SectorEquipmentGrid({
     updateSector(sectorIndex, updates);
   };
 
+  const isOrange = operator === 'orange';
+  const isRrhDisabled = isOrange && !!sector.hasRruEquipment;
+  const isRruDisabled = isOrange && !!sector.hasRrhEquipment;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* 0. Échelle */}
@@ -79,7 +83,13 @@ export function SectorEquipmentGrid({
       {operator !== 'bouygues' && (
         <RRHEquipmentToggle
           hasRrhEquipment={!!sector.hasRrhEquipment}
-          setHasRrhEquipment={(val) => syncUpdates({ hasRrhEquipment: val })}
+          setHasRrhEquipment={(val) => {
+            if (val && isOrange) {
+              syncUpdates({ hasRrhEquipment: true, hasRruEquipment: false });
+            } else {
+              syncUpdates({ hasRrhEquipment: val });
+            }
+          }}
           rrhItems={sector.rrhItems || []}
           setRrhItems={(val) => {
             const newItems = typeof val === 'function' ? val(sector.rrhItems || []) : val;
@@ -88,13 +98,21 @@ export function SectorEquipmentGrid({
           rrhOptions={config?.rrh_references || []}
           operator={operator}
           nombreSecteurs={nombreSecteurs}
+          disabled={isRrhDisabled}
+          disabledReason={isRrhDisabled ? 'Non cumulable avec RRU' : undefined}
         />
       )}
 
       {/* 3. RRU */}
       <RRUEquipmentToggle
         hasRruEquipment={!!sector.hasRruEquipment}
-        setHasRruEquipment={(val) => syncUpdates({ hasRruEquipment: val })}
+        setHasRruEquipment={(val) => {
+          if (val && isOrange) {
+            syncUpdates({ hasRruEquipment: true, hasRrhEquipment: false });
+          } else {
+            syncUpdates({ hasRruEquipment: val });
+          }
+        }}
         rruItems={sector.rruItems || []}
         setRruItems={(val) => {
           const newItems = typeof val === 'function' ? val(sector.rruItems || []) : val;
@@ -104,6 +122,8 @@ export function SectorEquipmentGrid({
         isRfmMode={operator === 'free'}
         operator={operator}
         nombreSecteurs={nombreSecteurs}
+        disabled={isRruDisabled}
+        disabledReason={isRruDisabled ? 'Non cumulable avec RRH' : undefined}
       />
 
       {/* 4. Coffrets fibre (uniquement pour les opérateurs hors Free, car Free a son coffret TRANS FO en zone technique) */}

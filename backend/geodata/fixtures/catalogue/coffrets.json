@@ -5,6 +5,18 @@
     "operator": "bouygues"
   },
   {
+    "id": "utel_v3",
+    "name": "Coffret hybride UTEL V3",
+    "reference": "UTEL V3",
+    "operator": "bouygues"
+  },
+  {
+    "id": "folan_v3",
+    "name": "Coffret hybride FOLAN V3",
+    "reference": "FOLAN V3",
+    "operator": "bouygues"
+  },
+  {
     "id": "622191062",
     "name": "Coffret PANAMA (215x360x111mm, 2.8kg)",
     "operator": "orange"

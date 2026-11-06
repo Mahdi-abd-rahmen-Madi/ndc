@@ -14,6 +14,8 @@ export interface RRUEquipmentToggleProps {
   isRfmMode?: boolean;
   operator?: string;
   nombreSecteurs?: number;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export function RRUEquipmentToggle({
@@ -24,7 +26,9 @@ export function RRUEquipmentToggle({
   rruOptions,
   isRfmMode = false,
   operator = 'bouygues',
-  nombreSecteurs = 1
+  nombreSecteurs = 1,
+  disabled = false,
+  disabledReason
 }: RRUEquipmentToggleProps) {
   const rfmModels: { id: string; vendor: string; reference: string; operator?: string; dimensions?: string; weight?: number }[] = [
     { id: 'ARGA', vendor: 'NOKIA', reference: 'ARGA' },
@@ -111,6 +115,8 @@ export function RRUEquipmentToggle({
       title={`Présence ${isRfmMode ? 'Module RF NSN' : 'RRU'}`}
       enabled={hasRruEquipment}
       onToggle={setHasRruEquipment}
+      disabled={disabled}
+      disabledReason={disabledReason}
       color="violet"
       scopeBadgeText="Par secteur"
       isIncomplete={isRruIncomplete}

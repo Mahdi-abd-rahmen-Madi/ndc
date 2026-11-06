@@ -294,7 +294,7 @@ function updateMapLayers(
   if (transitionSource) {
     const hasClickedZones = transitionZones && transitionZones.features && transitionZones.features.length > 0;
     const hasViewportZones = viewportTransitionZones && viewportTransitionZones.features && viewportTransitionZones.features.length > 0;
-    
+
     if (hasClickedZones || hasViewportZones) {
       // Combine features and deduplicate by geometry string representation
       const seen = new Set<string>();
@@ -306,7 +306,7 @@ function updateMapLayers(
           uniqueFeatures.push(f);
         }
       };
-      
+
       if (hasClickedZones) transitionZones.features.forEach(addFeature);
       if (hasViewportZones) viewportTransitionZones.features.forEach(addFeature);
 
@@ -355,7 +355,7 @@ export default function TerrainMap({
   const [coastlineGeoJSON, setCoastlineGeoJSON] = useState<any>(null);
   const [coastlineBufferGeoJSON, setCoastlineBufferGeoJSON] = useState<any>(null);
   const [viewportTransitionZones, setViewportTransitionZones] = useState<any>(null);
-  
+
   const [zoom, setZoom] = useState<number>(6);
   const [showWarning, setShowWarning] = useState<boolean>(false);
 
@@ -394,29 +394,37 @@ export default function TerrainMap({
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     const fetchCoastlineData = async () => {
       const baseUrl = import.meta.env.VITE_API_URL || '';
       try {
-        const response = await fetch(`${baseUrl}/api/geodata/regions/coastline/`);
-        if (response.ok) {
-          const data = await response.json();
+        const [coastlineRes, bufferRes] = await Promise.all([
+          fetch(`${baseUrl}/api/geodata/regions/coastline/`).catch(err => {
+            console.error('Failed to fetch coastline:', err);
+            return null;
+          }),
+          fetch(`${baseUrl}/api/geodata/regions/coastline_buffer/`).catch(err => {
+            console.error('Failed to fetch coastline buffer:', err);
+            return null;
+          })
+        ]);
+
+        if (isMounted && coastlineRes && coastlineRes.ok) {
+          const data = await coastlineRes.json();
           setCoastlineGeoJSON(data);
         }
-      } catch (err) {
-        console.error('Failed to fetch coastline:', err);
-      }
-
-      try {
-        const response = await fetch(`${baseUrl}/api/geodata/regions/coastline_buffer/`);
-        if (response.ok) {
-          const data = await response.json();
+        if (isMounted && bufferRes && bufferRes.ok) {
+          const data = await bufferRes.json();
           setCoastlineBufferGeoJSON(data);
         }
       } catch (err) {
-        console.error('Failed to fetch coastline buffer:', err);
+        console.error('Failed to fetch coastline data:', err);
       }
     };
     fetchCoastlineData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Listen to map moveend/load events to fetch transition zones
@@ -429,7 +437,7 @@ export default function TerrainMap({
     };
 
     map.on('moveend', handleMove);
-    
+
     // Fetch immediately if already loaded
     if (map.isStyleLoaded()) {
       handleMove();
@@ -600,27 +608,27 @@ export default function TerrainMap({
       // Create custom element
       const el = document.createElement('div');
       el.className = 'custom-map-marker flex items-center justify-center relative w-12 h-12';
-      
+
       // Large outer ripple ping animation
       const pulse = document.createElement('div');
       pulse.className = 'absolute w-12 h-12 bg-rose-500/40 rounded-full animate-ping pointer-events-none';
-      
+
       // Persistent glow ring
       const glow = document.createElement('div');
       glow.className = 'absolute w-8 h-8 bg-rose-500/20 rounded-full animate-pulse border border-rose-500/30 pointer-events-none';
-      
+
       // Core dot
       const core = document.createElement('div');
       core.className = 'w-5 h-5 bg-gradient-to-tr from-rose-500 to-rose-600 rounded-full border-2 border-white shadow-lg flex items-center justify-center z-10 pointer-events-none';
-      
+
       const innerDot = document.createElement('div');
       innerDot.className = 'w-1.5 h-1.5 bg-white rounded-full';
       core.appendChild(innerDot);
-      
+
       el.appendChild(pulse);
       el.appendChild(glow);
       el.appendChild(core);
-      
+
       markerRef.current = new maplibregl.Marker({
         element: el,
         anchor: 'center'
@@ -629,7 +637,7 @@ export default function TerrainMap({
         .addTo(map);
     } else {
       markerRef.current.setLngLat([longitude, latitude]);
-      
+
       // Restart the ping animation
       const el = markerRef.current.getElement();
       const pulse = el.querySelector('.animate-ping');
@@ -644,10 +652,10 @@ export default function TerrainMap({
   return (
     <div className="map-container relative w-full h-full">
       <div ref={mapContainerRef} className="w-full h-full" />
-      
+
       {/* Zoom guidance overlay */}
       {zoom < 13 && (
-        <div className="absolute bottom-10 left-3 pointer-events-none z-10 transition-all duration-300 max-w-sm">
+        <div className="absolute top-3 right-3 pointer-events-none z-10 transition-all duration-300 max-w-sm">
           <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-2 px-3 shadow-xl flex items-center gap-3 text-white">
             <div className="flex items-center gap-1.5 text-amber-400 shrink-0">
               <Search className="w-3.5 h-3.5 text-amber-400" />
@@ -660,7 +668,7 @@ export default function TerrainMap({
           </div>
         </div>
       )}
-      
+
       {/* Click warning flash */}
       {showWarning && zoom < 13 && (
         <div className="absolute inset-0 bg-rose-500/10 border-2 border-rose-400 rounded-xl flex items-center justify-center pointer-events-none z-20 animate-fade-in">

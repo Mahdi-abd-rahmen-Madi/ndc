@@ -485,19 +485,23 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
 
         # Use the single source of truth from CatalogueConfig
         final_refs = config.real_world_references
+        from .catalogue_loader import load_catalogue_dict
+        cat_dict = load_catalogue_dict()
+        atelier_refs = cat_dict.get('atelier_energie_references') or getattr(config, 'atelier_energie_references', [])
+        coffret_refs = cat_dict.get('coffret_references') or getattr(config, 'coffret_references', [])
 
         return Response({
             'precalculated_building_heights': config.precalculated_building_heights,
             'recommended_mast_heights': config.recommended_mast_heights,
             'fh_weight_options': config.fh_weight_options,
             'standard_montages': config.standard_montages,
-            'coffret_references': config.coffret_references,
+            'coffret_references': coffret_refs,
             'fh_references': config.fh_references,
             'td_references': config.td_references,
             'tgbt_references': getattr(config, 'tgbt_references', []),
             'rru_references': config.rru_references,
             'rrh_references': config.rrh_references,
-            'atelier_energie_references': getattr(config, 'atelier_energie_references', []),
+            'atelier_energie_references': atelier_refs,
             'baie_references': getattr(config, 'baie_references', []),
             'real_world_references': final_refs,
         })
@@ -1365,6 +1369,12 @@ def region_map_view(request):
     return render(request, 'geodata/region_map.html')
 
 
+# In-memory cache for static geospatial GeoJSON responses
+_REGIONS_GEOJSON_CACHE = None
+_COASTLINE_RAW = None
+_COASTLINE_BUFFER_RAW = None
+
+
 class RegionGeoJSONViewSet(viewsets.ViewSet):
     """ViewSet for serving region boundaries as GeoJSON"""
     permission_classes = [permissions.AllowAny]  # Allow public access for frontend
@@ -1372,6 +1382,12 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def regions(self, request):
         """Get all region boundaries as GeoJSON from actual wind coefficient data"""
+        global _REGIONS_GEOJSON_CACHE
+        if _REGIONS_GEOJSON_CACHE is not None:
+            response = HttpResponse(_REGIONS_GEOJSON_CACHE, content_type='application/json')
+            response['Cache-Control'] = 'public, max-age=86400, immutable'
+            return response
+
         try:
             import json
             from collections import defaultdict
@@ -1444,7 +1460,10 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
                 "features": combined_features
             }
             
-            return Response(regions_geojson)
+            _REGIONS_GEOJSON_CACHE = json.dumps(regions_geojson).encode('utf-8')
+            response = HttpResponse(_REGIONS_GEOJSON_CACHE, content_type='application/json')
+            response['Cache-Control'] = 'public, max-age=86400, immutable'
+            return response
             
         except Exception as e:
             return Response(
@@ -1455,23 +1474,24 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def coastline(self, request):
         """Get the physical coastline boundaries as GeoJSON"""
+        global _COASTLINE_RAW
         try:
-            import json
             from django.conf import settings
             import os
             
-            geojson_path = os.path.join(settings.BASE_DIR, 'data', 'france_coastline.geojson')
-            
-            if not os.path.exists(geojson_path):
-                return Response(
-                    {'error': 'Coastline GeoJSON file not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-                
-            with open(geojson_path, 'r') as f:
-                data = json.load(f)
-                
-            return Response(data)
+            if _COASTLINE_RAW is None:
+                geojson_path = os.path.join(settings.BASE_DIR, 'data', 'france_coastline.geojson')
+                if not os.path.exists(geojson_path):
+                    return Response(
+                        {'error': 'Coastline GeoJSON file not found'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                with open(geojson_path, 'rb') as f:
+                    _COASTLINE_RAW = f.read()
+
+            response = HttpResponse(_COASTLINE_RAW, content_type='application/json')
+            response['Cache-Control'] = 'public, max-age=86400, immutable'
+            return response
         except Exception as e:
             return Response(
                 {'error': str(e)},
@@ -1481,23 +1501,24 @@ class RegionGeoJSONViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['get'])
     def coastline_buffer(self, request):
         """Get the 1km physical coastline buffer zone as GeoJSON"""
+        global _COASTLINE_BUFFER_RAW
         try:
-            import json
             from django.conf import settings
             import os
             
-            geojson_path = os.path.join(settings.BASE_DIR, 'data', 'france_coastline_buffer_1km.geojson')
-            
-            if not os.path.exists(geojson_path):
-                return Response(
-                    {'error': 'Coastline buffer GeoJSON file not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-                
-            with open(geojson_path, 'r') as f:
-                data = json.load(f)
-                
-            return Response(data)
+            if _COASTLINE_BUFFER_RAW is None:
+                geojson_path = os.path.join(settings.BASE_DIR, 'data', 'france_coastline_buffer_1km.geojson')
+                if not os.path.exists(geojson_path):
+                    return Response(
+                        {'error': 'Coastline buffer GeoJSON file not found'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                with open(geojson_path, 'rb') as f:
+                    _COASTLINE_BUFFER_RAW = f.read()
+
+            response = HttpResponse(_COASTLINE_BUFFER_RAW, content_type='application/json')
+            response['Cache-Control'] = 'public, max-age=86400, immutable'
+            return response
         except Exception as e:
             return Response(
                 {'error': str(e)},

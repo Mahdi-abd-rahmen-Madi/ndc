@@ -45,12 +45,12 @@ export function CustomSelect({
   const updatePosition = () => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
+      const actualHeight = dropdownRef.current?.offsetHeight || 240;
       const spaceBelow = window.innerHeight - rect.bottom;
-      const dropdownHeight = 240;
-      const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+      const showAbove = spaceBelow < actualHeight && rect.top > actualHeight;
 
       setCoords({
-        top: showAbove ? rect.top - dropdownHeight - 4 : rect.bottom + 4,
+        top: showAbove ? Math.max(8, rect.top - actualHeight - 4) : rect.bottom + 4,
         left: rect.left,
         width: rect.width
       });
@@ -60,10 +60,13 @@ export function CustomSelect({
   useEffect(() => {
     if (isOpen) {
       updatePosition();
+      // Double check after dropdown renders in DOM to get exact measured height
+      const animFrame = requestAnimationFrame(updatePosition);
       const handleScrollOrResize = () => updatePosition();
       window.addEventListener('resize', handleScrollOrResize);
       window.addEventListener('scroll', handleScrollOrResize, true);
       return () => {
+        cancelAnimationFrame(animFrame);
         window.removeEventListener('resize', handleScrollOrResize);
         window.removeEventListener('scroll', handleScrollOrResize, true);
       };

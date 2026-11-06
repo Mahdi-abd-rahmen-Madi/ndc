@@ -67,6 +67,8 @@ interface PdfGeneratorOptions {
   coffretTransFoQuantity?: number;
   hasPileAmod?: boolean;
   amodModules?: Record<string, { enabled: boolean; quantity: number }>;
+  hasBcubeRadio?: boolean;
+  bcubeRadioReference?: string;
   bcubeItem?: { name: string; supplier?: string; dimensions?: string; weight?: number; power?: string; phase?: string };
   miniMapImage: string | null;
   nombreSecteurs: number;
@@ -116,6 +118,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasBaie, baieItems, baieRadio, baieEnergie,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       hasAtelierEnergie, atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity, bcubeItem,
+      hasBcubeRadio, bcubeRadioReference,
       hasConvertisseurMdea, convertisseurMdeaQuantity,
       hasCoffretTransFo, coffretTransFoQuantity,
       hasPileAmod, amodModules,
@@ -316,11 +319,12 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
     const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);
+    const showBcubeRadioInPdf = operator === 'bouygues' && hasBcubeRadio;
     const showMdeaInPdf = operator === 'free' && hasConvertisseurMdea;
     const showTransFoInPdf = operator === 'free' && hasCoffretTransFo;
     const showAmodInPdf = operator === 'free' && hasPileAmod;
     const showTgbtInPdf = operator === 'bouygues' && hasTgbt;
-    const hasTechniqueEquipment = showTdInPdf || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showMdeaInPdf || showTransFoInPdf || showAmodInPdf || showTgbtInPdf;
+    const hasTechniqueEquipment = showTdInPdf || hasGps || hasBoitierLovage || showBaieInPdf || showCabInPdf || showAtelierInPdf || showBcubeRadioInPdf || showMdeaInPdf || showTransFoInPdf || showAmodInPdf || showTgbtInPdf;
     if (hasTechniqueEquipment) {
       doc.setFillColor(245, 248, 255);
 
@@ -333,6 +337,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (showCabInPdf) techCount++;
       if (showAtelierInPdf) techCount++;
+      if (showBcubeRadioInPdf) techCount++;
       if (showMdeaInPdf) techCount++;
       if (showTransFoInPdf) techCount++;
       if (showAmodInPdf) techCount++;
@@ -350,7 +355,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showTdInPdf) {
         const tdStr = tdType === 'monophase'
           ? `• TD Monophasé : Référence ${tdReference || 'N/A'}`
-          : `• TD Tétrapolaire V5 : Référence ${tdReference || 'N/A'}`;
+          : `• TD 5G V5 : Référence ${tdReference || 'N/A'}`;
         doc.text(tdStr, 28, lineY);
         lineY += 8;
       }
@@ -402,10 +407,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (showAtelierInPdf) {
         if (operator === 'bouygues' && bcubeItem) {
-          const supplierStr = bcubeItem.supplier ? ` [${bcubeItem.supplier}]` : '';
-          const dimsStr = bcubeItem.dimensions ? ` - ${bcubeItem.dimensions}` : '';
-          const weightStr = bcubeItem.weight ? ` - ${bcubeItem.weight}kg` : '';
-          doc.text(`• BCube (TD+AE) : ${bcubeItem.name}${supplierStr}${dimsStr}${weightStr}`, 28, lineY);
+          doc.text(`• B-cube énergie ACTIA : ${bcubeItem.name}`, 28, lineY);
         } else {
           const modules = [];
           if (atelierFprb) {
@@ -418,6 +420,10 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
           }
           doc.text(`• Atelier d'énergie : ${modules.join(', ') || 'Sélectionné'}`, 28, lineY);
         }
+        lineY += 8;
+      }
+      if (showBcubeRadioInPdf) {
+        doc.text(`• BCube RADIO : ${bcubeRadioReference || 'RP6647 5G TDD'}`, 28, lineY);
         lineY += 8;
       }
       if (showMdeaInPdf) {

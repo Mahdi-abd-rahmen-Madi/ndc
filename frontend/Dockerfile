@@ -22,15 +22,15 @@ ENV VITE_WORKER_URL=$VITE_WORKER_URL
 # Build the app
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
+# Production stage with Caddy
+FROM caddy:2-alpine
 
 # Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /srv
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom Caddy configuration
+COPY Caddyfile /etc/caddy/Caddyfile
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

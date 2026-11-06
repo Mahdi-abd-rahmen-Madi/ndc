@@ -41,9 +41,9 @@ export function useSectorManager({
     setZoneTechnique(prev => ({
       ...prev,
       ...(operator !== 'orange' ? { hasBaie: false, baieRadio: false, baieEnergie: false, baieItems: [] } : {}),
-      ...(operator !== 'free' ? { hasCab: false, cabOne: false, cabTwo: false, cabThree: false, cabSupport: 'plinthes' } : {}),
+      ...(operator !== 'free' ? { hasCab: false, cabOne: false, cabTwo: false, cabThree: false, cabSupport: 'plinthes', freeConfigMode: 'standard' as const } : {}),
       ...((operator !== 'free' && operator !== 'bouygues') ? { hasAtelierEnergie: false } : {}),
-      ...(operator !== 'bouygues' ? { bcubeReference: '', hasTgbt: false, tgbtReference: '' } : {}),
+      ...(operator !== 'bouygues' ? { bcubeReference: '', hasBcubeRadio: false, bcubeRadioReference: '', hasTgbt: false, tgbtReference: '' } : {}),
       ...(operator === 'bouygues' ? { hasTdEquipment: false, tdReference: '' } : {})
     }));
 
@@ -61,26 +61,42 @@ export function useSectorManager({
       vendor: operator === 'free' ? 'NOKIA' : operator === 'orange' ? 'ERICSSON' : undefined
     }];
 
-    setSectors(prev => prev.map(s => ({
-      ...s,
-      hasRrhEquipment: operator === 'bouygues' ? false : s.hasRrhEquipment,
-      rrhItems: defaultRrh,
-      rruItems: defaultRru
-    })));
+    setSectors(prev => prev.map(s => {
+      let hasRrh = operator === 'bouygues' ? false : s.hasRrhEquipment;
+      let hasRru = s.hasRruEquipment;
+      if (operator === 'orange' && hasRrh && hasRru) {
+        hasRrh = false;
+      }
+      return {
+        ...s,
+        hasRrhEquipment: hasRrh,
+        hasRruEquipment: hasRru,
+        rrhItems: defaultRrh,
+        rruItems: defaultRru
+      };
+    }));
   }, [operator, setZoneTechnique]);
 
   const updateSector = useCallback((index: number, updates: Partial<SectorData>) => {
     setSectors(prev => {
+      let finalUpdates = { ...updates };
+      if (operator === 'orange') {
+        if (finalUpdates.hasRrhEquipment) {
+          finalUpdates.hasRruEquipment = false;
+        } else if (finalUpdates.hasRruEquipment) {
+          finalUpdates.hasRrhEquipment = false;
+        }
+      }
       const next = [...prev];
-      next[index] = { ...next[index], ...updates };
+      next[index] = { ...next[index], ...finalUpdates };
 
       if (index === 0 && similarityMode === 'all_similar') {
-        next[1] = { ...next[1], ...updates };
-        next[2] = { ...next[2], ...updates };
+        next[1] = { ...next[1], ...finalUpdates };
+        next[2] = { ...next[2], ...finalUpdates };
       }
       return next;
     });
-  }, [similarityMode]);
+  }, [operator, similarityMode]);
 
   // Sync data when similarity mode changes
   useEffect(() => {

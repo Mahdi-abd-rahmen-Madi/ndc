@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react'
 import { useAppStore } from './stores/useAppStore';
 import { cn } from './utils/cn';
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { Database, Map, Sliders, ExternalLink, ShieldCheck, Compass, Sparkles } from 'lucide-react';
+import { Database, Map, Sliders, ExternalLink, ShieldCheck, Compass } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import TerrainMap from './components/TerrainMap';
 import CLCLegend from './components/CLCLegend';
@@ -22,7 +22,6 @@ import type { GeocodingAddress } from './utils/types';
 // Lazy loaded route components
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const LoginView = lazy(() => import('./components/LoginView'));
-const NDCPortailTest = lazy(() => import('./components/regular-user/NDCPortailTest'));
 const RegularUserView = lazy(() => import('./components/RegularUserView'));
 const CatalogueManagement = lazy(() => import('./components/CatalogueManagement'));
 const CatalogueTestView = lazy(() => import('./components/CatalogueTestView'));
@@ -48,7 +47,6 @@ export default function App() {
         <Route path="/" element={<LandingPage token={token} userEmail={userEmail} isAdmin={isAdmin} onLogout={handleLogout} />} />
         <Route path="/portal" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
         <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
-        <Route path="/ndc-portail-test" element={<NDCPortailTest />} />
         <Route path="/test-catalogue" element={<CatalogueTestView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -333,14 +331,6 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
             )}
 
             <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block" />
-
-            <Link
-              to="/ndc-portail-test"
-              className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-lg text-xs font-semibold cursor-pointer transition-all flex items-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Test NDC</span>
-            </Link>
 
             <Link
               to="/test-catalogue"

@@ -12,11 +12,11 @@ export interface AmodSubModule {
 }
 
 export const AMOD_MODULES_LIST: AmodSubModule[] = [
-  { id: 'asib', reference: 'ASIB', name: 'Sous-module de gestion 4G (ASIB)', type: 'Gestion 4G', weight: 2.4 },
-  { id: 'asik', reference: 'ASIK', name: 'Sous-module de gestion 5G (ASIK)', type: 'Gestion 5G', weight: 2.4 },
-  { id: 'abia', reference: 'ABIA', name: 'Sous-module de capacité 4G (ABIA)', type: 'Capacité 4G', weight: 2.4 },
-  { id: 'abil', reference: 'ABIL', name: 'Sous-module de capacité 5G (ABIL)', type: 'Capacité 5G', weight: 2.4 },
-  { id: 'abio', reference: 'ABIO', name: 'Carte de capacité 4G/5G (ABIO)', type: 'Capacité 4G/5G', weight: 2.4 },
+  { id: 'asib', reference: 'ASIB', name: 'Sous-module ASIB', type: 'Gestion 4G', weight: 2.4 },
+  { id: 'asik', reference: 'ASIK', name: 'Sous-module ASIK', type: 'Gestion 5G', weight: 2.4 },
+  { id: 'abia', reference: 'ABIA', name: 'Sous-module ABIA', type: 'Capacité 4G', weight: 2.4 },
+  { id: 'abil', reference: 'ABIL', name: 'Sous-module ABIL', type: 'Capacité 5G', weight: 2.4 },
+  { id: 'abio', reference: 'ABIO', name: 'Carte ABIO', type: 'Capacité 4G/5G', weight: 2.4 },
 ];
 
 export interface PileAmodEquipmentToggleProps {
@@ -80,11 +80,14 @@ export function PileAmodEquipmentToggle({
         ) : null
       }
     >
-      <div className="flex flex-col gap-2">
-        <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
-          Sous-modules et cartes de capacité Nokia AMOD
-        </span>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-1">
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+          <span>Sous-modules et cartes de capacité</span>
+          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold normal-case tracking-normal border border-slate-200">
+            Constructeur : Nokia
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-0.5">
           {AMOD_MODULES_LIST.map((mod) => {
             const current = amodModules[mod.id] || { enabled: false, quantity: 1 };
             return (
@@ -93,8 +96,8 @@ export function PileAmodEquipmentToggle({
                 title={mod.name}
                 isSelected={current.enabled}
                 onToggle={(val) => toggleModule(mod.id, val)}
-                vendorBadge="NOKIA"
                 badgeText={mod.type}
+                badgePosition="below-title"
                 badgeClass="bg-rose-50 text-rose-700 border-rose-200"
                 quantity={current.quantity}
                 onQuantityChange={(qty) => updateQuantity(mod.id, qty)}
