@@ -235,11 +235,11 @@ export function useSiteNdcGenerator({
           },
           rrh_equipment: {
             enabled: operator !== 'bouygues' && hasRrhEquipment,
-            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity * nombreSecteurs })) : []
+            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
           },
           rru_equipment: {
             enabled: hasRruEquipment,
-            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity * nombreSecteurs })) : []
+            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
             enabled: operator !== 'bouygues' && hasTdEquipment,
@@ -408,11 +408,11 @@ export function useSiteNdcGenerator({
           },
           rrh_equipment: {
             enabled: operator !== 'bouygues' && hasRrhEquipment,
-            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity * nombreSecteurs })) : []
+            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
           },
           rru_equipment: {
             enabled: hasRruEquipment,
-            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity * nombreSecteurs })) : []
+            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
             enabled: operator !== 'bouygues' && hasTdEquipment,

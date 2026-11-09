@@ -5,6 +5,8 @@ import math
 import uuid
 import urllib.parse
 from datetime import datetime
+from PIL import Image
+import numpy as np
 from django.conf import settings
 from django.template.loader import render_to_string
 from weasyprint import HTML
@@ -787,6 +789,206 @@ def generate_ndc_pdf_task(job_id, photo_url_or_path):
         print(f"Job {job_id} not found for PDF generation")
         return None
 
+
+def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: float = 0.0) -> dict:
+    """
+    Extracts multi-RRH data from result_data with fallback to legacy single-RRH format
+    or input_data (catalogue lookup) for preview/pre-worker states.
+    """
+    result_data = result_data if isinstance(result_data, dict) else {}
+    input_data = input_data if isinstance(input_data, dict) else {}
+    rrh_sub = result_data.get("rrh") if isinstance(result_data.get("rrh"), dict) else {}
+
+    # 1. Extract items list from worker results
+    items = (
+        result_data.get("rrh_items")
+        or rrh_sub.get("rrh_items")
+        or []
+    )
+
+    # 2. Extract totals from worker results
+    totals = (
+        result_data.get("rrh_totals")
+        or rrh_sub.get("rrh_totals")
+        or {}
+    )
+
+    # 3. Extract wind parameters
+    wind = (
+        result_data.get("rrh_wind_params")
+        or rrh_sub.get("wind_params")
+        or result_data.get("wind_params")
+        or {}
+    )
+
+    try:
+        qp = float(wind.get("qp_dan") or qp_val or 0.0)
+    except (ValueError, TypeError):
+        qp = 0.0
+
+    # 4. Fallback 1: Legacy jobs / cached entries where equipment_params was present
+    if not items:
+        ep = rrh_sub.get("equipment_params") or result_data.get("equipment_params") or {}
+        if ep:
+            qty = ep.get("qty", 1)
+            cf_f = ep.get("cf_front", 1.36)
+            cf_l = ep.get("cf_lat", 1.10)
+            af = ep.get("a_front", 0.10)
+            al = ep.get("a_lat", 0.05)
+            fw_f = wind.get("fw_front", round(qty * cf_f * af * qp, 2))
+            fw_l = wind.get("fw_lat", round(qty * cf_l * al * qp, 2))
+            pe = wind.get("pe_dan", round(qty * ep.get("weight_kg", 0.0), 2))
+            h_mm = ep.get("h_mm", 0)
+            w_mm = ep.get("w_mm", 0)
+            t_mm = ep.get("t_mm", 0)
+            dims_str = f"{h_mm:g} x {w_mm:g} x {t_mm:g}" if (h_mm or w_mm) else "N/A"
+
+            items = [{
+                "index": 1,
+                "name": ep.get("name", "RRH"),
+                "catalog_reference": ep.get("catalog_reference", ep.get("name", "RRH")),
+                "qty": qty,
+                "h_mm": h_mm,
+                "w_mm": w_mm,
+                "t_mm": t_mm,
+                "dimensions_str": dims_str,
+                "weight_kg": ep.get("weight_kg", 0.0),
+                "weight_total_kg": pe,
+                "cf_front": cf_f,
+                "cf_lat": cf_l,
+                "a_front": af,
+                "a_lat": al,
+                "fw_front": fw_f,
+                "fw_lat": fw_l,
+                "pe_dan": pe,
+                "fw_front_formula": f"{qty} * {cf_f:.2f} * {af:.2f} * {qp:.2f} = {fw_f:.2f} daN",
+                "fw_lat_formula": f"{qty} * {cf_l:.2f} * {al:.2f} * {qp:.2f} = {fw_l:.2f} daN",
+            }]
+            totals = {
+                "count": 1,
+                "qty_total": qty,
+                "fw_front": fw_f,
+                "fw_lat": fw_l,
+                "pe_dan": pe,
+                "weight_total_kg": pe,
+                "fw_front_formula": f"{fw_f:.2f} daN",
+                "fw_lat_formula": f"{fw_l:.2f} daN",
+            }
+
+    # 5. Fallback 2: Preview mode / before worker run -> extract from input_data rrh_equipment
+    if not items:
+        from .catalogue_loader import find_rrh_reference
+        raw_items = input_data.get("rrh_equipment", {}).get("items", [])
+        op = input_data.get("site", {}).get("operator")
+        if raw_items:
+            built_items = []
+            tot_qty = 0
+            tot_fw_front = 0.0
+            tot_fw_lat = 0.0
+            tot_weight = 0.0
+            f_front_parts = []
+            f_lat_parts = []
+
+            for idx, it in enumerate(raw_items, start=1):
+                ref = it.get("reference") or it.get("name") or ""
+                spec = find_rrh_reference(ref, op) if ref else None
+                qty = it.get("quantity") or it.get("qty") or 1
+                name = (spec.get("name") if spec else None) or ref or f"RRH #{idx}"
+                h_mm = float(spec.get("height") or 0.0) if spec else 0.0
+                w_mm = float(spec.get("width") or 0.0) if spec else 0.0
+                t_mm = float(spec.get("thickness") or 0.0) if spec else 0.0
+                dims_str = f"{h_mm:g} x {w_mm:g} x {t_mm:g}" if (h_mm or w_mm) else (spec.get("dimensions", "N/A") if spec else "N/A")
+                weight_kg = float(spec.get("weight") or 0.0) if spec else 0.0
+                weight_total = round(qty * weight_kg, 2)
+                cf_front = float(spec.get("cf_front", 1.36)) if spec else 1.36
+                cf_lat = float(spec.get("cf_lat", 1.10)) if spec else 1.10
+                a_front = float(spec.get("surf_front") or spec.get("cx_front", 0.10)) if spec else 0.10
+                a_lat = float(spec.get("surf_lat") or spec.get("cx_lat", 0.05)) if spec else 0.05
+                fw_front_i = round(qty * cf_front * a_front * qp, 2) if qp else 0.0
+                fw_lat_i = round(qty * cf_lat * a_lat * qp, 2) if qp else 0.0
+
+                built_items.append({
+                    "index": idx,
+                    "name": name,
+                    "catalog_reference": ref,
+                    "qty": qty,
+                    "h_mm": h_mm,
+                    "w_mm": w_mm,
+                    "t_mm": t_mm,
+                    "dimensions_str": dims_str,
+                    "weight_kg": weight_kg,
+                    "weight_total_kg": weight_total,
+                    "cf_front": cf_front,
+                    "cf_lat": cf_lat,
+                    "a_front": a_front,
+                    "a_lat": a_lat,
+                    "fw_front": fw_front_i,
+                    "fw_lat": fw_lat_i,
+                    "pe_dan": weight_total,
+                    "fw_front_formula": f"{qty} * {cf_front:.2f} * {a_front:.2f} * {qp:.2f} = {fw_front_i:.2f} daN" if qp else f"{fw_front_i:.2f} daN",
+                    "fw_lat_formula": f"{qty} * {cf_lat:.2f} * {a_lat:.2f} * {qp:.2f} = {fw_lat_i:.2f} daN" if qp else f"{fw_lat_i:.2f} daN",
+                })
+                tot_qty += qty
+                tot_weight += weight_total
+                tot_fw_front += fw_front_i
+                tot_fw_lat += fw_lat_i
+                f_front_parts.append(f"{fw_front_i:.2f}")
+                f_lat_parts.append(f"{fw_lat_i:.2f}")
+
+            items = built_items
+            totals = {
+                "count": len(built_items),
+                "qty_total": tot_qty,
+                "fw_front": round(tot_fw_front, 2),
+                "fw_lat": round(tot_fw_lat, 2),
+                "pe_dan": round(tot_weight, 2),
+                "weight_total_kg": round(tot_weight, 2),
+                "fw_front_formula": " + ".join(f_front_parts) + f" = {round(tot_fw_front, 2):.2f} daN" if len(f_front_parts) > 1 else (f"{round(tot_fw_front, 2):.2f} daN" if f_front_parts else "0.00 daN"),
+                "fw_lat_formula": " + ".join(f_lat_parts) + f" = {round(tot_fw_lat, 2):.2f} daN" if len(f_lat_parts) > 1 else (f"{round(tot_fw_lat, 2):.2f} daN" if f_lat_parts else "0.00 daN"),
+            }
+
+    # 6. Fallback 3: Generic default single RRH if everything else is empty
+    if not items:
+        items = [{
+            "index": 1,
+            "name": "RRH",
+            "catalog_reference": "RRH",
+            "qty": 1,
+            "dimensions_str": "N/A",
+            "weight_kg": 0.0,
+            "weight_total_kg": 0.0,
+            "cf_front": 1.36,
+            "cf_lat": 1.10,
+            "a_front": 0.10,
+            "a_lat": 0.05,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+            "pe_dan": 0.0,
+            "fw_front_formula": "N/A",
+            "fw_lat_formula": "N/A",
+        }]
+        totals = {
+            "count": 1,
+            "qty_total": 1,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+            "pe_dan": 0.0,
+            "weight_total_kg": 0.0,
+            "fw_front_formula": "N/A",
+            "fw_lat_formula": "N/A",
+        }
+
+    is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
+
+    return {
+        "items": items,
+        "totals": totals,
+        "wind": wind,
+        "is_multi": is_multi,
+        "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
+    }
+
+
 def generate_auxiliary_pdfs(job, start_page=1):
     """
     Generate auxiliary PDFs (TD, FH, RRH, RRU) based on job.input_data.
@@ -947,65 +1149,46 @@ def generate_auxiliary_pdfs(job, start_page=1):
     res_data = getattr(job, 'result_data', {}) if job else {}
     if not isinstance(res_data, dict):
         res_data = {}
-    has_rrh_result = res_data.get('has_rrh') is True or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
+    has_rrh_result = (
+        res_data.get('has_rrh') is True 
+        or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
+        or bool(res_data.get('rrh_items'))
+        or bool(res_data.get('rrh_totals'))
+    )
     calc_type = getattr(job, 'calculation_type', '') if job else ''
     is_rrh_calc = bool(input_data.get('is_rrh') or calc_type in ['rrh', 'antenna_with_rrh'] or getattr(job, 'note_de_calcul_rrh', None))
 
     if rrh_eq.get('enabled') or has_rrh_result or is_rrh_calc:
-        from .catalogue_loader import find_rrh_reference
-        items = rrh_eq.get('items', [])
-        qty = sum(item.get('quantity', 1) for item in items) if items else 1
-        
-        rrh_spec = None
-        op = input_data.get('site', {}).get('operator')
-        for it in items:
-            ref = it.get('reference')
-            if ref:
-                found = find_rrh_reference(ref, op)
-                if found:
-                    rrh_spec = found
-                    break
-
-        eq_dims = rrh_spec.get('dimensions', '[RRH_DIMS]') if rrh_spec else '[RRH_DIMS]'
-        eq_weight = rrh_spec.get('weight', '[RRH_WEIGHT]') if rrh_spec else '[RRH_WEIGHT]'
-        cx_front = rrh_spec.get('cx_front', 0.1352) if rrh_spec else 0.1352
-        cx_lat = rrh_spec.get('cx_lat', 0.0523) if rrh_spec else 0.0523
-        
+        # Extract Multi-RRH context with full fallback support
         try:
             qp_val = float(context.get('qp_z', 0))
-            fw_front = round(cx_front * qp_val, 2)
-            fw_lat = round(cx_lat * qp_val, 2)
-            fw_mat = round(1.0 * 1.0 * 0.088 * qp_val, 2)
         except (ValueError, TypeError):
-            fw_front = '[Fw,Front]'
-            fw_lat = '[Fw,Lat]'
-            fw_mat = '[Fw,Mat]'
+            qp_val = 0.0
+
+        rrh_ctx = extract_rrh_ndc_context(res_data, input_data=input_data, qp_val=qp_val)
+        items = rrh_ctx['items']
+        totals = rrh_ctx['totals']
+        wind_p = rrh_ctx['wind']
+        is_multi = rrh_ctx['is_multi']
+        qty_total = rrh_ctx['qty_total']
+
+        first_item = items[0] if items else {}
+        eq_dims = first_item.get('dimensions_str', '[RRH_DIMS]')
+        eq_weight = first_item.get('weight_kg', '[RRH_WEIGHT]')
+        cx_front = first_item.get('cf_front', 0.1352)
+        cx_lat = first_item.get('cf_lat', 0.0523)
+        fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
+        fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
 
         # Override/Enrich with genuine Worker results if available
-        worker_rrh = res_data.get('rrh', {})
-        wind_p = worker_rrh.get('wind_params', {})
-        equip_p = worker_rrh.get('equipment_params', {})
-        extremes = worker_rrh.get('extremes', {})
+        worker_rrh = res_data.get('rrh', {}) if isinstance(res_data.get('rrh'), dict) else {}
+        extremes = worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
 
-        if equip_p:
-            qty = equip_p.get('qty', qty)
-            if equip_p.get('h_mm') and equip_p.get('w_mm'):
-                eq_dims = f"{equip_p.get('h_mm')}x{equip_p.get('w_mm')}x{equip_p.get('t_mm', 0)} mm"
-            if equip_p.get('weight_kg'):
-                eq_weight = equip_p.get('weight_kg')
-            if equip_p.get('cf_front'):
-                cx_front = equip_p.get('cf_front')
-            if equip_p.get('cf_lat'):
-                cx_lat = equip_p.get('cf_lat')
-
-        if wind_p:
-            if wind_p.get('fw_front'): fw_front = wind_p.get('fw_front')
-            if wind_p.get('fw_lat'): fw_lat = wind_p.get('fw_lat')
-            if wind_p.get('fw_mast'): fw_mat = wind_p.get('fw_mast')
-            if wind_p.get('qp_dan'): context['qp_z'] = wind_p.get('qp_dan')
+        if wind_p.get('qp_dan'):
+            context['qp_z'] = wind_p.get('qp_dan')
 
         # Structure params for RRH
-        struct_p = worker_rrh.get('structure_params', {})
         rrh_mat_section = struct_p.get('mast_section') or context.get('mat_section')
         rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
         rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
@@ -1028,6 +1211,19 @@ def generate_auxiliary_pdfs(job, start_page=1):
             rrh_mat_epaisseur = context.get('mat_epaisseur')
 
         rrh_cf_mat = struct_p.get('cf_mast', 0.088)
+
+        try:
+            m_diam_m = float(rrh_mat_diam) / 1000.0 if rrh_mat_diam and str(rrh_mat_diam).replace('.', '').isdigit() else 0.088
+        except (ValueError, TypeError):
+            m_diam_m = 0.088
+
+        if wind_p.get('fw_mast'):
+            fw_mat = wind_p.get('fw_mast')
+        else:
+            try:
+                fw_mat = round(1.0 * 1.0 * m_diam_m * float(context.get('qp_z', 0)), 2)
+            except (ValueError, TypeError):
+                fw_mat = '[Fw,Mat]'
 
         # Locate genuine screenshot artifacts from job
         rrh_screenshot_abs = None
@@ -1090,6 +1286,41 @@ def generate_auxiliary_pdfs(job, start_page=1):
                     if os.path.exists(cp):
                         rrh_tableau_charges_abs = cp
                         break
+
+        # Crop empty trailing columns (e.g. the last 3 empty columns) from RRH tableau charges to make it bigger & clearer
+        if rrh_tableau_charges_abs and os.path.exists(rrh_tableau_charges_abs):
+            try:
+                with Image.open(rrh_tableau_charges_abs) as src_img:
+                    gray = src_img.convert('L')
+                    arr = np.array(gray)
+                    h, w = arr.shape
+                    col_line_span = np.sum(arr[10:h-10, :] < 180, axis=0)
+                    true_lines = np.where(col_line_span > (h - 20) * 0.85)[0]
+                    groups = []
+                    for c in true_lines:
+                        if not groups or c > groups[-1][-1] + 2:
+                            groups.append([c])
+                        else:
+                            groups[-1].append(c)
+                    centers = [int(np.mean(g)) for g in groups]
+                    if len(centers) >= 4:
+                        crop_x = min(w, centers[-4] + 1)
+                        # Verify the last 3 columns are empty before cropping
+                        last_cols_content = arr[25:h-5, crop_x+2:w-2]
+                        # Grid lines alone or blank will have high row means
+                        row_means = np.mean(last_cols_content, axis=1)
+                        non_grid = last_cols_content[row_means > 220]
+                        non_white = np.sum(non_grid < 200)
+                        if non_white < 50:
+                            cropped_img = src_img.crop((0, 0, crop_x, h))
+                            dir_name = os.path.dirname(rrh_tableau_charges_abs)
+                            base_name = os.path.basename(rrh_tableau_charges_abs)
+                            cropped_name = f"cropped_{base_name}"
+                            cropped_path = os.path.join(dir_name, cropped_name)
+                            cropped_img.save(cropped_path)
+                            rrh_tableau_charges_abs = cropped_path
+            except Exception as e:
+                print(f"Warning: could not crop rrh_tableau_charges: {e}")
 
         # Locate RRH verification screenshot
         rrh_verification_screenshot_abs = None
@@ -1252,8 +1483,8 @@ def generate_auxiliary_pdfs(job, start_page=1):
                 print(f"Warning: Failed to convert RRH assemblage RTF to images: {e}")
 
         generated_pdfs.append(_render_and_save('rrh', {
-            'eq_qty': qty,
-            'rrh_name': equip_p.get('name', 'RRH'),
+            'eq_qty': qty_total,
+            'rrh_name': first_item.get('name', 'RRH'),
             'eq_dims': eq_dims,
             'eq_weight': eq_weight,
             'cx_front': cx_front,
@@ -1269,6 +1500,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
             'rrh_mat_longueur_m': rrh_mat_longueur_m,
             'rrh_plot_section': rrh_plot_section,
             'rrh_plot_longueur_m': rrh_plot_longueur_m,
+            'rrh_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
             'rrh_cf_mat': rrh_cf_mat,
             'rrh_screenshot_abs': rrh_screenshot_abs,
             'rrh_tableau_charges_abs': rrh_tableau_charges_abs,
@@ -1276,6 +1508,10 @@ def generate_auxiliary_pdfs(job, start_page=1):
             'rrh_note_mat_images': rrh_note_mat_images,
             'rrh_note_plot_images': rrh_note_plot_images,
             'rrh_assemblage_images': rrh_assemblage_images,
+            'rrh_items': items,
+            'rrh_totals': totals,
+            'rrh_is_multi': is_multi,
+            'rrh_qty_total': qty_total,
         }))
 
     # Check for RRU

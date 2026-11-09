@@ -1,0 +1,172 @@
+================================================================================
+ROBOT STRUCTURAL ANALYSIS WORKER - MULTI-RRH FIX SPECIFICATION
+================================================================================
+
+1. ISSUE SUMMARY & CONTEXT
+--------------------------------------------------------------------------------
+In calculation Job 537, the user configured 2 RRH models on the support mast:
+  - 2x AHHB 2600
+  - 3x AHDA 900
+
+However, the Robot Worker only processed items[0] (AHHB 2600) and completely
+ignored items[1] (AHDA 900).
+Evidence from Robot output:
+  - Node 3 Load FZ = -94.20 daN
+  - Node 3 Wind FX = 100.83 daN
+  - AHDA 900 (weight 14.0 kg * 3 = 42 kg) was NEVER applied to the Robot model!
+  - The worker returned legacy `equipment_params` containing only AHHB 2600,
+    and did NOT return `rrh_items` or `rrh_totals`.
+
+IMPORTANT NOTE ON QUANTITY & PER-MAST DIMENSIONING:
+The calculation is dimensioning ONE support mast (what is supported on one mast
+for a sector). Having 6 total across 3 sectors means 2 per mast. The frontend
+sends the per-mast quantity (e.g. qty: 2 for AHHB and qty: 3 for AHDA).
+Robot must calculate Node 3 forces for 1 mast using these exact quantities.
+
+
+2. INPUT PAYLOAD STRUCTURE
+--------------------------------------------------------------------------------
+The backend sends `input_data` containing:
+```json
+{
+  "calculation_type": "antenna_with_rrh" or "rrh",
+  "rrh_equipment": {
+    "enabled": true,
+    "items": [
+      {
+        "reference": "AHHB 2600",
+        "quantity": 2
+      },
+      {
+        "reference": "AHDA 900",
+        "quantity": 3
+      }
+    ]
+  },
+  "environment": { ... },
+  "structure": { ... }
+}
+```
+NOTE: `items` can contain 1, 2, or more distinct models. Quantities represent
+the units mounted on THIS support mast. Do NOT assume `items[0]` is the only item!
+
+
+3. ROBOT FEA MODELING - NODE 3 LOADS
+--------------------------------------------------------------------------------
+For every item in `rrh_equipment.items`:
+  1. Look up catalog specifications (via `find_rrh_reference` or catalog dict):
+     - `h_mm`, `w_mm`, `t_mm`: dimensions
+     - `weight_kg`: unit weight
+     - `cf_front`, `cf_lat`: drag coefficients (e.g. 1.36, 1.10)
+     - `a_front`, `a_lat`: projected areas in m² (e.g. 0.10, 0.05)
+  2. Compute forces for this item:
+     - `weight_total_kg = round(qty * weight_kg, 2)`
+     - `pe_dan = round(qty * weight_kg, 2)`
+     - `fw_front = round(qty * cf_front * a_front * qp_dan, 2)`
+     - `fw_lat = round(qty * cf_lat * a_lat * qp_dan, 2)`
+     - `fw_front_formula = f"{qty} * {cf_front:.2f} * {a_front:.2f} * {qp_dan:.2f} = {fw_front:.2f} daN"`
+     - `fw_lat_formula = f"{qty} * {cf_lat:.2f} * {a_lat:.2f} * {qp_dan:.2f} = {fw_lat:.2f} daN"`
+
+  3. Aggregate across ALL RRH units mounted on this mast:
+     - `TOTAL_WEIGHT_DAN = sum(item.pe_dan for item in rrh_items)`
+     - `TOTAL_FW_FRONT_DAN = sum(item.fw_front for item in rrh_items)`
+     - `TOTAL_FW_LAT_DAN = sum(item.fw_lat for item in rrh_items)`
+
+  4. Apply to Robot Node 3:
+     - Dead load (Cas 2 / PE):
+         FZ = - TOTAL_WEIGHT_DAN
+         (e.g., for 2x AHHB [31.4 daN] + 3x AHDA [42.0 daN] = -73.40 daN)
+     - Wind X (Cas 3 & Cas 4 / Frontal Wind):
+         FX = + TOTAL_FW_FRONT_DAN
+     - Wind Y (Cas 5 & Cas 6 / Lateral Wind):
+         FY = + TOTAL_FW_LAT_DAN
+
+
+4. WORKER RESULT_DATA PAYLOAD REQUIREMENT
+--------------------------------------------------------------------------------
+When calling `POST /api/calculations/{id}/complete/` (or returning result_data),
+`result_data` MUST contain:
+
+```json
+{
+  "rrh_items": [
+    {
+      "index": 1,
+      "name": "RRH AHHB 2600",
+      "catalog_reference": "AHHB 2600",
+      "qty": 2,
+      "h_mm": 337.0,
+      "w_mm": 295.0,
+      "t_mm": 141.0,
+      "dimensions_str": "337 x 295 x 141",
+      "weight_kg": 15.7,
+      "weight_total_kg": 31.4,
+      "cf_front": 1.36,
+      "cf_lat": 1.10,
+      "a_front": 0.10,
+      "a_lat": 0.05,
+      "fw_front": 33.61,
+      "fw_lat": 13.59,
+      "pe_dan": 31.4,
+      "fw_front_formula": "2 * 1.36 * 0.10 * 123.57 = 33.61 daN",
+      "fw_lat_formula": "2 * 1.10 * 0.05 * 123.57 = 13.59 daN"
+    },
+    {
+      "index": 2,
+      "name": "RRH AHDA 900",
+      "catalog_reference": "AHDA 900",
+      "qty": 3,
+      "h_mm": 336.0,
+      "w_mm": 309.0,
+      "t_mm": 130.0,
+      "dimensions_str": "336 x 309 x 130",
+      "weight_kg": 14.0,
+      "weight_total_kg": 42.0,
+      "cf_front": 1.32,
+      "cf_lat": 1.12,
+      "a_front": 0.10,
+      "a_lat": 0.04,
+      "fw_front": 40.78,
+      "fw_lat": 18.45,
+      "pe_dan": 42.0,
+      "fw_front_formula": "3 * 1.32 * 0.10 * 123.57 = 40.78 daN",
+      "fw_lat_formula": "3 * 1.12 * 0.04 * 123.57 = 18.45 daN"
+    }
+  ],
+  "rrh_totals": {
+    "count": 2,
+    "qty_total": 5,
+    "fw_front": 74.39,
+    "fw_lat": 32.04,
+    "pe_dan": 73.40,
+    "weight_total_kg": 73.40,
+    "fw_front_formula": "33.61 + 40.78 = 74.39 daN",
+    "fw_lat_formula": "13.59 + 18.45 = 32.04 daN"
+  },
+  "wind_params": {
+    "qp_dan": 123.57,
+    "fw_front": 74.39,
+    "fw_lat": 32.04,
+    "fw_mast": 10.87
+  }
+}
+```
+
+FOR COMPOSITE JOBS (`antenna_with_rrh`):
+Also nest these same keys under `result_data["rrh"]`:
+- `result_data["rrh"]["rrh_items"]`
+- `result_data["rrh"]["rrh_totals"]`
+- `result_data["rrh"]["wind_params"]`
+
+FOR BACKWARD COMPATIBILITY:
+Keep populating `result_data["equipment_params"]` (or `result_data["rrh"]["equipment_params"]`)
+with item[0] so legacy consumers do not crash.
+
+
+5. CACHE HASHING IN WORKER
+--------------------------------------------------------------------------------
+If the worker implements local caching or hash deduplication:
+Ensure the hash includes ALL items in `rrh_equipment["items"]` (both references
+and quantities), not just `items[0]`. Otherwise, changing or adding a second RRH
+will falsely hit a single-RRH cache.
+================================================================================

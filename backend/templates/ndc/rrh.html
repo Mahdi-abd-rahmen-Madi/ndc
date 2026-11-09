@@ -2,72 +2,123 @@
 
 {% block content %}
 <style>
-    .rrh-page-1 h1 { margin-top: 0; margin-bottom: 4mm; font-size: 20pt; }
-    .rrh-page-1 h2 { margin-top: 4mm; margin-bottom: 2mm; font-size: 13pt; }
-    .rrh-page-1 p { margin: 2mm 0; font-size: 10.5pt; line-height: 1.3; }
-    .rrh-page-1 table { margin-bottom: 3mm; }
+    .rrh-page-1 h1 {
+        margin-top: 0;
+        margin-bottom: 4mm;
+        font-size: 20pt;
+    }
+
+    .rrh-page-1 h2 {
+        margin-top: 4mm;
+        margin-bottom: 2mm;
+        font-size: 13pt;
+    }
+
+    .rrh-page-1 p {
+        margin: 2mm 0;
+        font-size: 10.5pt;
+        line-height: 1.3;
+    }
+
+    .rrh-page-1 table {
+        margin-bottom: 3mm;
+    }
 </style>
 
 <div class="rrh-page-1">
-<h1 id="etude-rrh">ÉTUDE RRH</h1>
+    <h1 id="etude-rrh">ÉTUDE RRH</h1>
 
-<h2>Description</h2>
-<p>
-    Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
-    Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:mat_longueur|default:"1500" }} mm supportant un RRH. Le mât sera fixé sur un plot métallique {{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
-</p>
+    <h2>Description</h2>
+    <p>
+        Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
+        {% if rrh_is_multi %}
+        Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:mat_longueur|default:"1500" }} mm supportant des RRHs.
+        {% else %}
+        Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:mat_longueur|default:"1500" }} mm supportant un RRH.
+        {% endif %}
+        Le mât sera fixé sur un plot métallique {{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
+    </p>
 
-<h2>Equipements considérés :</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Désignation</th>
-            <th>Quantité</th>
-            <th>Dimensions (mm)</th>
-            <th>Poids (kg)</th>
-            <th>État</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>{{ rrh_name|default:"RRH" }}</td>
-            <td class="text-center">{{ eq_qty|default:"1" }}</td>
-            <td class="text-center">{{ eq_dims|default:"N/A" }}</td>
-            <td class="text-center">{{ eq_weight|default:"N/A" }}</td>
-            <td class="text-center">Projet</td>
-        </tr>
-    </tbody>
-</table>
+    <h2>Equipements considérés :</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Désignation</th>
+                <th>Quantité</th>
+                <th>Dimensions (mm)</th>
+                <th>Poids (kg)</th>
+                <th>État</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in rrh_items %}
+            <tr>
+                <td>{{ it.name }}</td>
+                <td class="text-center">{{ it.qty }}</td>
+                <td class="text-center">{{ it.dimensions_str }}</td>
+                <td class="text-center">{{ it.weight_kg }}</td>
+                <td class="text-center">Projet</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td>{{ rrh_name|default:"RRH" }}</td>
+                <td class="text-center">{{ eq_qty|default:"1" }}</td>
+                <td class="text-center">{{ eq_dims|default:"N/A" }}</td>
+                <td class="text-center">{{ eq_weight|default:"N/A" }}</td>
+                <td class="text-center">Projet</td>
+            </tr>
+            {% endfor %}
+            {% if rrh_items|length > 1 %}
+            <tr style="font-weight: bold; background-color: #f7f7f7;">
+                <td>Total</td>
+                <td class="text-center">{{ rrh_totals.qty_total }}</td>
+                <td class="text-center">-</td>
+                <td class="text-center">{{ rrh_totals.weight_total_kg }}</td>
+                <td class="text-center">Projet</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
 
-<h2>Hypothèse de vent</h2>
-<p>
-    Région <strong>{{ region }}</strong><br>
-    Catégorie de terrain : <strong>{{ terrain_type }}</strong><br>
-    Hauteur : <strong>{{ building_height }}</strong> m<br>
-    Vitesse de référence du vent : V<sub>b</sub> = <strong>{{ vb_m_s }}</strong> m/s
-</p>
-<p>
-    <strong>Vitesse moyenne du vent à la hauteur z</strong><br>
-    V<sub>m</sub> = c<sub>r</sub>(z) . c<sub>0</sub>(z) . V<sub>b</sub><br>
-    k<sub>r</sub> = 0.19.(z<sub>0</sub>/z<sub>0,II</sub>)<sup>0.07</sup> = <strong>{{ kr_z }}</strong><br>
-    c<sub>r</sub>(z) = k<sub>r</sub> ⋅ ln(z/z<sub>0</sub>) = <strong>{{ cr_z }}</strong><br>
-    V<sub>m</sub> = {{ cr_z }} x {{ vb_m_s }} = <strong>{{ vm_z }}</strong> m/s<br>
-    I<sub>v</sub>(z) = 1/ln(z/z<sub>0</sub>) = <strong>{{ iv_z }}</strong>
-</p>
-<p>
-    <strong>Pression dynamique de pointe à la hauteur z</strong><br>
-    q<sub>p</sub> = <strong>{{ qp_z }}</strong> daN/m²
-</p>
+    <h2>Hypothèse de vent</h2>
+    <p>
+        Région <strong>{{ region }}</strong><br>
+        Catégorie de terrain : <strong>{{ terrain_type }}</strong><br>
+        Hauteur : <strong>{{ building_height }}</strong> m<br>
+        Vitesse de référence du vent : V<sub>b</sub> = <strong>{{ vb_m_s }}</strong> m/s
+    </p>
+    <p>
+        <strong>Vitesse moyenne du vent à la hauteur z</strong><br>
+        V<sub>m</sub> = c<sub>r</sub>(z) . c<sub>0</sub>(z) . V<sub>b</sub><br>
+        k<sub>r</sub> = 0.19.(z<sub>0</sub>/z<sub>0,II</sub>)<sup>0.07</sup> = <strong>{{ kr_z }}</strong><br>
+        c<sub>r</sub>(z) = k<sub>r</sub> ⋅ ln(z/z<sub>0</sub>) = <strong>{{ cr_z }}</strong><br>
+        V<sub>m</sub> = {{ cr_z }} x {{ vb_m_s }} = <strong>{{ vm_z }}</strong> m/s<br>
+        I<sub>v</sub>(z) = 1/ln(z/z<sub>0</sub>) = <strong>{{ iv_z }}</strong>
+    </p>
+    <p>
+        <strong>Pression dynamique de pointe à la hauteur z</strong><br>
+        q<sub>p</sub> = <strong>{{ qp_z }}</strong> daN/m²
+    </p>
 
-<h2>Les forces exercées par le vent :</h2>
-<p>
-    Mât : F<sub>w</sub> = 1 * 1 * {{ rrh_cf_mat|default:"0.088" }} * {{ qp_z }} = <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
-    RRH : F<sub>w,Frontale</sub> = 1 * {{ cx_front|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_front|default:"N/A" }}</strong> daN<br>
-    RRH : F<sub>w,Latéral</sub> = 1 * {{ cx_lat|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_lat|default:"N/A" }}</strong> daN
-</p>
+    <h2>Les forces exercées par le vent :</h2>
+    <p>
+        Mât : F<sub>w</sub> = 1 * 1 * {{ rrh_mat_diam_m|default:"0.088" }} * {{ qp_z }} = <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
+        {% if rrh_items|length > 1 %}
+            {% for it in rrh_items %}
+            {{ it.name }} : F<sub>w,Frontale</sub> = {{ it.fw_front_formula }}<br>
+            {{ it.name }} : F<sub>w,Latéral</sub> = {{ it.fw_lat_formula }}{% if not forloop.last %}<br>{% endif %}
+            {% endfor %}
+        {% elif rrh_items|length == 1 %}
+            RRH : F<sub>w,Frontale</sub> = {{ rrh_items.0.fw_front_formula }}<br>
+            RRH : F<sub>w,Latéral</sub> = {{ rrh_items.0.fw_lat_formula }}
+        {% else %}
+            RRH : F<sub>w,Frontale</sub> = 1 * {{ cx_front|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_front|default:"N/A" }}</strong> daN<br>
+            RRH : F<sub>w,Latéral</sub> = 1 * {{ cx_lat|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_lat|default:"N/A" }}</strong> daN
+        {% endif %}
+    </p>
 
-<h2>Calcul de chute</h2>
-<p>Pas de point d’ancrage sur le mât</p>
+    <h2>Calcul de chute</h2>
+    <p>Pas de point d’ancrage sur le mât</p>
 </div>
 
 <div class="page-break"></div>
@@ -75,13 +126,16 @@
 <!-- Page 2: MODELISATION 3D & Géométrie des pièces -->
 <h2>MODELISATION 3D</h2>
 <h3>Vue structure 3D</h3>
-<div style="width: 100%; height: 95mm; text-align: center; margin-bottom: 5mm; display: flex; align-items: center; justify-content: center; background-color: #f9f9f9; padding: 5px;">
+<div
+    style="width: 100%; height: 95mm; text-align: center; margin-bottom: 5mm; display: flex; align-items: center; justify-content: center; background-color: #f9f9f9; padding: 5px;">
     {% if rrh_screenshot_abs %}
-        <img src="file://{{ rrh_screenshot_abs }}" style="max-width: 100%; max-height: 100%; object-fit: contain;" alt="Vue 3D Robot Support RRH" />
+    <img src="file://{{ rrh_screenshot_abs }}" style="max-width: 100%; max-height: 100%; object-fit: contain;"
+        alt="Vue 3D Robot Support RRH" />
     {% else %}
-        <div style="width: 100%; height: 60mm; border: 1px dashed #ccc; text-align: center; display: flex; align-items: center; justify-content: center;">
-            <em>[Emplacement Vue 3D - En attente de calcul Robot]</em>
-        </div>
+    <div
+        style="width: 100%; height: 60mm; border: 1px dashed #ccc; text-align: center; display: flex; align-items: center; justify-content: center;">
+        <em>[Emplacement Vue 3D - En attente de calcul Robot]</em>
+    </div>
     {% endif %}
 </div>
 
@@ -113,13 +167,15 @@
 <!-- Page 3: Tableau des valeurs de chargements & combinaisons -->
 <h2>Tableau des valeurs de chargements & combinaisons</h2>
 {% if rrh_tableau_charges_abs %}
-<div style="text-align: center; margin: 15mm -12mm 0 -12mm;">
-    <img src="file://{{ rrh_tableau_charges_abs }}" style="width: 100%; max-width: 194mm; height: auto; display: block; margin: 0 auto;" alt="Tableau des charges Eurocode 1" />
+<div style="text-align: center; margin: 15mm -16mm 0 -16mm;">
+    <img src="file://{{ rrh_tableau_charges_abs }}"
+        style="width: 100%; max-width: 202mm; height: auto; display: block; margin: 0 auto;"
+        alt="Tableau des charges Eurocode 1" />
 </div>
 {% else %}
 <p>
     PP : Poids propre de la structure<br>
-    PE : Poids équipements ({{ eq_qty }}x {{ rrh_name|default:"RRH" }})<br>
+    PE : Poids équipements ({% if rrh_is_multi %}{{ rrh_qty_total }}x RRHs{% else %}{{ rrh_qty_total|default:eq_qty }}x {{ rrh_name|default:"RRH" }}{% endif %})<br>
     Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
 </p>
 {% endif %}
@@ -130,7 +186,9 @@
 <h2>Vérification à l’ELU et à l’ELS</h2>
 {% if rrh_verification_screenshot_abs %}
 <div style="text-align: center; margin: 5px 0 10px 0;">
-    <img src="file://{{ rrh_verification_screenshot_abs }}" style="max-width: 100%; max-height: 120mm; object-fit: contain;" alt="Vérification Ratios Robot Structural Analysis" />
+    <img src="file://{{ rrh_verification_screenshot_abs }}"
+        style="max-width: 100%; max-height: 120mm; object-fit: contain;"
+        alt="Vérification Ratios Robot Structural Analysis" />
 </div>
 {% endif %}
 
@@ -142,15 +200,19 @@
 
 <div style="text-align: center; margin-top: 5mm;">
     {% for img in rrh_note_mat_images %}
-        {% if forloop.first %}
-        <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul mât RRH">
-        {% else %}
-        <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul mât RRH">
-        {% endif %}
-        
-        {% if not forloop.last %}
-        <div class="page-break"></div>
-        {% endif %}
+    {% if forloop.first %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul mât RRH">
+    {% else %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul mât RRH">
+    {% endif %}
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
     {% endfor %}
 </div>
 {% endif %}
@@ -163,15 +225,19 @@
 
 <div style="text-align: center; margin-top: 5mm;">
     {% for img in rrh_note_plot_images %}
-        {% if forloop.first %}
-        <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul plot RRH">
-        {% else %}
-        <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note de calcul plot RRH">
-        {% endif %}
-        
-        {% if not forloop.last %}
-        <div class="page-break"></div>
-        {% endif %}
+    {% if forloop.first %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul plot RRH">
+    {% else %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul plot RRH">
+    {% endif %}
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
     {% endfor %}
 </div>
 {% endif %}
@@ -184,15 +250,19 @@
 
 <div style="text-align: center; margin-top: 5mm;">
     {% for img in rrh_assemblage_images %}
-        {% if forloop.first %}
-        <img src="file://{{ img }}" style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note d'assemblage RRH">
-        {% else %}
-        <img src="file://{{ img }}" style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;" alt="Page Note d'assemblage RRH">
-        {% endif %}
-        
-        {% if not forloop.last %}
-        <div class="page-break"></div>
-        {% endif %}
+    {% if forloop.first %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note d'assemblage RRH">
+    {% else %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note d'assemblage RRH">
+    {% endif %}
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
     {% endfor %}
 </div>
 {% endif %}
@@ -200,6 +270,7 @@
 <!-- Page finale: CONCLUSION -->
 <div class="page-break"></div>
 <h2>CONCLUSION</h2>
-<p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de vent, types d’antennes…). On peut assurer la bonne tenue de la structure du RRH.</p>
+<p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de
+    vent, types d’antennes…). On peut assurer la bonne tenue de la structure {% if rrh_is_multi %}des RRHs{% else %}du RRH{% endif %}.</p>
 
 {% endblock %}
