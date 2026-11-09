@@ -1287,7 +1287,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
                         rrh_tableau_charges_abs = cp
                         break
 
-        # Crop empty trailing columns (e.g. the last 3 empty columns) from RRH tableau charges to make it bigger & clearer
+        # Crop empty trailing columns (e.g. trailing empty columns) from RRH tableau charges to make it bigger & clearer
         if rrh_tableau_charges_abs and os.path.exists(rrh_tableau_charges_abs):
             try:
                 with Image.open(rrh_tableau_charges_abs) as src_img:
@@ -1304,14 +1304,25 @@ def generate_auxiliary_pdfs(job, start_page=1):
                             groups[-1].append(c)
                     centers = [int(np.mean(g)) for g in groups]
                     if len(centers) >= 4:
-                        crop_x = min(w, centers[-4] + 1)
-                        # Verify the last 3 columns are empty before cropping
-                        last_cols_content = arr[25:h-5, crop_x+2:w-2]
-                        # Grid lines alone or blank will have high row means
-                        row_means = np.mean(last_cols_content, axis=1)
-                        non_grid = last_cols_content[row_means > 220]
-                        non_white = np.sum(non_grid < 200)
-                        if non_white < 50:
+                        # Iterate backwards from rightmost columns to find trailing empty columns
+                        last_content_col = None
+                        for i in range(len(centers) - 2, -1, -1):
+                            c1, c2 = centers[i], centers[i+1]
+                            col_width = c2 - c1 - 4
+                            if col_width <= 0:
+                                continue
+                            cell_area = arr[25:h-5, c1+2:c2-2]
+                            row_dark_count = np.sum(cell_area < 180, axis=1)
+                            # Horizontal grid lines span across most of the cell width
+                            grid_rows = row_dark_count > (col_width * 0.5)
+                            text_rows = (~grid_rows)
+                            text_dark_pixels = np.sum(cell_area[text_rows] < 180)
+                            if text_dark_pixels > 20:
+                                last_content_col = i
+                                break
+                        
+                        if last_content_col is not None and last_content_col < len(centers) - 2:
+                            crop_x = min(w, centers[last_content_col + 1] + 1)
                             cropped_img = src_img.crop((0, 0, crop_x, h))
                             dir_name = os.path.dirname(rrh_tableau_charges_abs)
                             base_name = os.path.basename(rrh_tableau_charges_abs)
