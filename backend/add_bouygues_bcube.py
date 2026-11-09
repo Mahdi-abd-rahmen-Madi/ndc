@@ -11,25 +11,31 @@ from geodata.models import CatalogueConfig
 config = CatalogueConfig.objects.get(pk=1)
 atelier_refs = config.atelier_energie_references or []
 
-# B-cube énergie ACTIA equipments for Bouygues (no dimensions or weight)
+# B-cube énergie equipments for Bouygues (ACTIA & TLTI)
 bcube_specs = [
     {
         "id": "bcube_actia_ae_eltek_9kw",
-        "name": "AE ELTEK 9KW",
+        "name": "AE ELTEK 9kw",
         "operator": "bouygues",
         "supplier": "ACTIA"
     },
     {
         "id": "bcube_actia_ae_huawei_15kw",
-        "name": "AE HUAWEI 15KW",
+        "name": "AE HUAWEI 15kw",
         "operator": "bouygues",
         "supplier": "ACTIA"
     },
     {
-        "id": "bcube_actia_ae_huawei_9kw_15kw",
-        "name": "AE HUAWEI 9KW / 15KW",
+        "id": "bcube_tlti_ae_huawei_9kw",
+        "name": "AE HUAWEI 9kw",
         "operator": "bouygues",
-        "supplier": "ACTIA"
+        "supplier": "TLTI"
+    },
+    {
+        "id": "bcube_tlti_ae_huawei_15kw",
+        "name": "AE HUAWEI 15kw",
+        "operator": "bouygues",
+        "supplier": "TLTI"
     }
 ]
 

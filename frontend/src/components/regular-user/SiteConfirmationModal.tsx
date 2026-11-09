@@ -337,7 +337,7 @@ export function SiteConfirmationModal({
                   <Server className="w-3.5 h-3.5" />
                 </div>
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                  Zone Technique & Baies {operator === 'free' ? `(${zoneTechnique.freeConfigMode === 'alternative' ? 'Alternative' : 'Standard'})` : ''}
+                  Zone Technique & Baies
                 </h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -449,9 +449,13 @@ export function SiteConfirmationModal({
                   </ZoneTechniqueCard>
                 )}
                 {operator === 'bouygues' && hasAtelierEnergie && (
-                  <ZoneTechniqueCard title="B-cube énergie ACTIA">
+                  <ZoneTechniqueCard title="B-cube énergie">
                     <span className="text-xs font-bold text-slate-900 block">
-                      {config?.atelier_energie_references?.find(r => r.id === bcubeReference || r.reference === bcubeReference || r.name === bcubeReference)?.name || bcubeReference || 'Sélectionné'}
+                      {(() => {
+                        const item = config?.atelier_energie_references?.find(r => r.id === bcubeReference || r.reference === bcubeReference || r.name === bcubeReference);
+                        const marque = item?.supplier ? `${item.supplier} - ` : '';
+                        return `${marque}${item?.name || bcubeReference || 'Sélectionné'}`;
+                      })()}
                     </span>
                   </ZoneTechniqueCard>
                 )}

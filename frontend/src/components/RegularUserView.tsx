@@ -537,7 +537,6 @@ export default function RegularUserView({
                 isCompleted={(operator !== 'bouygues' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod || !!zoneTechnique.hasCoffretTransFo)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
-                  operator === 'free' ? (zoneTechnique.freeConfigMode === 'alternative' ? 'Config Alternative' : 'Config Standard') : null,
                   (operator !== 'bouygues' && hasTdEquipment) ? 'TD' : null,
                   hasGps ? 'GPS' : null,
                   hasBoitierLovage ? 'Lovage' : null,
@@ -547,7 +546,7 @@ export default function RegularUserView({
                   (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
                   (operator === 'free' && zoneTechnique.hasCoffretTransFo) ? 'Coffret TRANS FO' : null,
                   (operator === 'free' && hasPileAmod) ? 'Pile AMOD' : null,
-                  (operator === 'bouygues' && hasAtelierEnergie) ? 'B-cube énergie ACTIA' : null,
+                  (operator === 'bouygues' && hasAtelierEnergie) ? 'B-cube énergie' : null,
                   (operator === 'bouygues' && hasBcubeRadio) ? 'BCube RADIO' : null,
                   (operator === 'bouygues' && hasTgbt) ? 'TGBT' : null
                 ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}

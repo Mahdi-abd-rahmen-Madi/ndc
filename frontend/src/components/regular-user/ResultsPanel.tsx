@@ -133,7 +133,7 @@ function ResultsPanel({
             equipmentValues={equipmentValues}
           />
 
-          {/* 3. Section Zone Technique (Baies, TD, GPS, Lovage, CAB, Atelier, B-cube énergie ACTIA, MDEA) */}
+          {/* 3. Section Zone Technique (Baies, TD, GPS, Lovage, CAB, Atelier, B-cube énergie, MDEA) */}
           <TechnicalZoneSection
             techniqueConfigs={techniqueConfigs}
             isTechniqueEquipVisible={isTechniqueEquipVisible}

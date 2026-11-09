@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Zap } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
@@ -22,34 +22,33 @@ export interface BCubeEquipmentToggleProps {
 export const ALLOWED_BCUBE_OPTIONS: BCubeItem[] = [
   {
     id: 'bcube_actia_ae_eltek_9kw',
-    name: 'AE ELTEK 9KW',
-    reference: 'AE ELTEK 9KW',
+    name: 'AE ELTEK 9kw',
+    reference: 'AE ELTEK 9kw',
     operator: 'bouygues',
     supplier: 'ACTIA'
   },
   {
     id: 'bcube_actia_ae_huawei_15kw',
-    name: 'AE HUAWEI  15KW',
-    reference: 'AE HUAWEI  15KW',
+    name: 'AE HUAWEI 15kw',
+    reference: 'AE HUAWEI 15kw',
     operator: 'bouygues',
     supplier: 'ACTIA'
   },
   {
-    id: 'bcube_actia_ae_huawei_9kw_15kw',
-    name: 'AE HUAWEI 9KW / 15KW',
-    reference: 'AE HUAWEI 9KW / 15KW',
+    id: 'bcube_tlti_ae_huawei_9kw',
+    name: 'AE HUAWEI 9kw',
+    reference: 'AE HUAWEI 9kw',
     operator: 'bouygues',
-    supplier: 'ACTIA'
+    supplier: 'TLTI'
+  },
+  {
+    id: 'bcube_tlti_ae_huawei_15kw',
+    name: 'AE HUAWEI 15kw',
+    reference: 'AE HUAWEI 15kw',
+    operator: 'bouygues',
+    supplier: 'TLTI'
   }
 ];
-
-const VALID_CANONICAL_NAMES = new Set([
-  'AE ELTEK 9KW',
-  'AE HUAWEI 15KW',
-  'AE HUAWEI  15KW',
-  'AE HUAWEI 9KW / 15KW',
-  'AE HUAWEI 9KW/15KW'
-]);
 
 export function BCubeEquipmentToggle({
   hasAtelierEnergie,
@@ -58,55 +57,98 @@ export function BCubeEquipmentToggle({
   setBcubeReference,
   options = []
 }: BCubeEquipmentToggleProps) {
-  // Filter options strictly to the 3 allowed options, discarding any legacy/obsolete references
-  const matchedOptions = options.filter(o => {
-    const norm = (o.name || o.reference || '').toUpperCase().trim();
-    return VALID_CANONICAL_NAMES.has(norm);
+  // Use options from config if valid/complete, otherwise fallback to ALLOWED_BCUBE_OPTIONS
+  const bouyguesOptions = options.filter(o => o.operator === 'bouygues' && (o.supplier === 'ACTIA' || o.supplier === 'TLTI'));
+  const allBcubeOptions = bouyguesOptions.length >= 4 ? bouyguesOptions : ALLOWED_BCUBE_OPTIONS;
+
+  // Determine current marque based on current selected reference
+  const currentItem = allBcubeOptions.find(
+    o => o.id === bcubeReference || o.name === bcubeReference || o.reference === bcubeReference
+  );
+
+  const [selectedMarque, setSelectedMarque] = useState<string>(() => {
+    return currentItem?.supplier || 'ACTIA';
   });
 
-  const availableOptions = matchedOptions.length > 0 ? matchedOptions : ALLOWED_BCUBE_OPTIONS;
+  // Keep selectedMarque in sync if bcubeReference changes externally
+  useEffect(() => {
+    if (currentItem?.supplier && currentItem.supplier !== selectedMarque) {
+      setSelectedMarque(currentItem.supplier);
+    }
+  }, [currentItem, selectedMarque]);
 
-  // Detect if current reference is invalid, empty, or from obsolete catalogue
-  const isValidRef = availableOptions.some(
+  // Filter options by selected marque
+  const filteredOptions = allBcubeOptions.filter(
+    o => (o.supplier || '').toUpperCase() === selectedMarque.toUpperCase()
+  );
+
+  // Check if current reference is valid for the current marque
+  const isValidRef = filteredOptions.some(
     o => o.id === bcubeReference || o.name === bcubeReference || o.reference === bcubeReference
   );
 
   useEffect(() => {
-    if (hasAtelierEnergie && (!bcubeReference || !isValidRef) && availableOptions.length > 0) {
-      setBcubeReference(availableOptions[0].id);
+    if (hasAtelierEnergie && (!bcubeReference || !isValidRef) && filteredOptions.length > 0) {
+      setBcubeReference(filteredOptions[0].id);
     }
-  }, [hasAtelierEnergie, bcubeReference, isValidRef, availableOptions, setBcubeReference]);
+  }, [hasAtelierEnergie, bcubeReference, isValidRef, filteredOptions, setBcubeReference]);
 
-  const selectedValue = isValidRef ? bcubeReference : availableOptions[0]?.id;
+  const selectedValue = isValidRef ? bcubeReference : (filteredOptions[0]?.id || '');
+
+  const handleMarqueChange = (newMarque: string) => {
+    setSelectedMarque(newMarque);
+    const newOptions = allBcubeOptions.filter(
+      o => (o.supplier || '').toUpperCase() === newMarque.toUpperCase()
+    );
+    if (newOptions.length > 0) {
+      setBcubeReference(newOptions[0].id);
+    }
+  };
 
   return (
     <EquipmentToggleCard
-      title="B-cube énergie ACTIA"
+      title="B-cube énergie"
       enabled={hasAtelierEnergie}
       onToggle={(checked: boolean) => {
         setHasAtelierEnergie(checked);
-        if (checked && (!bcubeReference || !isValidRef) && availableOptions.length > 0) {
-          setBcubeReference(availableOptions[0].id);
+        if (checked && (!bcubeReference || !isValidRef) && filteredOptions.length > 0) {
+          setBcubeReference(filteredOptions[0].id);
         }
       }}
       icon={Zap}
       scopeBadgeText="Bouygues"
       color="violet"
     >
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col">
+      <div className="flex gap-3">
+        <div className="flex flex-col flex-1 min-w-0">
           <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-            Modèle B-cube énergie ACTIA
+            Marque
+          </label>
+          <CustomSelect
+            value={selectedMarque}
+            onChange={handleMarqueChange}
+            className="focus:ring-2 focus:ring-violet-500"
+            options={[
+              { value: 'ACTIA', label: 'ACTIA' },
+              { value: 'TLTI', label: 'TLTI' }
+            ]}
+            placeholder="Sélectionner la marque"
+          />
+        </div>
+
+        <div className="flex flex-col flex-1 min-w-0">
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
+            Modèle / Référence
           </label>
           <CustomSelect
             value={selectedValue}
             onChange={(val) => setBcubeReference(val)}
             className="focus:ring-2 focus:ring-violet-500"
-            options={availableOptions.map(opt => ({
+            options={filteredOptions.map(opt => ({
               value: opt.id,
               label: opt.name || opt.reference || opt.id
             }))}
-            placeholder="Sélectionner un modèle"
+            placeholder="Sélectionner une référence"
           />
         </div>
       </div>

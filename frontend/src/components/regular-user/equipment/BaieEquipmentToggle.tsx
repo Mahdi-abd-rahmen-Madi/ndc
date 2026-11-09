@@ -3,6 +3,7 @@ import { Server, Radio, Zap, Check } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { EquipmentOptionCard } from '../../ui/EquipmentOptionCard';
 import { QuantityInput } from '../../ui/QuantityInput';
+import { CustomSelect } from '../../ui/CustomSelect';
 import type { BaieReference, SelectedBaieItem } from '../types';
 
 export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
@@ -201,6 +202,10 @@ export function BaieEquipmentToggle({
 }: BaieEquipmentToggleProps) {
   const options = (baieOptions && baieOptions.length > 0) ? baieOptions : DEFAULT_ORANGE_BAIES;
   const [activeCategory, setActiveCategory] = useState<string>('radio');
+
+  // Selected vendor / marque for each sub-section (defaults to first available vendor)
+  const [selectedVendors, setSelectedVendors] = useState<Record<string, string>>({});
+
   const categories = [
     { id: 'radio', label: '1. Radio', shortName: 'Radio', icon: Radio, count: options.filter(o => o.category === 'radio' || o.category === 'radio_trans').length },
     { id: 'energie', label: '2. Énergie', shortName: 'Énergie', icon: Zap, count: options.filter(o => o.category === 'energie' || o.category === 'distribution' || o.category === 'raccordement').length }
@@ -245,14 +250,48 @@ export function BaieEquipmentToggle({
   const handleSetItemQty = (item: BaieReference, newQty: number) => {
     if (!setBaieItems) return;
     const exists = baieItems.find(i => i.referenceId === item.id);
-    if (!exists) return;
     const qty = Math.max(1, newQty);
-    const next = baieItems.map(i => i.referenceId === item.id ? { ...i, quantity: qty } : i);
+    let next: SelectedBaieItem[];
+    if (exists) {
+      next = baieItems.map(i => i.referenceId === item.id ? { ...i, quantity: qty } : i);
+    } else {
+      // If setting quantity for an unselected item, select it with that quantity (replacing same category)
+      const withoutSameCategory = baieItems.filter(i => {
+        const ref = options.find(o => o.id === i.referenceId);
+        return !matchesCategory(ref?.category, item.category);
+      });
+      next = [...withoutSameCategory, { id: crypto.randomUUID(), referenceId: item.id, quantity: qty }];
+    }
     setBaieItems(next);
     syncLegacyFlags(next);
   };
 
-  const filteredOptions = options.filter(o => matchesCategory(o.category, activeCategory));
+  // Vendor list for current active category
+  const categoryAllOptions = options.filter(o => matchesCategory(o.category, activeCategory));
+  const availableVendors = Array.from(
+    new Set(
+      categoryAllOptions
+        .map(o => (o.vendor || '').trim().toUpperCase())
+        .filter(Boolean)
+    )
+  ).sort();
+
+  // Find if there's an already selected item in this category to adopt its vendor
+  const categorySelectedItem = baieItems.find(i => {
+    const ref = options.find(o => o.id === i.referenceId);
+    return matchesCategory(ref?.category, activeCategory);
+  });
+  const categorySelectedRef = categorySelectedItem ? options.find(o => o.id === categorySelectedItem.referenceId) : null;
+  const preferredVendor = (categorySelectedRef?.vendor || '').trim().toUpperCase();
+
+  const currentVendor = selectedVendors[activeCategory]
+    || (preferredVendor && availableVendors.includes(preferredVendor) ? preferredVendor : availableVendors[0])
+    || '';
+
+  const filteredOptions = categoryAllOptions.filter(o => {
+    if (!currentVendor) return true;
+    return (o.vendor || '').trim().toUpperCase() === currentVendor;
+  });
   const totalSelectedCount = baieItems.reduce((acc, i) => acc + (i.quantity || 1), 0);
 
   const getCategoryColor = (cat: string) => {
@@ -347,24 +386,37 @@ export function BaieEquipmentToggle({
         })}
       </div>
 
-      {/* Bannière de la catégorie active */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/80 border border-slate-200/80 rounded-lg px-3 py-2 text-xs">
+      {/* Filtre Marque pour la catégorie active */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white border border-slate-200/90 rounded-xl p-2.5 shadow-2xs">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-800">
-            {currentCategoryInfo?.label}
-          </span>
-          <span className="text-[10px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-semibold">
-            1 référence max
-          </span>
+          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold whitespace-nowrap">
+            Marque {currentCategoryInfo?.shortName} :
+          </label>
+          <div className="w-48 sm:w-56">
+            <CustomSelect
+              value={currentVendor}
+              onChange={(val) => setSelectedVendors(prev => ({ ...prev, [activeCategory]: val }))}
+              options={availableVendors.map(v => {
+                const cnt = categoryAllOptions.filter(o => (o.vendor || '').trim().toUpperCase() === v).length;
+                return {
+                  value: v,
+                  label: `${v} (${cnt})`
+                };
+              })}
+              placeholder="Sélectionner la marque"
+            />
+          </div>
         </div>
-        <div className="flex items-center justify-between sm:justify-end gap-3">
+
+        {/* Info sélection courante */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 text-xs">
           <div className="text-[11px] text-slate-600">
             {currentCategorySelection ? (
               <span className="text-emerald-700 font-semibold flex items-center gap-1">
                 <Check className="w-3.5 h-3.5" /> Modèle sélectionné : {currentCategorySelection.ref?.name}
               </span>
             ) : (
-              <span className="text-slate-400 italic">Aucun modèle sélectionné (cliquez pour en choisir un)</span>
+              <span className="text-slate-400 italic">Aucun modèle sélectionné</span>
             )}
           </div>
           {currentCategorySelection && currentCategorySelection.ref && (
@@ -392,10 +444,8 @@ export function BaieEquipmentToggle({
               isSelected={isSelected}
               onToggle={() => handleToggleItem(item)}
               selectionType="radio"
-              vendorBadge={item.vendor}
-              badgeText={item.category_label || item.category}
-              badgeClass={getCategoryColor(item.category)}
               quantity={qty}
+              alwaysShowQuantity={true}
               onQuantityChange={(val) => handleSetItemQty(item, val)}
               color="orange"
               className={isWalkyrie ? 'col-span-full' : ''}

@@ -356,18 +356,18 @@ export function renderEquipmentPreviewCard({
     );
   }
 
-  // 10. Atelier d'énergie / B-cube énergie ACTIA
+  // 10. Atelier d'énergie / B-cube énergie
   if (config.id === 'atelier_energie') {
     if (operator === 'bouygues') {
       const bcube = equipmentValues.atelier_energie?.bcube;
       return (
         <EquipmentPreviewCard
           key={config.id}
-          title="B-cube énergie ACTIA"
+          title="B-cube énergie"
           icon={IconComponent}
           color="amber"
           typeBadge={{
-            text: 'B-cube énergie ACTIA',
+            text: 'B-cube énergie',
             bg: 'bg-amber-50',
             textCol: 'text-amber-700',
             border: 'border-amber-200'
@@ -378,7 +378,8 @@ export function renderEquipmentPreviewCard({
             textCol: 'text-amber-700',
             border: 'border-amber-200'
           }}
-          modele={bcube?.name || 'AE ELTEK 9KW'}
+          marque={bcube?.supplier || 'ACTIA'}
+          modele={bcube?.name || 'AE ELTEK 9kw'}
         />
       );
     }

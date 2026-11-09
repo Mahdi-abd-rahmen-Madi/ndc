@@ -99,7 +99,7 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
     missingStep4Equipments.push('Référence Boîtier de lovage');
   }
   if (operator === 'bouygues' && zoneTechnique.hasAtelierEnergie && !zoneTechnique.bcubeReference) {
-    missingStep4Equipments.push('Modèle B-cube énergie ACTIA');
+    missingStep4Equipments.push('Modèle B-cube énergie');
   }
   if (operator === 'bouygues' && zoneTechnique.hasBcubeRadio && !zoneTechnique.bcubeRadioReference) {
     missingStep4Equipments.push('Modèle BCube RADIO');

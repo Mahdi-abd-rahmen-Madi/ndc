@@ -33,12 +33,13 @@ export interface EquipmentOptionCardProps {
    */
   subtitle?: string;
   /**
-   * Optional quantity support. If quantity is specified and isSelected is true,
+   * Optional quantity support. If quantity is specified and (isSelected is true or alwaysShowQuantity is true),
    * a QuantityInput is rendered.
    */
   quantity?: number;
   onQuantityChange?: (qty: number) => void;
   quantityLabel?: string;
+  alwaysShowQuantity?: boolean;
   badgePosition?: 'top-right' | 'below-title';
   /**
    * Color theme: 'orange' | 'amber' | 'violet' | 'red' | 'emerald' | 'blue'
@@ -117,6 +118,7 @@ export function EquipmentOptionCard({
   quantity,
   onQuantityChange,
   quantityLabel = 'Quantité',
+  alwaysShowQuantity = false,
   badgePosition = 'top-right',
   color = 'orange',
   className = ''
@@ -192,13 +194,15 @@ export function EquipmentOptionCard({
         )}
       </div>
 
-      {isSelected && onQuantityChange && quantity !== undefined && (
+      {(isSelected || alwaysShowQuantity) && onQuantityChange && quantity !== undefined && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className={`flex items-center justify-between mt-2.5 pt-2 border-t ${c.divider}`}
+          className={`flex items-center justify-between mt-2.5 pt-2 border-t ${isSelected ? c.divider : 'border-slate-200'}`}
         >
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1">
-            <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+            {isSelected ? (
+              <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+            ) : null}
             {quantityLabel}
           </span>
           <QuantityInput

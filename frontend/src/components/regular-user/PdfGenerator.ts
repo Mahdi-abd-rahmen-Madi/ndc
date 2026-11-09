@@ -407,7 +407,8 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       }
       if (showAtelierInPdf) {
         if (operator === 'bouygues' && bcubeItem) {
-          doc.text(`• B-cube énergie ACTIA : ${bcubeItem.name}`, 28, lineY);
+          const supplierPrefix = bcubeItem.supplier ? `${bcubeItem.supplier} - ` : '';
+          doc.text(`• B-cube énergie : ${supplierPrefix}${bcubeItem.name}`, 28, lineY);
         } else {
           const modules = [];
           if (atelierFprb) {
