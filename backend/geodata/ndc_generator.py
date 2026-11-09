@@ -85,10 +85,10 @@ def calculate_wind_params(terrain_type: str, z_total: float, vb: float) -> dict:
     qp_dan = qp_pa / 10.0
 
     return {
-        'kr':     round(kr, 3),
-        'cr_z':   round(cr_z, 3),
+        'kr':     round(kr, 2),
+        'cr_z':   round(cr_z, 2),
         'vm':     round(vm, 2),
-        'iv_z':   round(iv_z, 4),
+        'iv_z':   round(iv_z, 2),
         'qp_pa':  round(qp_pa, 2),
         'qp_dan': round(qp_dan, 2),
         'z_used': round(z_used, 2),
