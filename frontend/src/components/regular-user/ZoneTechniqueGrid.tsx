@@ -147,17 +147,19 @@ export function ZoneTechniqueGrid({
         </>
       ) : (
         <>
-          {/* 1. TD Equipment */}
-          <TDEquipmentToggle
-            hasTdEquipment={data.hasTdEquipment}
-            setHasTdEquipment={(val) => onChange({ hasTdEquipment: val })}
-            tdType={data.tdType}
-            setTdType={(val) => onChange({ tdType: val })}
-            tdReference={data.tdReference}
-            setTdReference={(val) => onChange({ tdReference: val })}
-            tdOptions={config?.td_references || []}
-            operator={operator}
-          />
+          {/* 1. TD Equipment (Free only, as Orange uses Baies and Bouygues uses BCube/TGBT) */}
+          {operator !== 'orange' && (
+            <TDEquipmentToggle
+              hasTdEquipment={data.hasTdEquipment}
+              setHasTdEquipment={(val) => onChange({ hasTdEquipment: val })}
+              tdType={data.tdType}
+              setTdType={(val) => onChange({ tdType: val })}
+              tdReference={data.tdReference}
+              setTdReference={(val) => onChange({ tdReference: val })}
+              tdOptions={config?.td_references || []}
+              operator={operator}
+            />
+          )}
 
           {/* 2. GPS */}
           <GPSEquipmentToggle

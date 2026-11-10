@@ -1,8 +1,8 @@
 [
   {
     "id": "tgbt_actia",
-    "name": "TGBT ACTIA",
-    "reference": "TGBT ACTIA",
+    "name": "ACTIA",
+    "reference": "ACTIA",
     "vendor": "ACTIA",
     "supplier": "ACTIA",
     "operator": "bouygues",
@@ -11,8 +11,8 @@
   },
   {
     "id": "tgbt_tlti",
-    "name": "TGBT TLTI",
-    "reference": "TGBT TLTI",
+    "name": "TLTI",
+    "reference": "TLTI",
     "vendor": "TLTI",
     "supplier": "TLTI",
     "operator": "bouygues",

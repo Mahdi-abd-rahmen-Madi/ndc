@@ -489,6 +489,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
         cat_dict = load_catalogue_dict()
         atelier_refs = cat_dict.get('atelier_energie_references') or getattr(config, 'atelier_energie_references', [])
         coffret_refs = cat_dict.get('coffret_references') or getattr(config, 'coffret_references', [])
+        tgbt_refs = cat_dict.get('tgbt_references') or getattr(config, 'tgbt_references', [])
 
         return Response({
             'precalculated_building_heights': config.precalculated_building_heights,
@@ -498,7 +499,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'coffret_references': coffret_refs,
             'fh_references': config.fh_references,
             'td_references': config.td_references,
-            'tgbt_references': getattr(config, 'tgbt_references', []),
+            'tgbt_references': tgbt_refs,
             'rru_references': config.rru_references,
             'rrh_references': config.rrh_references,
             'atelier_energie_references': atelier_refs,

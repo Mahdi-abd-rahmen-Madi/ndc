@@ -1193,6 +1193,63 @@ def generate_auxiliary_pdfs(job, start_page=1):
         rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
         rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
         rrh_mat_longueur_m = struct_p.get('hauteur_mat_m') or context.get('mat_longueur_m')
+
+        # Wind calculation specific to RRH (do NOT use base antenna sector calculation)
+        rrh_qp_z = wind_p.get('qp_dan') or context.get('qp_z')
+        rrh_cr_z = wind_p.get('cr_z') or wind_p.get('cr')
+        rrh_vm_z = wind_p.get('vm_z') or wind_p.get('vm')
+        rrh_iv_z = wind_p.get('iv_z') or wind_p.get('iv')
+        rrh_kr_z = wind_p.get('kr_z') or wind_p.get('kr')
+
+        # If wind_p provides qp_dan but not cr_z, solve consistently from qp_dan or recalculate at RRH height
+        if not rrh_cr_z:
+            try:
+                target_qp_dan = float(wind_p.get('qp_dan') or 0.0)
+            except (ValueError, TypeError):
+                target_qp_dan = 0.0
+
+            if target_qp_dan > 0 and vb is not None and float(vb) > 0:
+                # Solve X = ln(z/z0) from qp(z) = (1 + 7/X) * 0.5 * rho * (kr * X * vb)^2
+                z0_val, _ = TERRAIN_Z0.get(terrain_type_str, TERRAIN_Z0['IIIa'])
+                kr_val = 0.19 * (z0_val / Z0_II) ** 0.07
+                A_coeff = 0.5 * RHO_AIR * (float(vb) ** 2) * (kr_val ** 2)
+                qp_pa_target = target_qp_dan * 10.0
+                disc = 49.0 + 4.0 * (qp_pa_target / A_coeff)
+                if disc > 0:
+                    X_val = (-7.0 + math.sqrt(disc)) / 2.0
+                    rrh_cr_calc = kr_val * X_val
+                    rrh_vm_calc = rrh_cr_calc * 1.0 * float(vb)
+                    rrh_iv_calc = 1.0 / X_val if X_val > 0 else 0.12
+                    rrh_cr_z = round(rrh_cr_calc, 2)
+                    rrh_vm_z = round(rrh_vm_calc, 2)
+                    rrh_iv_z = round(rrh_iv_calc, 2)
+                    rrh_kr_z = round(kr_val, 2)
+
+        # Fallback if still not determined: compute using RRH height
+        if not rrh_cr_z:
+            try:
+                rrh_h_bat = float(env.get('building_height_m') or 0)
+                rrh_h_plot = float(rrh_plot_longueur_m or 0)
+                rrh_h_mat = float(rrh_mat_longueur_m or 0)
+                rrh_z_total = rrh_h_bat + rrh_h_plot + rrh_h_mat
+                if rrh_z_total <= 0:
+                    rrh_z_total = rrh_h_bat
+            except (ValueError, TypeError):
+                rrh_z_total = 0
+
+            if vb is not None and rrh_z_total > 0:
+                rrh_wind_calc = calculate_wind_params(terrain_type_str, rrh_z_total, float(vb))
+                rrh_cr_z = rrh_wind_calc['cr_z']
+                rrh_vm_z = rrh_wind_calc['vm']
+                rrh_iv_z = rrh_wind_calc['iv_z']
+                rrh_kr_z = rrh_wind_calc['kr']
+                if not rrh_qp_z:
+                    rrh_qp_z = rrh_wind_calc['qp_dan']
+            else:
+                rrh_cr_z = context.get('cr_z')
+                rrh_vm_z = context.get('vm_z')
+                rrh_iv_z = context.get('iv_z')
+                rrh_kr_z = context.get('kr_z')
         
         try:
             rrh_mat_longueur = int(float(rrh_mat_longueur_m) * 1000) if rrh_mat_longueur_m else context.get('mat_longueur')
@@ -1494,6 +1551,11 @@ def generate_auxiliary_pdfs(job, start_page=1):
                 print(f"Warning: Failed to convert RRH assemblage RTF to images: {e}")
 
         generated_pdfs.append(_render_and_save('rrh', {
+            'cr_z': rrh_cr_z,
+            'vm_z': rrh_vm_z,
+            'iv_z': rrh_iv_z,
+            'kr_z': rrh_kr_z,
+            'qp_z': rrh_qp_z,
             'eq_qty': qty_total,
             'rrh_name': first_item.get('name', 'RRH'),
             'eq_dims': eq_dims,

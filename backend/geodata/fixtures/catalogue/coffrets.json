@@ -1,18 +1,18 @@
 [
   {
     "id": "HDB24MKII",
-    "name": "Coffrets hybride (400x350x150, 4kg)",
+    "name": "Coffret GIGAMEDIA (400x350x150, 4kg)",
     "operator": "bouygues"
   },
   {
     "id": "utel_v3",
-    "name": "Coffret hybride UTEL V3",
+    "name": "Coffret UTEL V3 (300x330x150mm, 5.5kg)",
     "reference": "UTEL V3",
     "operator": "bouygues"
   },
   {
     "id": "folan_v3",
-    "name": "Coffret hybride FOLAN V3",
+    "name": "Coffret FOLAN V3 (415x300x185mm, 6kg)",
     "reference": "FOLAN V3",
     "operator": "bouygues"
   },

@@ -65,8 +65,15 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
   }
   activeSectors.forEach((sector, idx) => {
     const secLabel = nombreSecteurs > 1 ? ` (Secteur ${idx + 1})` : '';
-    if (sector.hasFhEquipment && !sector.fhReference) {
-      missingStep3Equipments.push(`Référence FH${secLabel}`);
+    if (sector.hasFhEquipment) {
+      const fhList = sector.fhItems ?? [];
+      if (fhList.length > 0) {
+        if (fhList.some(i => !i.reference || !i.vendor)) {
+          missingStep3Equipments.push(`Référence FH${secLabel}`);
+        }
+      } else if (!sector.fhReference) {
+        missingStep3Equipments.push(`Référence FH${secLabel}`);
+      }
     }
 
     if (operator !== 'bouygues' && sector.hasRrhEquipment) {
@@ -89,7 +96,7 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
   });
 
   const missingStep4Equipments: string[] = [];
-  if (operator !== 'bouygues' && zoneTechnique.hasTdEquipment && !zoneTechnique.tdReference) {
+  if (operator !== 'bouygues' && operator !== 'orange' && zoneTechnique.hasTdEquipment && !zoneTechnique.tdReference) {
     missingStep4Equipments.push('Référence TD');
   }
   if (zoneTechnique.hasGps && !zoneTechnique.gpsReference) {

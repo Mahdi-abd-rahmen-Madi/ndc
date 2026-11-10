@@ -396,13 +396,10 @@ export function BaieEquipmentToggle({
             <CustomSelect
               value={currentVendor}
               onChange={(val) => setSelectedVendors(prev => ({ ...prev, [activeCategory]: val }))}
-              options={availableVendors.map(v => {
-                const cnt = categoryAllOptions.filter(o => (o.vendor || '').trim().toUpperCase() === v).length;
-                return {
-                  value: v,
-                  label: `${v} (${cnt})`
-                };
-              })}
+              options={availableVendors.map(v => ({
+                value: v,
+                label: v
+              }))}
               placeholder="Sélectionner la marque"
             />
           </div>

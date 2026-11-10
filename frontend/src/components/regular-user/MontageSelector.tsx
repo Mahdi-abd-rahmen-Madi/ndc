@@ -24,6 +24,7 @@ interface MontageSelectorProps {
   setSelectedVendor4G?: (vendor: string) => void;
   setSelectedVendor5G?: (vendor: string) => void;
   operator?: string;
+  echelleControl?: React.ReactNode;
   mastHeightControl?: React.ReactNode;
   children?: React.ReactNode;
 }
@@ -49,6 +50,7 @@ export default function MontageSelector({
   setSelectedVendor4G,
   setSelectedVendor5G,
   operator = 'bouygues',
+  echelleControl,
   mastHeightControl,
   children
 }: MontageSelectorProps) {
@@ -225,6 +227,8 @@ export default function MontageSelector({
         </label>
 
         {mastHeightControl}
+
+        {echelleControl}
 
         {/* Segmented Control */}
         <div className={styles.segmentedControlContainer}>

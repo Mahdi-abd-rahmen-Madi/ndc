@@ -2240,7 +2240,7 @@
       "coffret_references": [
         {
           "id": "HDB24MKII",
-          "name": "Coffrets hybride (400x350x150, 4kg)",
+          "name": "Coffret GIGAMEDIA (400x350x150, 4kg)",
           "operator": "bouygues"
         },
         {
@@ -2280,13 +2280,13 @@
         },
         {
           "id": "utel_v3",
-          "name": "Coffret hybride UTEL V3",
+          "name": "Coffret UTEL V3 (300x330x150mm, 5.5kg)",
           "reference": "UTEL V3",
           "operator": "bouygues"
         },
         {
           "id": "folan_v3",
-          "name": "Coffret hybride FOLAN V3",
+          "name": "Coffret FOLAN V3 (415x300x185mm, 6kg)",
           "reference": "FOLAN V3",
           "operator": "bouygues"
         }
@@ -2414,8 +2414,8 @@
       "tgbt_references": [
         {
           "id": "tgbt_actia",
-          "name": "TGBT ACTIA",
-          "reference": "TGBT ACTIA",
+          "name": "ACTIA",
+          "reference": "ACTIA",
           "vendor": "ACTIA",
           "supplier": "ACTIA",
           "operator": "bouygues",
@@ -2424,8 +2424,8 @@
         },
         {
           "id": "tgbt_tlti",
-          "name": "TGBT TLTI",
-          "reference": "TGBT TLTI",
+          "name": "TLTI",
+          "reference": "TLTI",
           "vendor": "TLTI",
           "supplier": "TLTI",
           "operator": "bouygues",

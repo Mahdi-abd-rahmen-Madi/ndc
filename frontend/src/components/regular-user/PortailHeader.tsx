@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass, Building2, Anchor, Edit3, User as UserIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import NotificationsDropdown from './NotificationsDropdown';
 
 export interface PortailHeaderProps {
@@ -29,6 +30,7 @@ export function PortailHeader({
   notifications,
   setNotifications
 }: PortailHeaderProps) {
+  const navigate = useNavigate();
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
@@ -102,8 +104,9 @@ export function PortailHeader({
         <div className="hidden sm:flex items-center gap-2">
           <span className="text-xs text-slate-500 font-medium">{userEmail}</span>
           <button
-            onClick={onOpenProfile}
+            onClick={() => navigate('/compte')}
             className="text-xs px-2.5 py-1.5 bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 rounded-xl transition-all flex items-center gap-1.5 border border-slate-200 font-medium shadow-2xs"
+            title="Accéder à Mon Compte & Historique"
           >
             {clientLogoUrl ? (
               <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-300 bg-white shrink-0">
@@ -116,7 +119,7 @@ export function PortailHeader({
             ) : (
               <UserIcon className="w-3.5 h-3.5 text-slate-500" />
             )}
-            Profil
+            Mon Compte
           </button>
           <button
             onClick={onLogout}

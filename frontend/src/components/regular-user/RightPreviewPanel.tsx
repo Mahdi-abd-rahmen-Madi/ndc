@@ -110,6 +110,7 @@ function RightPreviewPanel({
   const fhDiameter = s1?.fhDiameter ?? 300;
   const fhReference = s1?.fhReference ?? '';
   const fhQuantity = s1?.fhQuantity ?? 1;
+  const fhItems = s1?.fhItems ?? [];
   const hasRrhEquipment = !!s1?.hasRrhEquipment;
   const rrhItems = s1?.rrhItems ?? [];
   const hasRruEquipment = !!s1?.hasRruEquipment;
@@ -419,7 +420,7 @@ function RightPreviewPanel({
                     fh: hasFhEquipment,
                     rrh: operator !== 'bouygues' && hasRrhEquipment,
                     rru: hasRruEquipment,
-                    td: operator !== 'bouygues' && hasTdEquipment,
+                    td: operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment,
                     gps: hasGps,
                     boitier_lovage: hasBoitierLovage,
                     coffrets_fibre: operator !== 'free' && hasCoffret,
@@ -439,6 +440,17 @@ function RightPreviewPanel({
                       quantité: fhQuantity,
                       poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A'
                     },
+                    fhItems: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ id: 'fh-1', reference: fhReference, quantity: fhQuantity }]).map(item => {
+                      const fhOpt = config?.fh_references?.find(r => r.id === item.reference || r.reference === item.reference || r.name === item.reference);
+                      return {
+                        ...item,
+                        vendor: item.vendor || fhOpt?.vendor || '',
+                        name: fhOpt?.name || item.reference,
+                        reference: fhOpt?.reference || fhOpt?.name || item.reference,
+                        diameter: fhOpt?.diameter,
+                        weight: fhOpt?.weight
+                      };
+                    }) : null,
                     rrhItems: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ ...item, reference: resolveRrh(item.reference) })) : null,
                     rruItems: hasRruEquipment ? rruItems.map(item => {
                       const rruOpt = config?.rru_references?.find(r => r.id === item.reference || r.reference === item.reference);
@@ -449,7 +461,7 @@ function RightPreviewPanel({
                         weight: rruOpt?.weight ?? null
                       };
                     }) : null,
-                    td: (operator !== 'bouygues' && hasTdEquipment) ? {
+                    td: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? {
                       type: tdType === 'monophase' ? 'TD Monophasé' : 'TD 5G V5',
                       référence: resolveTd(tdReference) || 'N/A'
                     } : null,

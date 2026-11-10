@@ -24,8 +24,8 @@ export interface TGBTEquipmentToggleProps {
 }
 
 const DEFAULT_TGBT_OPTIONS: TGBTItem[] = [
-  { id: 'tgbt_actia', name: 'TGBT ACTIA', reference: 'TGBT ACTIA', vendor: 'ACTIA', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 },
-  { id: 'tgbt_tlti', name: 'TGBT TLTI', reference: 'TGBT TLTI', vendor: 'TLTI', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 }
+  { id: 'tgbt_actia', name: 'ACTIA', reference: 'ACTIA', vendor: 'ACTIA', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 },
+  { id: 'tgbt_tlti', name: 'TLTI', reference: 'TLTI', vendor: 'TLTI', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 }
 ];
 
 export function TGBTEquipmentToggle({
@@ -67,12 +67,12 @@ export function TGBTEquipmentToggle({
             Modèle TGBT
           </label>
           <CustomSelect
-            value={tgbtReference || availableOptions[0]?.reference || 'TGBT ACTIA'}
+            value={tgbtReference || availableOptions[0]?.reference || 'ACTIA'}
             onChange={(val) => setTgbtReference(val)}
             className="focus:ring-2 focus:ring-violet-500"
             options={availableOptions.map(opt => ({
               value: opt.reference || opt.name || opt.id,
-              label: opt.name || opt.reference
+              label: (opt.name || opt.reference || '').replace(/^TGBT\s+/i, '')
             }))}
             placeholder="Sélectionner un TGBT"
           />

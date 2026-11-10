@@ -82,7 +82,7 @@ export default function LandingPage({ token, userEmail, isAdmin, onLogout }: Lan
           {/* CTA Buttons */}
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/portal"
+              to="/portail"
               className="group relative px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-2xl flex items-center gap-3 transition-all duration-300 shadow-xl shadow-indigo-900/30 hover:shadow-indigo-500/40 hover:-translate-y-0.5 overflow-hidden w-full sm:w-auto justify-center"
             >
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>

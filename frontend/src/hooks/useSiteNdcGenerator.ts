@@ -127,6 +127,7 @@ export function useSiteNdcGenerator({
     const fhDiameter = s1?.fhDiameter ?? 300;
     const fhReference = s1?.fhReference ?? '';
     const fhQuantity = s1?.fhQuantity ?? 1;
+    const fhItems = s1?.fhItems ?? [];
     const hasRrhEquipment = !!s1?.hasRrhEquipment;
     const rrhItems = s1?.rrhItems ?? [];
     const hasRruEquipment = !!s1?.hasRruEquipment;
@@ -231,7 +232,11 @@ export function useSiteNdcGenerator({
             diameter_mm: hasFhEquipment ? fhDiameter : null,
             reference: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.reference || null) : null,
             quantity: hasFhEquipment ? fhQuantity : null,
-            weight_kg: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.weight || null) : null
+            weight_kg: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.weight || null) : null,
+            items: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ reference: fhReference, quantity: fhQuantity }]).map(item => ({
+              reference: config?.fh_references?.find((r: any) => r.id === item.reference)?.reference || item.reference,
+              quantity: item.quantity
+            })) : []
           },
           rrh_equipment: {
             enabled: operator !== 'bouygues' && hasRrhEquipment,
@@ -242,10 +247,10 @@ export function useSiteNdcGenerator({
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
-            enabled: operator !== 'bouygues' && hasTdEquipment,
-            type: (operator !== 'bouygues' && hasTdEquipment) ? tdType : null,
-            reference: (operator !== 'bouygues' && hasTdEquipment) ? tdReference : null,
-            tgbt_reference: (operator !== 'bouygues' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
+            enabled: operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment,
+            type: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdType : null,
+            reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdReference : null,
+            tgbt_reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
           },
           tgbt_equipment: {
             enabled: operator === 'bouygues' && hasTgbt,
@@ -404,7 +409,11 @@ export function useSiteNdcGenerator({
             diameter_mm: hasFhEquipment ? fhDiameter : null,
             reference: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.reference || null) : null,
             quantity: hasFhEquipment ? fhQuantity : null,
-            weight_kg: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.weight || null) : null
+            weight_kg: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.weight || null) : null,
+            items: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ reference: fhReference, quantity: fhQuantity }]).map(item => ({
+              reference: config?.fh_references?.find(r => r.id === item.reference)?.reference || item.reference,
+              quantity: item.quantity
+            })) : []
           },
           rrh_equipment: {
             enabled: operator !== 'bouygues' && hasRrhEquipment,
@@ -415,10 +424,10 @@ export function useSiteNdcGenerator({
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
-            enabled: operator !== 'bouygues' && hasTdEquipment,
-            type: (operator !== 'bouygues' && hasTdEquipment) ? tdType : null,
-            reference: (operator !== 'bouygues' && hasTdEquipment) ? tdReference : null,
-            tgbt_reference: (operator !== 'bouygues' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
+            enabled: operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment,
+            type: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdType : null,
+            reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdReference : null,
+            tgbt_reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
           },
           tgbt_equipment: {
             enabled: operator === 'bouygues' && hasTgbt,

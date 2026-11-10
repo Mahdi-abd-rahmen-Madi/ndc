@@ -78,7 +78,7 @@ function ResultsPanel({
   });
   const techniqueConfigs = enabledConfigs.filter(c => {
     if (c.zone !== 'technique') return false;
-    if (c.id === 'td' && operator === 'bouygues') return false;
+    if (c.id === 'td' && (operator === 'bouygues' || operator === 'orange')) return false;
     return true;
   });
 

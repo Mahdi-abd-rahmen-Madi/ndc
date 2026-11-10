@@ -126,6 +126,7 @@ export function SiteConfirmationModal({
   const hasFhEquipment = !!s1?.hasFhEquipment;
   const fhQuantity = s1?.fhQuantity ?? 1;
   const fhReference = s1?.fhReference ?? '';
+  const fhItems = s1?.fhItems ?? [];
   const hasRruEquipment = !!s1?.hasRruEquipment;
   const rruItems = s1?.rruItems ?? [];
   const hasRrhEquipment = !!s1?.hasRrhEquipment;
@@ -275,7 +276,23 @@ export function SiteConfirmationModal({
                 )}
 
                 {/* FH */}
-                {hasFhEquipment && fhQuantity > 0 && (
+                {hasFhEquipment && (fhItems && fhItems.length > 0 ? (
+                  fhItems.map((item, idx) => {
+                    const opt = config?.fh_references?.find(r => r.id === item.reference || r.reference === item.reference || r.name === item.reference);
+                    return (
+                      <MastEquipmentCard
+                        key={`fh-${idx}`}
+                        borderClass="border-l-amber-500"
+                        title="Faisceau Hertzien (FH)"
+                        badgeText="1x par site"
+                        badgeClass="bg-amber-50 text-amber-700 border-amber-200"
+                        quantityText={`${item.quantity} unité`}
+                        detailLabel="Modèle"
+                        detailValue={opt?.reference || opt?.name || item.reference || 'Sélectionné'}
+                      />
+                    );
+                  })
+                ) : (fhQuantity > 0 && (
                   <MastEquipmentCard
                     borderClass="border-l-amber-500"
                     title="Faisceau Hertzien (FH)"
@@ -285,7 +302,7 @@ export function SiteConfirmationModal({
                     detailLabel="Modèle"
                     detailValue={config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}
                   />
-                )}
+                )))}
 
                 {/* RRU Items */}
                 {hasRruEquipment && rruItems.map((item, idx) => (
@@ -330,7 +347,7 @@ export function SiteConfirmationModal({
           </div>
 
           {/* 3. Zone Technique */}
-          {((operator !== 'bouygues' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasCoffretTransFo || hasPileAmod)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)) && (
+          {((operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasCoffretTransFo || hasPileAmod)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)) && (
             <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/60">
                 <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md">
@@ -341,12 +358,12 @@ export function SiteConfirmationModal({
                 </h4>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {(operator !== 'bouygues' && hasTdEquipment) && (
+                {(operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) && (
                   <ZoneTechniqueCard title={`Équipement TD (${tdType === 'monophase' ? 'Monophasé' : 'Tétraphasé'})`}>
                     <span className="text-xs font-bold text-slate-900 block truncate" title={resolveTd(tdReference) || tdReference}>
                       {resolveTd(tdReference) || tdReference || 'Sélectionné'}
                     </span>
-                    {operator !== 'bouygues' && tdType === 'monophase' && tgbtReference && (
+                    {operator !== 'bouygues' && operator !== 'orange' && tdType === 'monophase' && tgbtReference && (
                       <span className="text-[10px] text-slate-500 block mt-0.5">TGBT : {tgbtReference}</span>
                     )}
                   </ZoneTechniqueCard>

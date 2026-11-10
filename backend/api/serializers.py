@@ -117,16 +117,17 @@ class AntennaSerializer(serializers.Serializer):
     poids_kg = serializers.FloatField(required=False, allow_null=True)
     hauteur_mat_antenne_m = serializers.FloatField(required=False, allow_null=True)
 
+class EquipmentItemSerializer(serializers.Serializer):
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    quantity = serializers.IntegerField(required=False, allow_null=True)
+
 class FHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     diameter_mm = serializers.FloatField(required=False, allow_null=True)
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     quantity = serializers.IntegerField(required=False, allow_null=True)
     weight_kg = serializers.FloatField(required=False, allow_null=True)
-
-class EquipmentItemSerializer(serializers.Serializer):
-    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    quantity = serializers.IntegerField(required=False, allow_null=True)
+    items = EquipmentItemSerializer(many=True, required=False)
 
 class EquipmentPayloadSerializer(serializers.Serializer):
     model = serializers.CharField(required=False, allow_blank=True, allow_null=True)

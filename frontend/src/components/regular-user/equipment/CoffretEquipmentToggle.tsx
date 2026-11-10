@@ -58,8 +58,11 @@ export function CoffretEquipmentToggle({
           }}
           className="focus:ring-2 focus:ring-fuchsia-500"
           options={[
-            ...otherOptions.map(ref => ({ value: ref.id, label: ref.name.replace(/\s*\([^)]*\)/g, '').trim() })),
-            ...(httaOptions.length > 0 ? [{ value: 'HTTA', label: 'Coffrets HTTA' }] : [])
+            ...otherOptions.map(ref => ({
+              value: ref.id,
+              label: ref.name.replace(/\s*\([^)]*\)/g, '').replace(/^Coffrets?\s+/i, '').trim()
+            })),
+            ...(httaOptions.length > 0 ? [{ value: 'HTTA', label: 'HTTA' }] : [])
           ]}
           placeholder="Sélectionner..."
           error={!mainSelectValue}

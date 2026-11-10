@@ -25,6 +25,7 @@ const LoginView = lazy(() => import('./components/LoginView'));
 const RegularUserView = lazy(() => import('./components/RegularUserView'));
 const CatalogueManagement = lazy(() => import('./components/CatalogueManagement'));
 const CatalogueTestView = lazy(() => import('./components/CatalogueTestView'));
+const AccountView = lazy(() => import('./components/AccountView'));
 
 export default function App() {
   const token = useAppStore((state) => state.token);
@@ -45,7 +46,10 @@ export default function App() {
     <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Chargement...</div>}>
       <Routes>
         <Route path="/" element={<LandingPage token={token} userEmail={userEmail} isAdmin={isAdmin} onLogout={handleLogout} />} />
-        <Route path="/portal" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
+        <Route path="/portail" element={<MainApp key="public" initialMode="public" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
+        {/* Backward compatibility redirect */}
+        <Route path="/portal" element={<Navigate to="/portail" replace />} />
+        <Route path="/compte" element={<AccountRoute token={token} userEmail={userEmail} onLogout={handleLogout} onLoginSuccess={handleLoginSuccess} />} />
         <Route path="/engineer" element={<MainApp key="engineer" initialMode="engineer" token={token} userEmail={userEmail} isAdmin={isAdmin} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />} />
         <Route path="/test-catalogue" element={<CatalogueTestView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -92,7 +96,7 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
 
   // Route protection
   if (userMode === 'engineer' && token && !isAdmin) {
-    return <Navigate to="/portal" replace />;
+    return <Navigate to="/portail" replace />;
   }
 
   const {
@@ -341,7 +345,7 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
             </Link>
 
             <Link
-              to="/portal"
+              to="/portail"
               className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition-all shadow-xs flex items-center gap-1.5"
             >
               <span>Portail Client</span>
@@ -455,3 +459,27 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
     </div>
   );
 }
+
+interface AccountRouteProps {
+  token: string | null;
+  userEmail: string | null;
+  onLogout: () => void;
+  onLoginSuccess: (token: string, email: string, isAdmin: boolean) => void;
+}
+
+function AccountRoute({ token, userEmail, onLogout, onLoginSuccess }: AccountRouteProps) {
+  const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+
+  if (!token) {
+    return <LoginView apiBaseUrl={apiBaseUrl} onLoginSuccess={onLoginSuccess} />;
+  }
+
+  return (
+    <AccountView
+      apiBaseUrl={apiBaseUrl}
+      userEmail={userEmail}
+      onLogout={onLogout}
+    />
+  );
+}
+

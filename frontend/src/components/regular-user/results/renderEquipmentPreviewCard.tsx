@@ -20,6 +20,35 @@ export function renderEquipmentPreviewCard({
 
   // 1. Faisceau Hertzien (FH)
   if (config.id === 'fh') {
+    if (equipmentValues.fhItems && Array.isArray(equipmentValues.fhItems) && equipmentValues.fhItems.length > 0) {
+      return equipmentValues.fhItems.map((item: any, index: number) => {
+        const qVal = item.quantity || 1;
+        const ref = item.reference || item.name || 'N/A';
+        const vendor = item.vendor;
+        let model = ref;
+        if (vendor && model.startsWith(vendor)) {
+          model = model.substring(vendor.length).trim();
+        }
+
+        return (
+          <EquipmentPreviewCard
+            key={`${config.id}-${index}`}
+            title={config.name || 'Faisceau Hertzien (FH)'}
+            icon={IconComponent}
+            color="amber"
+            scopeBadge={{
+              text: `${qVal} par site`,
+              bg: 'bg-amber-50',
+              textCol: 'text-amber-700',
+              border: 'border-amber-200'
+            }}
+            marque={vendor}
+            modele={model}
+          />
+        );
+      });
+    }
+
     const fhVal = equipmentValues.fh || {};
     const qVal = fhVal.quantité || 1;
     const ref = fhVal.référence || 'N/A';

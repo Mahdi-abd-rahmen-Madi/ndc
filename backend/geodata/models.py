@@ -605,7 +605,9 @@ class CatalogueConfig(models.Model):
                 'recommended_mast_heights': [3, 4],
                 'fh_weight_options': [20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70],
                 'coffret_references': [
-                    { "id": "HDB24MKII", "name": "Coffrets hybride (400x350x150, 4kg)", "operator": "bouygues" },
+                    { "id": "HDB24MKII", "name": "Coffret GIGAMEDIA (400x350x150, 4kg)", "operator": "bouygues" },
+                    { "id": "utel_v3", "name": "Coffret UTEL V3 (300x330x150mm, 5.5kg)", "reference": "UTEL V3", "operator": "bouygues" },
+                    { "id": "folan_v3", "name": "Coffret FOLAN V3 (415x300x185mm, 6kg)", "reference": "FOLAN V3", "operator": "bouygues" },
                     { "id": "622191062", "name": "Coffret PANAMA (215x360x111mm, 2.8kg)", "operator": "orange" },
                     { "id": "TRANS_FO", "name": "Coffret TRANS FO (260x380x97mm, 2.1kg)", "operator": "free" },
                     { "id": "TELENCO", "name": "Coffret TELENCO (260x380x95mm, 2.1kg)", "operator": "orange" },
@@ -624,8 +626,8 @@ class CatalogueConfig(models.Model):
                     { "id": "td_tri_free", "vendor": "FREE", "name": "TD triphasé", "reference": "68237", "weight": 60, "dimensions": "1055x850x350mm" }
                 ],
                 'tgbt_references': [
-                    { "id": "tgbt_actia", "name": "TGBT ACTIA", "reference": "TGBT ACTIA", "vendor": "ACTIA", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 },
-                    { "id": "tgbt_tlti", "name": "TGBT TLTI", "reference": "TGBT TLTI", "vendor": "TLTI", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 }
+                    { "id": "tgbt_actia", "name": "ACTIA", "reference": "ACTIA", "vendor": "ACTIA", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 },
+                    { "id": "tgbt_tlti", "name": "TLTI", "reference": "TLTI", "vendor": "TLTI", "operator": "bouygues", "dimensions": "500x400x230mm", "weight": 15.0 }
                 ],
                 'rru_references': [
                     { "id": "rru_eri_4486", "vendor": "ERICSSON", "operator": "bouygues", "reference": "Radio 4486", "dimensions": "444x384x143mm", "weight": 27.1 },

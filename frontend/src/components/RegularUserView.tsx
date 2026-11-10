@@ -3,7 +3,7 @@ import {
   Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,
   FileText, AlertTriangle, Eye, CheckCircle2, Settings, RefreshCw,
   Building2, Anchor, Edit3, Sparkles, ArrowRight, ChevronRight, ChevronDown, Pencil,
-  Search, Zap, Check, Radio, Activity, X, Server
+  Search, Zap, Check, Radio, Activity, X, Server, AlignJustify
 } from 'lucide-react';
 
 export interface EquipmentItem {
@@ -20,6 +20,8 @@ import { useGeocoding } from '../hooks/useGeocoding';
 import { useSiteNdcGenerator } from '../hooks/useSiteNdcGenerator';
 import { useLocationSelection } from '../hooks/useLocationSelection';
 import { useSectorManager } from '../hooks/useSectorManager';
+
+import { CustomSelect } from './ui/CustomSelect';
 
 // Sub-components
 import AddressSearchSection from './regular-user/AddressSearchSection';
@@ -156,6 +158,7 @@ export default function RegularUserView({
   const fhDiameter = s1?.fhDiameter ?? 300;
   const fhReference = s1?.fhReference ?? '';
   const fhQuantity = s1?.fhQuantity ?? 1;
+  const fhItems = s1?.fhItems ?? [];
   const hasRrhEquipment = !!s1?.hasRrhEquipment;
   const rrhItems = s1?.rrhItems ?? [];
   const hasRruEquipment = !!s1?.hasRruEquipment;
@@ -480,6 +483,34 @@ export default function RegularUserView({
                             config={config}
                             collapsed={isCollapsed}
                             operator={operator}
+                            echelleControl={idx === 0 ? (
+                              <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-slate-300 transition-all flex flex-col justify-between mb-5">
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <label className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1.5 tracking-wider">
+                                      <AlignJustify className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                                      <span>Présence echelle + Palier de repos rabattable + PA <span className="text-red-500 font-bold">*</span></span>
+                                    </label>
+                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                      1x par site
+                                    </span>
+                                  </div>
+                                  <CustomSelect
+                                    value={selectedEchelle}
+                                    onChange={(val) => setProject(prev => ({ ...prev, selectedEchelle: val }))}
+                                    options={[
+                                      { value: "Pas d'échelle", label: "Pas d'échelle" },
+                                      { value: 'Echelle Söll', label: 'Echelle Söll' },
+                                      { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
+                                      { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' }
+                                    ]}
+                                    placeholder="Sélectionner une échelle"
+                                    className="w-full"
+                                    error={!selectedEchelle}
+                                  />
+                                </div>
+                              </div>
+                            ) : undefined}
                           >
                             <div className="mt-4 pt-4 border-t border-slate-200/80">
                               <div className="flex items-center justify-between mb-3">
@@ -503,8 +534,6 @@ export default function RegularUserView({
                                 config={config}
                                 operator={operator}
                                 nombreSecteurs={nombreSecteurs}
-                                selectedEchelle={selectedEchelle}
-                                setSelectedEchelle={(val) => setProject(prev => ({ ...prev, selectedEchelle: val }))}
                               />
                             </div>
                           </SectorConfigurator>
@@ -534,10 +563,10 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={(operator !== 'bouygues' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod || !!zoneTechnique.hasCoffretTransFo)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
+                isCompleted={(operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod || !!zoneTechnique.hasCoffretTransFo)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
                 summary={[
-                  (operator !== 'bouygues' && hasTdEquipment) ? 'TD' : null,
+                  (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? 'TD' : null,
                   hasGps ? 'GPS' : null,
                   hasBoitierLovage ? 'Lovage' : null,
                   (operator === 'orange' && hasBaie) ? 'Baie' : null,

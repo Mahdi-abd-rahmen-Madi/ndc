@@ -234,6 +234,7 @@ export interface SectorData {
   fhDiameter?: number;
   fhReference?: string;
   fhQuantity?: number;
+  fhItems?: EquipmentItem[];
   hasRrhEquipment?: boolean;
   rrhItems?: EquipmentItem[];
   hasRruEquipment?: boolean;
@@ -392,6 +393,7 @@ export const defaultSectorData = (id: number): SectorData => ({
   fhDiameter: 300,
   fhReference: '',
   fhQuantity: 1,
+  fhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   hasRrhEquipment: false,
   rrhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   hasRruEquipment: false,

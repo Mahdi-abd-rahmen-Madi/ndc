@@ -44,7 +44,7 @@ export function useSectorManager({
       ...(operator !== 'free' ? { hasCab: false, cabOne: false, cabTwo: false, cabThree: false, cabSupport: 'plinthes', freeConfigMode: 'standard' as const } : {}),
       ...((operator !== 'free' && operator !== 'bouygues') ? { hasAtelierEnergie: false } : {}),
       ...(operator !== 'bouygues' ? { bcubeReference: '', hasBcubeRadio: false, bcubeRadioReference: '', hasTgbt: false, tgbtReference: '' } : {}),
-      ...(operator === 'bouygues' ? { hasTdEquipment: false, tdReference: '' } : {})
+      ...((operator === 'bouygues' || operator === 'orange') ? { hasTdEquipment: false, tdReference: '' } : {})
     }));
 
     const defaultRrh = [{

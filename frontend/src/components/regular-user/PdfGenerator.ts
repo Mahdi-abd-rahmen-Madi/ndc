@@ -28,6 +28,7 @@ interface PdfGeneratorOptions {
   fhDiameter: number;
   fhReference: string;
   fhQuantity: number;
+  fhItems?: { id: string; reference: string; quantity: number; diameter?: number }[];
   hasRrhEquipment: boolean;
   rrhItems: { id: string; reference: string; quantity: number }[];
   hasRruEquipment: boolean;
@@ -103,6 +104,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       fhDiameter,
       fhReference,
       fhQuantity,
+      fhItems,
       hasRrhEquipment,
       rrhItems,
       hasRruEquipment,
@@ -265,7 +267,9 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       doc.setFillColor(250, 245, 255);
 
       let aerialCount = 0;
-      if (hasFhEquipment) aerialCount++;
+      if (hasFhEquipment) {
+        aerialCount += (fhItems && fhItems.length > 0) ? fhItems.length : 1;
+      }
       if (showRrhInPdf) aerialCount += rrhItems.length;
       if (hasRruEquipment && rruItems) aerialCount += rruItems.length;
       if (hasCoffret) aerialCount++;
@@ -280,8 +284,16 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       doc.setFont('helvetica', 'normal');
       let lineY = yPos + 16;
       if (hasFhEquipment) {
-        doc.text(`• Faisceau Hertzien (FH) [Unique au site]: Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
-        lineY += 8;
+        if (fhItems && fhItems.length > 0) {
+          fhItems.forEach((item, index) => {
+            const diamText = item.diameter ? `Diamètre ${item.diameter}mm - ` : (fhDiameter ? `Diamètre ${fhDiameter}mm - ` : '');
+            doc.text(`• Faisceau Hertzien (FH) ${fhItems.length > 1 ? `#${index + 1} ` : ''}[Unique au site]: ${diamText}Réf: ${item.reference || 'N/A'} - Qté: ${item.quantity}`, 28, lineY);
+            lineY += 8;
+          });
+        } else {
+          doc.text(`• Faisceau Hertzien (FH) [Unique au site]: Diamètre ${fhDiameter}mm - Réf: ${fhReference || 'N/A'} - Qté: ${fhQuantity}`, 28, lineY);
+          lineY += 8;
+        }
       }
       if (showRrhInPdf) {
         rrhItems.forEach((item, index) => {
@@ -315,7 +327,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     }
 
     // Équipements Zone Technique (TD, GPS, Boîtier de lovage, Baie, CAB, Atelier d'énergie, BCube, Convertisseur MDEA, Coffret TRANS FO, TGBT, Pile AMOD)
-    const showTdInPdf = operator !== 'bouygues' && hasTdEquipment;
+    const showTdInPdf = operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment;
     const showBaieInPdf = operator === 'orange' && hasBaie;
     const showCabInPdf = operator === 'free' && hasCab;
     const showAtelierInPdf = (operator === 'free' && hasAtelierEnergie) || (operator === 'bouygues' && hasAtelierEnergie && !!bcubeItem);

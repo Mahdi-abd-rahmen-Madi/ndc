@@ -12,6 +12,7 @@ interface SectorConfiguratorProps {
   config: CatalogueConfig | null;
   collapsed?: boolean;
   operator?: string;
+  echelleControl?: React.ReactNode;
   children?: React.ReactNode;
 }
 
@@ -22,6 +23,7 @@ export default function SectorConfigurator({
   config,
   collapsed,
   operator = 'bouygues',
+  echelleControl,
   children
 }: SectorConfiguratorProps) {
   const recommendedMastHeights = config?.recommended_mast_heights || [3, 4];
@@ -138,6 +140,7 @@ export default function SectorConfigurator({
           setSelectedVendor4G={(vendor) => updateSector(index, { selectedVendor4G: vendor })}
           setSelectedVendor5G={(vendor) => updateSector(index, { selectedVendor5G: vendor })}
           operator={operator}
+          echelleControl={echelleControl}
           mastHeightControl={
             <div className={styles.mastContainer}>
               <div className={styles.mastDecoStandard}></div>
