@@ -821,12 +821,26 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         or {}
     )
 
+    # 4. Extract structure parameters
+    structure = (
+        result_data.get("structure_params")
+        or rrh_sub.get("structure_params")
+        or {}
+    )
+
+    # 5. Extract extremes
+    extremes = (
+        result_data.get("extremes")
+        or rrh_sub.get("extremes")
+        or {}
+    )
+
     try:
         qp = float(wind.get("qp_dan") or qp_val or 0.0)
     except (ValueError, TypeError):
         qp = 0.0
 
-    # 4. Fallback 1: Legacy jobs / cached entries where equipment_params was present
+    # 6. Fallback 1: Legacy jobs / cached entries where equipment_params was present
     if not items:
         ep = rrh_sub.get("equipment_params") or result_data.get("equipment_params") or {}
         if ep:
@@ -984,6 +998,8 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         "items": items,
         "totals": totals,
         "wind": wind,
+        "structure": structure,
+        "extremes": extremes,
         "is_multi": is_multi,
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
     }
@@ -1182,8 +1198,8 @@ def generate_auxiliary_pdfs(job, start_page=1):
 
         # Override/Enrich with genuine Worker results if available
         worker_rrh = res_data.get('rrh', {}) if isinstance(res_data.get('rrh'), dict) else {}
-        extremes = worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
-        struct_p = worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
+        extremes = rrh_ctx.get('extremes') or worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = rrh_ctx.get('structure') or worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
 
         if wind_p.get('qp_dan'):
             context['qp_z'] = wind_p.get('qp_dan')
@@ -1200,6 +1216,20 @@ def generate_auxiliary_pdfs(job, start_page=1):
         rrh_vm_z = wind_p.get('vm_z') or wind_p.get('vm')
         rrh_iv_z = wind_p.get('iv_z') or wind_p.get('iv')
         rrh_kr_z = wind_p.get('kr_z') or wind_p.get('kr')
+
+        # Site wind parameters for RRH summary block
+        rrh_region = wind_p.get('region')
+        if rrh_region is not None:
+            if isinstance(rrh_region, (int, float)) or (isinstance(rrh_region, str) and str(rrh_region).isdigit()):
+                rrh_region_str = f"Region {rrh_region}"
+            else:
+                rrh_region_str = str(rrh_region)
+        else:
+            rrh_region_str = context.get('region')
+
+        rrh_terrain_type = wind_p.get('terrain_type') or context.get('terrain_type')
+        rrh_building_height = wind_p.get('building_height_m') if wind_p.get('building_height_m') is not None else context.get('building_height')
+        rrh_vb_m_s = wind_p.get('v_b0') if wind_p.get('v_b0') is not None else context.get('vb_m_s')
 
         # If wind_p provides qp_dan but not cr_z, solve consistently from qp_dan or recalculate at RRH height
         if not rrh_cr_z:
@@ -1267,18 +1297,18 @@ def generate_auxiliary_pdfs(job, start_page=1):
         except (ValueError, TypeError):
             rrh_mat_epaisseur = context.get('mat_epaisseur')
 
-        rrh_cf_mat = struct_p.get('cf_mast', 0.088)
+        rrh_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
 
         try:
-            m_diam_m = float(rrh_mat_diam) / 1000.0 if rrh_mat_diam and str(rrh_mat_diam).replace('.', '').isdigit() else 0.088
+            m_diam_m = float(struct_p.get('mast_d_m') or (float(rrh_mat_diam) / 1000.0 if rrh_mat_diam and str(rrh_mat_diam).replace('.', '').isdigit() else 0.088))
         except (ValueError, TypeError):
             m_diam_m = 0.088
 
-        if wind_p.get('fw_mast'):
+        if wind_p.get('fw_mast') is not None:
             fw_mat = wind_p.get('fw_mast')
         else:
             try:
-                fw_mat = round(1.0 * 1.0 * m_diam_m * float(context.get('qp_z', 0)), 2)
+                fw_mat = round(1.0 * float(rrh_cf_mat) * m_diam_m * float(rrh_qp_z or context.get('qp_z', 0)), 2)
             except (ValueError, TypeError):
                 fw_mat = '[Fw,Mat]'
 
@@ -1551,6 +1581,10 @@ def generate_auxiliary_pdfs(job, start_page=1):
                 print(f"Warning: Failed to convert RRH assemblage RTF to images: {e}")
 
         generated_pdfs.append(_render_and_save('rrh', {
+            'region': rrh_region_str,
+            'terrain_type': rrh_terrain_type,
+            'building_height': rrh_building_height,
+            'vb_m_s': rrh_vb_m_s,
             'cr_z': rrh_cr_z,
             'vm_z': rrh_vm_z,
             'iv_z': rrh_iv_z,

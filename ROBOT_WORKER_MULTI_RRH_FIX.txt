@@ -169,4 +169,34 @@ If the worker implements local caching or hash deduplication:
 Ensure the hash includes ALL items in `rrh_equipment["items"]` (both references
 and quantities), not just `items[0]`. Otherwise, changing or adding a second RRH
 will falsely hit a single-RRH cache.
+
+
+6. WORKER'S LOCAL NDC ASSEMBLER (rrh_automation/calculation.py)
+--------------------------------------------------------------------------------
+In `rrh_automation/calculation.py`, update `assemble_rrh_ndc_document(results)`:
+1. REMOVE any redundant call to `computed_w = rrh_config.compute_wind(...)`.
+   The worker must NEVER re-compute wind or forces during document assembly.
+2. Direct Extraction:
+   - `_w = results.get("wind_params", {})`
+   - `rrh_items = results.get("rrh_items", [])`
+   - `rrh_totals = results.get("rrh_totals", {})`
+   - `structure = results.get("structure_params", {})`
+3. Table 0 ("Équipements considérés"):
+   - Populate rows for every item in `rrh_items`:
+     [Désignation, Quantité, Dimensions (mm), Poids (kg), État]
+   - IMPORTANT: Do NOT add a "Total" row (intentionally removed).
+4. Section "Les forces exercées par le vent":
+   - Mast:
+     `Mât : Fw = 1 * {wind.get('cf_mast', 1.0):g} * {structure.get('mast_d_m', 0.088):g} * {wind['qp_dan']:.2f} = {wind['fw_mast']:.2f} daN/ml`
+   - RRH:
+     - If single RRH:
+       `RRH : Fw,Frontale = {items[0]['fw_front_formula']}`
+       `RRH : Fw,Latéral = {items[0]['fw_lat_formula']}`
+     - If multi-RRH:
+       Write per-item formulas for each item in `rrh_items`:
+       `RRH #1 ({item1.name}) : Fw,Frontale = {item1.fw_front_formula}`
+       `RRH #1 ({item1.name}) : Fw,Latéral = {item1.fw_lat_formula}`
+       `RRH #2 ({item2.name}) : Fw,Frontale = {item2.fw_front_formula}`
+       `RRH #2 ({item2.name}) : Fw,Latéral = {item2.fw_lat_formula}`
+       (Do NOT add TOTAL RRH lines).
 ================================================================================
