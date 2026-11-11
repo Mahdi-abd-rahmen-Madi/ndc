@@ -133,6 +133,8 @@ export function SiteConfirmationModal({
   const rrhItems = s1?.rrhItems ?? [];
   const hasCoffret = !!s1?.hasCoffret;
   const coffretReference = s1?.coffretReference ?? '';
+  const hasBoitierJonction = !!s1?.hasBoitierJonction;
+  const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
 
   const {
     hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
@@ -267,7 +269,7 @@ export function SiteConfirmationModal({
                   <MastEquipmentCard
                     borderClass="border-l-indigo-500"
                     title="Échelle + Palier"
-                    badgeText="1x par site"
+                    badgeText="par site"
                     badgeClass="bg-indigo-50 text-indigo-700 border-indigo-200"
                     quantityText={selectedEchelle === "Pas d'échelle" ? "0" : "1"}
                     detailLabel="Modèle"
@@ -284,7 +286,7 @@ export function SiteConfirmationModal({
                         key={`fh-${idx}`}
                         borderClass="border-l-amber-500"
                         title="Faisceau Hertzien (FH)"
-                        badgeText="1x par site"
+                        badgeText="par site"
                         badgeClass="bg-amber-50 text-amber-700 border-amber-200"
                         quantityText={`${item.quantity} unité`}
                         detailLabel="Modèle"
@@ -296,7 +298,7 @@ export function SiteConfirmationModal({
                   <MastEquipmentCard
                     borderClass="border-l-amber-500"
                     title="Faisceau Hertzien (FH)"
-                    badgeText="1x par site"
+                    badgeText="par site"
                     badgeClass="bg-amber-50 text-amber-700 border-amber-200"
                     quantityText={`${fhQuantity} unité`}
                     detailLabel="Modèle"
@@ -340,6 +342,19 @@ export function SiteConfirmationModal({
                     totalCount={nombreSecteurs}
                     detailLabel="Modèle"
                     detailValue={config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || coffretReference || 'Sélectionné'}
+                  />
+                )}
+
+                {/* Boîtier de jonction FO (Free) */}
+                {operator === 'free' && hasBoitierJonction && (
+                  <MastEquipmentCard
+                    borderClass="border-l-cyan-500"
+                    title="Boitier de jonction FO"
+                    badgeText="Par secteur"
+                    quantityText={`${boitierJonctionQuantity || 1} / sect.`}
+                    totalCount={(boitierJonctionQuantity || 1) * nombreSecteurs}
+                    detailLabel="Modèle"
+                    detailValue="Aginode (427×380×127 mm)"
                   />
                 )}
               </div>
@@ -433,10 +448,10 @@ export function SiteConfirmationModal({
                   </ZoneTechniqueCard>
                 )}
                 {operator === 'free' && hasCoffretTransFo && (
-                  <ZoneTechniqueCard title="Coffret hybride : TRANS FO">
+                  <ZoneTechniqueCard title="Coffret hybride">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900">
-                        Coffret TRANS FO (2.1 kg)
+                        TRANS FO (2.1 kg)
                       </span>
                       <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full shrink-0">
                         Qté: {coffretTransFoQuantity || 1}

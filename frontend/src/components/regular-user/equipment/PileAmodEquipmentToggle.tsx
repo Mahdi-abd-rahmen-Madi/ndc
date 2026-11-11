@@ -71,7 +71,7 @@ export function PileAmodEquipmentToggle({
       }}
       icon={Layers}
       color="rose"
-      scopeBadgeText="1x par site (Nokia)"
+      scopeBadgeText="par site"
       headerRightContent={
         hasPileAmod ? (
           <span className="text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">

@@ -40,7 +40,7 @@ export function AtelierEnergieEquipmentToggle({
       }}
       icon={Zap}
       color="violet"
-      scopeBadgeText="1x par site"
+      scopeBadgeText="par site"
     >
       <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Modules d'énergie</span>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">

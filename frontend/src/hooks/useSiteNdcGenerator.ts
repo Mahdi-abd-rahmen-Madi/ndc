@@ -134,6 +134,8 @@ export function useSiteNdcGenerator({
     const rruItems = s1?.rruItems ?? [];
     const hasCoffret = !!s1?.hasCoffret;
     const coffretReference = s1?.coffretReference ?? '';
+    const hasBoitierJonction = !!s1?.hasBoitierJonction;
+    const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
 
     const {
       hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
@@ -258,6 +260,13 @@ export function useSiteNdcGenerator({
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
+          boitier_jonction: {
+            enabled: operator === 'free' && hasBoitierJonction,
+            quantity: operator === 'free' && hasBoitierJonction ? (boitierJonctionQuantity || 1) : null,
+            marque: 'Aginode',
+            dimensions: '427*380*127mm',
+            weight: 0
+          },
           coffrets_fibre: {
             enabled: operator === 'free' ? !!hasCoffretTransFo : hasCoffret,
             quantity: operator === 'free' ? (coffretTransFoQuantity || 1) : (hasCoffret ? nombreSecteurs : 1),
@@ -435,6 +444,13 @@ export function useSiteNdcGenerator({
           },
           gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
           boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
+          boitier_jonction: {
+            enabled: operator === 'free' && hasBoitierJonction,
+            quantity: operator === 'free' && hasBoitierJonction ? (boitierJonctionQuantity || 1) : null,
+            marque: 'Aginode',
+            dimensions: '427*380*127mm',
+            weight: 0
+          },
           coffrets_fibre: {
             enabled: operator === 'free' ? !!hasCoffretTransFo : hasCoffret,
             quantity: operator === 'free' ? (coffretTransFoQuantity || 1) : (hasCoffret ? nombreSecteurs : 1),

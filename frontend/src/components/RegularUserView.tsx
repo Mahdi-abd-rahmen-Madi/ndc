@@ -165,6 +165,8 @@ export default function RegularUserView({
   const rruItems = s1?.rruItems ?? [];
   const hasCoffret = !!s1?.hasCoffret;
   const coffretReference = s1?.coffretReference ?? '';
+  const hasBoitierJonction = !!s1?.hasBoitierJonction;
+  const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
 
   // Status State
   const [showPdfPreview, setShowPdfPreview] = useState<boolean>(false);
@@ -463,7 +465,8 @@ export default function RegularUserView({
                       hasFhEquipment ? 'FH' : null,
                       (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
                       hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
-                      (operator !== 'free' && hasCoffret) ? 'Fibre' : null
+                      (operator !== 'free' && hasCoffret) ? 'Fibre' : null,
+                      (operator === 'free' && hasBoitierJonction) ? 'Boitier jonction FO' : null
                     ].filter(Boolean).join(' • ')
                     : undefined
                 }
@@ -492,7 +495,7 @@ export default function RegularUserView({
                                       <span>Présence echelle + Palier de repos rabattable + PA <span className="text-red-500 font-bold">*</span></span>
                                     </label>
                                     <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                      1x par site
+                                      par site
                                     </span>
                                   </div>
                                   <CustomSelect
@@ -573,7 +576,7 @@ export default function RegularUserView({
                   (operator === 'free' && hasCab) ? 'CAB' : null,
                   (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
                   (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
-                  (operator === 'free' && zoneTechnique.hasCoffretTransFo) ? 'Coffret TRANS FO' : null,
+                  (operator === 'free' && zoneTechnique.hasCoffretTransFo) ? 'Coffret hybride' : null,
                   (operator === 'free' && hasPileAmod) ? 'Pile AMOD' : null,
                   (operator === 'bouygues' && hasAtelierEnergie) ? 'B-cube énergie' : null,
                   (operator === 'bouygues' && hasBcubeRadio) ? 'BCube RADIO' : null,

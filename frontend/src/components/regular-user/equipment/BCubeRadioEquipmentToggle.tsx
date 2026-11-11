@@ -52,7 +52,6 @@ export function BCubeRadioEquipmentToggle({
         }
       }}
       icon={Radio}
-      scopeBadgeText="Bouygues"
       color="violet"
     >
       <div className="flex flex-col gap-3">

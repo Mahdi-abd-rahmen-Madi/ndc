@@ -23,6 +23,7 @@ export function ConvertisseurMdeaEquipmentToggle({
       onToggle={setHasConvertisseurMdea}
       icon={Zap}
       color="violet"
+      scopeBadgeText="par site"
     >
       <div className="flex flex-col gap-3">
         <QuantityInput

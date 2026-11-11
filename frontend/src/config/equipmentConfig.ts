@@ -114,6 +114,18 @@ export const equipmentConfigs: EquipmentConfig[] = [
     ],
   },
   {
+    id: 'boitier_jonction',
+    name: 'Boitier de jonction FO',
+    enabled: false,
+    icon: 'Activity',
+    color: 'violet',
+    zone: 'aerienne',
+    fields: [
+      { label: 'Marque', value: 'Aginode' },
+      { label: 'Dimensions', value: '427 × 380 × 127 mm' },
+    ],
+  },
+  {
     id: 'coffrets_hybride',
     name: 'Coffrets hybride',
     enabled: false,
@@ -127,13 +139,13 @@ export const equipmentConfigs: EquipmentConfig[] = [
   },
   {
     id: 'coffret_trans_fo',
-    name: 'Coffret hybride : TRANS FO',
+    name: 'Coffret hybride',
     enabled: false,
     icon: 'Activity',
     color: 'violet',
     zone: 'technique',
     fields: [
-      { label: 'Modèle', value: 'Coffret TRANS FO' },
+      { label: 'Modèle', value: 'TRANS FO' },
       { label: 'Dimensions', value: '260x380x97mm' },
       { label: 'Poids', value: '2.1kg' },
     ],

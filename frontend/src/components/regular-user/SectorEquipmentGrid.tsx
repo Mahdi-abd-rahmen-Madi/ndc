@@ -3,6 +3,7 @@ import { FHEquipmentToggle } from './equipment/FHEquipmentToggle';
 import { RRHEquipmentToggle } from './equipment/RRHEquipmentToggle';
 import { RRUEquipmentToggle } from './equipment/RRUEquipmentToggle';
 import { CoffretEquipmentToggle } from './equipment/CoffretEquipmentToggle';
+import { BoitierJonctionEquipmentToggle } from './equipment/BoitierJonctionEquipmentToggle';
 import type { SectorData, CatalogueConfig, EquipmentItem } from './types';
 
 export interface SectorEquipmentGridProps {
@@ -98,8 +99,15 @@ export function SectorEquipmentGrid({
         disabledReason={isRruDisabled ? 'Non cumulable avec RRH' : undefined}
       />
 
-      {/* 4. Coffrets fibre (uniquement pour les opérateurs hors Free, car Free a son coffret TRANS FO en zone technique) */}
-      {operator !== 'free' && (
+      {/* 4. Boîtier de jonction FO (Free) ou Coffrets fibre (hors Free) */}
+      {operator === 'free' ? (
+        <BoitierJonctionEquipmentToggle
+          hasBoitierJonction={!!sector.hasBoitierJonction}
+          setHasBoitierJonction={(val) => syncUpdates({ hasBoitierJonction: val })}
+          boitierJonctionQuantity={sector.boitierJonctionQuantity || 1}
+          setBoitierJonctionQuantity={(val) => syncUpdates({ boitierJonctionQuantity: val })}
+        />
+      ) : (
         <CoffretEquipmentToggle
           hasCoffret={!!sector.hasCoffret}
           setHasCoffret={(val) => syncUpdates({ hasCoffret: val })}

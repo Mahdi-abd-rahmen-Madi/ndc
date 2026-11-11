@@ -117,6 +117,8 @@ function RightPreviewPanel({
   const rruItems = s1?.rruItems ?? [];
   const hasCoffret = !!s1?.hasCoffret;
   const coffretReference = s1?.coffretReference ?? '';
+  const hasBoitierJonction = !!s1?.hasBoitierJonction;
+  const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
 
   const {
     hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
@@ -424,6 +426,7 @@ function RightPreviewPanel({
                     gps: hasGps,
                     boitier_lovage: hasBoitierLovage,
                     coffrets_fibre: operator !== 'free' && hasCoffret,
+                    boitier_jonction: operator === 'free' && hasBoitierJonction,
                     coffret_trans_fo: operator === 'free' && !!hasCoffretTransFo,
                     coffrets_hybride: false,
                     baie: operator === 'orange' && hasBaie,
@@ -476,8 +479,13 @@ function RightPreviewPanel({
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
                     boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
                     coffrets_fibre: { référence: coffretReference || 'N/A' },
+                    boitier_jonction: (operator === 'free' && hasBoitierJonction) ? {
+                      marque: 'Aginode',
+                      modèle: '427 × 380 × 127 mm',
+                      quantité: boitierJonctionQuantity || 1
+                    } : null,
                     coffret_trans_fo: (operator === 'free' && hasCoffretTransFo) ? {
-                      modèle: 'Coffret TRANS FO',
+                      modèle: 'TRANS FO',
                       dimensions: '260x380x97mm',
                       poids: `${(2.1 * (coffretTransFoQuantity || 1)).toFixed(1)} kg`,
                       quantité: coffretTransFoQuantity || 1

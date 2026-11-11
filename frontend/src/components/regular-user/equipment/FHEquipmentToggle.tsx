@@ -160,7 +160,7 @@ export function FHEquipmentToggle({
       disabled={disabled}
       disabledReason={disabledReason}
       color="violet"
-      scopeBadgeText="1x par site"
+      scopeBadgeText="par site"
       isIncomplete={isFhIncomplete}
     >
       {items.map((item) => (

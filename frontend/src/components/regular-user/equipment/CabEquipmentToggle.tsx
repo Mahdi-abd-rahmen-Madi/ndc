@@ -52,7 +52,7 @@ export function CabEquipmentToggle({
       }}
       icon={Server}
       color="rose"
-      scopeBadgeText="1x par site"
+      scopeBadgeText="par site"
     >
       <div className="flex flex-col gap-2">
         <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Options CAB</span>

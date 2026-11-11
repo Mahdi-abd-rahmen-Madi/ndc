@@ -52,7 +52,7 @@ export function TDEquipmentToggle({
       onToggle={setHasTdEquipment}
       icon={Activity}
       color="violet"
-      scopeBadgeText="1x par site"
+      scopeBadgeText="par site"
     >
       <div className="flex flex-wrap gap-x-4 gap-y-2">
         <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer font-medium whitespace-nowrap">

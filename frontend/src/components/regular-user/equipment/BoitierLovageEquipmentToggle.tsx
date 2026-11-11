@@ -59,7 +59,7 @@ export function BoitierLovageEquipmentToggle({
       onToggle={setHasBoitierLovage}
       icon={Activity}
       color="violet"
-      scopeBadgeText="1x par site"
+      scopeBadgeText="par site"
     >
       <div className="flex flex-col md:flex-row md:items-center gap-3">
         <QuantityInput

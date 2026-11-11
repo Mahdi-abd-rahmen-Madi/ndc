@@ -15,3 +15,4 @@ export * from './ConvertisseurMdeaEquipmentToggle';
 export * from './BoitierLovageEquipmentToggle';
 export * from './PileAmodEquipmentToggle';
 export * from './CoffretTransFoEquipmentToggle';
+export * from './BoitierJonctionEquipmentToggle';

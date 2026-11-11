@@ -10,6 +10,7 @@ import { BaieEquipmentToggle, DEFAULT_ORANGE_BAIES } from './equipment/BaieEquip
 import { CabEquipmentToggle } from './equipment/CabEquipmentToggle';
 import { AtelierEnergieEquipmentToggle } from './equipment/AtelierEnergieEquipmentToggle';
 import { PileAmodEquipmentToggle } from './equipment/PileAmodEquipmentToggle';
+import { ConvertisseurMdeaEquipmentToggle } from './equipment/ConvertisseurMdeaEquipmentToggle';
 import type { CatalogueConfig, ZoneTechniqueData } from './types';
 
 export interface ZoneTechniqueGridProps {
@@ -85,24 +86,30 @@ export function ZoneTechniqueGrid({
           setHasCoffretTransFo={(val) => onChange({ hasCoffretTransFo: val })}
           coffretTransFoQuantity={data.coffretTransFoQuantity ?? 1}
           setCoffretTransFoQuantity={(val) => onChange({ coffretTransFoQuantity: val })}
+          coffretReference={data.coffretTransFoReference || 'TRANS_FO'}
+          setCoffretReference={(val) => onChange({ coffretTransFoReference: val })}
           coffretOptions={config?.coffret_references || []}
         />
 
-        {/* Row 4: Présence Baie CAB X is the last card in position */}
-        <div className="lg:col-span-2">
-          <CabEquipmentToggle
-            hasCab={data.hasCab}
-            setHasCab={(val) => onChange({ hasCab: val })}
-            cabOne={data.cabOne}
-            setCabOne={(val) => onChange({ cabOne: val })}
-            cabTwo={data.cabTwo}
-            setCabTwo={(val) => onChange({ cabTwo: val })}
-            cabThree={data.cabThree}
-            setCabThree={(val) => onChange({ cabThree: val })}
-            cabSupport={data.cabSupport}
-            setCabSupport={(val) => onChange({ cabSupport: val })}
-          />
-        </div>
+        {/* Row 4: Convertisseur MDEA & Présence Baie CAB X */}
+        <ConvertisseurMdeaEquipmentToggle
+          hasConvertisseurMdea={data.hasConvertisseurMdea}
+          setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
+          convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
+          setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
+        />
+        <CabEquipmentToggle
+          hasCab={data.hasCab}
+          setHasCab={(val) => onChange({ hasCab: val })}
+          cabOne={data.cabOne}
+          setCabOne={(val) => onChange({ cabOne: val })}
+          cabTwo={data.cabTwo}
+          setCabTwo={(val) => onChange({ cabTwo: val })}
+          cabThree={data.cabThree}
+          setCabThree={(val) => onChange({ cabThree: val })}
+          cabSupport={data.cabSupport}
+          setCabSupport={(val) => onChange({ cabSupport: val })}
+        />
       </div>
     );
   }

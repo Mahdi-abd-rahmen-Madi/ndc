@@ -179,6 +179,42 @@ export function renderEquipmentPreviewCard({
     );
   }
 
+  // 4a. Boitier de jonction FO (Free - Aériens)
+  if (config.id === 'boitier_jonction') {
+    if (operator !== 'free') return null;
+    const bjVal = equipmentValues.boitier_jonction || {};
+    const qty = bjVal.quantité || 1;
+    const totalQty = qty * (nombreSecteurs || 1);
+    return (
+      <EquipmentPreviewCard
+        key={config.id}
+        title="Boitier de jonction FO"
+        icon={IconComponent}
+        color="purple"
+        typeBadge={{
+          text: 'Jonction FO',
+          bg: 'bg-violet-50',
+          textCol: 'text-violet-700',
+          border: 'border-violet-200'
+        }}
+        scopeBadge={{
+          text: `${qty} par secteur`,
+          bg: 'bg-violet-50',
+          textCol: 'text-violet-700',
+          border: 'border-violet-200'
+        }}
+        totalBadge={{
+          text: `Total par site : ${totalQty}`,
+          bg: 'bg-purple-50',
+          textCol: 'text-purple-700',
+          border: 'border-purple-200'
+        }}
+        marque={bjVal.marque || 'Aginode'}
+        modele={bjVal.modèle || '427 × 380 × 127 mm'}
+      />
+    );
+  }
+
   // 4b. Coffret hybride TRANS FO (Free - Zone Technique)
   if (config.id === 'coffret_trans_fo') {
     const transFoVal = equipmentValues.coffret_trans_fo || {};
@@ -186,7 +222,7 @@ export function renderEquipmentPreviewCard({
     return (
       <EquipmentPreviewCard
         key={config.id}
-        title="Coffret hybride : TRANS FO"
+        title="Coffret hybride"
         icon={IconComponent}
         color="purple"
         typeBadge={{
@@ -201,7 +237,7 @@ export function renderEquipmentPreviewCard({
           textCol: 'text-violet-700',
           border: 'border-violet-200'
         }}
-        modele="Coffret TRANS FO"
+        modele="TRANS FO"
         extraSpecs={{
           Dimensions: '260x380x97mm',
           Poids: `${(2.1 * qty).toFixed(1)} kg (${qty}x 2.1kg)`

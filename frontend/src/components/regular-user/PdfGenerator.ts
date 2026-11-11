@@ -48,6 +48,8 @@ interface PdfGeneratorOptions {
   hasCoffret: boolean;
   coffretReference: string;
   coffretOptions: { id: string; name: string }[];
+  hasBoitierJonction?: boolean;
+  boitierJonctionQuantity?: number;
   hasBaie?: boolean;
   baieItems?: any[];
   baieRadio?: boolean;
@@ -117,6 +119,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       hasGps, gpsMarque, gpsQuantity, gpsReference,
       hasBoitierLovage, boitierLovageQuantity, boitierLovageReference,
       hasCoffret, coffretReference, coffretOptions,
+      hasBoitierJonction, boitierJonctionQuantity,
       hasBaie, baieItems, baieRadio, baieEnergie,
       hasCab, cabOne, cabTwo, cabThree, cabSupport,
       hasAtelierEnergie, atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity, bcubeItem,
@@ -262,7 +265,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
 
     // Équipements Aériens (FH, RRH, RRU, Coffret)
     const showRrhInPdf = operator !== 'bouygues' && hasRrhEquipment && rrhItems && rrhItems.length > 0;
-    const hasAerialEquipment = hasFhEquipment || showRrhInPdf || hasRruEquipment || hasCoffret;
+    const hasAerialEquipment = hasFhEquipment || showRrhInPdf || hasRruEquipment || hasCoffret || (operator === 'free' && hasBoitierJonction);
     if (hasAerialEquipment) {
       doc.setFillColor(250, 245, 255);
 
@@ -273,6 +276,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showRrhInPdf) aerialCount += rrhItems.length;
       if (hasRruEquipment && rruItems) aerialCount += rruItems.length;
       if (hasCoffret) aerialCount++;
+      if (operator === 'free' && hasBoitierJonction) aerialCount++;
 
       const boxHeight = 10 + aerialCount * 8;
       doc.rect(20, yPos, 170, boxHeight, 'F');
@@ -321,6 +325,13 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
         const refName = refObj ? `${refObj.name.replace(/\s*\([^)]*\)/g, '').trim()} - Réf: ${refObj.id}` : (coffretReference || 'Standard');
         const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${nombreSecteurs})` : '';
         doc.text(`• Coffrets fibre / hybride [Par secteur]: ${refName} - Qté: 1/secteur${totalText}`, 28, lineY);
+        lineY += 8;
+      }
+      if (hasBoitierJonction && operator === 'free') {
+        const qty = boitierJonctionQuantity || 1;
+        const totalQty = qty * (nombreSecteurs || 1);
+        const totalText = (nombreSecteurs && nombreSecteurs > 1) ? ` (Total site: ${totalQty})` : '';
+        doc.text(`• Boitier de jonction FO [Par secteur]: Marque: Aginode (427×380×127mm) - Qté: ${qty}/secteur${totalText}`, 28, lineY);
         lineY += 8;
       }
       yPos += boxHeight + 8;
@@ -448,7 +459,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
       if (showTransFoInPdf) {
         const qty = coffretTransFoQuantity || 1;
         const qtyPrefix = qty > 1 ? `${qty}x ` : '';
-        doc.text(`• Coffret hybride : TRANS FO : ${qtyPrefix}Coffret TRANS FO (260x380x97mm - ${(2.1 * qty).toFixed(1)}kg)`, 28, lineY);
+        doc.text(`• Coffret hybride : ${qtyPrefix}TRANS FO (260x380x97mm - ${(2.1 * qty).toFixed(1)}kg)`, 28, lineY);
         lineY += 8;
       }
       if (showAmodInPdf) {

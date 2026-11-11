@@ -241,6 +241,8 @@ export interface SectorData {
   rruItems?: EquipmentItem[];
   hasCoffret?: boolean;
   coffretReference?: string;
+  hasBoitierJonction?: boolean;
+  boitierJonctionQuantity?: number;
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
   loading?: boolean;
@@ -289,6 +291,7 @@ export interface ZoneTechniqueData {
 
   hasCoffretTransFo?: boolean;
   coffretTransFoQuantity?: number;
+  coffretTransFoReference?: string;
 
   hasPileAmod: boolean;
   amodModules: Record<string, { enabled: boolean; quantity: number }>;
@@ -337,6 +340,7 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
 
   hasCoffretTransFo: false,
   coffretTransFoQuantity: 1,
+  coffretTransFoReference: 'TRANS_FO',
 
   hasPileAmod: false,
   amodModules: {},
@@ -400,6 +404,8 @@ export const defaultSectorData = (id: number): SectorData => ({
   rruItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   hasCoffret: false,
   coffretReference: '',
+  hasBoitierJonction: false,
+  boitierJonctionQuantity: 1,
   lookupResult: null,
   loading: false,
   error: null

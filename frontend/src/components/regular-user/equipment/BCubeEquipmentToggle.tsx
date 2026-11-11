@@ -116,7 +116,6 @@ export function BCubeEquipmentToggle({
         }
       }}
       icon={Zap}
-      scopeBadgeText="Bouygues"
       color="violet"
     >
       <div className="flex gap-3">

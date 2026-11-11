@@ -58,7 +58,6 @@ export function TGBTEquipmentToggle({
         }
       }}
       icon={Zap}
-      scopeBadgeText="Bouygues"
       color="violet"
     >
       <div className="flex flex-col gap-3">

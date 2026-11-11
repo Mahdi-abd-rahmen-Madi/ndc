@@ -63,7 +63,7 @@ export function GPSEquipmentToggle({
       onToggle={setHasGps}
       icon={Activity}
       color="blue"
-      scopeBadgeText="1x par site"
+      scopeBadgeText="par site"
       isIncomplete={isGpsIncomplete}
     >
       <div className="flex gap-3">

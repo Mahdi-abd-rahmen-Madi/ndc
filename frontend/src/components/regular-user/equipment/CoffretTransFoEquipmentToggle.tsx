@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Box } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
+import { CustomSelect } from '../../ui/CustomSelect';
 import { QuantityInput } from '../../ui/QuantityInput';
 
 export interface CoffretTransFoEquipmentToggleProps {
@@ -9,6 +10,7 @@ export interface CoffretTransFoEquipmentToggleProps {
   coffretTransFoQuantity: number;
   setCoffretTransFoQuantity: (val: number) => void;
   coffretReference?: string;
+  setCoffretReference?: (val: string) => void;
   coffretOptions?: { id: string; name: string; operator?: string }[];
 }
 
@@ -17,35 +19,52 @@ export function CoffretTransFoEquipmentToggle({
   setHasCoffretTransFo,
   coffretTransFoQuantity,
   setCoffretTransFoQuantity,
+  coffretReference = 'TRANS_FO',
+  setCoffretReference,
   coffretOptions = []
 }: CoffretTransFoEquipmentToggleProps) {
-  const transFoOption = coffretOptions.find(opt => opt.id === 'TRANS_FO' || opt.operator === 'free');
-  const details = transFoOption?.name || 'Coffret TRANS FO (260x380x97mm, 2.1kg)';
+  const options = useMemo(() => {
+    const freeOpts = coffretOptions.filter(opt => opt.operator === 'free' || opt.id === 'TRANS_FO');
+    if (freeOpts.length > 0) {
+      return freeOpts.map(opt => ({
+        value: opt.id,
+        label: opt.id === 'TRANS_FO' ? 'TRANS FO' : (opt.name?.replace(/\s*\([^)]*\).*/, '').replace(/^Coffrets?\s+/i, '').trim() || opt.id)
+      }));
+    }
+    return [{ value: 'TRANS_FO', label: 'TRANS FO' }];
+  }, [coffretOptions]);
+
+  const selectedValue = coffretReference || options[0]?.value || 'TRANS_FO';
 
   return (
     <EquipmentToggleCard
-      title="Coffret hybride : TRANS FO"
+      title="Coffret hybride"
       enabled={hasCoffretTransFo}
       onToggle={setHasCoffretTransFo}
       icon={Box}
       color="violet"
-      scopeBadgeText="Zone Technique"
     >
-      <div className="flex flex-col md:flex-row md:items-center gap-3">
-        <QuantityInput
-          value={coffretTransFoQuantity || 1}
-          onChange={setCoffretTransFoQuantity}
-          label="Qté :"
-          size="md"
-        />
-
-        <div className="flex flex-col flex-1 min-w-0">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col min-w-0">
           <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-            Modèle / Dimensions
+            Référence
           </label>
-          <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 truncate">
-            {details}
-          </div>
+          <CustomSelect
+            value={selectedValue}
+            onChange={(val) => setCoffretReference?.(val)}
+            options={options}
+            placeholder="Sélectionner une référence"
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <QuantityInput
+            value={coffretTransFoQuantity || 1}
+            onChange={setCoffretTransFoQuantity}
+            label="Qté :"
+            size="md"
+          />
         </div>
       </div>
     </EquipmentToggleCard>

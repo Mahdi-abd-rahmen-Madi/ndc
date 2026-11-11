@@ -31,7 +31,7 @@ export interface EquipmentToggleCardProps {
    */
   color?: 'violet' | 'amber' | 'blue' | 'emerald' | 'orange' | 'rose';
   /**
-   * Scope badge shown on the top-right (e.g. "1x par site", "Par secteur")
+   * Scope badge shown on the top-right (e.g. "par site", "Par secteur")
    */
   scopeBadgeText?: string;
   /**

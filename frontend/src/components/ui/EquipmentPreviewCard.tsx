@@ -15,7 +15,7 @@ export interface EquipmentPreviewCardProps {
    */
   color?: 'amber' | 'emerald' | 'rose' | 'purple' | 'blue' | 'orange' | 'fuchsia' | 'teal';
   /**
-   * Scope badge displayed on the 2nd line on the left (e.g. { text: '1x par site' } or { text: 'Par secteur' })
+   * Scope badge displayed on the 2nd line on the left (e.g. { text: 'par site' } or { text: 'Par secteur' })
    */
   scopeBadge?: {
     text: string;
