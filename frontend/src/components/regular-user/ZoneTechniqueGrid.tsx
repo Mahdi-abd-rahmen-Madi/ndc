@@ -70,7 +70,7 @@ export function ZoneTechniqueGrid({
           operator={operator}
         />
 
-        {/* Row 3: Boîtier Lovage & Coffret TRANS FO sit on the same row */}
+        {/* Row 3: Boîtier Lovage & Convertisseur MDEA sit on the same row */}
         <BoitierLovageEquipmentToggle
           hasBoitierLovage={data.hasBoitierLovage}
           setHasBoitierLovage={(val) => onChange({ hasBoitierLovage: val })}
@@ -81,6 +81,14 @@ export function ZoneTechniqueGrid({
           boitierOptions={config?.boitier_lovage_references || []}
           operator={operator}
         />
+        <ConvertisseurMdeaEquipmentToggle
+          hasConvertisseurMdea={data.hasConvertisseurMdea}
+          setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
+          convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
+          setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
+        />
+
+        {/* Row 4: Coffret hybride & Présence Baie CAB X */}
         <CoffretTransFoEquipmentToggle
           hasCoffretTransFo={!!data.hasCoffretTransFo}
           setHasCoffretTransFo={(val) => onChange({ hasCoffretTransFo: val })}
@@ -89,14 +97,6 @@ export function ZoneTechniqueGrid({
           coffretReference={data.coffretTransFoReference || 'TRANS_FO'}
           setCoffretReference={(val) => onChange({ coffretTransFoReference: val })}
           coffretOptions={config?.coffret_references || []}
-        />
-
-        {/* Row 4: Convertisseur MDEA & Présence Baie CAB X */}
-        <ConvertisseurMdeaEquipmentToggle
-          hasConvertisseurMdea={data.hasConvertisseurMdea}
-          setHasConvertisseurMdea={(val) => onChange({ hasConvertisseurMdea: val })}
-          convertisseurMdeaQuantity={data.convertisseurMdeaQuantity}
-          setConvertisseurMdeaQuantity={(val) => onChange({ convertisseurMdeaQuantity: val })}
         />
         <CabEquipmentToggle
           hasCab={data.hasCab}
