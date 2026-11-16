@@ -366,6 +366,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         job.save()
 
+        # Trigger backend document compilation (DOCX / PDF) before announcing completion
+        if job_status == 'COMPLETED':
+            try:
+                from .services import assemble_ndc_document
+                assemble_ndc_document(job.id)
+            except Exception as e:
+                print(f"Document compilation warning for Job {job.id}: {e}")
+
         # Broadcast completion to WebSocket listeners
         try:
             from asgiref.sync import async_to_sync
@@ -388,14 +396,6 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 )
         except Exception as ws_err:
             print(f"WebSocket broadcast warning: {ws_err}")
-
-        # Trigger backend document compilation (DOCX / PDF)
-        if job_status == 'COMPLETED':
-            try:
-                from .services import assemble_ndc_document
-                assemble_ndc_document(job.id)
-            except Exception as e:
-                print(f"Document compilation warning for Job {job.id}: {e}")
 
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -655,8 +655,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             merger = PdfWriter()
             total_pages = 0
 
-            for i, job_id in enumerate(job_ids):
-                job = CalculationJob.objects.get(id=job_id)
+            # Batch pre-conversion of all RTF files across jobs and auxiliary equipment
+            # Guarantees zero cross-job leakage and reduces multiple LibreOffice cold starts to one.
+            from geodata.ndc_generator import collect_site_ndc_rtf_specs, _batch_convert_rtf_files
+            jobs = [CalculationJob.objects.get(id=job_id) for job_id in job_ids]
+            rtf_specs = collect_site_ndc_rtf_specs(jobs)
+            preconverted_images = _batch_convert_rtf_files(rtf_specs) if rtf_specs else {}
+
+            for i, job in enumerate(jobs):
                 # First sector gets the cover page and hypotheses. Subsequent ones don't.
                 is_subsequent = (i > 0)
                 
@@ -674,7 +680,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     if not job.input_data['site'].get('name') and request.data.get('site_name'):
                         job.input_data['site']['name'] = request.data.get('site_name')
                     
-                pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent, start_page=total_pages + 1)
+                pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent, start_page=total_pages + 1, preconverted_images=preconverted_images)
                 
                 # Convert relative URL back to absolute file path
                 if pdf_url.startswith(settings.MEDIA_URL):
@@ -688,9 +694,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         total_pages += len(reader.pages)
     
             # Generate and append auxiliary equipment PDFs if enabled
-            if job_ids:
-                first_job = CalculationJob.objects.get(id=job_ids[0])
-                aux_pdf_paths = generate_auxiliary_pdfs(first_job, start_page=total_pages + 1)
+            if jobs:
+                first_job = jobs[0]
+                aux_pdf_paths = generate_auxiliary_pdfs(first_job, start_page=total_pages + 1, preconverted_images=preconverted_images)
                 for aux_path in aux_pdf_paths:
                     if os.path.exists(aux_path):
                         temp_pdfs.append(aux_path)

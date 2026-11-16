@@ -185,8 +185,14 @@ export default function RegularUserView({
 
   // Fetch user profile on mount to prefill client logo if available
   useEffect(() => {
+    const savedLogo = localStorage.getItem('ndc_client_logo');
+    if (savedLogo) {
+      setClientLogoUrl(savedLogo);
+    }
+
     const fetchProfile = async () => {
       try {
+        if (!apiBaseUrl) return;
         const token = localStorage.getItem('ndc_auth_token');
         if (!token) return;
         const res = await fetch(`${apiBaseUrl}/api/user-profiles/me/`, {
@@ -196,10 +202,11 @@ export default function RegularUserView({
           const data = await res.json();
           if (data.client_logo) {
             setClientLogoUrl(data.client_logo);
+            localStorage.setItem('ndc_client_logo', data.client_logo);
           }
         }
       } catch (err) {
-        console.error("Failed to fetch user profile:", err);
+        // Offline fallback already loaded
       }
     };
     fetchProfile();

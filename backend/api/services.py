@@ -261,8 +261,10 @@ def _assemble_rrh(job):
 
         # If WeasyPrint didn't compile PDF, convert DOCX to PDF via LibreOffice headless
         if not weasyprint_success:
+            import tempfile, shutil
+            lo_prof = tempfile.mkdtemp(prefix=f"lo_docx_{job.id}_")
             try:
-                cmd = ["libreoffice", "--headless", "--convert-to", "pdf", output_docx, "--outdir", output_dir]
+                cmd = ["libreoffice", f"-env:UserInstallation=file://{lo_prof}", "--headless", "--convert-to", "pdf", output_docx, "--outdir", output_dir]
                 subprocess.run(cmd, check=True, timeout=30, capture_output=True)
                 output_pdf = os.path.join(output_dir, f"ndc_rrh_{job.id}.pdf")
                 if os.path.exists(output_pdf):
@@ -270,6 +272,8 @@ def _assemble_rrh(job):
                         job.compiled_pdf.save(f"ndc_rrh_{job.id}.pdf", File(f), save=False)
             except Exception as conv_err:
                 print(f"LibreOffice PDF conversion note: {conv_err}")
+            finally:
+                shutil.rmtree(lo_prof, ignore_errors=True)
 
         job.save()
         print(f"assemble_ndc_document: Compiled RRH DOCX for Job {job.id}.")

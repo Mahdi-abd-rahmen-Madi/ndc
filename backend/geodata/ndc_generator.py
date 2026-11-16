@@ -175,44 +175,20 @@ def sanitize_assemblage_rtf(rtf_text: str) -> str:
     return rtf_text
 
 
-def _convert_rtf_file_to_images(rtf_path, convert_dir, prefix, is_assemblage=False):
+def _extract_images_from_pdf(pdf_path, convert_dir, prefix, unique_run_id):
     """
-    Converts an RTF calculation note into cropped PNG images per page.
-    Handles Symbol font/cell width sanitization for assemblage notes.
+    Renders pages of a PDF to cropped PNG images.
     """
-    import subprocess
-    import glob
+    import pymupdf as fitz
     from PIL import Image, ImageChops
-    import fitz
+
+    images = []
+    if not pdf_path or not os.path.exists(pdf_path):
+        return images
 
     os.makedirs(convert_dir, exist_ok=True)
-    clean_rtf = rtf_path
-    if is_assemblage:
-        with open(rtf_path, 'r', encoding='latin1') as rf:
-            raw_rtf = rf.read()
-        cleaned_rtf = sanitize_assemblage_rtf(raw_rtf)
-        clean_rtf = os.path.join(convert_dir, f"{prefix}_clean.rtf")
-        with open(clean_rtf, 'w', encoding='latin1') as wf:
-            wf.write(cleaned_rtf)
-
-    # Clean old page images for this prefix
-    for old_img in glob.glob(os.path.join(convert_dir, f"{prefix}_page_*.png")):
-        try:
-            os.remove(old_img)
-        except Exception:
-            pass
-
-    cmd = [
-        'soffice', '-env:UserInstallation=file:///tmp/libreoffice_ndc',
-        '--headless', '--convert-to', 'pdf',
-        '--outdir', convert_dir, clean_rtf
-    ]
-    subprocess.run(cmd, timeout=45, check=True, capture_output=True)
-    pdf_output = os.path.join(convert_dir, f"{os.path.splitext(os.path.basename(clean_rtf))[0]}.pdf")
-    
-    images = []
-    if os.path.exists(pdf_output):
-        doc = fitz.open(pdf_output)
+    try:
+        doc = fitz.open(pdf_path)
         for page_num in range(len(doc)):
             page = doc.load_page(page_num)
             zoom = 2.0
@@ -237,19 +213,305 @@ def _convert_rtf_file_to_images(rtf_path, convert_dir, prefix, is_assemblage=Fal
                 )
                 img = img.crop(bbox)
             
-            img_path = os.path.join(convert_dir, f"{prefix}_page_{page_num+1}.png")
+            img_path = os.path.join(convert_dir, f"{prefix}_{unique_run_id}_page_{page_num+1}.png")
             img.save(img_path)
             images.append(img_path)
         doc.close()
+    except Exception as img_err:
+        print(f"Error rendering PDF pages to images: {img_err}")
+
     return images
 
 
+def _batch_convert_rtf_files(specs):
+    """
+    Batches multiple RTF-to-image conversions in a SINGLE LibreOffice invocation.
+    Guarantees zero cross-job leakage by using an isolated LibreOffice profile,
+    fresh unique run IDs, and no persistent caches between runs.
+    """
+    import subprocess
+    import tempfile
+    import shutil
+    import uuid
+
+    results = {}
+    valid_specs = []
+    for s in specs:
+        key = s.get('key', s['prefix'])
+        results[key] = []
+        if s.get('rtf_path') and os.path.exists(s['rtf_path']):
+            valid_specs.append({**s, 'key': key})
+
+    if not valid_specs:
+        return results
+
+    unique_run_id = uuid.uuid4().hex[:8]
+    needs_conversion = []
+
+    for s in valid_specs:
+        if s['rtf_path'].lower().endswith('.pdf'):
+            results[s['key']] = _extract_images_from_pdf(s['rtf_path'], s['convert_dir'], s['prefix'], unique_run_id)
+        else:
+            needs_conversion.append(s)
+
+    if not needs_conversion:
+        return results
+
+    profile_dir = tempfile.mkdtemp(prefix=f"lo_prof_batch_{unique_run_id}_")
+    pdf_out_dir = tempfile.mkdtemp(prefix=f"lo_out_batch_{unique_run_id}_")
+    work_dir = tempfile.mkdtemp(prefix=f"lo_work_batch_{unique_run_id}_")
+
+    prepared_files = []
+    for idx, s in enumerate(needs_conversion):
+        unique_base = f"{s['prefix']}_{idx}_{unique_run_id}"
+        dest_rtf = os.path.join(work_dir, f"{unique_base}.rtf")
+        if s.get('is_assemblage'):
+            try:
+                with open(s['rtf_path'], 'r', encoding='latin1') as rf:
+                    raw_rtf = rf.read()
+                cleaned_rtf = sanitize_assemblage_rtf(raw_rtf)
+                with open(dest_rtf, 'w', encoding='latin1') as wf:
+                    wf.write(cleaned_rtf)
+            except Exception as e:
+                print(f"Warning: sanitize_assemblage_rtf failed in batch for {s['rtf_path']}: {e}")
+                shutil.copy2(s['rtf_path'], dest_rtf)
+        else:
+            shutil.copy2(s['rtf_path'], dest_rtf)
+
+        prepared_files.append((s, dest_rtf, unique_base))
+
+    try:
+        input_file_paths = [p[1] for p in prepared_files]
+        cmd = [
+            'soffice', f'-env:UserInstallation=file://{profile_dir}',
+            '--headless', '--invisible', '--nocrashreport', '--nodefault',
+            '--nofirststartwizard', '--nologo', '--norestore',
+            '--convert-to', 'pdf',
+            '--outdir', pdf_out_dir
+        ] + input_file_paths
+
+        subprocess.run(cmd, timeout=90, check=True, capture_output=True)
+
+        for s, _, unique_base in prepared_files:
+            expected_pdf = os.path.join(pdf_out_dir, f"{unique_base}.pdf")
+            if os.path.exists(expected_pdf):
+                os.makedirs(s['convert_dir'], exist_ok=True)
+                final_pdf = os.path.join(s['convert_dir'], f"{s['prefix']}_{unique_run_id}.pdf")
+                shutil.copy2(expected_pdf, final_pdf)
+                results[s['key']] = _extract_images_from_pdf(final_pdf, s['convert_dir'], s['prefix'], unique_run_id)
+            else:
+                print(f"Warning: LibreOffice batch did not output expected PDF: {expected_pdf}")
+    except Exception as batch_err:
+        print(f"Warning: LibreOffice batch conversion failed: {batch_err}. Falling back to individual conversions.")
+        for s, _, _ in prepared_files:
+            if not results[s['key']]:
+                results[s['key']] = _convert_rtf_file_to_images(
+                    s['rtf_path'], s['convert_dir'], s['prefix'], is_assemblage=s.get('is_assemblage', False)
+                )
+    finally:
+        shutil.rmtree(profile_dir, ignore_errors=True)
+        shutil.rmtree(pdf_out_dir, ignore_errors=True)
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+    return results
+
+
+def _convert_rtf_file_to_images(rtf_path, convert_dir, prefix, is_assemblage=False):
+    """
+    Converts a single RTF file to cropped images.
+    Uses _batch_convert_rtf_files internally to ensure strict profile isolation
+    and zero cache reuse across calls.
+    """
+    specs = [{
+        'rtf_path': rtf_path,
+        'convert_dir': convert_dir,
+        'prefix': prefix,
+        'is_assemblage': is_assemblage,
+        'key': prefix
+    }]
+    res = _batch_convert_rtf_files(specs)
+    return res.get(prefix, [])
+
+
+def find_job_note_de_calcul_path(job):
+    """Strictly find the note de calcul RTF belonging to this job."""
+    if not job:
+        return None
+    if hasattr(job, 'note_de_calcul') and job.note_de_calcul:
+        try:
+            if os.path.exists(job.note_de_calcul.path):
+                return job.note_de_calcul.path
+        except Exception:
+            pass
+    fallback_media = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_note_de_calcul.rtf')
+    if os.path.exists(fallback_media):
+        return fallback_media
+    worker_ndc = f"/home/mahdi/worker_share/screenshots/job_{job.id}_note_de_calcul.rtf"
+    if os.path.exists(worker_ndc):
+        return worker_ndc
+    return None
+
+
+def find_job_assemblage_note_path(job):
+    """Strictly find the assemblage note RTF belonging to this job."""
+    if not job:
+        return None
+    if hasattr(job, 'assemblage_note') and job.assemblage_note:
+        try:
+            if os.path.exists(job.assemblage_note.path):
+                return job.assemblage_note.path
+        except Exception:
+            pass
+    fallback_media = os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_assemblage_note.rtf')
+    if os.path.exists(fallback_media):
+        return fallback_media
+    worker_assemblage = f"/home/mahdi/worker_share/screenshots/job_{job.id}_assemblage_note.rtf"
+    if os.path.exists(worker_assemblage):
+        return worker_assemblage
+    return None
+
+
+def find_job_rrh_rtf_paths(job):
+    """Strictly find the RRH RTF files belonging to this job."""
+    if not job:
+        return {}
+    res = {'note_mat': None, 'note_plot': None, 'assemblage_note': None}
+
+    # note_mat
+    if getattr(job, 'note_mat', None) and job.note_mat:
+        try:
+            if os.path.exists(job.note_mat.path):
+                res['note_mat'] = job.note_mat.path
+        except Exception:
+            pass
+    if not res['note_mat']:
+        for cp in [
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_note_mat.rtf",
+            os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_note_mat.rtf'),
+            os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rrh_note_mat.rtf')
+        ]:
+            if os.path.exists(cp):
+                res['note_mat'] = cp
+                break
+
+    # note_plot
+    if getattr(job, 'note_plot', None) and job.note_plot:
+        try:
+            if os.path.exists(job.note_plot.path):
+                res['note_plot'] = job.note_plot.path
+        except Exception:
+            pass
+    if not res['note_plot']:
+        for cp in [
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_note_plot.rtf",
+            os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_note_plot.rtf'),
+            os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rrh_note_plot.rtf')
+        ]:
+            if os.path.exists(cp):
+                res['note_plot'] = cp
+                break
+
+    # assemblage
+    if getattr(job, 'rrh_assemblage_note', None) and job.rrh_assemblage_note:
+        try:
+            if os.path.exists(job.rrh_assemblage_note.path):
+                res['assemblage_note'] = job.rrh_assemblage_note.path
+        except Exception:
+            pass
+    if not res['assemblage_note']:
+        for cp in [
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_assemblage_note.rtf",
+            os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_assemblage_note.rtf'),
+            os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_rrh_assemblage_note.rtf')
+        ]:
+            if os.path.exists(cp):
+                res['assemblage_note'] = cp
+                break
+    return res
+
+
+def collect_site_ndc_rtf_specs(jobs):
+    """
+    Collects all RTF conversion specifications needed for generating a complete
+    site Note de Calcul PDF across all sector jobs and auxiliary equipment.
+    """
+    specs = []
+    if not jobs:
+        return specs
+
+    for job in jobs:
+        if not job:
+            continue
+        ndc_path = find_job_note_de_calcul_path(job)
+        if ndc_path:
+            prefix = f"job_{job.id}_note_de_calcul"
+            specs.append({
+                'rtf_path': ndc_path,
+                'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul'),
+                'prefix': prefix,
+                'is_assemblage': False,
+                'key': prefix,
+            })
+
+        assemblage_path = find_job_assemblage_note_path(job)
+        if assemblage_path:
+            prefix = f"job_{job.id}_assemblage"
+            specs.append({
+                'rtf_path': assemblage_path,
+                'convert_dir': os.path.join(settings.MEDIA_ROOT, 'assemblages'),
+                'prefix': prefix,
+                'is_assemblage': True,
+                'key': prefix,
+            })
+
+    # Auxiliary notes for the first job (RRH etc.)
+    first_job = jobs[0] if jobs else None
+    if first_job:
+        input_data = first_job.input_data if first_job else {}
+        rrh_data = input_data.get('rrh_equipment', {})
+        rrh_enabled = isinstance(rrh_data, dict) and rrh_data.get('enabled', False)
+
+        if rrh_enabled or getattr(first_job, 'note_mat', None) or getattr(first_job, 'note_plot', None) or getattr(first_job, 'rrh_assemblage_note', None):
+            rrh_paths = find_job_rrh_rtf_paths(first_job)
+            if rrh_paths.get('note_mat'):
+                prefix = f"job_{first_job.id}_rrh_note_mat"
+                specs.append({
+                    'rtf_path': rrh_paths['note_mat'],
+                    'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rrh'),
+                    'prefix': prefix,
+                    'is_assemblage': False,
+                    'key': prefix,
+                })
+            if rrh_paths.get('note_plot'):
+                prefix = f"job_{first_job.id}_rrh_note_plot"
+                specs.append({
+                    'rtf_path': rrh_paths['note_plot'],
+                    'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rrh'),
+                    'prefix': prefix,
+                    'is_assemblage': False,
+                    'key': prefix,
+                })
+            if rrh_paths.get('assemblage_note'):
+                prefix = f"job_{first_job.id}_rrh_assemblage"
+                specs.append({
+                    'rtf_path': rrh_paths['assemblage_note'],
+                    'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rrh'),
+                    'prefix': prefix,
+                    'is_assemblage': True,
+                    'key': prefix,
+                })
+
+    return specs
 
 
 
-def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False, start_page=1):
+
+
+def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_sector=False, is_cover_only=False, start_page=1, preconverted_images=None):
     """
     Generates a PDF from HTML templates using WeasyPrint based on job calculation results.
+    Accepts preconverted_images mapping to reuse images generated in batch, avoiding
+    redundant LibreOffice startup overhead.
     """
     context = {}
     context['is_subsequent_sector'] = is_subsequent_sector
@@ -497,40 +759,60 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
     else:
         context['photo_abs'] = None
         
-    # Robot Screenshot Path
+    # Robot Screenshot Path (treat each job as unique)
     screenshot_found = False
     
     if job:
-        # 1. Try to read from worker share folder first as requested by user
-        worker_screenshot_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_3d_view.jpg"
-        if os.path.exists(worker_screenshot_path):
-            context['robot_screenshot_abs'] = worker_screenshot_path
-            screenshot_found = True
-        # 2. Fallback to django uploaded screenshot
-        elif job.screenshot:
-            screenshot_path = job.screenshot.path
-            if os.path.exists(screenshot_path):
-                context['robot_screenshot_abs'] = screenshot_path
+        # 1. Primary: Django uploaded screenshot for this specific job
+        if hasattr(job, 'screenshot') and job.screenshot:
+            try:
+                screenshot_path = job.screenshot.path
+                if os.path.exists(screenshot_path):
+                    context['robot_screenshot_abs'] = screenshot_path
+                    screenshot_found = True
+            except Exception:
+                pass
+        # 2. Worker share folder strictly for this job ID
+        if not screenshot_found:
+            worker_screenshot_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_3d_view.jpg"
+            if os.path.exists(worker_screenshot_path):
+                context['robot_screenshot_abs'] = worker_screenshot_path
+                screenshot_found = True
+        # 3. Direct media folder strictly for this job ID
+        if not screenshot_found:
+            media_screenshot_path = os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_3d_view.jpg')
+            if os.path.exists(media_screenshot_path):
+                context['robot_screenshot_abs'] = media_screenshot_path
                 screenshot_found = True
                 
     if not screenshot_found:
         context['robot_screenshot_abs'] = None
 
-    # Verification Screenshot Path
+    # Verification Screenshot Path (treat each job as unique)
     verification_screenshot_found = False
     
     if job:
-        # 1. Try to read from worker share folder
-        worker_verification_screenshot_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_verification_view.jpg"
-        if os.path.exists(worker_verification_screenshot_path):
-            context['verification_screenshot_abs'] = worker_verification_screenshot_path
-            verification_screenshot_found = True
-        # 2. Fallback to django uploaded screenshot
-        elif hasattr(job, 'verification_screenshot') and job.verification_screenshot:
-            verification_screenshot_path = job.verification_screenshot.path
-            if os.path.exists(verification_screenshot_path):
-                context['verification_screenshot_abs'] = verification_screenshot_path
-                verification_screenshot_found = True
+        # 1. Primary: Django uploaded verification screenshot for this specific job
+        if hasattr(job, 'verification_screenshot') and job.verification_screenshot:
+            try:
+                verification_screenshot_path = job.verification_screenshot.path
+                if os.path.exists(verification_screenshot_path):
+                    context['verification_screenshot_abs'] = verification_screenshot_path
+                    verification_screenshot_found = True
+            except Exception:
+                pass
+        # 2. Worker share folder strictly for this job ID
+        if not verification_screenshot_found:
+            for wsp in [
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_verification_view.jpg",
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_verification.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', f'job_{job.id}_verification.jpg'),
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_verification.jpg')
+            ]:
+                if os.path.exists(wsp):
+                    context['verification_screenshot_abs'] = wsp
+                    verification_screenshot_found = True
+                    break
                 
     if not verification_screenshot_found:
         context['verification_screenshot_abs'] = None
@@ -577,167 +859,35 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
             print(f"Warning: Failed to auto-crop verification screenshot: {e}")
 
         
-    # Note de Calcul (RTF) Path
-    note_de_calcul_found = False
-    
-    if job:
-        # 1. Try to read from worker share folder first
-        worker_ndc_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_note_de_calcul.rtf"
-        if os.path.exists(worker_ndc_path):
-            context['note_de_calcul_abs'] = worker_ndc_path
-            note_de_calcul_found = True
-        # 2. Fallback to django uploaded file
-        elif hasattr(job, 'note_de_calcul') and job.note_de_calcul:
-            try:
-                ndc_path = job.note_de_calcul.path
-                if os.path.exists(ndc_path):
-                    context['note_de_calcul_abs'] = ndc_path
-                    note_de_calcul_found = True
-            except Exception:
-                pass
-        # 3. Fallback to media/notes_de_calcul default path
-        if not note_de_calcul_found:
-            fallback_media_path = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_note_de_calcul.rtf')
-            if os.path.exists(fallback_media_path):
-                context['note_de_calcul_abs'] = fallback_media_path
-                note_de_calcul_found = True
-        # 4. Fallback to worker result_data path if provided
-        if not note_de_calcul_found and isinstance(job.result_data, dict):
-            raw_path = job.result_data.get('note_de_calcul_path') or job.result_data.get('note_mat_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', basename)
-                ]:
-                    if os.path.exists(cp):
-                        context['note_de_calcul_abs'] = cp
-                        note_de_calcul_found = True
-                        break
-                
-    if not note_de_calcul_found:
-        context['note_de_calcul_abs'] = None
+    # Note de Calcul (RTF) Path (strictly scoped to this job)
+    context['note_de_calcul_abs'] = find_job_note_de_calcul_path(job)
 
     # Convert RTF to Images (for embedding directly in the HTML template)
     context['note_de_calcul_images'] = []
-    if context.get('note_de_calcul_abs') and os.path.exists(context['note_de_calcul_abs']):
+    job_prefix = f"job_{job.id if job else 'preview'}_note_de_calcul"
+    if preconverted_images and job_prefix in preconverted_images and preconverted_images[job_prefix]:
+        context['note_de_calcul_images'] = preconverted_images[job_prefix]
+    elif context.get('note_de_calcul_abs') and os.path.exists(context['note_de_calcul_abs']):
         convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul')
-        job_prefix = f"job_{job.id if job else 'preview'}_note_de_calcul"
         try:
             context['note_de_calcul_images'] = _convert_rtf_file_to_images(context['note_de_calcul_abs'], convert_dir, job_prefix)
         except Exception as e:
             print(f"Warning: Failed to convert RTF note de calcul to Images: {e}")
 
-    # Assemblage Note (RTF) Path
-    assemblage_note_found = False
-    
-    if job:
-        # 1. Try to read from worker share folder first
-        worker_assemblage_path = f"/home/mahdi/worker_share/screenshots/job_{job.id}_assemblage_note.rtf"
-        if os.path.exists(worker_assemblage_path):
-            context['assemblage_note_abs'] = worker_assemblage_path
-            assemblage_note_found = True
-        # 2. Fallback to django uploaded file
-        elif hasattr(job, 'assemblage_note') and job.assemblage_note:
-            try:
-                assemblage_path = job.assemblage_note.path
-                if os.path.exists(assemblage_path):
-                    context['assemblage_note_abs'] = assemblage_path
-                    assemblage_note_found = True
-            except Exception:
-                pass
-        # 3. Fallback to media/assemblages default path
-        if not assemblage_note_found:
-            fallback_media_path = os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_assemblage_note.rtf')
-            if os.path.exists(fallback_media_path):
-                context['assemblage_note_abs'] = fallback_media_path
-                assemblage_note_found = True
-        # 4. Fallback to worker result_data path if provided
-        if not assemblage_note_found and isinstance(job.result_data, dict):
-            raw_path = job.result_data.get('assemblage_note_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                candidate_paths = [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'assemblages', basename)
-                ]
-                for cp in candidate_paths:
-                    if os.path.exists(cp):
-                        context['assemblage_note_abs'] = cp
-                        assemblage_note_found = True
-                        break
-
-    if not assemblage_note_found:
-        context['assemblage_note_abs'] = None
+    # Assemblage Note (RTF) Path (strictly scoped to this job)
+    context['assemblage_note_abs'] = find_job_assemblage_note_path(job)
 
     # Convert Assemblage RTF to Images (for embedding directly in the HTML template)
     context['assemblage_note_images'] = []
-    if context.get('assemblage_note_abs'):
-        import subprocess
-        rtf_path = context['assemblage_note_abs']
+    job_prefix = f"job_{job.id if job else 'preview'}_assemblage"
+    if preconverted_images and job_prefix in preconverted_images and preconverted_images[job_prefix]:
+        context['assemblage_note_images'] = preconverted_images[job_prefix]
+    elif context.get('assemblage_note_abs') and os.path.exists(context['assemblage_note_abs']):
         convert_dir = os.path.join(settings.MEDIA_ROOT, 'assemblages')
-        os.makedirs(convert_dir, exist_ok=True)
         try:
-            rtf_basename = os.path.splitext(os.path.basename(rtf_path))[0]
-            if rtf_path.endswith('.pdf'):
-                pdf_output = rtf_path
-            else:
-                # Sanitize RTF before converting to PDF:
-                # Fixes Symbol font characters (Greek/math) and corrupted \cellx480 widths
-                clean_rtf_path = os.path.join(convert_dir, f"{rtf_basename}_clean.rtf")
-                with open(rtf_path, 'r', encoding='latin1') as rf:
-                    raw_rtf = rf.read()
-                cleaned_rtf = sanitize_assemblage_rtf(raw_rtf)
-                with open(clean_rtf_path, 'w', encoding='latin1') as wf:
-                    wf.write(cleaned_rtf)
-
-                subprocess.run([
-                    'soffice', '--headless', '--convert-to', 'pdf',
-                    '--outdir', convert_dir, clean_rtf_path
-                ], timeout=30, check=True, capture_output=True)
-                pdf_output = os.path.join(convert_dir, f"{rtf_basename}_clean.pdf")
-
-            if os.path.exists(pdf_output):
-                # Clean up any previously generated page images to avoid stale extra pages (e.g., old page 4)
-                for old_img in glob.glob(os.path.join(convert_dir, f"{rtf_basename}_page_*.png")):
-                    try:
-                        os.remove(old_img)
-                    except Exception:
-                        pass
-
-                import fitz
-                doc = fitz.open(pdf_output)
-                for page_num in range(len(doc)):
-                    page = doc.load_page(page_num)
-                    zoom = 2.0
-                    mat = fitz.Matrix(zoom, zoom)
-                    pix = page.get_pixmap(matrix=mat)
-                    
-                    from PIL import Image, ImageChops
-                    mode = "RGBA" if pix.alpha else "RGB"
-                    img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-                    
-                    bg = Image.new(img.mode, img.size, (255, 255, 255) if not pix.alpha else (255, 255, 255, 255))
-                    diff = ImageChops.difference(img, bg)
-                    diff = ImageChops.add(diff, diff, 2.0, -100)
-                    bbox = diff.getbbox()
-                    
-                    if bbox:
-                        pad = 20
-                        bbox = (
-                            max(0, bbox[0] - pad),
-                            max(0, bbox[1] - pad),
-                            min(img.width, bbox[2] + pad),
-                            min(img.height, bbox[3] + pad)
-                        )
-                        img = img.crop(bbox)
-                    
-                    img_path = os.path.join(convert_dir, f"{rtf_basename}_page_{page_num+1}.png")
-                    img.save(img_path)
-                    context['assemblage_note_images'].append(img_path)
-                doc.close()
+            context['assemblage_note_images'] = _convert_rtf_file_to_images(
+                context['assemblage_note_abs'], convert_dir, job_prefix, is_assemblage=True
+            )
         except Exception as e:
             print(f"Warning: Failed to convert Assemblage RTF to Images: {e}")
     
@@ -1005,10 +1155,11 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
     }
 
 
-def generate_auxiliary_pdfs(job, start_page=1):
+def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     """
     Generate auxiliary PDFs (TD, FH, RRH, RRU) based on job.input_data.
     Returns a list of absolute paths to the generated PDFs.
+    Accepts preconverted_images mapping to reuse images generated in batch.
     """
     input_data = job.input_data if job else {}
     generated_pdfs = []
@@ -1227,7 +1378,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
         else:
             rrh_region_str = context.get('region')
 
-        rrh_terrain_type = wind_p.get('terrain_type') or context.get('terrain_type')
+        rrh_terrain_type = str(wind_p.get('terrain_type') or context.get('terrain_type') or env.get('terrain_type') or 'IIIa')
         rrh_building_height = wind_p.get('building_height_m') if wind_p.get('building_height_m') is not None else context.get('building_height')
         rrh_vb_m_s = wind_p.get('v_b0') if wind_p.get('v_b0') is not None else context.get('vb_m_s')
 
@@ -1240,7 +1391,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
 
             if target_qp_dan > 0 and vb is not None and float(vb) > 0:
                 # Solve X = ln(z/z0) from qp(z) = (1 + 7/X) * 0.5 * rho * (kr * X * vb)^2
-                z0_val, _ = TERRAIN_Z0.get(terrain_type_str, TERRAIN_Z0['IIIa'])
+                z0_val, _ = TERRAIN_Z0.get(rrh_terrain_type, TERRAIN_Z0['IIIa'])
                 kr_val = 0.19 * (z0_val / Z0_II) ** 0.07
                 A_coeff = 0.5 * RHO_AIR * (float(vb) ** 2) * (kr_val ** 2)
                 qp_pa_target = target_qp_dan * 10.0
@@ -1312,7 +1463,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
             except (ValueError, TypeError):
                 fw_mat = '[Fw,Mat]'
 
-        # Locate genuine screenshot artifacts from job
+        # Locate genuine screenshot artifacts from job (strictly scoped to this job)
         rrh_screenshot_abs = None
         if job and getattr(job, 'rrh_screenshot', None) and job.rrh_screenshot:
             try:
@@ -1323,28 +1474,15 @@ def generate_auxiliary_pdfs(job, start_page=1):
         if not rrh_screenshot_abs and job:
             for cp in [
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_3d_view.jpg",
-                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_3d_view.jpg",
                 os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg')
             ]:
                 if os.path.exists(cp):
                     rrh_screenshot_abs = cp
                     break
-        if not rrh_screenshot_abs and isinstance(res_data, dict):
-            raw_path = res_data.get('rrh', {}).get('screenshot_path') or res_data.get('rrh_screenshot_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', basename)
-                ]:
-                    if os.path.exists(cp):
-                        rrh_screenshot_abs = cp
-                        break
 
         # Preserve genuine 3D view screenshot directly without cropping out pieces definition
 
-        # Locate RRH tableau charges
+        # Locate RRH tableau charges (strictly scoped to this job)
         rrh_tableau_charges_abs = None
         if job and getattr(job, 'rrh_tableau_charges', None) and job.rrh_tableau_charges:
             try:
@@ -1355,24 +1493,11 @@ def generate_auxiliary_pdfs(job, start_page=1):
         if not rrh_tableau_charges_abs and job:
             for cp in [
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_tableau_charges.png",
-                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_tableau_charges.png",
                 os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png')
             ]:
                 if os.path.exists(cp):
                     rrh_tableau_charges_abs = cp
                     break
-        if not rrh_tableau_charges_abs and isinstance(res_data, dict):
-            raw_path = res_data.get('rrh', {}).get('loads_table_path') or res_data.get('rrh_loads_table_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'charges_rrh', basename)
-                ]:
-                    if os.path.exists(cp):
-                        rrh_tableau_charges_abs = cp
-                        break
 
         # Crop empty trailing columns (e.g. trailing empty columns) from RRH tableau charges to make it bigger & clearer
         if rrh_tableau_charges_abs and os.path.exists(rrh_tableau_charges_abs):
@@ -1420,7 +1545,7 @@ def generate_auxiliary_pdfs(job, start_page=1):
             except Exception as e:
                 print(f"Warning: could not crop rrh_tableau_charges: {e}")
 
-        # Locate RRH verification screenshot
+        # Locate RRH verification screenshot (strictly scoped to this job)
         rrh_verification_screenshot_abs = None
         if job and getattr(job, 'rrh_verification_screenshot', None) and job.rrh_verification_screenshot:
             try:
@@ -1431,26 +1556,13 @@ def generate_auxiliary_pdfs(job, start_page=1):
         if not rrh_verification_screenshot_abs and job:
             for cp in [
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_verification.jpg",
-                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_verification.jpg",
                 os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg')
             ]:
                 if os.path.exists(cp):
                     rrh_verification_screenshot_abs = cp
                     break
-        if not rrh_verification_screenshot_abs and isinstance(res_data, dict):
-            raw_path = res_data.get('rrh', {}).get('rrh_verification_screenshot_path') or res_data.get('rrh_verification_screenshot_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'verif_rrh', basename)
-                ]:
-                    if os.path.exists(cp):
-                        rrh_verification_screenshot_abs = cp
-                        break
 
-        # Locate RRH note mat (RTF)
+        # Locate RRH note mat (RTF) (strictly scoped to this job)
         rrh_note_mat_abs = None
         if job and getattr(job, 'note_de_calcul_rrh', None) and job.note_de_calcul_rrh:
             try:
@@ -1458,125 +1570,43 @@ def generate_auxiliary_pdfs(job, start_page=1):
                     rrh_note_mat_abs = job.note_de_calcul_rrh.path
             except Exception:
                 pass
-        if not rrh_note_mat_abs and job and getattr(job, 'note_mat', None) and job.note_mat:
-            try:
-                if os.path.exists(job.note_mat.path):
-                    rrh_note_mat_abs = job.note_mat.path
-            except Exception:
-                pass
-        if not rrh_note_mat_abs and job:
-            for cp in [
-                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_note_mat.rtf",
-                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_note_mat.rtf",
-                os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_note_mat.rtf'),
-                os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rrh_note_mat.rtf')
-            ]:
-                if os.path.exists(cp):
-                    rrh_note_mat_abs = cp
-                    break
-        if not rrh_note_mat_abs and isinstance(res_data, dict):
-            raw_path = res_data.get('rrh', {}).get('note_mat_path') or res_data.get('rrh_note_mat_path') or res_data.get('note_de_calcul_rrh_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'notes_rrh', basename),
-                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', basename)
-                ]:
-                    if os.path.exists(cp):
-                        rrh_note_mat_abs = cp
-                        break
+        # Locate RRH RTF files strictly scoped to this job
+        rrh_paths = find_job_rrh_rtf_paths(job)
+        rrh_note_mat_abs = rrh_paths.get('note_mat')
+        rrh_note_plot_abs = rrh_paths.get('note_plot')
+        rrh_assemblage_note_abs = rrh_paths.get('assemblage_note')
 
-        # Locate RRH note plot (RTF)
-        rrh_note_plot_abs = None
-        if job and getattr(job, 'note_plot', None) and job.note_plot:
-            try:
-                if os.path.exists(job.note_plot.path):
-                    rrh_note_plot_abs = job.note_plot.path
-            except Exception:
-                pass
-        if not rrh_note_plot_abs and job:
-            for cp in [
-                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_note_plot.rtf",
-                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_note_plot.rtf",
-                os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_note_plot.rtf'),
-                os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rrh_note_plot.rtf')
-            ]:
-                if os.path.exists(cp):
-                    rrh_note_plot_abs = cp
-                    break
-        if not rrh_note_plot_abs and isinstance(res_data, dict):
-            raw_path = res_data.get('rrh', {}).get('note_plot_path') or res_data.get('rrh_note_plot_path') or res_data.get('note_plot_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'notes_rrh', basename),
-                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', basename)
-                ]:
-                    if os.path.exists(cp):
-                        rrh_note_plot_abs = cp
-                        break
-
-        # Locate RRH assemblage note (RTF)
-        rrh_assemblage_note_abs = None
-        if job and getattr(job, 'rrh_assemblage_note', None) and job.rrh_assemblage_note:
-            try:
-                if os.path.exists(job.rrh_assemblage_note.path):
-                    rrh_assemblage_note_abs = job.rrh_assemblage_note.path
-            except Exception:
-                pass
-        if not rrh_assemblage_note_abs and job:
-            for cp in [
-                f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_assemblage_note.rtf",
-                f"/home/mahdi/worker_share/screenshots/default_client/job_{job.id}_rrh_assemblage_note.rtf",
-                os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_assemblage_note.rtf'),
-                os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_rrh_assemblage_note.rtf')
-            ]:
-                if os.path.exists(cp):
-                    rrh_assemblage_note_abs = cp
-                    break
-        if not rrh_assemblage_note_abs and isinstance(res_data, dict):
-            raw_path = res_data.get('rrh_assemblage_note_path') or res_data.get('rrh', {}).get('rrh_assemblage_note_path')
-            if raw_path:
-                basename = os.path.basename(raw_path.replace('\\', '/'))
-                for cp in [
-                    f"/home/mahdi/worker_share/screenshots/{basename}",
-                    f"/home/mahdi/worker_share/screenshots/default_client/{basename}",
-                    os.path.join(settings.MEDIA_ROOT, 'notes_rrh', basename),
-                    os.path.join(settings.MEDIA_ROOT, 'assemblages', basename)
-                ]:
-                    if os.path.exists(cp):
-                        rrh_assemblage_note_abs = cp
-                        break
-
-        # Convert RTF notes to images for embedding
+        # Convert RTF notes to images for embedding (or use batch pre-converted)
         rrh_note_mat_images = []
-        if rrh_note_mat_abs and os.path.exists(rrh_note_mat_abs):
+        job_prefix_mat = f"job_{job.id if job else 'preview'}_rrh_note_mat"
+        if preconverted_images and job_prefix_mat in preconverted_images and preconverted_images[job_prefix_mat]:
+            rrh_note_mat_images = preconverted_images[job_prefix_mat]
+        elif rrh_note_mat_abs and os.path.exists(rrh_note_mat_abs):
             convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
-            job_prefix = f"job_{job.id if job else 'preview'}_rrh_note_mat"
             try:
-                rrh_note_mat_images = _convert_rtf_file_to_images(rrh_note_mat_abs, convert_dir, job_prefix)
+                rrh_note_mat_images = _convert_rtf_file_to_images(rrh_note_mat_abs, convert_dir, job_prefix_mat)
             except Exception as e:
                 print(f"Warning: Failed to convert RRH note_mat RTF to images: {e}")
 
         rrh_note_plot_images = []
-        if rrh_note_plot_abs and os.path.exists(rrh_note_plot_abs):
+        job_prefix_plot = f"job_{job.id if job else 'preview'}_rrh_note_plot"
+        if preconverted_images and job_prefix_plot in preconverted_images and preconverted_images[job_prefix_plot]:
+            rrh_note_plot_images = preconverted_images[job_prefix_plot]
+        elif rrh_note_plot_abs and os.path.exists(rrh_note_plot_abs):
             convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
-            job_prefix = f"job_{job.id if job else 'preview'}_rrh_note_plot"
             try:
-                rrh_note_plot_images = _convert_rtf_file_to_images(rrh_note_plot_abs, convert_dir, job_prefix)
+                rrh_note_plot_images = _convert_rtf_file_to_images(rrh_note_plot_abs, convert_dir, job_prefix_plot)
             except Exception as e:
                 print(f"Warning: Failed to convert RRH note_plot RTF to images: {e}")
 
         rrh_assemblage_images = []
-        if rrh_assemblage_note_abs and os.path.exists(rrh_assemblage_note_abs):
+        job_prefix_ass = f"job_{job.id if job else 'preview'}_rrh_assemblage"
+        if preconverted_images and job_prefix_ass in preconverted_images and preconverted_images[job_prefix_ass]:
+            rrh_assemblage_images = preconverted_images[job_prefix_ass]
+        elif rrh_assemblage_note_abs and os.path.exists(rrh_assemblage_note_abs):
             convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
-            job_prefix = f"job_{job.id if job else 'preview'}_rrh_assemblage"
             try:
-                rrh_assemblage_images = _convert_rtf_file_to_images(rrh_assemblage_note_abs, convert_dir, job_prefix, is_assemblage=True)
+                rrh_assemblage_images = _convert_rtf_file_to_images(rrh_assemblage_note_abs, convert_dir, job_prefix_ass, is_assemblage=True)
             except Exception as e:
                 print(f"Warning: Failed to convert RRH assemblage RTF to images: {e}")
 
