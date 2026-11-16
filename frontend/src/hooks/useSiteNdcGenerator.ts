@@ -100,7 +100,7 @@ export function useSiteNdcGenerator({
       if (typeof hFloat !== 'number' || isNaN(hFloat) || !config?.recommended_mast_heights?.includes(hFloat)) return false;
 
       // Check if building height is standard (only matters for roof sites)
-      if (foundationType === 'metallique') {
+      if (foundationType === 'metallique' || foundationType === 'dallettes') {
         const bHeight = Number(selectedBuildingHeight) || 0;
         if (typeof bHeight !== 'number' || isNaN(bHeight) || !config?.precalculated_building_heights?.includes(bHeight)) return false;
       }
@@ -163,7 +163,7 @@ export function useSiteNdcGenerator({
         for (const g of uniqueGroups) {
           const eq = g.sector.lookupResult?.equipment[0];
           if (eq) {
-            const height = foundationType === 'metallique'
+            const height = (foundationType === 'metallique' || foundationType === 'dallettes')
               ? (Number(selectedBuildingHeight) || eq.building_height || 15)
               : g.sector.selectedHeight;
 
@@ -194,6 +194,7 @@ export function useSiteNdcGenerator({
 
         const payload = {
           fast_track: true,
+          operateur: operator,
           catalogue_pdf_urls: catalogueUrls,
           photo_url: siteImageUrl,
           site_name: siteName,
@@ -203,6 +204,15 @@ export function useSiteNdcGenerator({
           address: selectedAddress?.label || selectedAddress?.name || '',
           etancheite: etancheite,
           dalle_thickness_m: dalleThickness ? parseFloat(String(dalleThickness)) / 100 : null,
+          site: {
+            operator,
+            name: siteName,
+            code_site: codeSite,
+            ref_site: codeSite,
+            client: clientName,
+            client_logo_url: clientLogoUrl,
+            address: selectedAddress?.label || selectedAddress?.name || ''
+          },
           environment: {
             terrain_type: activeSectors[0]?.lookupResult?.detected_terrain_type || 'IIIa',
             region: activeSectors[0]?.lookupResult?.detected_region || '1',
@@ -246,6 +256,7 @@ export function useSiteNdcGenerator({
           },
           rru_equipment: {
             enabled: hasRruEquipment,
+            sans_plot: false,
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
@@ -363,8 +374,10 @@ export function useSiteNdcGenerator({
 
         const payload = {
           schema_version: "1.0",
+          operateur: operator,
           site: {
             type: siteType,
+            operator,
             address: selectedAddress?.label || '',
             name: siteName,
             code_site: codeSite,
@@ -430,6 +443,7 @@ export function useSiteNdcGenerator({
           },
           rru_equipment: {
             enabled: hasRruEquipment,
+            sans_plot: false,
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {

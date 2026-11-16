@@ -4,9 +4,9 @@ interface MontageSelectionModalProps {
   show: boolean;
   onClose: () => void;
   selectedSiteType: 'nouveau' | 'existant' | null;
-  selectedFoundationType: 'metallique' | 'beton' | 'encastre' | null;
+  selectedFoundationType?: 'metallique' | 'beton' | 'encastre' | 'dallettes' | null;
   onSiteTypeSelect: (type: 'nouveau' | 'existant') => void;
-  onFoundationTypeSelect: (type: 'metallique' | 'beton' | 'encastre') => void;
+  onFoundationTypeSelect?: (type: 'metallique' | 'beton' | 'encastre' | 'dallettes') => void;
   onCasSelect: (cas: string) => void;
 }
 
@@ -14,9 +14,7 @@ export default function MontageSelectionModal({
   show,
   onClose,
   selectedSiteType,
-  selectedFoundationType,
   onSiteTypeSelect,
-  onFoundationTypeSelect,
   onCasSelect,
 }: MontageSelectionModalProps) {
   if (!show) return null;
@@ -30,7 +28,7 @@ export default function MontageSelectionModal({
             <div>
               <h3 className="text-xl font-bold text-slate-900 tracking-tight">Sélectionner le type de Structure</h3>
               <p className="text-slate-500 text-xs mt-0.5">
-                Choisissez votre type de site et d'ancrage pour afficher les cas de structure éligibles.
+                Choisissez votre type de site pour afficher les cas de structure éligibles.
               </p>
             </div>
             <button
@@ -42,21 +40,16 @@ export default function MontageSelectionModal({
           </div>
 
           {/* Inline Selection Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="flex items-center gap-3 pt-1 max-w-md">
             {/* Site Type Prompt */}
-            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/80">
+            <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/80 w-full">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0 px-1">
-                1. Site :
+                Site :
               </span>
               <div className="grid grid-cols-2 gap-2 flex-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    onSiteTypeSelect('nouveau');
-                    if (selectedFoundationType !== 'metallique' && selectedFoundationType !== null) {
-                      onFoundationTypeSelect('metallique');
-                    }
-                  }}
+                  onClick={() => onSiteTypeSelect('nouveau')}
                   className={`py-1.5 px-2.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
                     selectedSiteType === 'nouveau'
                       ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
@@ -81,53 +74,15 @@ export default function MontageSelectionModal({
                 </button>
               </div>
             </div>
-
-            {/* Foundation Type Prompt */}
-            <div className={`flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/80 transition-opacity ${
-              !selectedSiteType ? 'opacity-40 pointer-events-none' : ''
-            }`}>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 shrink-0 px-1">
-                2. Ancrage :
-              </span>
-              <div className="grid grid-cols-2 gap-2 flex-1">
-                <button
-                  type="button"
-                  disabled={selectedSiteType !== 'nouveau'}
-                  onClick={() => onFoundationTypeSelect('metallique')}
-                  className={`py-1.5 px-2.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                    selectedFoundationType === 'metallique'
-                      ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
-                  }`}
-                >
-                  <span className="text-xs font-bold">Plot métallique</span>
-                  <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.2 rounded">Disponible</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={selectedSiteType !== 'nouveau'}
-                  onClick={() => onFoundationTypeSelect('beton')}
-                  className={`py-1.5 px-2.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                    selectedFoundationType === 'beton'
-                      ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
-                      : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
-                  }`}
-                >
-                  <span className="text-xs font-bold">Plot Béton</span>
-                  <span className="text-[9px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.2 rounded">Indispo.</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Optional Warning Banner */}
-        {selectedSiteType && selectedFoundationType && (selectedSiteType !== 'nouveau' || selectedFoundationType !== 'metallique') && (
+        {selectedSiteType && selectedSiteType !== 'nouveau' && (
           <div className="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2.5 text-xs text-amber-800 shrink-0">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <p>
-              La configuration sélectionnée n'est pas encore disponible. Veuillez sélectionner <strong className="underline">Site Neuf</strong> et <strong className="underline">Plot métallique</strong> pour activer le Cas 1.
+              La configuration sélectionnée n'est pas encore disponible. Veuillez sélectionner <strong className="underline">Site Neuf</strong> pour activer le Cas 1.
             </p>
           </div>
         )}
@@ -135,7 +90,7 @@ export default function MontageSelectionModal({
         {/* 4 Cases Grid: Displayed horizontally side-by-side (4 columns on lg, 2 on sm) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 my-4 flex-1">
           {/* Cas 1 - Active */}
-          {selectedSiteType === 'nouveau' && selectedFoundationType === 'metallique' ? (
+          {selectedSiteType === 'nouveau' ? (
             <button
               onClick={() => {
                 onCasSelect('A1');
@@ -196,7 +151,7 @@ export default function MontageSelectionModal({
                 </div>
                 <div className="pt-2 border-t border-slate-100 mt-2">
                   <span className="text-[10px] text-slate-400 font-medium bg-slate-200/70 px-2 py-0.5 rounded block text-center truncate">
-                    Sélectionner Site Neuf & Plot
+                    Sélectionner Site Neuf
                   </span>
                 </div>
               </div>

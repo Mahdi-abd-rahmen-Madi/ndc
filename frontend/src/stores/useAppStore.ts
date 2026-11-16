@@ -34,8 +34,8 @@ interface AppState {
   setSelectedCivilMontage: (montage: string | null) => void;
   selectedSiteType: 'nouveau' | 'existant' | null;
   setSelectedSiteType: (type: 'nouveau' | 'existant' | null) => void;
-  selectedFoundationType: 'metallique' | 'beton' | 'encastre' | null;
-  setSelectedFoundationType: (type: 'metallique' | 'beton' | 'encastre' | null) => void;
+  selectedFoundationType: 'metallique' | 'beton' | 'encastre' | 'dallettes' | null;
+  setSelectedFoundationType: (type: 'metallique' | 'beton' | 'encastre' | 'dallettes' | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -88,6 +88,6 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedCivilMontage: (montage) => set({ selectedCivilMontage: montage }),
   selectedSiteType: null,
   setSelectedSiteType: (type) => set({ selectedSiteType: type }),
-  selectedFoundationType: null,
+  selectedFoundationType: 'metallique',
   setSelectedFoundationType: (type) => set({ selectedFoundationType: type }),
 }));

@@ -200,6 +200,123 @@ def _populate_rrh_docx(doc, ctx):
             break
 
 
+def extract_rru_docx_context(job) -> dict:
+    """
+    Extracts RRU data, wind parameters, support geometry and reactions from job.result_data
+    using the canonical geodata extractor so Table 0 always shows REAL dimensions & weights.
+    """
+    from geodata.ndc_generator import extract_rru_ndc_context
+    res = job.result_data if job else {}
+    if isinstance(res, str):
+        import json
+        try:
+            res = json.loads(res) if res.strip() else {}
+        except Exception:
+            res = {}
+    elif not isinstance(res, dict):
+        res = {}
+    inp = job.input_data if (job and isinstance(job.input_data, dict)) else {}
+    return extract_rru_ndc_context(res, input_data=inp)
+
+
+def _populate_rru_docx(doc, ctx):
+    """
+    Populates NDC RRU.docx tables and paragraphs with pre-computed values from context.
+    Table 0 uses REAL equipment dimensions & weights.
+    """
+    items = ctx.get("items", [])
+    wind = ctx.get("wind", {})
+    structure = ctx.get("structure", {})
+    is_sans_plot = bool(ctx.get("is_sans_plot", False))
+
+    # 1. Populate Table 0 ("Équipements considérés")
+    if doc.tables:
+        table0 = doc.tables[0]
+        for i, item in enumerate(items):
+            if i == 0 and len(table0.rows) > 1:
+                row = table0.rows[1]
+            else:
+                row = table0.add_row()
+            row.cells[0].text = str(item.get("name", "RRU"))
+            row.cells[1].text = str(item.get("qty", 1))
+            row.cells[2].text = str(item.get("dimensions_str") or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {item.get('d_mm', 0):g}")
+            row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
+            row.cells[4].text = "Projet"
+
+    # 2. Populate Table 1 ("Géométrie des pièces")
+    if len(doc.tables) > 1:
+        table1 = doc.tables[1]
+        mast_sec = structure.get("mast_section") or "TRON 88x2.5"
+        mast_h = structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5
+        plot_sec = "Sans plot" if is_sans_plot else (structure.get("plot_section") or "TCAR 150x5")
+        plot_h = 0 if is_sans_plot else (structure.get("plot_h_m") if structure.get("plot_h_m") is not None else 0.5)
+        if len(table1.rows) > 1:
+            table1.rows[1].cells[0].text = str(mast_sec)
+            table1.rows[1].cells[1].text = f"{float(mast_h):g}"
+            table1.rows[1].cells[2].text = "Mat principal"
+        if len(table1.rows) > 2:
+            table1.rows[2].cells[0].text = str(plot_sec)
+            table1.rows[2].cells[1].text = f"{float(plot_h):g}"
+            table1.rows[2].cells[2].text = "Plot"
+
+    # 3. Wind variables
+    region = wind.get("region", 2)
+    terrain = wind.get("terrain_type", "II")
+    building_h = float(wind.get("building_height_m", 0.0) or 0.0)
+    vb0 = float(wind.get("vb0_ms") or wind.get("v_b0") or 24.0)
+    kr = float(wind.get("kr_z") or wind.get("kr") or 0.19)
+    cr = float(wind.get("cr_z") or wind.get("cr") or 1.25)
+    vm = float(wind.get("vm_z") or wind.get("vm") or round(cr * vb0, 2))
+    iv = float(wind.get("iv_z") or wind.get("iv") or 0.15)
+    qp = float(wind.get("qp_dan", 45.0) or 45.0)
+
+    cf_mast = float(wind.get("cf_mast", 1.0) or 1.0)
+    mast_d_m = float(structure.get("mast_d_m", 0.088) or 0.088)
+    fw_mast = float(wind.get("fw_mast", round(1.0 * cf_mast * mast_d_m * qp, 2)) or 0.0)
+
+    # 4. Paragraph replacements
+    for p in doc.paragraphs:
+        txt = p.text
+        if "Région XX" in txt:
+            p.text = f"Région {region}"
+        elif "Catégorie de terrain" in txt and "XX" in txt:
+            p.text = f"Catégorie de terrain : {terrain}"
+        elif "Hauteur" in txt and "XXm" in txt:
+            p.text = f"Hauteur : {building_h:g}m"
+        elif "Vb= XXm/s" in txt:
+            p.text = f"Vb= {vb0:g}m/s"
+        elif "kr=" in txt and "0.19" in txt and "XX" in txt:
+            p.text = f"kr= 0.19.(z0/z0,II)0.07 = {kr:.2f}"
+        elif "cr" in txt and "ln(z" in txt and "XX" in txt:
+            p.text = f"cr(z) = kr⋅ln(z/z0) = {cr:.2f}"
+        elif "Vm = XXxXX" in txt:
+            p.text = f"Vm = {cr:.2f} x {vb0:g} = {vm:.2f} m/s"
+        elif "Iv(z) =" in txt and "XX" in txt:
+            p.text = f"Iv(z) = 1/ln(z/z0) = {iv:.2f}"
+        elif "qp =" in txt and "XX" in txt:
+            p.text = f"qp = {qp:.2f} daN/m²"
+        elif "Mat" in txt and "Fw =" in txt and "XX" in txt:
+            p.text = f"Mât : Fw = 1 * {cf_mast:g} * {mast_d_m:g} * {qp:.2f} = {fw_mast:.2f} daN/ml"
+
+    # Replace RRU force paragraphs
+    for idx, p in enumerate(doc.paragraphs):
+        if "RRU : Fw,Frontale" in p.text:
+            if len(items) == 1:
+                p.text = f"RRU : Fw,Frontale = {items[0].get('fw_front_formula', 'N/A')}"
+                if idx + 1 < len(doc.paragraphs) and "RRU : Fw,Latéral" in doc.paragraphs[idx + 1].text:
+                    doc.paragraphs[idx + 1].text = f"RRU : Fw,Latéral = {items[0].get('fw_lat_formula', 'N/A')}"
+            else:
+                lines = []
+                for it in items:
+                    idx_label = f"RRU #{it.get('index', 1)} ({it.get('name', 'RRU')})"
+                    lines.append(f"{idx_label} : Fw,Frontale = {it.get('fw_front_formula', 'N/A')}")
+                    lines.append(f"{idx_label} : Fw,Latéral = {it.get('fw_lat_formula', 'N/A')}")
+                p.text = "\n".join(lines)
+                if idx + 1 < len(doc.paragraphs) and "RRU : Fw,Latéral" in doc.paragraphs[idx + 1].text:
+                    doc.paragraphs[idx + 1].text = ""
+            break
+
+
 def assemble_ndc_document(calculation_id):
     """
     Assembles the final Note de Calcul document locally on the Django backend
@@ -213,8 +330,71 @@ def assemble_ndc_document(calculation_id):
 
     if job.calculation_type == "rrh":
         _assemble_rrh(job)
+    elif job.calculation_type == "rru":
+        _assemble_rru(job)
     else:
         _assemble_antenna(job)
+
+
+def _assemble_rru(job):
+    """
+    Assembles the RRU Note de Calcul document.
+    Uses HTML WeasyPrint template (templates/ndc/rru.html) and DOCX template (templates/rru/NDC RRU.docx).
+    """
+    output_dir = os.path.join(settings.MEDIA_ROOT, "ndc")
+    os.makedirs(output_dir, exist_ok=True)
+
+    weasyprint_success = False
+    try:
+        from geodata.ndc_generator import generate_auxiliary_pdfs
+        generated = generate_auxiliary_pdfs(job)
+        if generated and os.path.exists(generated[0]):
+            with open(generated[0], "rb") as f:
+                job.compiled_pdf.save(f"ndc_rru_{job.id}.pdf", File(f), save=False)
+            job.save()
+            weasyprint_success = True
+            print(f"assemble_ndc_document: Successfully compiled RRU NDC via WeasyPrint for Job {job.id}.")
+    except Exception as html_err:
+        print(f"WeasyPrint RRU compilation note: {html_err}")
+
+    template_path = os.path.join(settings.BASE_DIR, "templates", "rru", "NDC RRU.docx")
+    if not os.path.exists(template_path):
+        print(f"assemble_ndc_document: Template not found at {template_path}")
+        return
+
+    try:
+        from docx import Document
+        doc = Document(template_path)
+
+        ctx = extract_rru_docx_context(job)
+        _populate_rru_docx(doc, ctx)
+
+        output_docx = os.path.join(output_dir, f"ndc_rru_{job.id}.docx")
+        doc.save(output_docx)
+
+        with open(output_docx, "rb") as f:
+            job.compiled_docx.save(f"ndc_rru_{job.id}.docx", File(f), save=False)
+
+        if not weasyprint_success:
+            import tempfile, shutil
+            lo_prof = tempfile.mkdtemp(prefix=f"lo_docx_rru_{job.id}_")
+            try:
+                cmd = ["libreoffice", f"-env:UserInstallation=file://{lo_prof}", "--headless", "--convert-to", "pdf", output_docx, "--outdir", output_dir]
+                subprocess.run(cmd, check=True, timeout=30, capture_output=True)
+                output_pdf = os.path.join(output_dir, f"ndc_rru_{job.id}.pdf")
+                if os.path.exists(output_pdf):
+                    with open(output_pdf, "rb") as f:
+                        job.compiled_pdf.save(f"ndc_rru_{job.id}.pdf", File(f), save=False)
+            except Exception as conv_err:
+                print(f"LibreOffice PDF conversion note: {conv_err}")
+            finally:
+                shutil.rmtree(lo_prof, ignore_errors=True)
+
+        job.save()
+        print(f"assemble_ndc_document: Compiled RRU DOCX for Job {job.id}.")
+
+    except Exception as e:
+        print(f"assemble_ndc_document error for RRU Job {job.id}: {e}")
 
 
 def _assemble_rrh(job):

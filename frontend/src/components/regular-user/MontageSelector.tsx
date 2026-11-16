@@ -223,7 +223,7 @@ export default function MontageSelector({
       <div className={styles.configContainer}>
         <label className={styles.configHeader}>
           <Settings className={styles.configIcon} />
-          Configuration de l'Antenne
+          Configuration du Site
         </label>
 
         {mastHeightControl}

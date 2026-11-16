@@ -15,14 +15,21 @@ def detect_calculation_type(input_data: Dict[str, Any]) -> str:
         return "antenna"
     if input_data.get("calculation_type"):
         return str(input_data["calculation_type"]).lower().strip()
+    if input_data.get("is_rru") is True:
+        return "rru"
     if input_data.get("is_rrh") is True:
         return "rrh"
     type_str = f"{input_data.get('type_support', '')} {input_data.get('type', '')}".lower()
+    if "rru" in type_str:
+        return "rru"
     if "rrh" in type_str:
         return "rrh"
     eq = input_data.get("equipment")
     if eq and isinstance(eq, dict):
-        if "rrh" in str(eq.get("model", "")).lower():
+        eq_label = f"{eq.get('model', '')} {eq.get('reference', '')}".lower()
+        if "rru" in eq_label or "radio " in eq_label:
+            return "rru"
+        if "rrh" in eq_label:
             return "rrh"
         if "antenna_4g" not in input_data and "antenna_5g" not in input_data:
             return "rrh"
@@ -68,11 +75,24 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
         "environment": _normalize(merged_env),
     }
 
-    if normalized_type == "rrh" or equipment:
+    if normalized_type in ("rrh", "rru") or equipment:
         canonical["equipment"] = _normalize(equipment)
     if normalized_type == "antenna" or antenna_4g or antenna_5g:
         canonical["antenna_4g"] = _normalize(antenna_4g)
         canonical["antenna_5g"] = _normalize(antenna_5g)
+
+    rru_eq = data.get("rru_equipment")
+    if isinstance(rru_eq, dict) and rru_eq.get("enabled"):
+        canonical["rru_equipment"] = _normalize(rru_eq)
+
+    rrh_eq = data.get("rrh_equipment")
+    if isinstance(rrh_eq, dict) and rrh_eq.get("enabled"):
+        canonical["rrh_equipment"] = _normalize(rrh_eq)
+
+    if data.get("sans_plot") is True:
+        canonical["sans_plot"] = True
+    if data.get("operateur"):
+        canonical["operateur"] = _normalize(data["operateur"])
 
     if "deflection_limit" in data:
         canonical["deflection_limit"] = _normalize(data["deflection_limit"])

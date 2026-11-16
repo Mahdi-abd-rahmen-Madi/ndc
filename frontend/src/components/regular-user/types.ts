@@ -360,6 +360,7 @@ export interface ProjectData {
   hasChauffageAuSol: boolean;
   fausseDalleThickness: number | string;
   selectedEchelle: string;
+  foundationType?: 'metallique' | 'beton' | 'encastre' | 'dallettes';
 }
 
 export const defaultProjectData: ProjectData = {
@@ -375,6 +376,7 @@ export const defaultProjectData: ProjectData = {
   hasChauffageAuSol: false,
   fausseDalleThickness: '',
   selectedEchelle: '',
+  foundationType: 'metallique',
 };
 
 export const defaultSectorData = (id: number): SectorData => ({

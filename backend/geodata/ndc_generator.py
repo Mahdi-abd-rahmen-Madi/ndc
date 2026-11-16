@@ -377,10 +377,15 @@ def find_job_rrh_rtf_paths(job):
         return {}
     res = {'note_mat': None, 'note_plot': None, 'assemblage_note': None}
 
+    res_data = getattr(job, 'result_data', None)
+    if isinstance(res_data, dict) and res_data.get('has_rrh') is False:
+        return res
+
     # note_mat
     if getattr(job, 'note_mat', None) and job.note_mat:
         try:
-            if os.path.exists(job.note_mat.path):
+            mat_name = getattr(job.note_mat, 'name', '') or ''
+            if '_rru_' not in mat_name.lower() and os.path.exists(job.note_mat.path) and '_rru_' not in job.note_mat.path.lower():
                 res['note_mat'] = job.note_mat.path
         except Exception:
             pass
@@ -397,7 +402,8 @@ def find_job_rrh_rtf_paths(job):
     # note_plot
     if getattr(job, 'note_plot', None) and job.note_plot:
         try:
-            if os.path.exists(job.note_plot.path):
+            plot_name = getattr(job.note_plot, 'name', '') or ''
+            if '_rru_' not in plot_name.lower() and os.path.exists(job.note_plot.path) and '_rru_' not in job.note_plot.path.lower():
                 res['note_plot'] = job.note_plot.path
         except Exception:
             pass
@@ -414,7 +420,8 @@ def find_job_rrh_rtf_paths(job):
     # assemblage
     if getattr(job, 'rrh_assemblage_note', None) and job.rrh_assemblage_note:
         try:
-            if os.path.exists(job.rrh_assemblage_note.path):
+            ass_name = getattr(job.rrh_assemblage_note, 'name', '') or ''
+            if '_rru_' not in ass_name.lower() and os.path.exists(job.rrh_assemblage_note.path) and '_rru_' not in job.rrh_assemblage_note.path.lower():
                 res['assemblage_note'] = job.rrh_assemblage_note.path
         except Exception:
             pass
@@ -427,6 +434,101 @@ def find_job_rrh_rtf_paths(job):
             if os.path.exists(cp):
                 res['assemblage_note'] = cp
                 break
+    return res
+
+
+def find_job_rru_rtf_paths(job):
+    """Strictly find the RRU RTF/PDF files belonging to this job."""
+    res = {'note_mat': None, 'note_plot': None, 'assemblage_note': None, 'note_de_calcul': None}
+    if not job:
+        return res
+
+    res_data = getattr(job, 'result_data', None)
+    if not isinstance(res_data, dict):
+        res_data = {}
+    rru_sub = res_data.get('rru') if isinstance(res_data.get('rru'), dict) else {}
+    rru_files = res_data.get('rru_files') if isinstance(res_data.get('rru_files'), dict) else {}
+
+    def _first_existing(candidates):
+        for cp in candidates:
+            if cp and isinstance(cp, str) and os.path.exists(cp):
+                return cp
+        return None
+
+    # note_mat
+    mat_cands = [
+        rru_files.get('note_mat'),
+        rru_files.get('rru_note_mat'),
+        res_data.get('rru_note_mat_path'),
+        rru_sub.get('note_mat_path'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_rru_note_mat.rtf'),
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_note_mat.rtf",
+        os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rru_note_mat.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rru_note_mat.rtf'),
+    ]
+    if getattr(job, 'note_mat', None) and job.note_mat:
+        try:
+            if '_rru_' in (getattr(job.note_mat, 'name', '') or '').lower():
+                mat_cands.append(job.note_mat.path)
+        except Exception:
+            pass
+    res['note_mat'] = _first_existing(mat_cands)
+
+    # note_plot
+    plot_cands = [
+        rru_files.get('note_plot'),
+        rru_files.get('rru_note_plot'),
+        res_data.get('rru_note_plot_path'),
+        rru_sub.get('note_plot_path'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_rru_note_plot.rtf'),
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_note_plot.rtf",
+        os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_rru_note_plot.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rru_note_plot.rtf'),
+    ]
+    if getattr(job, 'note_plot', None) and job.note_plot:
+        try:
+            if '_rru_' in (getattr(job.note_plot, 'name', '') or '').lower():
+                plot_cands.append(job.note_plot.path)
+        except Exception:
+            pass
+    res['note_plot'] = _first_existing(plot_cands)
+
+    # assemblage_note
+    ass_cands = [
+        rru_files.get('assemblage_note'),
+        rru_files.get('rru_assemblage_note'),
+        res_data.get('rru_assemblage_note_path'),
+        rru_sub.get('assemblage_note_path'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_rru_assemblage_note.rtf'),
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_assemblage_note.rtf",
+        os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_rru_assemblage_note.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rru_assemblage_note.rtf'),
+    ]
+    if getattr(job, 'rrh_assemblage_note', None) and job.rrh_assemblage_note:
+        try:
+            if '_rru_' in (getattr(job.rrh_assemblage_note, 'name', '') or '').lower():
+                ass_cands.append(job.rrh_assemblage_note.path)
+        except Exception:
+            pass
+    res['assemblage_note'] = _first_existing(ass_cands)
+
+    # note_de_calcul
+    ndc_cands = [
+        rru_files.get('note_de_calcul'),
+        rru_files.get('note_de_calcul_rru'),
+        rru_files.get('rru_note_de_calcul'),
+        res_data.get('rru_note_de_calcul_path'),
+        res_data.get('note_de_calcul_rru_path'),
+        rru_sub.get('note_de_calcul_path'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_rru_note_de_calcul.pdf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_rru_note_de_calcul.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_note_de_calcul_rru.pdf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_note_de_calcul_rru.rtf'),
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_note_de_calcul.rtf",
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_note_de_calcul.pdf",
+    ]
+    res['note_de_calcul'] = _first_existing(ndc_cands)
+
     return res
 
 
@@ -464,14 +566,27 @@ def collect_site_ndc_rtf_specs(jobs):
                 'key': prefix,
             })
 
-    # Auxiliary notes for the first job (RRH etc.)
+    # Auxiliary notes for the first job (RRH, RRU, etc.)
     first_job = jobs[0] if jobs else None
     if first_job:
-        input_data = first_job.input_data if first_job else {}
+        input_data = first_job.input_data if isinstance(getattr(first_job, 'input_data', None), dict) else {}
+        res_data = first_job.result_data if isinstance(getattr(first_job, 'result_data', None), dict) else {}
+        calc_type = getattr(first_job, 'calculation_type', '')
+
         rrh_data = input_data.get('rrh_equipment', {})
         rrh_enabled = isinstance(rrh_data, dict) and rrh_data.get('enabled', False)
+        rru_data = input_data.get('rru_equipment', {})
+        rru_enabled = isinstance(rru_data, dict) and rru_data.get('enabled', False)
 
-        if rrh_enabled or getattr(first_job, 'note_mat', None) or getattr(first_job, 'note_plot', None) or getattr(first_job, 'rrh_assemblage_note', None):
+        is_rrh_eligible = (
+            res_data.get('has_rrh') is not False
+            and (
+                rrh_enabled
+                or res_data.get('has_rrh') is True
+                or calc_type == 'rrh'
+            )
+        )
+        if is_rrh_eligible:
             rrh_paths = find_job_rrh_rtf_paths(first_job)
             if rrh_paths.get('note_mat'):
                 prefix = f"job_{first_job.id}_rrh_note_mat"
@@ -496,6 +611,43 @@ def collect_site_ndc_rtf_specs(jobs):
                 specs.append({
                     'rtf_path': rrh_paths['assemblage_note'],
                     'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rrh'),
+                    'prefix': prefix,
+                    'is_assemblage': True,
+                    'key': prefix,
+                })
+
+        is_rru_eligible = (
+            rru_enabled
+            or res_data.get('has_rru') is True
+            or bool(res_data.get('rru_items'))
+            or bool(input_data.get('is_rru'))
+            or calc_type == 'rru'
+        )
+        if is_rru_eligible:
+            rru_paths = find_job_rru_rtf_paths(first_job)
+            if rru_paths.get('note_mat'):
+                prefix = f"job_{first_job.id}_rru_note_mat"
+                specs.append({
+                    'rtf_path': rru_paths['note_mat'],
+                    'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rru'),
+                    'prefix': prefix,
+                    'is_assemblage': False,
+                    'key': prefix,
+                })
+            if rru_paths.get('note_plot'):
+                prefix = f"job_{first_job.id}_rru_note_plot"
+                specs.append({
+                    'rtf_path': rru_paths['note_plot'],
+                    'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rru'),
+                    'prefix': prefix,
+                    'is_assemblage': False,
+                    'key': prefix,
+                })
+            if rru_paths.get('assemblage_note'):
+                prefix = f"job_{first_job.id}_rru_assemblage"
+                specs.append({
+                    'rtf_path': rru_paths['assemblage_note'],
+                    'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rru'),
                     'prefix': prefix,
                     'is_assemblage': True,
                     'key': prefix,
@@ -1155,6 +1307,449 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
     }
 
 
+def _parse_envelope_dims_m(env_str: str):
+    """Parse '600*500*200' or '600*500*200mm' into (h_m, w_m, d_m)."""
+    if not env_str:
+        return None
+    m = re.search(r'(\d+(?:\.\d+)?)\s*[*xX]\s*(\d+(?:\.\d+)?)\s*[*xX]\s*(\d+(?:\.\d+)?)', str(env_str))
+    if not m:
+        return None
+    return float(m.group(1)) / 1000.0, float(m.group(2)) / 1000.0, float(m.group(3)) / 1000.0
+
+
+def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: float = 0.0) -> dict:
+    """
+    Extracts multi-RRU data from result_data with fallback to input_data
+    (catalogue lookup) for preview/pre-worker states.
+    Table 0 always uses REAL equipment dimensions & weights; wind forces use
+    modeling values (Bouygues envelope or Free/Orange real dimensions).
+    """
+    result_data = result_data if isinstance(result_data, dict) else {}
+    input_data = input_data if isinstance(input_data, dict) else {}
+    rru_sub = result_data.get("rru") if isinstance(result_data.get("rru"), dict) else {}
+
+    # 1. Extract items list from worker results
+    raw_items = (
+        result_data.get("rru_items")
+        or rru_sub.get("rru_items")
+        or []
+    )
+    # Backward compatibility with legacy Job #565 only when has_rru is absent
+    legacy_rru_compat = (
+        not raw_items
+        and result_data.get("has_rru") is None
+        and isinstance(input_data.get("rru_equipment"), dict)
+        and input_data["rru_equipment"].get("enabled")
+    )
+    if legacy_rru_compat:
+        rrh_sub_legacy = result_data.get("rrh") if isinstance(result_data.get("rrh"), dict) else {}
+        raw_items = result_data.get("rrh_items") or rrh_sub_legacy.get("rrh_items") or []
+
+    # 2. Extract totals from worker results
+    totals = (
+        result_data.get("rru_totals")
+        or rru_sub.get("rru_totals")
+        or {}
+    )
+    if not totals and legacy_rru_compat:
+        rrh_sub_legacy = result_data.get("rrh") if isinstance(result_data.get("rrh"), dict) else {}
+        totals = result_data.get("rrh_totals") or rrh_sub_legacy.get("rrh_totals") or {}
+
+    # 3. Extract wind parameters
+    wind = (
+        result_data.get("rru_wind_params")
+        or rru_sub.get("wind_params")
+        or result_data.get("wind_params")
+        or {}
+    )
+
+    # 4. Extract structure parameters
+    structure = (
+        rru_sub.get("structure_params")
+        or result_data.get("structure_params")
+        or {}
+    )
+
+    # 5. Extract extremes, operator, and sans_plot flag
+    extremes = (
+        result_data.get("extremes")
+        or rru_sub.get("extremes")
+        or {}
+    )
+    operateur = (
+        result_data.get("operateur")
+        or rru_sub.get("operateur")
+        or input_data.get("operateur")
+        or input_data.get("site", {}).get("operator")
+        or "bouygues"
+    )
+    is_sans_plot = bool(
+        result_data.get("rru_sans_plot")
+        or rru_sub.get("sans_plot")
+        or structure.get("sans_plot")
+        or input_data.get("sans_plot")
+        or (input_data.get("rru_equipment") or {}).get("sans_plot", False)
+    )
+
+    try:
+        qp = float(wind.get("qp_dan") or qp_val or 0.0)
+    except (ValueError, TypeError):
+        qp = 0.0
+
+    items = []
+    if raw_items:
+        tot_qty = 0
+        tot_weight = 0.0
+        tot_fw_front = 0.0
+        tot_fw_lat = 0.0
+
+        for idx, it in enumerate(raw_items, start=1):
+            qty = int(it.get("qty") or it.get("quantity") or 1)
+            h_mm = float(it.get("h_mm") or 0.0)
+            w_mm = float(it.get("w_mm") or 0.0)
+            d_mm = float(it.get("d_mm") if it.get("d_mm") is not None else (it.get("t_mm") or 0.0))
+            dims_str = it.get("dimensions_str")
+            if not dims_str:
+                dims_str = f"{h_mm:g} x {w_mm:g} x {d_mm:g}" if (h_mm or w_mm or d_mm) else "N/A"
+
+            weight_kg = float(it.get("weight_kg") or 0.0)
+            weight_total = float(it.get("weight_total_kg") if it.get("weight_total_kg") is not None else round(qty * weight_kg, 2))
+            cf_front = float(it.get("cf_front") or 1.38)
+            cf_lat = float(it.get("cf_lat") or 1.11)
+
+            a_front = float(it.get("area_front_m2") if it.get("area_front_m2") is not None else (it.get("a_front") or 0.12))
+            a_lat = float(it.get("area_lat_m2") if it.get("area_lat_m2") is not None else (it.get("a_lat") or 0.06))
+
+            mod_h = it.get("modeling_h_m")
+            mod_w = it.get("modeling_w_m")
+            mod_d = it.get("modeling_d_m")
+            a_front_calc = round(float(mod_h) * float(mod_w), 4) if (mod_h and mod_w) else a_front
+            a_lat_calc = round(float(mod_h) * float(mod_d), 4) if (mod_h and mod_d) else a_lat
+
+            fw_f_raw = it.get("fw_front") if it.get("fw_front") is not None else it.get("fw_front_dan")
+            fw_l_raw = it.get("fw_lat") if it.get("fw_lat") is not None else it.get("fw_lat_dan")
+            fw_front_i = float(fw_f_raw) if fw_f_raw is not None else (round(qty * cf_front * a_front_calc * qp, 2) if qp else 0.0)
+            fw_lat_i = float(fw_l_raw) if fw_l_raw is not None else (round(qty * cf_lat * a_lat_calc * qp, 2) if qp else 0.0)
+
+            fw_front_formula = it.get("fw_front_formula") or (
+                f"{qty} * {cf_front:.2f} * {a_front_calc:.2f} * {qp:.2f} = {fw_front_i:.2f} daN" if qp else f"{fw_front_i:.2f} daN"
+            )
+            fw_lat_formula = it.get("fw_lat_formula") or (
+                f"{qty} * {cf_lat:.2f} * {a_lat_calc:.2f} * {qp:.2f} = {fw_lat_i:.2f} daN" if qp else f"{fw_lat_i:.2f} daN"
+            )
+
+            items.append({
+                "index": it.get("index", idx),
+                "name": it.get("name") or it.get("reference") or f"RRU #{idx}",
+                "vendor": it.get("vendor", ""),
+                "catalog_reference": it.get("catalog_reference") or it.get("name") or f"RRU #{idx}",
+                "qty": qty,
+                "h_mm": h_mm,
+                "w_mm": w_mm,
+                "d_mm": d_mm,
+                "dimensions_str": dims_str,
+                "weight_kg": weight_kg,
+                "weight_total_kg": weight_total,
+                "cf_front": cf_front,
+                "cf_lat": cf_lat,
+                "a_front": a_front,
+                "a_lat": a_lat,
+                "fw_front": fw_front_i,
+                "fw_lat": fw_lat_i,
+                "pe_dan": weight_total,
+                "fw_front_formula": fw_front_formula,
+                "fw_lat_formula": fw_lat_formula,
+            })
+            tot_qty += qty
+            tot_weight += weight_total
+            tot_fw_front += fw_front_i
+            tot_fw_lat += fw_lat_i
+
+        totals = dict(totals) if isinstance(totals, dict) else {}
+        totals.setdefault("count", len(items))
+        totals.setdefault("qty_total", tot_qty)
+        totals.setdefault("weight_total_kg", round(tot_weight, 2))
+        totals.setdefault("pe_dan", totals.get("weight_total_kg", round(tot_weight, 2)))
+        if totals.get("fw_front") is None:
+            totals["fw_front"] = wind.get("fw_front_total_dan") if wind.get("fw_front_total_dan") is not None else round(tot_fw_front, 2)
+        if totals.get("fw_lat") is None:
+            totals["fw_lat"] = wind.get("fw_lat_total_dan") if wind.get("fw_lat_total_dan") is not None else round(tot_fw_lat, 2)
+
+    # 6. Fallback 1: Preview mode / before worker run -> extract from input_data rru_equipment or standalone equipment
+    if not items:
+        from .catalogue_loader import find_rru_reference
+        raw_in_items = (input_data.get("rru_equipment") or {}).get("items", [])
+        if not raw_in_items and isinstance(input_data.get("equipment"), dict):
+            eq = input_data["equipment"]
+            eq_ref = eq.get("reference") or eq.get("model")
+            if eq_ref:
+                raw_in_items = [{"reference": eq_ref, "quantity": eq.get("qty") or eq.get("quantity") or eq.get("quantite") or 1}]
+
+        op_norm = str(operateur or "").strip().lower()
+        if op_norm == "bytel":
+            op_norm = "bouygues"
+
+        if raw_in_items:
+            built_items = []
+            tot_qty = 0
+            tot_fw_front = 0.0
+            tot_fw_lat = 0.0
+            tot_weight = 0.0
+            f_front_parts = []
+            f_lat_parts = []
+
+            for idx, it in enumerate(raw_in_items, start=1):
+                ref = it.get("reference") or it.get("name") or ""
+                spec = (find_rru_reference(ref, op_norm) or find_rru_reference(ref)) if ref else None
+                qty = int(it.get("quantity") or it.get("qty") or 1)
+                name = (spec.get("reference") if spec else None) or ref or f"RRU #{idx}"
+                h_mm = float(spec.get("height") or 0.0) if spec else 0.0
+                w_mm = float(spec.get("width") or 0.0) if spec else 0.0
+                d_mm = float(spec.get("thickness") or 0.0) if spec else 0.0
+                dims_str = f"{h_mm:g} x {w_mm:g} x {d_mm:g}" if (h_mm or w_mm or d_mm) else (spec.get("dimensions", "N/A") if spec else "N/A")
+                weight_kg = float(spec.get("weight") or 0.0) if spec else 0.0
+                weight_total = round(qty * weight_kg, 2)
+                cf_front = float(spec.get("cf_front", 1.38)) if spec else 1.38
+                cf_lat = float(spec.get("cf_lat", 1.11)) if spec else 1.11
+                a_front_real = float(spec.get("surf_front") or (round((h_mm * w_mm) / 1e6, 4) if (h_mm and w_mm) else 0.12)) if spec else 0.12
+                a_lat_real = float(spec.get("surf_lat") or (round((h_mm * d_mm) / 1e6, 4) if (h_mm and d_mm) else 0.06)) if spec else 0.06
+
+                a_front_calc, a_lat_calc = a_front_real, a_lat_real
+                if op_norm == "bouygues" and spec:
+                    env_dims = _parse_envelope_dims_m(spec.get("envelope_dimensions") or spec.get("envelope"))
+                    if env_dims:
+                        eh, ew, ed = env_dims
+                        a_front_calc = round(eh * ew, 4)
+                        a_lat_calc = round(eh * ed, 4)
+
+                fw_front_i = round(qty * cf_front * a_front_calc * qp, 2) if qp else 0.0
+                fw_lat_i = round(qty * cf_lat * a_lat_calc * qp, 2) if qp else 0.0
+
+                built_items.append({
+                    "index": idx,
+                    "name": name,
+                    "vendor": spec.get("vendor", "") if spec else "",
+                    "catalog_reference": ref,
+                    "qty": qty,
+                    "h_mm": h_mm,
+                    "w_mm": w_mm,
+                    "d_mm": d_mm,
+                    "dimensions_str": dims_str,
+                    "weight_kg": weight_kg,
+                    "weight_total_kg": weight_total,
+                    "cf_front": cf_front,
+                    "cf_lat": cf_lat,
+                    "a_front": a_front_real,
+                    "a_lat": a_lat_real,
+                    "fw_front": fw_front_i,
+                    "fw_lat": fw_lat_i,
+                    "pe_dan": weight_total,
+                    "fw_front_formula": f"{qty} * {cf_front:.2f} * {a_front_calc:.2f} * {qp:.2f} = {fw_front_i:.2f} daN" if qp else f"{fw_front_i:.2f} daN",
+                    "fw_lat_formula": f"{qty} * {cf_lat:.2f} * {a_lat_calc:.2f} * {qp:.2f} = {fw_lat_i:.2f} daN" if qp else f"{fw_lat_i:.2f} daN",
+                })
+                tot_qty += qty
+                tot_weight += weight_total
+                tot_fw_front += fw_front_i
+                tot_fw_lat += fw_lat_i
+                f_front_parts.append(f"{fw_front_i:.2f}")
+                f_lat_parts.append(f"{fw_lat_i:.2f}")
+
+            items = built_items
+            totals = {
+                "count": len(built_items),
+                "qty_total": tot_qty,
+                "fw_front": round(tot_fw_front, 2),
+                "fw_lat": round(tot_fw_lat, 2),
+                "pe_dan": round(tot_weight, 2),
+                "weight_total_kg": round(tot_weight, 2),
+                "fw_front_formula": " + ".join(f_front_parts) + f" = {round(tot_fw_front, 2):.2f} daN" if len(f_front_parts) > 1 else (f"{round(tot_fw_front, 2):.2f} daN" if f_front_parts else "0.00 daN"),
+                "fw_lat_formula": " + ".join(f_lat_parts) + f" = {round(tot_fw_lat, 2):.2f} daN" if len(f_lat_parts) > 1 else (f"{round(tot_fw_lat, 2):.2f} daN" if f_lat_parts else "0.00 daN"),
+            }
+
+    # 7. Fallback 2: Generic default single RRU if everything else is empty
+    if not items:
+        items = [{
+            "index": 1,
+            "name": "RRU",
+            "vendor": "",
+            "catalog_reference": "RRU",
+            "qty": 1,
+            "dimensions_str": "N/A",
+            "weight_kg": 0.0,
+            "weight_total_kg": 0.0,
+            "cf_front": 1.38,
+            "cf_lat": 1.11,
+            "a_front": 0.12,
+            "a_lat": 0.06,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+            "pe_dan": 0.0,
+            "fw_front_formula": "N/A",
+            "fw_lat_formula": "N/A",
+        }]
+        totals = {
+            "count": 1,
+            "qty_total": 1,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+            "pe_dan": 0.0,
+            "weight_total_kg": 0.0,
+            "fw_front_formula": "N/A",
+            "fw_lat_formula": "N/A",
+        }
+
+    is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
+
+    return {
+        "items": items,
+        "totals": totals,
+        "wind": wind,
+        "structure": structure,
+        "extremes": extremes,
+        "operateur": operateur,
+        "is_sans_plot": is_sans_plot,
+        "is_multi": is_multi,
+        "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
+    }
+
+
+def _resolve_support_wind_params(wind_p: dict, context: dict, env: dict, vb, h_plot_m, h_mat_m) -> dict:
+    """Resolve EC1 wind chain for an auxiliary support (RRH or RRU) consistently."""
+    qp_z = wind_p.get('qp_dan') or context.get('qp_z')
+    cr_z = wind_p.get('cr_z') or wind_p.get('cr')
+    vm_z = wind_p.get('vm_z') or wind_p.get('vm')
+    iv_z = wind_p.get('iv_z') or wind_p.get('iv')
+    kr_z = wind_p.get('kr_z') or wind_p.get('kr')
+
+    raw_region = wind_p.get('region')
+    if raw_region is not None:
+        if isinstance(raw_region, (int, float)) or (isinstance(raw_region, str) and str(raw_region).isdigit()):
+            region_str = f"Region {raw_region}"
+        else:
+            region_str = str(raw_region)
+    else:
+        region_str = context.get('region')
+
+    terrain_type = str(wind_p.get('terrain_type') or context.get('terrain_type') or env.get('terrain_type') or 'IIIa')
+    building_height = wind_p.get('building_height_m') if wind_p.get('building_height_m') is not None else context.get('building_height')
+    vb_m_s = (
+        wind_p.get('vb0_ms')
+        if wind_p.get('vb0_ms') is not None
+        else (wind_p.get('v_b0') if wind_p.get('v_b0') is not None else context.get('vb_m_s'))
+    )
+
+    try:
+        vb_num = float(vb_m_s) if vb_m_s is not None and str(vb_m_s) != '[Vb]' else (float(vb) if vb is not None else None)
+    except (ValueError, TypeError):
+        vb_num = float(vb) if vb is not None else None
+
+    if not cr_z:
+        try:
+            target_qp_dan = float(wind_p.get('qp_dan') or 0.0)
+        except (ValueError, TypeError):
+            target_qp_dan = 0.0
+
+        if target_qp_dan > 0 and vb_num is not None and vb_num > 0:
+            z0_val, _ = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
+            kr_val = 0.19 * (z0_val / Z0_II) ** 0.07
+            a_coeff = 0.5 * RHO_AIR * (vb_num ** 2) * (kr_val ** 2)
+            qp_pa_target = target_qp_dan * 10.0
+            disc = 49.0 + 4.0 * (qp_pa_target / a_coeff)
+            if disc > 0:
+                x_val = (-7.0 + math.sqrt(disc)) / 2.0
+                cr_calc = kr_val * x_val
+                vm_calc = cr_calc * 1.0 * vb_num
+                iv_calc = 1.0 / x_val if x_val > 0 else 0.12
+                cr_z = round(cr_calc, 2)
+                vm_z = round(vm_calc, 2)
+                iv_z = round(iv_calc, 2)
+                kr_z = round(kr_val, 2)
+
+    if not cr_z:
+        try:
+            h_bat = float(env.get('building_height_m') or 0)
+            h_plot = float(h_plot_m or 0)
+            h_mat = float(h_mat_m or 0)
+            z_tot = h_bat + h_plot + h_mat
+            if z_tot <= 0:
+                z_tot = h_bat
+        except (ValueError, TypeError):
+            z_tot = 0
+
+        if vb_num is not None and vb_num > 0 and z_tot > 0:
+            wind_calc = calculate_wind_params(terrain_type, z_tot, vb_num)
+            cr_z = wind_calc['cr_z']
+            vm_z = wind_calc['vm']
+            iv_z = wind_calc['iv_z']
+            kr_z = wind_calc['kr']
+            if not qp_z:
+                qp_z = wind_calc['qp_dan']
+        else:
+            cr_z = context.get('cr_z')
+            vm_z = context.get('vm_z')
+            iv_z = context.get('iv_z')
+            kr_z = context.get('kr_z')
+
+    return {
+        'region': region_str,
+        'terrain_type': terrain_type,
+        'building_height': building_height,
+        'vb_m_s': vb_m_s,
+        'cr_z': cr_z,
+        'vm_z': vm_z,
+        'iv_z': iv_z,
+        'kr_z': kr_z,
+        'qp_z': qp_z,
+    }
+
+
+def _crop_tableau_charges_image(img_path: str) -> str:
+    """Crop trailing empty columns from a Robot tableau des charges screenshot."""
+    if not img_path or not os.path.exists(img_path):
+        return img_path
+    try:
+        with Image.open(img_path) as src_img:
+            gray = src_img.convert('L')
+            arr = np.array(gray)
+            h, w = arr.shape
+            col_line_span = np.sum(arr[10:h-10, :] < 180, axis=0)
+            true_lines = np.where(col_line_span > (h - 20) * 0.85)[0]
+            groups = []
+            for c in true_lines:
+                if not groups or c > groups[-1][-1] + 2:
+                    groups.append([c])
+                else:
+                    groups[-1].append(c)
+            centers = [int(np.mean(g)) for g in groups]
+            if len(centers) >= 4:
+                last_content_col = None
+                for i in range(len(centers) - 2, -1, -1):
+                    c1, c2 = centers[i], centers[i + 1]
+                    col_width = c2 - c1 - 4
+                    if col_width <= 0:
+                        continue
+                    cell_area = arr[25:h-5, c1+2:c2-2]
+                    row_dark_count = np.sum(cell_area < 180, axis=1)
+                    grid_rows = row_dark_count > (col_width * 0.5)
+                    text_rows = (~grid_rows)
+                    text_dark_pixels = np.sum(cell_area[text_rows] < 180)
+                    if text_dark_pixels > 20:
+                        last_content_col = i
+                        break
+
+                if last_content_col is not None and last_content_col < len(centers) - 2:
+                    crop_x = min(w, centers[last_content_col + 1] + 1)
+                    cropped_img = src_img.crop((0, 0, crop_x, h))
+                    dir_name = os.path.dirname(img_path)
+                    base_name = os.path.basename(img_path)
+                    cropped_path = os.path.join(dir_name, f"cropped_{base_name}")
+                    cropped_img.save(cropped_path)
+                    return cropped_path
+    except Exception as e:
+        print(f"Warning: could not crop tableau_charges ({img_path}): {e}")
+    return img_path
+
+
 def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     """
     Generate auxiliary PDFs (TD, FH, RRH, RRU) based on job.input_data.
@@ -1311,22 +1906,54 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'eq_weight': fh_eq.get('weight_kg') or '[FH_WEIGHT]'
         }))
 
-    # Check for RRH (Enabled via toggle, standalone RRH job, or composite Antenna+RRH)
+    # Check for RRH vs RRU (strictly segregated)
+    rru_eq = input_data.get('rru_equipment', {})
     rrh_eq = input_data.get('rrh_equipment', {})
     res_data = getattr(job, 'result_data', {}) if job else {}
     if not isinstance(res_data, dict):
         res_data = {}
-    has_rrh_result = (
-        res_data.get('has_rrh') is True 
-        or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
-        or bool(res_data.get('rrh_items'))
-        or bool(res_data.get('rrh_totals'))
-    )
     calc_type = getattr(job, 'calculation_type', '') if job else ''
-    is_rrh_calc = bool(input_data.get('is_rrh') or calc_type in ['rrh', 'antenna_with_rrh'] or getattr(job, 'note_de_calcul_rrh', None))
 
-    if rrh_eq.get('enabled') or has_rrh_result or is_rrh_calc:
-        # Extract Multi-RRH context with full fallback support
+    is_rru_only_job = (
+        res_data.get('has_rrh') is False
+        or (
+            isinstance(rru_eq, dict) and rru_eq.get('enabled')
+            and not (isinstance(rrh_eq, dict) and rrh_eq.get('enabled'))
+            and res_data.get('has_rrh') is not True
+        )
+    )
+
+    has_rrh_result = (
+        not is_rru_only_job
+        and (
+            res_data.get('has_rrh') is True
+            or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
+            or bool(res_data.get('rrh_items'))
+            or bool(res_data.get('rrh_totals'))
+        )
+    )
+    is_rrh_calc = (
+        not is_rru_only_job
+        and bool(input_data.get('is_rrh') or calc_type in ['rrh', 'antenna_with_rrh'] or getattr(job, 'note_de_calcul_rrh', None))
+    )
+
+    def _get_or_convert_rtf_images(key_prefix, rtf_abs, convert_dir, is_assemblage=False):
+        if preconverted_images and key_prefix in preconverted_images and preconverted_images[key_prefix]:
+            return preconverted_images[key_prefix]
+        if rtf_abs and os.path.exists(rtf_abs):
+            try:
+                return _convert_rtf_file_to_images(rtf_abs, convert_dir, key_prefix, is_assemblage=is_assemblage)
+            except Exception as e:
+                print(f"Warning: Failed to convert {key_prefix} RTF to images: {e}")
+        return []
+
+    def _first_existing_path(candidates):
+        for cp in candidates:
+            if cp and isinstance(cp, str) and os.path.exists(cp):
+                return cp
+        return None
+
+    if (not is_rru_only_job) and ((isinstance(rrh_eq, dict) and rrh_eq.get('enabled')) or has_rrh_result or is_rrh_calc):
         try:
             qp_val = float(context.get('qp_z', 0))
         except (ValueError, TypeError):
@@ -1347,91 +1974,18 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
         fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
 
-        # Override/Enrich with genuine Worker results if available
         worker_rrh = res_data.get('rrh', {}) if isinstance(res_data.get('rrh'), dict) else {}
         extremes = rrh_ctx.get('extremes') or worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
         struct_p = rrh_ctx.get('structure') or worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
 
-        if wind_p.get('qp_dan'):
-            context['qp_z'] = wind_p.get('qp_dan')
-
-        # Structure params for RRH
         rrh_mat_section = struct_p.get('mast_section') or context.get('mat_section')
         rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
         rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
         rrh_mat_longueur_m = struct_p.get('hauteur_mat_m') or context.get('mat_longueur_m')
 
-        # Wind calculation specific to RRH (do NOT use base antenna sector calculation)
-        rrh_qp_z = wind_p.get('qp_dan') or context.get('qp_z')
-        rrh_cr_z = wind_p.get('cr_z') or wind_p.get('cr')
-        rrh_vm_z = wind_p.get('vm_z') or wind_p.get('vm')
-        rrh_iv_z = wind_p.get('iv_z') or wind_p.get('iv')
-        rrh_kr_z = wind_p.get('kr_z') or wind_p.get('kr')
+        rrh_wind = _resolve_support_wind_params(wind_p, context, env, vb, rrh_plot_longueur_m, rrh_mat_longueur_m)
+        rrh_qp_z = rrh_wind['qp_z']
 
-        # Site wind parameters for RRH summary block
-        rrh_region = wind_p.get('region')
-        if rrh_region is not None:
-            if isinstance(rrh_region, (int, float)) or (isinstance(rrh_region, str) and str(rrh_region).isdigit()):
-                rrh_region_str = f"Region {rrh_region}"
-            else:
-                rrh_region_str = str(rrh_region)
-        else:
-            rrh_region_str = context.get('region')
-
-        rrh_terrain_type = str(wind_p.get('terrain_type') or context.get('terrain_type') or env.get('terrain_type') or 'IIIa')
-        rrh_building_height = wind_p.get('building_height_m') if wind_p.get('building_height_m') is not None else context.get('building_height')
-        rrh_vb_m_s = wind_p.get('v_b0') if wind_p.get('v_b0') is not None else context.get('vb_m_s')
-
-        # If wind_p provides qp_dan but not cr_z, solve consistently from qp_dan or recalculate at RRH height
-        if not rrh_cr_z:
-            try:
-                target_qp_dan = float(wind_p.get('qp_dan') or 0.0)
-            except (ValueError, TypeError):
-                target_qp_dan = 0.0
-
-            if target_qp_dan > 0 and vb is not None and float(vb) > 0:
-                # Solve X = ln(z/z0) from qp(z) = (1 + 7/X) * 0.5 * rho * (kr * X * vb)^2
-                z0_val, _ = TERRAIN_Z0.get(rrh_terrain_type, TERRAIN_Z0['IIIa'])
-                kr_val = 0.19 * (z0_val / Z0_II) ** 0.07
-                A_coeff = 0.5 * RHO_AIR * (float(vb) ** 2) * (kr_val ** 2)
-                qp_pa_target = target_qp_dan * 10.0
-                disc = 49.0 + 4.0 * (qp_pa_target / A_coeff)
-                if disc > 0:
-                    X_val = (-7.0 + math.sqrt(disc)) / 2.0
-                    rrh_cr_calc = kr_val * X_val
-                    rrh_vm_calc = rrh_cr_calc * 1.0 * float(vb)
-                    rrh_iv_calc = 1.0 / X_val if X_val > 0 else 0.12
-                    rrh_cr_z = round(rrh_cr_calc, 2)
-                    rrh_vm_z = round(rrh_vm_calc, 2)
-                    rrh_iv_z = round(rrh_iv_calc, 2)
-                    rrh_kr_z = round(kr_val, 2)
-
-        # Fallback if still not determined: compute using RRH height
-        if not rrh_cr_z:
-            try:
-                rrh_h_bat = float(env.get('building_height_m') or 0)
-                rrh_h_plot = float(rrh_plot_longueur_m or 0)
-                rrh_h_mat = float(rrh_mat_longueur_m or 0)
-                rrh_z_total = rrh_h_bat + rrh_h_plot + rrh_h_mat
-                if rrh_z_total <= 0:
-                    rrh_z_total = rrh_h_bat
-            except (ValueError, TypeError):
-                rrh_z_total = 0
-
-            if vb is not None and rrh_z_total > 0:
-                rrh_wind_calc = calculate_wind_params(terrain_type_str, rrh_z_total, float(vb))
-                rrh_cr_z = rrh_wind_calc['cr_z']
-                rrh_vm_z = rrh_wind_calc['vm']
-                rrh_iv_z = rrh_wind_calc['iv_z']
-                rrh_kr_z = rrh_wind_calc['kr']
-                if not rrh_qp_z:
-                    rrh_qp_z = rrh_wind_calc['qp_dan']
-            else:
-                rrh_cr_z = context.get('cr_z')
-                rrh_vm_z = context.get('vm_z')
-                rrh_iv_z = context.get('iv_z')
-                rrh_kr_z = context.get('kr_z')
-        
         try:
             rrh_mat_longueur = int(float(rrh_mat_longueur_m) * 1000) if rrh_mat_longueur_m else context.get('mat_longueur')
         except (ValueError, TypeError):
@@ -1463,7 +2017,6 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             except (ValueError, TypeError):
                 fw_mat = '[Fw,Mat]'
 
-        # Locate genuine screenshot artifacts from job (strictly scoped to this job)
         rrh_screenshot_abs = None
         if job and getattr(job, 'rrh_screenshot', None) and job.rrh_screenshot:
             try:
@@ -1472,17 +2025,11 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             except Exception:
                 pass
         if not rrh_screenshot_abs and job:
-            for cp in [
+            rrh_screenshot_abs = _first_existing_path([
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_3d_view.jpg",
-                os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg')
-            ]:
-                if os.path.exists(cp):
-                    rrh_screenshot_abs = cp
-                    break
+                os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg'),
+            ])
 
-        # Preserve genuine 3D view screenshot directly without cropping out pieces definition
-
-        # Locate RRH tableau charges (strictly scoped to this job)
         rrh_tableau_charges_abs = None
         if job and getattr(job, 'rrh_tableau_charges', None) and job.rrh_tableau_charges:
             try:
@@ -1491,61 +2038,12 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             except Exception:
                 pass
         if not rrh_tableau_charges_abs and job:
-            for cp in [
+            rrh_tableau_charges_abs = _first_existing_path([
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_tableau_charges.png",
-                os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png')
-            ]:
-                if os.path.exists(cp):
-                    rrh_tableau_charges_abs = cp
-                    break
+                os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png'),
+            ])
+        rrh_tableau_charges_abs = _crop_tableau_charges_image(rrh_tableau_charges_abs)
 
-        # Crop empty trailing columns (e.g. trailing empty columns) from RRH tableau charges to make it bigger & clearer
-        if rrh_tableau_charges_abs and os.path.exists(rrh_tableau_charges_abs):
-            try:
-                with Image.open(rrh_tableau_charges_abs) as src_img:
-                    gray = src_img.convert('L')
-                    arr = np.array(gray)
-                    h, w = arr.shape
-                    col_line_span = np.sum(arr[10:h-10, :] < 180, axis=0)
-                    true_lines = np.where(col_line_span > (h - 20) * 0.85)[0]
-                    groups = []
-                    for c in true_lines:
-                        if not groups or c > groups[-1][-1] + 2:
-                            groups.append([c])
-                        else:
-                            groups[-1].append(c)
-                    centers = [int(np.mean(g)) for g in groups]
-                    if len(centers) >= 4:
-                        # Iterate backwards from rightmost columns to find trailing empty columns
-                        last_content_col = None
-                        for i in range(len(centers) - 2, -1, -1):
-                            c1, c2 = centers[i], centers[i+1]
-                            col_width = c2 - c1 - 4
-                            if col_width <= 0:
-                                continue
-                            cell_area = arr[25:h-5, c1+2:c2-2]
-                            row_dark_count = np.sum(cell_area < 180, axis=1)
-                            # Horizontal grid lines span across most of the cell width
-                            grid_rows = row_dark_count > (col_width * 0.5)
-                            text_rows = (~grid_rows)
-                            text_dark_pixels = np.sum(cell_area[text_rows] < 180)
-                            if text_dark_pixels > 20:
-                                last_content_col = i
-                                break
-                        
-                        if last_content_col is not None and last_content_col < len(centers) - 2:
-                            crop_x = min(w, centers[last_content_col + 1] + 1)
-                            cropped_img = src_img.crop((0, 0, crop_x, h))
-                            dir_name = os.path.dirname(rrh_tableau_charges_abs)
-                            base_name = os.path.basename(rrh_tableau_charges_abs)
-                            cropped_name = f"cropped_{base_name}"
-                            cropped_path = os.path.join(dir_name, cropped_name)
-                            cropped_img.save(cropped_path)
-                            rrh_tableau_charges_abs = cropped_path
-            except Exception as e:
-                print(f"Warning: could not crop rrh_tableau_charges: {e}")
-
-        # Locate RRH verification screenshot (strictly scoped to this job)
         rrh_verification_screenshot_abs = None
         if job and getattr(job, 'rrh_verification_screenshot', None) and job.rrh_verification_screenshot:
             try:
@@ -1554,71 +2052,27 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             except Exception:
                 pass
         if not rrh_verification_screenshot_abs and job:
-            for cp in [
+            rrh_verification_screenshot_abs = _first_existing_path([
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_rrh_verification.jpg",
-                os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg')
-            ]:
-                if os.path.exists(cp):
-                    rrh_verification_screenshot_abs = cp
-                    break
+                os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg'),
+            ])
 
-        # Locate RRH note mat (RTF) (strictly scoped to this job)
-        rrh_note_mat_abs = None
-        if job and getattr(job, 'note_de_calcul_rrh', None) and job.note_de_calcul_rrh:
-            try:
-                if os.path.exists(job.note_de_calcul_rrh.path):
-                    rrh_note_mat_abs = job.note_de_calcul_rrh.path
-            except Exception:
-                pass
-        # Locate RRH RTF files strictly scoped to this job
         rrh_paths = find_job_rrh_rtf_paths(job)
-        rrh_note_mat_abs = rrh_paths.get('note_mat')
-        rrh_note_plot_abs = rrh_paths.get('note_plot')
-        rrh_assemblage_note_abs = rrh_paths.get('assemblage_note')
-
-        # Convert RTF notes to images for embedding (or use batch pre-converted)
-        rrh_note_mat_images = []
-        job_prefix_mat = f"job_{job.id if job else 'preview'}_rrh_note_mat"
-        if preconverted_images and job_prefix_mat in preconverted_images and preconverted_images[job_prefix_mat]:
-            rrh_note_mat_images = preconverted_images[job_prefix_mat]
-        elif rrh_note_mat_abs and os.path.exists(rrh_note_mat_abs):
-            convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
-            try:
-                rrh_note_mat_images = _convert_rtf_file_to_images(rrh_note_mat_abs, convert_dir, job_prefix_mat)
-            except Exception as e:
-                print(f"Warning: Failed to convert RRH note_mat RTF to images: {e}")
-
-        rrh_note_plot_images = []
-        job_prefix_plot = f"job_{job.id if job else 'preview'}_rrh_note_plot"
-        if preconverted_images and job_prefix_plot in preconverted_images and preconverted_images[job_prefix_plot]:
-            rrh_note_plot_images = preconverted_images[job_prefix_plot]
-        elif rrh_note_plot_abs and os.path.exists(rrh_note_plot_abs):
-            convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
-            try:
-                rrh_note_plot_images = _convert_rtf_file_to_images(rrh_note_plot_abs, convert_dir, job_prefix_plot)
-            except Exception as e:
-                print(f"Warning: Failed to convert RRH note_plot RTF to images: {e}")
-
-        rrh_assemblage_images = []
-        job_prefix_ass = f"job_{job.id if job else 'preview'}_rrh_assemblage"
-        if preconverted_images and job_prefix_ass in preconverted_images and preconverted_images[job_prefix_ass]:
-            rrh_assemblage_images = preconverted_images[job_prefix_ass]
-        elif rrh_assemblage_note_abs and os.path.exists(rrh_assemblage_note_abs):
-            convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
-            try:
-                rrh_assemblage_images = _convert_rtf_file_to_images(rrh_assemblage_note_abs, convert_dir, job_prefix_ass, is_assemblage=True)
-            except Exception as e:
-                print(f"Warning: Failed to convert RRH assemblage RTF to images: {e}")
+        rrh_convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
+        job_id_lbl = job.id if job else 'preview'
+        rrh_note_mat_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_note_mat", rrh_paths.get('note_mat'), rrh_convert_dir)
+        rrh_note_plot_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_note_plot", rrh_paths.get('note_plot'), rrh_convert_dir)
+        rrh_assemblage_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_assemblage", rrh_paths.get('assemblage_note'), rrh_convert_dir, is_assemblage=True)
 
         generated_pdfs.append(_render_and_save('rrh', {
-            'region': rrh_region_str,
-            'terrain_type': rrh_terrain_type,
-            'building_height': rrh_building_height,
-            'vb_m_s': rrh_vb_m_s,
-            'cr_z': rrh_cr_z,
-            'vm_z': rrh_vm_z,
-            'iv_z': rrh_iv_z,
-            'kr_z': rrh_kr_z,
+            'region': rrh_wind['region'],
+            'terrain_type': rrh_wind['terrain_type'],
+            'building_height': rrh_wind['building_height'],
+            'vb_m_s': rrh_wind['vb_m_s'],
+            'cr_z': rrh_wind['cr_z'],
+            'vm_z': rrh_wind['vm_z'],
+            'iv_z': rrh_wind['iv_z'],
+            'kr_z': rrh_wind['kr_z'],
             'qp_z': rrh_qp_z,
             'eq_qty': qty_total,
             'rrh_name': first_item.get('name', 'RRH'),
@@ -1651,47 +2105,200 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'rrh_qty_total': qty_total,
         }))
 
-    # Check for RRU
-    rru_eq = input_data.get('rru_equipment', {})
-    if rru_eq.get('enabled'):
-        from .catalogue_loader import find_rru_reference
-        items = rru_eq.get('items', [])
-        qty = sum(item.get('quantity', 1) for item in items) if items else 1
+    # Check for RRU (Enabled via toggle, standalone RRU job, or composite Antenna+RRU)
+    has_rru_result = (
+        res_data.get('has_rru') is True
+        or ('rru' in res_data and isinstance(res_data['rru'], dict))
+        or bool(res_data.get('rru_items'))
+        or bool(res_data.get('rru_totals'))
+    )
+    is_rru_calc = bool(input_data.get('is_rru') or calc_type in ['rru', 'antenna_with_rru'])
 
-        rru_spec = None
-        op = input_data.get('site', {}).get('operator')
-        for it in items:
-            ref = it.get('reference')
-            if ref:
-                found = find_rru_reference(ref, op)
-                if found:
-                    rru_spec = found
-                    break
-
-        eq_dims = rru_spec.get('dimensions', '[RRU_DIMS]') if rru_spec else '[RRU_DIMS]'
-        eq_weight = rru_spec.get('weight', '[RRU_WEIGHT]') if rru_spec else '[RRU_WEIGHT]'
-        cx_front = rru_spec.get('cx_front', 0.14) if rru_spec else 0.14
-        cx_lat = rru_spec.get('cx_lat', 0.055) if rru_spec else 0.055
-
+    if (isinstance(rru_eq, dict) and rru_eq.get('enabled')) or has_rru_result or is_rru_calc:
         try:
             qp_val = float(context.get('qp_z', 0))
-            fw_front = round(cx_front * qp_val, 2)
-            fw_lat = round(cx_lat * qp_val, 2)
-            fw_mat = round(1.0 * 1.0 * 0.088 * qp_val, 2)
         except (ValueError, TypeError):
-            fw_front = '[Fw,Front]'
-            fw_lat = '[Fw,Lat]'
-            fw_mat = '[Fw,Mat]'
+            qp_val = 0.0
+
+        rru_ctx = extract_rru_ndc_context(res_data, input_data=input_data, qp_val=qp_val)
+        items = rru_ctx['items']
+        totals = rru_ctx['totals']
+        wind_p = rru_ctx['wind']
+        is_multi = rru_ctx['is_multi']
+        qty_total = rru_ctx['qty_total']
+        rru_sans_plot = rru_ctx['is_sans_plot']
+
+        first_item = items[0] if items else {}
+        eq_dims = first_item.get('dimensions_str', '[RRU_DIMS]')
+        eq_weight = first_item.get('weight_kg', '[RRU_WEIGHT]')
+        cx_front = first_item.get('cf_front', 1.38)
+        cx_lat = first_item.get('cf_lat', 1.11)
+        fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
+        fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+
+        worker_rru = res_data.get('rru', {}) if isinstance(res_data.get('rru'), dict) else {}
+        extremes = rru_ctx.get('extremes') or worker_rru.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = rru_ctx.get('structure') or worker_rru.get('structure_params', {}) or res_data.get('structure_params', {})
+        is_standalone_rru = bool(input_data.get('is_rru') and not input_data.get('antenna_4g') and not input_data.get('antenna_5g'))
+
+        # Strict RRU structure defaults (never inherit 4G/5G antenna mast/plot)
+        rru_mat_section = (
+            struct_p.get('mast_section')
+            or (structure_data.get('mast_section') if is_standalone_rru else None)
+            or 'TRON 88x2.5'
+        )
+        rru_mat_longueur_m = (
+            struct_p.get('hauteur_mat_m')
+            if struct_p.get('hauteur_mat_m') is not None
+            else (structure_data.get('hauteur_mat_m') if is_standalone_rru and structure_data.get('hauteur_mat_m') is not None else 1.5)
+        )
+        if rru_sans_plot:
+            rru_plot_section = 'Sans plot'
+            rru_plot_longueur_m = 0
+        else:
+            rru_plot_section = (
+                struct_p.get('plot_section')
+                or (structure_data.get('plot_section') if is_standalone_rru else None)
+                or 'TCAR 150x5'
+            )
+            rru_plot_longueur_m = (
+                struct_p.get('plot_h_m')
+                if struct_p.get('plot_h_m') is not None
+                else (structure_data.get('plot_h_m') if is_standalone_rru and structure_data.get('plot_h_m') is not None else 0.5)
+            )
+
+        rru_wind = _resolve_support_wind_params(wind_p, context, env, vb, rru_plot_longueur_m, rru_mat_longueur_m)
+        rru_qp_z = rru_wind['qp_z']
+
+        # Re-extract items if worker wind_p didn't provide qp_dan but rru_wind calculated one
+        if (not wind_p.get('qp_dan')) and rru_qp_z and rru_qp_z != '[qp]':
+            try:
+                rru_qp_num = float(rru_qp_z)
+                if rru_qp_num > 0 and rru_qp_num != qp_val:
+                    rru_ctx = extract_rru_ndc_context(res_data, input_data=input_data, qp_val=rru_qp_num)
+                    items = rru_ctx['items']
+                    totals = rru_ctx['totals']
+                    first_item = items[0] if items else {}
+                    fw_front = totals.get('fw_front', fw_front)
+                    fw_lat = totals.get('fw_lat', fw_lat)
+            except (ValueError, TypeError):
+                pass
+
+        try:
+            rru_mat_longueur = int(float(rru_mat_longueur_m) * 1000)
+        except (ValueError, TypeError):
+            rru_mat_longueur = 1500
+
+        m_diam, m_ep = parse_dimensions(rru_mat_section)
+        try:
+            rru_mat_diam = m_diam or (int(float(struct_p.get('mast_d_m')) * 1000) if struct_p.get('mast_d_m') else '88')
+        except (ValueError, TypeError):
+            rru_mat_diam = '88'
+
+        try:
+            rru_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '2.5')
+        except (ValueError, TypeError):
+            rru_mat_epaisseur = '2.5'
+
+        rru_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
+
+        try:
+            m_diam_m = float(struct_p.get('mast_d_m') or (float(rru_mat_diam) / 1000.0 if rru_mat_diam and str(rru_mat_diam).replace('.', '').isdigit() else 0.088))
+        except (ValueError, TypeError):
+            m_diam_m = 0.088
+
+        if wind_p.get('fw_mast') is not None:
+            fw_mat = wind_p.get('fw_mast')
+        else:
+            try:
+                fw_mat = round(1.0 * float(rru_cf_mat) * m_diam_m * float(rru_qp_z or context.get('qp_z', 0)), 2)
+            except (ValueError, TypeError):
+                fw_mat = '[Fw,Mat]'
+
+        rru_files = res_data.get('rru_files') if isinstance(res_data.get('rru_files'), dict) else {}
+
+        rru_screenshot_abs = _first_existing_path([
+            rru_files.get('rru_screenshot'),
+            rru_files.get('screenshot'),
+            res_data.get('rru_screenshot_path'),
+            worker_rru.get('screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_rru', f'job_{job.id}_rru_3d_view.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_rru', f'job_{job.id}_rru_3d_view.png') if job else None,
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_3d_view.jpg" if job else None,
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_3d_view.png" if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rru_3d_view.jpg') if job else None,
+        ])
+
+        rru_tableau_charges_abs = _first_existing_path([
+            rru_files.get('rru_tableau_charges'),
+            rru_files.get('tableau_charges'),
+            res_data.get('rru_tableau_charges_path'),
+            worker_rru.get('tableau_charges_path'),
+            os.path.join(settings.MEDIA_ROOT, 'charges_rru', f'job_{job.id}_rru_tableau_charges.png') if job else None,
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_tableau_charges.png" if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rru_tableau_charges.png') if job else None,
+        ])
+        rru_tableau_charges_abs = _crop_tableau_charges_image(rru_tableau_charges_abs)
+
+        rru_verification_screenshot_abs = _first_existing_path([
+            rru_files.get('rru_verification_screenshot'),
+            rru_files.get('verification_screenshot'),
+            res_data.get('rru_verification_screenshot_path'),
+            worker_rru.get('verification_screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'verif_rru', f'job_{job.id}_rru_verification.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'verif_rru', f'job_{job.id}_rru_verification.png') if job else None,
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_verification.jpg" if job else None,
+            f"/home/mahdi/worker_share/screenshots/job_{job.id}_rru_verification.png" if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rru_verification.jpg') if job else None,
+        ])
+
+        rru_paths = find_job_rru_rtf_paths(job)
+        rru_convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rru')
+        job_id_lbl = job.id if job else 'preview'
+        rru_note_mat_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rru_note_mat", rru_paths.get('note_mat'), rru_convert_dir)
+        rru_note_plot_images = [] if rru_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_rru_note_plot", rru_paths.get('note_plot'), rru_convert_dir)
+        rru_assemblage_images = [] if rru_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_rru_assemblage", rru_paths.get('assemblage_note'), rru_convert_dir, is_assemblage=True)
 
         generated_pdfs.append(_render_and_save('rru', {
-            'eq_qty': qty,
+            'region': rru_wind['region'],
+            'terrain_type': rru_wind['terrain_type'],
+            'building_height': rru_wind['building_height'],
+            'vb_m_s': rru_wind['vb_m_s'],
+            'cr_z': rru_wind['cr_z'],
+            'vm_z': rru_wind['vm_z'],
+            'iv_z': rru_wind['iv_z'],
+            'kr_z': rru_wind['kr_z'],
+            'qp_z': rru_qp_z,
+            'eq_qty': qty_total,
+            'rru_name': first_item.get('name', 'RRU'),
             'eq_dims': eq_dims,
             'eq_weight': eq_weight,
             'cx_front': cx_front,
             'cx_lat': cx_lat,
             'fw_front': fw_front,
             'fw_lat': fw_lat,
-            'fw_mat': fw_mat
+            'fw_mat': fw_mat,
+            'extremes': extremes,
+            'rru_sans_plot': rru_sans_plot,
+            'rru_mat_section': rru_mat_section,
+            'rru_mat_diam': rru_mat_diam,
+            'rru_mat_epaisseur': rru_mat_epaisseur,
+            'rru_mat_longueur': rru_mat_longueur,
+            'rru_mat_longueur_m': rru_mat_longueur_m,
+            'rru_plot_section': rru_plot_section,
+            'rru_plot_longueur_m': rru_plot_longueur_m,
+            'rru_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
+            'rru_cf_mat': rru_cf_mat,
+            'rru_screenshot_abs': rru_screenshot_abs,
+            'rru_tableau_charges_abs': rru_tableau_charges_abs,
+            'rru_verification_screenshot_abs': rru_verification_screenshot_abs,
+            'rru_note_mat_images': rru_note_mat_images,
+            'rru_note_plot_images': rru_note_plot_images,
+            'rru_assemblage_images': rru_assemblage_images,
+            'rru_items': items,
+            'rru_totals': totals,
+            'rru_is_multi': is_multi,
+            'rru_qty_total': qty_total,
         }))
 
     return generated_pdfs

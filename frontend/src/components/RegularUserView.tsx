@@ -14,6 +14,7 @@ export interface EquipmentItem {
 }
 
 import { useCatalogueConfig } from '../hooks/useCatalogueConfig';
+import { useAppStore } from '../stores/useAppStore';
 const TerrainMap = lazy(() => import('./TerrainMap'));
 import type { GeocodingAddress } from '../utils/types';
 import { useGeocoding } from '../hooks/useGeocoding';
@@ -44,7 +45,7 @@ interface RegularUserViewProps {
   apiBaseUrl: string;
   initialMontage?: string | null;
   initialSiteType?: 'nouveau' | 'existant' | null;
-  initialFoundationType?: 'metallique' | 'beton' | 'encastre' | null;
+  initialFoundationType?: 'metallique' | 'beton' | 'encastre' | 'dallettes' | null;
   onResetMontage?: () => void;
   token: string;
   userEmail: string;
@@ -66,8 +67,13 @@ export default function RegularUserView({
   const { config, loading: configLoading } = useCatalogueConfig(apiBaseUrl);
   const { reverseGeocode } = useGeocoding();
 
+  const setSelectedFoundationType = useAppStore((state) => state.setSelectedFoundationType);
+
   // Core State
-  const [project, setProject] = useState<ProjectData>(defaultProjectData);
+  const [project, setProject] = useState<ProjectData>(() => ({
+    ...defaultProjectData,
+    foundationType: (initialFoundationType as any) || 'metallique',
+  }));
   const {
     siteName,
     clientName,
@@ -81,16 +87,29 @@ export default function RegularUserView({
     hasChauffageAuSol,
     fausseDalleThickness,
     selectedEchelle,
+    foundationType = 'metallique',
   } = project;
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isInfoConfirmed, setIsInfoConfirmed] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (initialFoundationType && !project.foundationType) {
+      setProject(prev => ({ ...prev, foundationType: initialFoundationType }));
+    }
+  }, [initialFoundationType]);
+
+  useEffect(() => {
+    if (foundationType) {
+      setSelectedFoundationType(foundationType);
+    }
+  }, [foundationType, setSelectedFoundationType]);
+
   const siteType = initialSiteType || 'nouveau';
-  const foundationType = initialFoundationType || 'metallique';
-  const ancrageInfo = initialFoundationType === 'metallique' ? 'Fixation sur plot métallique' :
-    initialFoundationType === 'beton' ? 'Fixation sur plot béton' :
-      initialFoundationType === 'encastre' ? 'Mât encastré' :
-        'Fixation sur plot métallique';
+  const ancrageInfo = foundationType === 'metallique' ? 'Fixation sur plot métallique' :
+    foundationType === 'beton' ? 'Fixation sur plot béton' :
+      foundationType === 'dallettes' ? 'Fixation sur dallettes' :
+        foundationType === 'encastre' ? 'Mât encastré' :
+          'Fixation sur plot métallique';
 
   const [zoneTechnique, setZoneTechnique] = useState<ZoneTechniqueData>(defaultZoneTechniqueData);
   const {
@@ -440,7 +459,7 @@ export default function RegularUserView({
                 setActiveStep={setActiveStep}
                 isCompleted={!!siteName || !!clientName}
                 disabled={!selectedCoords || !!pendingGenericAddress}
-                summary={`Site: ${siteName || 'N/A'} | Client: ${clientName || 'N/A'}`}
+                summary={`Site: ${siteName || 'N/A'} | Client: ${clientName || 'N/A'} | Ancrage: ${foundationType === 'metallique' ? 'Plot Métallique' : foundationType === 'beton' ? 'Plot Béton' : foundationType === 'dallettes' ? 'Dallettes' : 'Encastré'}`}
                 hideContinue={foundationType !== 'encastre' && (dalleThickness === '' || Number(dalleThickness) < 12 || Number(dalleThickness) > 35 || etancheite === '')}
               >
                 <UserInput

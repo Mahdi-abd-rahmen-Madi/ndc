@@ -164,7 +164,7 @@ export const generateAndDownloadPdf = (options: PdfGeneratorOptions, setPdfGener
     doc.setFontSize(10);
     const siteDetails = [
       `Type de site: ${siteType === 'nouveau' ? 'Site Neuf' : 'Site Existant'}`,
-      `Type de fondation: ${foundationType === 'metallique' ? 'Plot Métallique' : foundationType === 'beton' ? 'Plot Béton' : foundationType === 'encastre' ? 'Encastré' : 'N/A'}`,
+      `Type de fondation: ${foundationType === 'metallique' ? 'Plot Métallique' : foundationType === 'beton' ? 'Plot Béton' : foundationType === 'dallettes' ? 'Dallettes' : foundationType === 'encastre' ? 'Encastré' : 'N/A'}`,
       `Type d'ancrage: ${ancrageInfo}`
     ];
     if (selectedAddress?.name) siteDetails.push(`Adresse: ${selectedAddress.name}`);

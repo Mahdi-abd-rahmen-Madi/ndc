@@ -230,6 +230,13 @@ function RightPreviewPanel({
                 </div>
 
                 <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Ancrage</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
+                    {foundationType === 'metallique' ? 'Plot Métallique' : foundationType === 'beton' ? 'Plot Béton' : foundationType === 'dallettes' ? 'Dallettes' : 'Encastré'}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
                   <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hauteur Bâtiment</span>
                   <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
                     {buildingHeight !== '' ? `${buildingHeight} m` : <span className="text-slate-400 italic font-normal">À renseigner</span>}

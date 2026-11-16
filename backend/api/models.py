@@ -86,6 +86,7 @@ class CalculationJob(models.Model):
     CALC_TYPES = [
         ("antenna", "Antenne (Base)"),
         ("rrh", "RRH"),
+        ("rru", "RRU"),
         ("parabole", "Parabole"),
         ("coffret", "Coffret"),
     ]

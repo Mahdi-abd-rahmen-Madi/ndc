@@ -329,34 +329,75 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         if 'reactions_file' in files:
             job.reactions_file = files['reactions_file']
 
-        # 2. RRH Support Files (Accepts both primary and alias keys)
-        rrh_ndc = files.get("note_de_calcul_rrh") or files.get("rrh_note_de_calcul")
-        if rrh_ndc:
-            job.note_de_calcul_rrh = rrh_ndc
+        is_rru_job = bool(result_data.get("has_rru")) and not bool(result_data.get("has_rrh"))
 
-        note_mat = files.get("note_mat") or files.get("rrh_note_mat")
-        if note_mat:
-            job.note_mat = note_mat
+        # 2. RRU Support Files (Strictly separated from RRH)
+        def _save_rru_uploaded_file(file_obj, subdir, filename):
+            target_dir = os.path.join(settings.MEDIA_ROOT, subdir)
+            os.makedirs(target_dir, exist_ok=True)
+            target_path = os.path.join(target_dir, filename)
+            with open(target_path, 'wb+') as dest:
+                for chunk in file_obj.chunks():
+                    dest.write(chunk)
+            return target_path
 
-        note_plot = files.get("note_plot") or files.get("rrh_note_plot")
-        if note_plot:
-            job.note_plot = note_plot
+        rru_files_saved = {}
+        rru_ndc = files.get("note_de_calcul_rru") or files.get("rru_note_de_calcul")
+        if rru_ndc:
+            ext = os.path.splitext(rru_ndc.name)[1] or ".rtf"
+            rru_files_saved["note_de_calcul"] = _save_rru_uploaded_file(rru_ndc, "notes_rru", f"job_{job.id}_rru_note_de_calcul{ext}")
 
-        if 'rrh_assemblage_note' in files:
-            job.rrh_assemblage_note = files['rrh_assemblage_note']
+        if 'rru_note_mat' in files:
+            rru_files_saved["note_mat"] = _save_rru_uploaded_file(files['rru_note_mat'], "notes_rru", f"job_{job.id}_rru_note_mat.rtf")
+        if 'rru_note_plot' in files:
+            rru_files_saved["note_plot"] = _save_rru_uploaded_file(files['rru_note_plot'], "notes_rru", f"job_{job.id}_rru_note_plot.rtf")
+        if 'rru_assemblage_note' in files:
+            rru_files_saved["assemblage_note"] = _save_rru_uploaded_file(files['rru_assemblage_note'], "notes_rru", f"job_{job.id}_rru_assemblage_note.rtf")
+        if 'rru_verification_screenshot' in files:
+            rru_files_saved["rru_verification_screenshot"] = _save_rru_uploaded_file(files['rru_verification_screenshot'], "verif_rru", f"job_{job.id}_rru_verification.jpg")
+        if 'rru_tableau_charges' in files:
+            rru_files_saved["rru_tableau_charges"] = _save_rru_uploaded_file(files['rru_tableau_charges'], "charges_rru", f"job_{job.id}_rru_tableau_charges.png")
+        if 'rru_reactions_file' in files:
+            rru_files_saved["rru_reactions_file"] = _save_rru_uploaded_file(files['rru_reactions_file'], "reactions_rru", f"job_{job.id}_rru_reactions.txt")
+        if 'rru_screenshot' in files:
+            rru_files_saved["rru_screenshot"] = _save_rru_uploaded_file(files['rru_screenshot'], "screenshots_rru", f"job_{job.id}_rru_3d_view.jpg")
 
-        if 'rrh_verification_screenshot' in files:
-            job.rrh_verification_screenshot = files['rrh_verification_screenshot']
+        if rru_files_saved:
+            if not isinstance(job.result_data, dict):
+                job.result_data = {}
+            existing_rru_files = job.result_data.get("rru_files") if isinstance(job.result_data.get("rru_files"), dict) else {}
+            existing_rru_files.update(rru_files_saved)
+            job.result_data["rru_files"] = existing_rru_files
 
-        charges_img = files.get("rrh_tableau_charges") or files.get("loads_table")
-        if charges_img:
-            job.rrh_tableau_charges = charges_img
+        # 3. RRH Support Files (Accepts both primary and alias keys, guarded against RRU jobs)
+        if not is_rru_job:
+            rrh_ndc = files.get("note_de_calcul_rrh") or files.get("rrh_note_de_calcul")
+            if rrh_ndc:
+                job.note_de_calcul_rrh = rrh_ndc
 
-        if 'rrh_reactions_file' in files:
-            job.rrh_reactions_file = files['rrh_reactions_file']
+            note_mat = files.get("note_mat") or files.get("rrh_note_mat")
+            if note_mat and "_rru_" not in (getattr(note_mat, "name", "") or "").lower():
+                job.note_mat = note_mat
 
-        if 'rrh_screenshot' in files:
-            job.rrh_screenshot = files['rrh_screenshot']
+            note_plot = files.get("note_plot") or files.get("rrh_note_plot")
+            if note_plot and "_rru_" not in (getattr(note_plot, "name", "") or "").lower():
+                job.note_plot = note_plot
+
+            if 'rrh_assemblage_note' in files:
+                job.rrh_assemblage_note = files['rrh_assemblage_note']
+
+            if 'rrh_verification_screenshot' in files:
+                job.rrh_verification_screenshot = files['rrh_verification_screenshot']
+
+            charges_img = files.get("rrh_tableau_charges") or files.get("loads_table")
+            if charges_img:
+                job.rrh_tableau_charges = charges_img
+
+            if 'rrh_reactions_file' in files:
+                job.rrh_reactions_file = files['rrh_reactions_file']
+
+            if 'rrh_screenshot' in files:
+                job.rrh_screenshot = files['rrh_screenshot']
 
         # Manage user quota if completed
         if job_status == 'COMPLETED':

@@ -446,14 +446,9 @@ function MainApp({ initialMode, token, userEmail, isAdmin, onLoginSuccess, onLog
         show={showMontageModal}
         onClose={() => setShowMontageModal(false)}
         selectedSiteType={selectedSiteType}
-        selectedFoundationType={selectedFoundationType}
         onSiteTypeSelect={(type) => {
           setSelectedSiteType(type);
-          if (selectedFoundationType !== 'metallique' && selectedFoundationType !== null) {
-            setSelectedFoundationType('metallique');
-          }
         }}
-        onFoundationTypeSelect={setSelectedFoundationType}
         onCasSelect={(cas) => setSelectedCivilMontage(cas)}
       />
     </div>

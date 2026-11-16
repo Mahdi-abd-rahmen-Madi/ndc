@@ -74,13 +74,14 @@ class GeneratedSiteNdcSerializer(serializers.ModelSerializer):
 
 class SiteSerializer(serializers.Serializer):
     type = serializers.ChoiceField(choices=['nouveau', 'existant'], required=False, allow_null=True)
-    ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'encastre'], required=False, allow_null=True)
+    ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'encastre', 'dallettes'], required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     code_site = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     ref_site = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     client_logo_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    operator = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     latitude = serializers.FloatField(required=False, allow_null=True)
     longitude = serializers.FloatField(required=False, allow_null=True)
 
@@ -95,6 +96,8 @@ class EnvironmentSerializer(serializers.Serializer):
 class StructureSerializer(serializers.Serializer):
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     hauteur_plot_m = serializers.FloatField(required=False, allow_null=True)
+    plot_h_m = serializers.FloatField(required=False, allow_null=True)
+    sans_plot = serializers.BooleanField(required=False, default=False)
     montage_id = serializers.CharField(required=False, allow_blank=True, allow_null=True, default='')
     is_custom_montage = serializers.BooleanField(default=False, required=False)
     mat_principal = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -132,6 +135,7 @@ class FHEquipmentSerializer(serializers.Serializer):
 class EquipmentPayloadSerializer(serializers.Serializer):
     model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     quantite = serializers.IntegerField(required=False, allow_null=True, default=1)
+    qty = serializers.IntegerField(required=False, allow_null=True)
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     poids_kg = serializers.FloatField(required=False, allow_null=True)
     hauteur_mm = serializers.FloatField(required=False, allow_null=True)
@@ -144,6 +148,7 @@ class RRHEquipmentSerializer(serializers.Serializer):
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
+    sans_plot = serializers.BooleanField(required=False, default=False)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class CatalogueMatchSerializer(serializers.Serializer):
@@ -155,6 +160,9 @@ class CalculationPayloadSerializer(serializers.Serializer):
     schema_version = serializers.CharField(default="1.0", required=False)
     client_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     is_rrh = serializers.BooleanField(required=False, default=False)
+    is_rru = serializers.BooleanField(required=False, default=False)
+    sans_plot = serializers.BooleanField(required=False, default=False)
+    operateur = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     calculation_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     force_recalculate = serializers.BooleanField(required=False, default=False)
 

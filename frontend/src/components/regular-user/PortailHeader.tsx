@@ -61,7 +61,8 @@ export function PortailHeader({
             <span className="font-semibold text-slate-900">
               {foundationType === 'metallique' ? 'Plot Métallique' :
                 foundationType === 'beton' ? 'Plot Béton' :
-                  foundationType === 'encastre' ? 'Encastré' : foundationType}
+                  foundationType === 'dallettes' ? 'Dallettes' :
+                    foundationType === 'encastre' ? 'Encastré' : foundationType}
             </span>
           </div>
           {onResetMontage && (
