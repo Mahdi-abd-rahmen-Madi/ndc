@@ -374,17 +374,17 @@ export default function RegularUserView({
         <div className="w-full lg:w-1/2 flex flex-col bg-slate-50/70 border-r border-slate-200 shadow-sm z-10 shrink-0">
           <div className="flex-1 overflow-y-auto p-4 sm:p-5 pb-64 custom-scrollbar">
             {/* Stepper Progress Bar */}
-            <div className="mb-5 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+            <div className="mb-5 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
+              <div className="flex items-center justify-between text-xs mb-3">
+                <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-violet-600" />
                   Progression du Projet
                 </span>
-                <span className="font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md border border-violet-100">
+                <span className="font-bold text-violet-700 bg-violet-50/90 px-2.5 py-0.5 rounded-full border border-violet-200/80 shadow-2xs">
                   Étape {activeStep} sur 4
                 </span>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2.5">
                 {[
                   { num: 1, label: 'Localisation' },
                   { num: 2, label: 'Projet' },
@@ -392,26 +392,48 @@ export default function RegularUserView({
                   { num: 4, label: 'Zone Technique' }
                 ].map((s) => {
                   const isStepLocked = s.num > 1 && (!selectedCoords || !!pendingGenericAddress);
+                  const isCurrent = s.num === activeStep;
+                  const isCompleted = s.num < activeStep && !isStepLocked;
+
                   return (
-                    <div key={s.num} className="flex flex-col gap-1">
-                      <div
-                        className={`h-1.5 rounded-full transition-all duration-300 ${isStepLocked
-                          ? 'bg-slate-200/80 opacity-60'
-                          : s.num < activeStep
-                            ? 'bg-emerald-500'
-                            : s.num === activeStep
-                              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-xs'
-                              : 'bg-slate-200'
+                    <div key={s.num} className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition-all ${
+                            isCompleted
+                              ? 'bg-emerald-500 text-white shadow-2xs'
+                              : isCurrent
+                                ? 'bg-violet-600 text-white ring-2 ring-violet-200 shadow-2xs'
+                                : isStepLocked
+                                  ? 'bg-slate-200 text-slate-400'
+                                  : 'bg-slate-300 text-slate-600'
                           }`}
-                      />
-                      <span className={`text-[10px] text-center truncate ${isStepLocked
-                        ? 'text-slate-300'
-                        : s.num === activeStep
-                          ? 'font-bold text-violet-700'
-                          : s.num < activeStep
-                            ? 'font-medium text-emerald-700'
-                            : 'text-slate-400'
-                        }`}>
+                        >
+                          {isCompleted ? '✓' : s.num}
+                        </div>
+                        <div
+                          className={`h-2 flex-1 rounded-full transition-all duration-300 ${
+                            isStepLocked
+                              ? 'bg-slate-100'
+                              : isCompleted
+                                ? 'bg-emerald-500'
+                                : isCurrent
+                                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-2xs'
+                                  : 'bg-slate-200'
+                          }`}
+                        />
+                      </div>
+                      <span
+                        className={`text-[11px] truncate transition-colors ${
+                          isStepLocked
+                            ? 'text-slate-400 font-normal'
+                            : isCurrent
+                              ? 'font-bold text-violet-900'
+                              : isCompleted
+                                ? 'font-semibold text-emerald-800'
+                                : 'font-medium text-slate-600'
+                        }`}
+                      >
                         {s.label}
                       </span>
                     </div>
@@ -706,9 +728,11 @@ export default function RegularUserView({
                   </span>
                 </div>
               )}
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-lg border border-slate-200/90 text-xs text-slate-700 whitespace-nowrap">
-                <MapPin className="w-4 h-4 text-violet-600 animate-bounce shrink-0" />
-                <span className="font-semibold">
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl border border-slate-200 text-xs text-slate-800 whitespace-nowrap ring-1 ring-black/5">
+                <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                  <MapPin className="w-3.5 h-3.5 text-violet-700 animate-bounce" />
+                </div>
+                <span className="font-bold">
                   {pendingGenericAddress
                     ? "Cliquez sur la carte pour définir l'emplacement exact du site"
                     : "Cliquez n'importe où sur la carte pour positionner le site"}
@@ -716,7 +740,7 @@ export default function RegularUserView({
                 {selectedCoords && (
                   <button
                     onClick={() => setShowMap(false)}
-                    className="ml-2 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-semibold transition-colors shadow-2xs"
+                    className="ml-1 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold transition-colors shadow-2xs cursor-pointer text-[11px]"
                   >
                     Fermer la carte
                   </button>
@@ -748,7 +772,9 @@ export default function RegularUserView({
             project={project}
             foundationType={foundationType}
             isStep2Complete={isStep2Complete}
+            isStep3Complete={isStep3Complete}
             missingRequirements={missingRequirements}
+            missingStep3Equipments={missingStep3Equipments}
             nombreSecteurs={nombreSecteurs}
             sectors={sectors}
             activeSectors={activeSectors}

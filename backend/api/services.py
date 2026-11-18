@@ -107,9 +107,12 @@ def _populate_rrh_docx(doc, ctx):
     Populates NDC RRH-1.docx tables and paragraphs with pre-computed values from context.
     Omits TOTAL RRH lines per user directive.
     """
+    from geodata.ndc_generator import clean_equipment_designation
+
     items = ctx.get("items", [])
     wind = ctx.get("wind", {})
     structure = ctx.get("structure", {})
+    is_sans_plot = bool(ctx.get("is_sans_plot") or structure.get("sans_plot"))
 
     # 1. Populate Table 0 ("Équipements considérés")
     if doc.tables:
@@ -119,7 +122,7 @@ def _populate_rrh_docx(doc, ctx):
                 row = table0.rows[1]
             else:
                 row = table0.add_row()
-            row.cells[0].text = str(item.get("name", "RRH"))
+            row.cells[0].text = clean_equipment_designation(str(item.get("name", "RRH")))
             row.cells[1].text = str(item.get("qty", 1))
             row.cells[2].text = str(item.get("dimensions_str") or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {item.get('t_mm', 0):g}")
             row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
@@ -137,10 +140,15 @@ def _populate_rrh_docx(doc, ctx):
             table1.rows[1].cells[0].text = str(mast_sec)
             table1.rows[1].cells[1].text = f"{float(mast_h):g}"
             table1.rows[1].cells[2].text = "Mat principal"
-        if len(table1.rows) > 2:
-            table1.rows[2].cells[0].text = str(plot_sec)
-            table1.rows[2].cells[1].text = f"{float(plot_h):g}"
-            table1.rows[2].cells[2].text = "Plot"
+        if is_sans_plot:
+            if len(table1.rows) > 2:
+                tr = table1.rows[2]._tr
+                tr.getparent().remove(tr)
+        else:
+            if len(table1.rows) > 2:
+                table1.rows[2].cells[0].text = str(plot_sec)
+                table1.rows[2].cells[1].text = f"{float(plot_h):g}"
+                table1.rows[2].cells[2].text = "Plot"
 
     # 3. Wind variables
     region = wind.get("region", 2)
@@ -229,6 +237,8 @@ def _populate_rru_docx(doc, ctx):
     structure = ctx.get("structure", {})
     is_sans_plot = bool(ctx.get("is_sans_plot", False))
 
+    from geodata.ndc_generator import clean_equipment_designation
+
     # 1. Populate Table 0 ("Équipements considérés")
     if doc.tables:
         table0 = doc.tables[0]
@@ -237,7 +247,7 @@ def _populate_rru_docx(doc, ctx):
                 row = table0.rows[1]
             else:
                 row = table0.add_row()
-            row.cells[0].text = str(item.get("name", "RRU"))
+            row.cells[0].text = clean_equipment_designation(str(item.get("name", "RRU")))
             row.cells[1].text = str(item.get("qty", 1))
             row.cells[2].text = str(item.get("dimensions_str") or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {item.get('d_mm', 0):g}")
             row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
@@ -248,16 +258,21 @@ def _populate_rru_docx(doc, ctx):
         table1 = doc.tables[1]
         mast_sec = structure.get("mast_section") or "TRON 88x2.5"
         mast_h = structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5
-        plot_sec = "Sans plot" if is_sans_plot else (structure.get("plot_section") or "TCAR 150x5")
-        plot_h = 0 if is_sans_plot else (structure.get("plot_h_m") if structure.get("plot_h_m") is not None else 0.5)
+        plot_sec = structure.get("plot_section") or "TCAR 150x5"
+        plot_h = structure.get("plot_h_m") if structure.get("plot_h_m") is not None else 0.5
         if len(table1.rows) > 1:
             table1.rows[1].cells[0].text = str(mast_sec)
             table1.rows[1].cells[1].text = f"{float(mast_h):g}"
             table1.rows[1].cells[2].text = "Mat principal"
-        if len(table1.rows) > 2:
-            table1.rows[2].cells[0].text = str(plot_sec)
-            table1.rows[2].cells[1].text = f"{float(plot_h):g}"
-            table1.rows[2].cells[2].text = "Plot"
+        if is_sans_plot:
+            if len(table1.rows) > 2:
+                tr = table1.rows[2]._tr
+                tr.getparent().remove(tr)
+        else:
+            if len(table1.rows) > 2:
+                table1.rows[2].cells[0].text = str(plot_sec)
+                table1.rows[2].cells[1].text = f"{float(plot_h):g}"
+                table1.rows[2].cells[2].text = "Plot"
 
     # 3. Wind variables
     region = wind.get("region", 2)
@@ -317,6 +332,148 @@ def _populate_rru_docx(doc, ctx):
             break
 
 
+def validate_calculation_artifacts(job, files=None) -> list:
+    """
+    Hardened validator ensuring all strictly required artifacts exist for a calculation job.
+    Returns a list of missing artifact descriptions.
+    If the returned list is empty, the calculation artifacts are 100% complete.
+    """
+    if not job:
+        return ["Données du job introuvables"]
+
+    files = files or {}
+    missing = []
+
+    calc_type = getattr(job, 'calculation_type', 'antenna') or 'antenna'
+    input_data = job.input_data if isinstance(getattr(job, 'input_data', None), dict) else {}
+    result_data = job.result_data if isinstance(getattr(job, 'result_data', None), dict) else {}
+
+    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru)
+    is_pure_rrh = (calc_type == 'rrh')
+    is_pure_rru = (calc_type == 'rru')
+
+    if not is_pure_rrh and not is_pure_rru:
+        # 3D view
+        has_3d = bool(
+            getattr(job, 'screenshot', None)
+            or files.get('screenshot')
+            or files.get('antenna_screenshot')
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_3d_view.jpg'))
+        )
+        if not has_3d:
+            missing.append("Capture 3D antenne (page 4)")
+
+        # Member Verification table (Robot steel verification ELU/ELS)
+        has_verif = bool(
+            getattr(job, 'verification_screenshot', None)
+            or files.get('verification_screenshot')
+            or files.get('antenna_verification_screenshot')
+            or files.get('verification_view')
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', f'job_{job.id}_verification.jpg'))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_verification.jpg'))
+        )
+        if not has_verif:
+            missing.append("Capture de vérification Robot ELU/ELS (page 7)")
+
+        # Member Calculation Note (RTF)
+        from geodata.ndc_generator import find_job_note_de_calcul_path
+        ndc_path = find_job_note_de_calcul_path(job)
+        has_ndc = bool(
+            ndc_path
+            or getattr(job, 'note_de_calcul', None)
+            or files.get('note_de_calcul')
+            or files.get('antenna_note_de_calcul')
+            or files.get('antenna_note_mat')
+        )
+        if not has_ndc:
+            missing.append("Note de calcul RTF du mât principal (page 8)")
+
+        # Assemblage Note (RTF)
+        from geodata.ndc_generator import find_job_assemblage_note_path
+        ass_path = find_job_assemblage_note_path(job)
+        has_assemblage = bool(
+            ass_path
+            or getattr(job, 'assemblage_note', None)
+            or files.get('assemblage_note')
+            or files.get('antenna_assemblage_note')
+        )
+        if not has_assemblage:
+            missing.append("Note de calcul d'assemblage Robot (page 9+)")
+
+    # 2. RRH Verification (if RRH is enabled or calculation_type is rrh / antenna_with_rrh)
+    has_rrh = (
+        calc_type in ['rrh', 'antenna_with_rrh', 'antenna_with_rrh_sans_plot']
+        or bool(input_data.get('rrh_equipment', {}).get('enabled'))
+        or bool(result_data.get('has_rrh'))
+    )
+    if has_rrh:
+        from geodata.ndc_generator import find_job_rrh_rtf_paths
+        rrh_paths = find_job_rrh_rtf_paths(job)
+
+        has_rrh_3d = bool(
+            getattr(job, 'rrh_screenshot', None)
+            or files.get('rrh_screenshot')
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg'))
+        )
+        if not has_rrh_3d:
+            missing.append("Capture 3D modélisation RRH (page 14)")
+
+        has_rrh_verif = bool(
+            getattr(job, 'rrh_verification_screenshot', None)
+            or files.get('rrh_verification_screenshot')
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg'))
+        )
+        if not has_rrh_verif:
+            missing.append("Capture de vérification Robot RRH (page 16)")
+
+        has_rrh_mat = bool(
+            rrh_paths.get('note_mat')
+            or getattr(job, 'note_de_calcul_rrh', None)
+            or getattr(job, 'note_mat', None)
+            or files.get('note_de_calcul_rrh')
+            or files.get('rrh_note_de_calcul')
+            or files.get('rrh_note_mat')
+        )
+        if not has_rrh_mat:
+            missing.append("Note de calcul RTF du mât RRH (page 17)")
+
+        has_rrh_charges = bool(
+            getattr(job, 'rrh_tableau_charges', None)
+            or files.get('rrh_tableau_charges')
+            or files.get('loads_table')
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png'))
+        )
+        if not has_rrh_charges:
+            missing.append("Tableau des charges RRH (page 15)")
+
+        # Determine if RRH is sans_plot (cantilever 1-bar mast without plot/TCAR)
+        rrh_sub = result_data.get("rrh") if isinstance(result_data.get("rrh"), dict) else {}
+        calc_type_str = str(result_data.get("calculation_type") or calc_type).lower()
+        is_rrh_sans_plot = bool(
+            result_data.get("rrh_sans_plot")
+            or result_data.get("sans_plot")
+            or rrh_sub.get("sans_plot")
+            or input_data.get("rrh_sans_plot")
+            or input_data.get("sans_plot")
+            or "sans_plot" in calc_type_str
+        )
+
+        # Only require rrh_assemblage_note (page 21+) when WITH plot:
+        if not is_rrh_sans_plot:
+            has_rrh_ass = bool(
+                rrh_paths.get('assemblage_note')
+                or getattr(job, 'rrh_assemblage_note', None)
+                or files.get('rrh_assemblage_note')
+                or files.get('note_assemblage_rrh')
+                or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_rrh_assemblage_note.rtf'))
+                or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_rrh_assemblage_note.rtf'))
+            )
+            if not has_rrh_ass:
+                missing.append("Note d'assemblage Robot RRH (page 21+)")
+
+    return missing
+
+
 def assemble_ndc_document(calculation_id):
     """
     Assembles the final Note de Calcul document locally on the Django backend
@@ -326,6 +483,16 @@ def assemble_ndc_document(calculation_id):
         job = CalculationJob.objects.get(id=calculation_id)
     except CalculationJob.DoesNotExist:
         print(f"assemble_ndc_document: Job {calculation_id} not found.")
+        return
+
+    # Hardening: Validate artifacts before assembling
+    missing = validate_calculation_artifacts(job)
+    if missing:
+        print(f"[NDC HARDENING] Job {calculation_id} has missing artifacts ({', '.join(missing)}). Aborting compilation.")
+        if job.status == 'COMPLETED':
+            job.status = 'FAILED'
+            job.error_message = f"Calcul incomplet rejeté : artéfacts obligatoires manquants ({', '.join(missing)})."
+            job.save(update_fields=['status', 'error_message'])
         return
 
     if job.calculation_type == "rrh":

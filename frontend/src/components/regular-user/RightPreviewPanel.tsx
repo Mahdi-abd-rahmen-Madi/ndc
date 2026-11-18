@@ -1,7 +1,8 @@
 import React from 'react';
 import {
   MapPin, Map as MapIcon, Building2, CheckCircle2, ArrowRight,
-  Sparkles, Radio, Server, AlertCircle, Loader2, FileText, Eye, Settings, RefreshCw
+  Sparkles, Radio, Server, AlertCircle, Loader2, FileText, Eye, Settings, RefreshCw,
+  Camera, Layers, ShieldCheck, Ruler, UserCheck, Hash, Check
 } from 'lucide-react';
 import ResultsPanel from './ResultsPanel';
 import type {
@@ -23,7 +24,9 @@ export interface RightPreviewPanelProps {
   project: ProjectData;
   foundationType: string;
   isStep2Complete: boolean;
+  isStep3Complete?: boolean;
   missingRequirements: string[];
+  missingStep3Equipments?: string[];
   nombreSecteurs: number;
   sectors: SectorData[];
   activeSectors: SectorData[];
@@ -63,7 +66,9 @@ function RightPreviewPanel({
   project,
   foundationType,
   isStep2Complete,
+  isStep3Complete = false,
   missingRequirements,
+  missingStep3Equipments = [],
   nombreSecteurs,
   sectors,
   activeSectors,
@@ -179,145 +184,456 @@ function RightPreviewPanel({
 
       {selectedCoords && (!sectors[0].selectedMontage4G || !sectors[0].selectedMontage5G) && (
         activeStep === 2 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 w-full max-w-2xl mx-auto animate-fadeIn relative z-10">
-            <div className="w-full bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-200/50 p-6 sm:p-8 relative overflow-hidden">
-              {/* Top accent gradient bar */}
-              <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600"></div>
-
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-violet-500/25 shrink-0">
-                  <Building2 className="w-7 h-7" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[11px] font-bold text-violet-700 bg-violet-50 border border-violet-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+          <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 w-full max-w-3xl mx-auto animate-fadeIn relative z-10">
+            <div className="w-full bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-100 p-6 sm:p-8 relative overflow-hidden">
+              {/* Header with completion meter */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
                       Étape 2 sur 4
                     </span>
-                    <span className="text-xs text-slate-400 font-medium">Informations du Projet</span>
+                    <span className="text-xs text-slate-400 font-medium">Fiche Technique</span>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                    Paramètres & Données du Site
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    Données du Site & Bâtiment
                   </h3>
                 </div>
+
+                {/* Progress Ring / Percentage */}
+                {(() => {
+                  const totalFields = foundationType === 'encastre' ? 6 : 7;
+                  const filledCount = [
+                    !!siteName,
+                    !!clientName,
+                    !!buildingHeight,
+                    !!dalleThickness,
+                    foundationType !== 'encastre' ? !!etancheite : true,
+                    !!siteImageUrl,
+                    !!operator
+                  ].filter(Boolean).length;
+                  const percentage = Math.round((filledCount / totalFields) * 100);
+
+                  return (
+                    <div className="flex items-center gap-3 bg-slate-50 p-2.5 px-4 rounded-2xl border border-slate-200/80 shrink-0 self-start sm:self-auto">
+                      <div className="flex flex-col text-right">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Complétion</span>
+                        <span className="text-sm font-black text-slate-800">{filledCount} / {totalFields} champs</span>
+                      </div>
+                      <div className="w-10 h-10 rounded-full border-2 border-violet-200 bg-violet-50 flex items-center justify-center text-[11px] font-bold text-violet-700">
+                        {percentage}%
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
-              <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                Complétez les informations du site et ses paramètres structurels dans le panneau de gauche pour configurer votre note de calcul.
-              </p>
-
-              {/* Live summary grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Nom du site</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1" title={siteName || 'Non renseigné'}>
-                    {siteName || <span className="text-slate-400 italic font-normal">À renseigner</span>}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Client</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1" title={clientName || 'Non renseigné'}>
-                    {clientName || <span className="text-slate-400 italic font-normal">À renseigner</span>}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Opérateur</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                    {operator ? operator.toUpperCase() : 'BOUYGUES'}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Ancrage</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                    {foundationType === 'metallique' ? 'Plot Métallique' : foundationType === 'beton' ? 'Plot Béton' : foundationType === 'dallettes' ? 'Dallettes' : 'Encastré'}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hauteur Bâtiment</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                    {buildingHeight !== '' ? `${buildingHeight} m` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
-                  </span>
-                </div>
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Épaisseur Dalle</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                    {dalleThickness !== '' ? `${dalleThickness} cm` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
-                  </span>
-                </div>
-
-                {foundationType !== 'encastre' && (
-                  <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Étanchéité</span>
-                    <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                      {etancheite !== '' ? `${etancheite} cm` : <span className="text-slate-400 italic font-normal">À renseigner</span>}
-                    </span>
+              {/* Categorized Tiles Grid */}
+              <div className="space-y-4 mb-6">
+                {/* Category 1: Identification */}
+                <div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Identification du Projet
                   </div>
-                )}
-
-                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3 flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Photo du site</span>
-                  <span className="text-xs sm:text-sm font-bold text-slate-800 truncate mt-1">
-                    {siteImageUrl ? (
-                      <span className="text-emerald-600 flex items-center gap-1 font-semibold">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Chargée
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Nom du site */}
+                    <div className={`p-3 rounded-xl border transition-all ${
+                      siteName
+                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Nom du site</span>
+                        {!siteName && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">Requis</span>}
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold truncate block mt-1" title={siteName || 'Non renseigné'}>
+                        {siteName || <span className="text-slate-400 italic font-normal">À renseigner...</span>}
                       </span>
-                    ) : (
-                      <span className="text-slate-400 italic font-normal">À ajouter</span>
-                    )}
-                  </span>
+                    </div>
+
+                    {/* Client */}
+                    <div className={`p-3 rounded-xl border transition-all ${
+                      clientName
+                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Client</span>
+                        {!clientName && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">Requis</span>}
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold truncate block mt-1" title={clientName || 'Non renseigné'}>
+                        {clientName || <span className="text-slate-400 italic font-normal">À renseigner...</span>}
+                      </span>
+                    </div>
+
+                    {/* Opérateur */}
+                    <div className="p-3 rounded-xl border bg-slate-50/70 border-slate-200/70">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Opérateur</span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 truncate block mt-1">
+                        {operator ? operator.toUpperCase() : 'BOUYGUES'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category 2: Structure & Bâtiment */}
+                <div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Paramètres Techniques & Structure
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {/* Ancrage */}
+                    <div className="p-3 rounded-xl border bg-slate-50/70 border-slate-200/70">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Type Ancrage</span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 truncate block mt-1">
+                        {foundationType === 'metallique' ? 'Plot Métallique' : foundationType === 'beton' ? 'Plot Béton' : foundationType === 'dallettes' ? 'Dallettes' : 'Encastré'}
+                      </span>
+                    </div>
+
+                    {/* Hauteur Bâtiment */}
+                    <div className={`p-3 rounded-xl border transition-all ${
+                      buildingHeight !== ''
+                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Hauteur Bât.</span>
+                        {buildingHeight === '' && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold truncate block mt-1">
+                        {buildingHeight !== '' ? `${buildingHeight} m` : <span className="text-slate-400 italic font-normal">À renseigner...</span>}
+                      </span>
+                    </div>
+
+                    {/* Épaisseur Dalle */}
+                    <div className={`p-3 rounded-xl border transition-all ${
+                      dalleThickness !== ''
+                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Épaisseur Dalle</span>
+                        {dalleThickness === '' && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold truncate block mt-1">
+                        {dalleThickness !== '' ? `${dalleThickness} cm` : <span className="text-slate-400 italic font-normal">À renseigner...</span>}
+                      </span>
+                    </div>
+
+                    {/* Étanchéité (si non encastré) */}
+                    {foundationType !== 'encastre' ? (
+                      <div className={`p-3 rounded-xl border transition-all ${
+                        etancheite !== ''
+                          ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                          : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Étanchéité</span>
+                          {etancheite === '' && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
+                        </div>
+                        <span className="text-xs sm:text-sm font-bold truncate block mt-1">
+                          {etancheite !== '' ? `${etancheite} cm` : <span className="text-slate-400 italic font-normal">À renseigner...</span>}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {/* Photo du site */}
+                    <div className={`p-3 rounded-xl border transition-all ${
+                      siteImageUrl
+                        ? 'bg-emerald-50/40 border-emerald-200/80 text-emerald-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                    } ${foundationType === 'encastre' ? 'col-span-2' : ''}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Photo Site</span>
+                        {!siteImageUrl && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold truncate block mt-1">
+                        {siteImageUrl ? (
+                          <span className="text-emerald-700 font-semibold">Photo enregistrée</span>
+                        ) : (
+                          <span className="text-slate-400 italic font-normal">À ajouter...</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Status indicator bar */}
               {isStep2Complete ? (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-emerald-800">
-                  <div className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <span className="text-xs sm:text-sm font-semibold">
-                      Informations du projet complètes !
-                    </span>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-4 text-emerald-900 shadow-sm">
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-950">Informations du projet complètes !</h4>
+                    <p className="text-xs text-emerald-700">Tous les paramètres requis pour la note de calcul ont été saisis.</p>
                   </div>
                   <button
                     onClick={() => setActiveStep(3)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shrink-0 cursor-pointer"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/20 shrink-0 cursor-pointer hover:translate-x-0.5"
                   >
                     <span>Passer aux Aériens</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <div className="bg-violet-50/60 border border-violet-100 rounded-2xl p-3.5 flex items-start sm:items-center gap-3 text-violet-900">
-                  <Sparkles className="w-5 h-5 text-violet-600 shrink-0 mt-0.5 sm:mt-0" />
-                  <div className="text-xs sm:text-sm leading-relaxed">
-                    <span className="font-semibold text-slate-700">Champs requis restants : </span>
-                    <span className="text-violet-700 font-medium">{missingRequirements.join(', ')}</span>
+                <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-3.5 text-xs text-amber-950">
+                  <div className="font-bold text-amber-900 mb-1.5">Champs requis restants :</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {missingRequirements.map((req) => (
+                      <span key={req} className="bg-white border border-amber-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold text-amber-900 shadow-2xs">
+                        {req}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
             </div>
           </div>
         ) : activeStep === 3 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 h-full relative z-10 animate-fadeIn">
-            <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-violet-600 mb-6 shadow-md">
-              <Radio className="w-10 h-10 text-violet-600" />
-            </div>
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="text-[11px] font-bold text-violet-700 bg-violet-50 border border-violet-200/70 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                Étape 3 sur 4
-              </span>
-              <span className="text-xs text-slate-400 font-medium">Aériens & Antennes</span>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-3">Sélectionnez les Aériens</h3>
-            <p className="text-base text-slate-600 max-w-md leading-relaxed mb-4">
-              Choisissez un gabarit agile ou des références d'antennes 4G et 5G dans le panneau de gauche pour vos secteurs.
-            </p>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-100 rounded-full text-xs font-semibold text-slate-600">
-              <span>{nombreSecteurs} secteur(s) à configurer</span>
+          <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-6 w-full max-w-3xl mx-auto animate-fadeIn relative z-10">
+            <div className="w-full bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-100 p-6 sm:p-8 relative overflow-hidden">
+              {/* Header with completion meter */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-bold text-violet-700 bg-violet-50 border border-violet-200/80 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Étape 3 sur 4
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">Aériens & Antennes</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                    Configuration des Aériens
+                  </h3>
+                </div>
+
+                {/* Progress Ring / Percentage */}
+                {(() => {
+                  const hasEchelle = Boolean(project.selectedEchelle && project.selectedEchelle.trim());
+                  const allSectorsHaveAntennas = activeSectors.length > 0 && activeSectors.every(
+                    s => Boolean(s.selectedMontage4G) && Boolean(s.selectedMontage5G)
+                  );
+                  const totalRequired = 2; // Échelle + Antennes
+                  const count = (hasEchelle ? 1 : 0) + (allSectorsHaveAntennas ? 1 : 0);
+                  const percentage = Math.round((count / totalRequired) * 100);
+
+                  return (
+                    <div className="flex items-center gap-3 bg-slate-50 p-2.5 px-4 rounded-2xl border border-slate-200/80 shrink-0 self-start sm:self-auto">
+                      <div className="flex flex-col text-right">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Complétion</span>
+                        <span className="text-sm font-black text-slate-800">{count} / {totalRequired} requis</span>
+                      </div>
+                      <div className="w-10 h-10 rounded-full border-2 border-violet-200 bg-violet-50 flex items-center justify-center text-[11px] font-bold text-violet-700">
+                        {percentage}%
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Categorized Tiles Grid */}
+              <div className="space-y-4 mb-6">
+                {/* Requis 1: Échelle */}
+                <div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    Équipement d'accès obligatoire (au sol)
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className={`p-3.5 rounded-xl border transition-all ${
+                      project.selectedEchelle && project.selectedEchelle.trim()
+                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Échelle & Palier (Par site)</span>
+                        {project.selectedEchelle && project.selectedEchelle.trim() ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            {project.selectedEchelle === "Pas d'échelle" ? 'Sans échelle' : 'Sélectionnée'}
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">Requis</span>
+                        )}
+                      </div>
+                      <span className="text-xs sm:text-sm font-bold truncate block mt-1.5">
+                        {project.selectedEchelle || <span className="text-slate-400 italic font-normal">Sélectionner une échelle...</span>}
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border bg-slate-50/70 border-slate-200/70 flex flex-col justify-between">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                        {nombreSecteurs > 1 ? 'Mode de configuration' : 'Configuration'}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-800 block mt-1.5">
+                        {nombreSecteurs > 1
+                          ? `Secteurs similaires (${nombreSecteurs} secteurs identiques)`
+                          : 'Site mono-secteur (1 secteur unique)'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Requis 2: Antennes par secteur */}
+                <div>
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {nombreSecteurs > 1
+                      ? "Antennes obligatoires (Secteurs similaires — appliqué à l'ensemble du site)"
+                      : "Antennes obligatoires (Secteur unique)"}
+                  </div>
+                  {(() => {
+                    const sec = activeSectors[0] || sectors[0];
+                    const has4G = Boolean(sec?.selectedMontage4G);
+                    const has5G = Boolean(sec?.selectedMontage5G);
+                    const isComplete = has4G && has5G;
+
+                    return (
+                      <div
+                        className={`p-4 rounded-xl border transition-all ${
+                          isComplete
+                            ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                            : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs sm:text-sm font-bold text-slate-900">
+                              {nombreSecteurs > 1 ? 'Secteur 1' : 'Secteur Unique'}
+                            </span>
+                            {nombreSecteurs > 1 && (
+                              <span className="text-[10px] font-semibold text-violet-700 bg-violet-100/70 px-2 py-0.5 rounded-full">
+                                Appliqué aux {nombreSecteurs} secteurs
+                              </span>
+                            )}
+                          </div>
+                          {isComplete ? (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              Antennes configurées
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">
+                              {!has4G && !has5G ? 'Antennes 4G & 5G requises' : !has4G ? 'Antenne 4G requise' : 'Antenne 5G requise'}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          {/* Antenne 3G/4G */}
+                          <div className="bg-white/80 p-2.5 rounded-lg border border-slate-200/80">
+                            <span className="text-slate-400 uppercase font-bold text-[10px] block">Antenne 3G/4G</span>
+                            {has4G ? (
+                              sec?.configMode === 'reference' ? (
+                                <div className="mt-0.5">
+                                  <span className="font-semibold text-slate-800 text-xs truncate block" title={sec?.selectedReference4G || sec?.ant4gConfig?.model}>
+                                    {sec?.selectedReference4G || sec?.ant4gConfig?.model}
+                                  </span>
+                                  {sec?.selectedVendor4G && (
+                                    <span className="text-[10px] text-slate-500 font-medium block">
+                                      {sec.selectedVendor4G}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="mt-0.5">
+                                  <span className="font-bold text-slate-800 text-xs block">
+                                    {sec?.ant4gConfig?.height && sec?.ant4gConfig?.width
+                                      ? `${sec.ant4gConfig.height} × ${sec.ant4gConfig.width} × ${sec.ant4gConfig.thickness} mm`
+                                      : sec?.ant4gConfig?.model || sec?.selectedMontage4G}
+                                  </span>
+                                  {sec?.ant4gConfig?.weight ? (
+                                    <span className="text-[10px] text-slate-500 font-medium block">
+                                      Poids : {sec.ant4gConfig.weight} kg
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-slate-400 italic font-normal text-xs block mt-0.5">
+                                À sélectionner...
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Antenne 5G */}
+                          <div className="bg-white/80 p-2.5 rounded-lg border border-slate-200/80">
+                            <span className="text-slate-400 uppercase font-bold text-[10px] block">Antenne 5G</span>
+                            {has5G ? (
+                              sec?.configMode === 'reference' ? (
+                                <div className="mt-0.5">
+                                  <span className="font-semibold text-slate-800 text-xs truncate block" title={sec?.selectedReference5G || sec?.ant5gConfig?.model}>
+                                    {sec?.selectedReference5G || sec?.ant5gConfig?.model}
+                                  </span>
+                                  {sec?.selectedVendor5G && (
+                                    <span className="text-[10px] text-slate-500 font-medium block">
+                                      {sec.selectedVendor5G}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="mt-0.5">
+                                  <span className="font-bold text-slate-800 text-xs block">
+                                    {sec?.ant5gConfig?.height && sec?.ant5gConfig?.width
+                                      ? `${sec.ant5gConfig.height} × ${sec.ant5gConfig.width} × ${sec.ant5gConfig.thickness} mm`
+                                      : sec?.ant5gConfig?.model || sec?.selectedMontage5G}
+                                  </span>
+                                  {sec?.ant5gConfig?.weight ? (
+                                    <span className="text-[10px] text-slate-500 font-medium block">
+                                      Poids : {sec.ant5gConfig.weight} kg
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-slate-400 italic font-normal text-xs block mt-0.5">
+                                À sélectionner...
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Status indicator bar */}
+              {isStep3Complete ? (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-4 text-emerald-900 shadow-sm">
+                  <div>
+                    <h4 className="text-sm font-bold text-emerald-950">Aériens configurés avec succès !</h4>
+                    <p className="text-xs text-emerald-700">L'échelle et les antennes requises sont renseignées pour tous les secteurs.</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveStep(4)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-md shadow-emerald-600/20 shrink-0 cursor-pointer hover:translate-x-0.5"
+                  >
+                    <span>Passer à la Zone Technique</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-3.5 text-xs text-amber-950">
+                  <div className="font-bold text-amber-900 mb-1.5">Sélections requises pour passer à l'étape suivante :</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {!project.selectedEchelle?.trim() && (
+                      <span className="bg-white border border-amber-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold text-amber-900 shadow-2xs">
+                        Échelle au sol (Accès)
+                      </span>
+                    )}
+                    {activeSectors.some(s => !s.selectedMontage4G) && (
+                      <span className="bg-white border border-amber-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold text-amber-900 shadow-2xs">
+                        Antenne 3G/4G
+                      </span>
+                    )}
+                    {activeSectors.some(s => !s.selectedMontage5G) && (
+                      <span className="bg-white border border-amber-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold text-amber-900 shadow-2xs">
+                        Antenne 5G
+                      </span>
+                    )}
+                    {missingStep3Equipments.filter(req => !req.toLowerCase().includes('echelle') && !req.toLowerCase().includes('échelle')).map((req) => (
+                      <span key={req} className="bg-white border border-amber-200/80 px-2 py-0.5 rounded-md text-[11px] font-semibold text-amber-900 shadow-2xs">
+                        {req}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : activeStep === 4 ? (
@@ -546,6 +862,7 @@ function RightPreviewPanel({
                   showSectorsConfig={activeStep >= 3}
                   showAerialEquipmentConfig={activeStep >= 3}
                   showTechniqueEquipmentConfig={activeStep >= 4}
+                  selectedEchelle={project.selectedEchelle}
                 />
               )}
             </div>
@@ -599,28 +916,52 @@ function RightPreviewPanel({
                 )
               ) : (
                 <div className="flex flex-col gap-3 animate-fadeIn">
-                  <button
-                    onClick={handleGenerateSiteNdc}
-                    disabled={isGeneratingSiteNdc || !canGenerate}
-                    className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${!canGenerate
-                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                      : isFullyStandard()
-                        ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
-                        : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
-                      } ${isGeneratingSiteNdc ? 'opacity-80 scale-[0.98]' : ''}`}
-                  >
-                    {isGeneratingSiteNdc ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span>{siteNdcPollingMsg || 'Calcul en cours...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="w-5 h-5" />
-                        <span>Calculer</span>
-                      </>
-                    )}
-                  </button>
+                  {isGeneratingSiteNdc ? (
+                    <button
+                      disabled
+                      className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base opacity-80 scale-[0.98] ${
+                        isFullyStandard() ? 'bg-emerald-600' : 'bg-violet-600'
+                      }`}
+                    >
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>{siteNdcPollingMsg || 'Calcul en cours...'}</span>
+                    </button>
+                  ) : siteNdcError ? (
+                    <div className="flex flex-col gap-3 animate-fadeIn">
+                      <div className="flex items-start gap-2.5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm leading-relaxed shadow-sm">
+                        <AlertCircle className="w-5 h-5 shrink-0 text-rose-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-semibold text-rose-900">Échec du calcul</p>
+                          <p className="text-xs text-rose-700 mt-0.5">{siteNdcError}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSiteNdcError(null);
+                          handleGenerateSiteNdc();
+                        }}
+                        disabled={!canGenerate}
+                        className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md shadow-rose-500/25 transition-all text-base cursor-pointer hover:shadow-lg"
+                      >
+                        <RefreshCw className="w-5 h-5" />
+                        <span>Réessayer le calcul</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleGenerateSiteNdc}
+                      disabled={!canGenerate}
+                      className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${!canGenerate
+                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                        : isFullyStandard()
+                          ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                          : 'bg-violet-600 hover:bg-violet-700 shadow-violet-500/20'
+                        }`}
+                    >
+                      <FileText className="w-5 h-5" />
+                      <span>Calculer</span>
+                    </button>
+                  )}
 
                   {isGeneratingSiteNdc && (
                     <div className="w-full mt-2 animate-fadeIn">
@@ -683,9 +1024,7 @@ function RightPreviewPanel({
                 )}
               </div>
             )}
-            {siteNdcError && canGenerate && (
-              <p className="text-rose-600 text-sm text-center mt-3">{siteNdcError}</p>
-            )}
+
           </div>
         </div>
       )}

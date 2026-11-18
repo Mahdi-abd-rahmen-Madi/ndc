@@ -13,6 +13,7 @@ export interface AerialResultsSectionProps {
   operator?: string;
   nombreSecteurs?: number;
   equipmentValues?: Record<string, any>;
+  selectedEchelle?: string;
 }
 
 export function AerialResultsSection({
@@ -22,7 +23,8 @@ export function AerialResultsSection({
   isAerialEquipVisible = true,
   operator = 'bouygues',
   nombreSecteurs = 3,
-  equipmentValues = {}
+  equipmentValues = {},
+  selectedEchelle
 }: AerialResultsSectionProps) {
   if (!showSectorsConfig && (!isAerialEquipVisible || aerialConfigs.length === 0)) {
     return null;
@@ -80,6 +82,27 @@ export function AerialResultsSection({
       {/* Sub-section 1: Antennes 4G & 5G */}
       {showSectorsConfig && displaySectors.length > 0 && (
         <div className="mb-5">
+          {/* Échelle au sol / Accès display if selected or configured */}
+          {selectedEchelle && (
+            <div className="mb-4 bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200/90 shadow-2xs flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Équipement d'accès (au sol)
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">
+                  {selectedEchelle}
+                </span>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                selectedEchelle === "Pas d'échelle"
+                  ? 'bg-slate-50 text-slate-500 border-slate-200'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}>
+                {selectedEchelle === "Pas d'échelle" ? 'Sans échelle' : 'Configurée'}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Radio className="w-3.5 h-3.5 text-violet-600" />

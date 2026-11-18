@@ -343,12 +343,30 @@ def find_job_note_de_calcul_path(job):
                 return job.note_de_calcul.path
         except Exception:
             pass
-    fallback_media = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_note_de_calcul.rtf')
-    if os.path.exists(fallback_media):
-        return fallback_media
-    worker_ndc = f"/home/mahdi/worker_share/screenshots/job_{job.id}_note_de_calcul.rtf"
-    if os.path.exists(worker_ndc):
-        return worker_ndc
+
+    for cand in [
+        os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_note_de_calcul.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_antenna_note_de_calcul.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_antenna_note_mat.rtf'),
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_note_de_calcul.rtf",
+        f"/home/mahdi/worker_share/screenshots/job_{job.id}_antenna_note_de_calcul.rtf",
+    ]:
+        if os.path.exists(cand):
+            return cand
+
+    # Check worker result_data paths if present
+    if isinstance(getattr(job, 'result_data', None), dict):
+        for k in ['note_de_calcul_path', 'antenna_note_de_calcul_path', 'antenna_note_mat_path']:
+            raw_path = job.result_data.get(k)
+            if raw_path and isinstance(raw_path, str):
+                base = os.path.basename(raw_path.replace('\\', '/'))
+                for p in [
+                    os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', base),
+                    f"/home/mahdi/worker_share/screenshots/{base}",
+                ]:
+                    if os.path.exists(p):
+                        return p
+
     return None
 
 
@@ -958,13 +976,34 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
             for wsp in [
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_verification_view.jpg",
                 f"/home/mahdi/worker_share/screenshots/job_{job.id}_verification.jpg",
+                f"/home/mahdi/worker_share/screenshots/job_{job.id}_antenna_verification.jpg",
                 os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', f'job_{job.id}_verification.jpg'),
-                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_verification.jpg')
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', f'job_{job.id}_antenna_verification.jpg'),
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_verification.jpg'),
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_antenna_verification.jpg')
             ]:
                 if os.path.exists(wsp):
                     context['verification_screenshot_abs'] = wsp
                     verification_screenshot_found = True
                     break
+
+        # 3. Check worker result_data paths if present
+        if not verification_screenshot_found and isinstance(getattr(job, 'result_data', None), dict):
+            for k in ['verification_screenshot_path', 'antenna_verification_screenshot_path', 'verification_view_path']:
+                raw_path = job.result_data.get(k)
+                if raw_path and isinstance(raw_path, str):
+                    base = os.path.basename(raw_path.replace('\\', '/'))
+                    for p in [
+                        os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', base),
+                        os.path.join(settings.MEDIA_ROOT, 'screenshots', base),
+                        f"/home/mahdi/worker_share/screenshots/{base}",
+                    ]:
+                        if os.path.exists(p):
+                            context['verification_screenshot_abs'] = p
+                            verification_screenshot_found = True
+                            break
+                    if verification_screenshot_found:
+                        break
                 
     if not verification_screenshot_found:
         context['verification_screenshot_abs'] = None
@@ -1053,7 +1092,27 @@ def generate_ndc_pdf(job, photo_url_or_path, preview_data=None, is_subsequent_se
     # Logo Path
     logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')
     context['logo_abs'] = logo_path if os.path.exists(logo_path) else None
-        
+
+    # Hardened Artifact Guard: Never compile a half-baked PDF with placeholder error boxes for a real job
+    if job and job.id != 'preview' and job.id != 'fast':
+        missing_mandatory = []
+        if not context.get('robot_screenshot_abs') or not os.path.exists(context['robot_screenshot_abs']):
+            missing_mandatory.append("Capture 3D modélisation Robot (page 4)")
+        if not context.get('verification_screenshot_abs') or not os.path.exists(context['verification_screenshot_abs']):
+            missing_mandatory.append("Capture de vérification Robot ELU/ELS (page 7)")
+        if not context.get('note_de_calcul_images'):
+            missing_mandatory.append("Note de calcul RTF du mât principal (page 8)")
+        if not context.get('assemblage_note_images'):
+            missing_mandatory.append("Note de calcul d'assemblage Robot (page 9+)")
+
+        if missing_mandatory:
+            err_msg = (
+                f"Génération NDC bloquée pour le Job {job.id} : artéfacts obligatoires manquants ({', '.join(missing_mandatory)}). "
+                f"La création d'un PDF incomplet est strictement interdite afin de ne jamais transmettre un document tronqué au client."
+            )
+            print(f"[NDC HARDENING ERROR] {err_msg}")
+            raise ValueError(err_msg)
+
     # Render HTML template
     html_string = render_to_string('ndc/base.html', context)
     
@@ -1090,6 +1149,23 @@ def generate_ndc_pdf_task(job_id, photo_url_or_path):
     except CalculationJob.DoesNotExist:
         print(f"Job {job_id} not found for PDF generation")
         return None
+
+
+def clean_equipment_designation(name: str) -> str:
+    """
+    Strips brand/marque prefixes (e.g., NOKIA, HUAWEI, ERICSSON, ZTE, SAMSUNG)
+    and equipment type prefixes (RRH, RRU) to return the direct reference (e.g. AHHB 2600).
+    """
+    if not name:
+        return ""
+    cleaned = str(name).strip()
+    # Strip leading brand names: NOKIA, HUAWEI, ERICSSON, ZTE, SAMSUNG (case-insensitive)
+    cleaned = re.sub(r'^(?:NOKIA|HUAWEI|ERICSSON|ZTE|SAMSUNG)\s+', '', cleaned, flags=re.IGNORECASE)
+    # Strip leading RRH or RRU if followed by model reference
+    cleaned = re.sub(r'^(?:RRH|RRU)\s+', '', cleaned, flags=re.IGNORECASE)
+    # Strip brand again if it was in format "RRH NOKIA AHHB 2600"
+    cleaned = re.sub(r'^(?:NOKIA|HUAWEI|ERICSSON|ZTE|SAMSUNG)\s+', '', cleaned, flags=re.IGNORECASE)
+    return cleaned.strip() or str(name)
 
 
 def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: float = 0.0) -> dict:
@@ -1294,7 +1370,26 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
             "fw_lat_formula": "N/A",
         }
 
+    # Ensure all item designations are cleaned of brand prefixes (e.g. NOKIA AHHB 2600 -> AHHB 2600)
+    cleaned_items = []
+    for it in items:
+        it_copy = dict(it)
+        raw_name = it_copy.get("name") or it_copy.get("reference") or it_copy.get("catalog_reference") or ""
+        it_copy["name"] = clean_equipment_designation(raw_name)
+        cleaned_items.append(it_copy)
+    items = cleaned_items
+
     is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
+
+    is_sans_plot = bool(
+        result_data.get("rrh_sans_plot")
+        or result_data.get("sans_plot")
+        or rrh_sub.get("sans_plot")
+        or structure.get("sans_plot")
+        or input_data.get("rrh_sans_plot")
+        or input_data.get("sans_plot")
+        or "sans_plot" in str(result_data.get("calculation_type") or "").lower()
+    )
 
     return {
         "items": items,
@@ -1304,6 +1399,7 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         "extremes": extremes,
         "is_multi": is_multi,
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
+        "is_sans_plot": is_sans_plot,
     }
 
 
@@ -1597,6 +1693,15 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
             "fw_front_formula": "N/A",
             "fw_lat_formula": "N/A",
         }
+
+    # Ensure all item designations are cleaned of brand prefixes
+    cleaned_items = []
+    for it in items:
+        it_copy = dict(it)
+        raw_name = it_copy.get("name") or it_copy.get("reference") or it_copy.get("catalog_reference") or ""
+        it_copy["name"] = clean_equipment_designation(raw_name)
+        cleaned_items.append(it_copy)
+    items = cleaned_items
 
     is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
 
@@ -2064,6 +2169,42 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         rrh_note_plot_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_note_plot", rrh_paths.get('note_plot'), rrh_convert_dir)
         rrh_assemblage_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_assemblage", rrh_paths.get('assemblage_note'), rrh_convert_dir, is_assemblage=True)
 
+        # Hardened Guard: do not generate auxiliary RRH PDF if critical artifacts are missing
+        if job and job.id != 'preview' and job.id != 'fast':
+            res_d = getattr(job, 'result_data', {}) if isinstance(getattr(job, 'result_data', None), dict) else {}
+            inp_d = getattr(job, 'input_data', {}) if isinstance(getattr(job, 'input_data', None), dict) else {}
+            rrh_sub = res_d.get("rrh") if isinstance(res_d.get("rrh"), dict) else {}
+            calc_type_str = str(res_d.get("calculation_type") or getattr(job, "calculation_type", "")).lower()
+
+            is_rrh_sans_plot = bool(
+                res_d.get("rrh_sans_plot")
+                or res_d.get("sans_plot")
+                or rrh_sub.get("sans_plot")
+                or inp_d.get("rrh_sans_plot")
+                or inp_d.get("sans_plot")
+                or "sans_plot" in calc_type_str
+            )
+
+            missing_rrh = []
+            if not rrh_screenshot_abs or not os.path.exists(rrh_screenshot_abs):
+                missing_rrh.append("Capture 3D modélisation RRH (page 14)")
+            if not rrh_tableau_charges_abs or not os.path.exists(rrh_tableau_charges_abs):
+                missing_rrh.append("Tableau des charges RRH (page 15)")
+            if not rrh_verification_screenshot_abs or not os.path.exists(rrh_verification_screenshot_abs):
+                missing_rrh.append("Capture de vérification Robot RRH (page 16)")
+            if not rrh_note_mat_images:
+                missing_rrh.append("Note de calcul RTF du mât RRH (page 17)")
+
+            # Only require rrh_assemblage_images (page 21+) and rrh_note_plot when WITH plot:
+            if not is_rrh_sans_plot:
+                if not rrh_assemblage_images:
+                    missing_rrh.append("Note d'assemblage Robot RRH (page 21+)")
+
+            if missing_rrh:
+                err_msg = f"Génération annexe RRH bloquée pour le Job {job.id} : artéfacts obligatoires manquants ({', '.join(missing_rrh)})."
+                print(f"[NDC HARDENING ERROR] {err_msg}")
+                raise ValueError(err_msg)
+
         generated_pdfs.append(_render_and_save('rrh', {
             'region': rrh_wind['region'],
             'terrain_type': rrh_wind['terrain_type'],
@@ -2075,7 +2216,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'kr_z': rrh_wind['kr_z'],
             'qp_z': rrh_qp_z,
             'eq_qty': qty_total,
-            'rrh_name': first_item.get('name', 'RRH'),
+            'rrh_name': clean_equipment_designation(first_item.get('name', 'RRH')),
             'eq_dims': eq_dims,
             'eq_weight': eq_weight,
             'cx_front': cx_front,
@@ -2103,6 +2244,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'rrh_totals': totals,
             'rrh_is_multi': is_multi,
             'rrh_qty_total': qty_total,
+            'is_sans_plot': is_rrh_sans_plot,
         }))
 
     # Check for RRU (Enabled via toggle, standalone RRU job, or composite Antenna+RRU)
@@ -2270,7 +2412,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'kr_z': rru_wind['kr_z'],
             'qp_z': rru_qp_z,
             'eq_qty': qty_total,
-            'rru_name': first_item.get('name', 'RRU'),
+            'rru_name': clean_equipment_designation(first_item.get('name', 'RRU')),
             'eq_dims': eq_dims,
             'eq_weight': eq_weight,
             'cx_front': cx_front,

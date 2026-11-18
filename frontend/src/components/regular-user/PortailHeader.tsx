@@ -50,15 +50,15 @@ export function PortailHeader({
         <div className="h-6 w-px bg-slate-200/80 mx-1 hidden sm:block"></div>
 
         <div className="hidden sm:flex items-center gap-2 bg-slate-100/90 p-1 rounded-xl border border-slate-200/70 text-xs">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/70">
             <Building2 className="w-3.5 h-3.5 text-violet-600" />
             <span className="text-slate-400 font-normal">Site:</span>
-            <span className="font-semibold text-slate-900">{siteType === 'nouveau' ? 'Neuf' : 'Existant'}</span>
+            <span className="font-bold text-slate-800">{siteType === 'nouveau' ? 'Neuf' : 'Existant'}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/60">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-lg shadow-2xs text-slate-700 font-medium border border-slate-200/70">
             <Anchor className="w-3.5 h-3.5 text-indigo-600" />
             <span className="text-slate-400 font-normal">Ancrage:</span>
-            <span className="font-semibold text-slate-900">
+            <span className="font-bold text-slate-800">
               {foundationType === 'metallique' ? 'Plot Métallique' :
                 foundationType === 'beton' ? 'Plot Béton' :
                   foundationType === 'dallettes' ? 'Dallettes' :
@@ -68,7 +68,7 @@ export function PortailHeader({
           {onResetMontage && (
             <button
               onClick={onResetMontage}
-              className="flex items-center gap-1 px-2.5 py-1 text-violet-700 hover:text-violet-900 hover:bg-violet-50 rounded-lg transition-colors font-semibold"
+              className="flex items-center gap-1 px-2.5 py-1 text-violet-700 hover:text-violet-900 hover:bg-violet-100/60 rounded-lg transition-colors font-bold cursor-pointer"
               title="Modifier le type de site ou d'ancrage"
             >
               <Edit3 className="w-3 h-3" />

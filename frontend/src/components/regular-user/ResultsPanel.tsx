@@ -41,6 +41,7 @@ export interface ResultsPanelProps {
   showAerialEquipmentConfig?: boolean;
   showTechniqueEquipmentConfig?: boolean;
   operator?: string;
+  selectedEchelle?: string;
 }
 
 function ResultsPanel({
@@ -61,7 +62,8 @@ function ResultsPanel({
   showSectorsConfig = true,
   showEquipmentConfig = true,
   showAerialEquipmentConfig,
-  showTechniqueEquipmentConfig
+  showTechniqueEquipmentConfig,
+  selectedEchelle
 }: ResultsPanelProps) {
   const isAerialEquipVisible = showAerialEquipmentConfig !== undefined ? showAerialEquipmentConfig : showEquipmentConfig;
   const isTechniqueEquipVisible = showTechniqueEquipmentConfig !== undefined ? showTechniqueEquipmentConfig : showEquipmentConfig;
@@ -131,6 +133,7 @@ function ResultsPanel({
             operator={operator}
             nombreSecteurs={nombreSecteurs}
             equipmentValues={equipmentValues}
+            selectedEchelle={selectedEchelle}
           />
 
           {/* 3. Section Zone Technique (Baies, TD, GPS, Lovage, CAB, Atelier, B-cube énergie, MDEA) */}

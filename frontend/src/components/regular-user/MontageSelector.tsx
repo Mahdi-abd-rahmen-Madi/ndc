@@ -266,7 +266,7 @@ export default function MontageSelector({
               <div className={styles.iconContainer4G}>
                 <Radio className={styles.icon4G} />
               </div>
-              Antenne 3G/4G
+              <span>Antenne 3G/4G <span className="text-red-500 font-bold">*</span></span>
             </h4>
 
             {/* Dropdown 4G */}
@@ -332,7 +332,7 @@ export default function MontageSelector({
               <div className={styles.iconContainer5G}>
                 <SignalHigh className={styles.icon5G} />
               </div>
-              Antenne 5G
+              <span>Antenne 5G <span className="text-red-500 font-bold">*</span></span>
             </h4>
 
             {/* Dropdown 5G */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, Pencil, ArrowRight } from 'lucide-react';
+import { Check, Pencil, ArrowRight, Lock } from 'lucide-react';
 
 export interface AccordionStepProps {
   step: number;
@@ -28,19 +28,19 @@ export function AccordionStep({
 
   return (
     <div
-      className={`bg-white rounded-2xl border transition-all duration-300 mb-4 ${disabled
-        ? 'opacity-50 border-slate-200/80 bg-slate-50/50 cursor-not-allowed overflow-hidden'
+      className={`bg-white rounded-2xl border transition-all duration-300 mb-3 ${disabled
+        ? 'opacity-70 border-slate-200/90 bg-slate-50/40 cursor-not-allowed overflow-hidden'
         : isOpen
-          ? 'border-violet-300 shadow-md ring-4 ring-violet-500/5 overflow-visible z-20 relative'
-          : 'border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm overflow-hidden'
+          ? 'border-violet-400 shadow-md ring-4 ring-violet-500/10 overflow-visible z-20 relative'
+          : 'border-slate-200/90 shadow-2xs hover:border-slate-300 hover:shadow-xs overflow-hidden'
         }`}
     >
       <div
-        className={`p-4 flex items-center justify-between transition-all ${disabled
+        className={`px-4 py-3 sm:py-3.5 flex items-center justify-between transition-all ${disabled
           ? 'cursor-not-allowed'
           : isOpen
-            ? 'bg-gradient-to-r from-violet-50/70 via-indigo-50/30 to-white border-b border-violet-100 cursor-pointer'
-            : 'hover:bg-slate-50/70 cursor-pointer'
+            ? 'bg-gradient-to-r from-violet-50/80 via-indigo-50/30 to-white border-b border-violet-100 cursor-pointer'
+            : 'hover:bg-slate-50/80 cursor-pointer'
           }`}
         onClick={() => {
           if (!disabled) {
@@ -50,28 +50,37 @@ export function AccordionStep({
       >
         <div className="flex items-center gap-3.5 min-w-0">
           <div
-            className={`flex items-center justify-center w-9 h-9 rounded-xl font-bold text-xs shrink-0 transition-all ${disabled
+            className={`flex items-center justify-center w-8 h-8 rounded-xl font-bold text-xs shrink-0 transition-all ${disabled
               ? 'bg-slate-100 text-slate-400 border border-slate-200'
               : isCompleted && !isOpen
                 ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-200'
                 : isOpen
                   ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-300'
-                  : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  : 'bg-slate-100 text-slate-600 border border-slate-200'
               }`}
           >
             {isCompleted && !isOpen && !disabled ? (
-              <Check className="w-5 h-5 text-emerald-700 stroke-[2.5]" />
+              <Check className="w-4 h-4 text-emerald-700 stroke-[2.5]" />
+            ) : disabled ? (
+              <Lock className="w-3.5 h-3.5 text-slate-400" />
             ) : (
               step
             )}
           </div>
           <div className="min-w-0">
-            <h3
-              className={`font-bold text-sm tracking-tight transition-colors ${disabled ? 'text-slate-400' : isOpen ? 'text-slate-900' : 'text-slate-700'
-                }`}
-            >
-              {title}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3
+                className={`font-bold text-sm tracking-tight transition-colors ${disabled ? 'text-slate-500' : isOpen ? 'text-slate-900' : 'text-slate-800'
+                  }`}
+              >
+                {title}
+              </h3>
+              {disabled && (
+                <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200/60">
+                  Verrouillé
+                </span>
+              )}
+            </div>
             {!isOpen && isCompleted && !disabled && summary && (
               <div className="text-xs text-slate-500 truncate mt-0.5 flex items-center gap-1 font-medium">
                 {summary}

@@ -36,7 +36,7 @@
         {% else %}
         Ajout d’un mât en tube {{ rru_mat_diam|default:"88" }} mm, d’épaisseur {{ rru_mat_epaisseur|default:"2.5" }} mm et de longueur {{ rru_mat_longueur|default:"1500" }} mm supportant un RRU.
         {% endif %}
-        {% if rru_sans_plot %}
+        {% if rru_sans_plot or is_sans_plot %}
         Configuration sans plot (fixation directe sur acrotère/châssis).
         {% else %}
         Le mât sera fixé sur un plot métallique {{ rru_plot_section|default:"TCAR 150x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
@@ -149,7 +149,7 @@
             <td class="text-center">{{ rru_mat_longueur_m|default:"1.5" }}</td>
             <td class="text-center">Mat principal</td>
         </tr>
-        {% if not rru_sans_plot %}
+        {% if not rru_sans_plot and not is_sans_plot %}
         <tr>
             <td>{{ rru_plot_section|default:"TCAR 150x5" }}</td>
             <td class="text-center">{{ rru_plot_longueur_m|default:"0.5" }}</td>

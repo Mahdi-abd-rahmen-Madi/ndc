@@ -12,15 +12,15 @@ export function createResolvers(config: any, operator: string) {
         { id: 'ARPA', vendor: 'NOKIA', reference: 'ARPA' },
       ];
       const opt = rfmModels.find(r => r.id === id);
-      return opt ? `${opt.vendor} ${opt.reference}` : id;
+      return opt ? opt.reference : id;
     }
     const opt = config?.rru_references?.find((r: any) => r.id === id);
-    return opt ? `${opt.vendor} ${opt.reference}` : id;
+    return opt ? opt.reference : id;
   };
 
   const resolveRrh = (id: string) => {
     const opt = config?.rrh_references?.find((r: any) => r.id === id);
-    return opt ? `${opt.vendor} ${opt.reference}` : id;
+    return opt ? opt.reference : id;
   };
 
   const resolveTd = (id: string) => {

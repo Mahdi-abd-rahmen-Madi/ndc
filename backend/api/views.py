@@ -12,7 +12,10 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 
 import hashlib
 import json
+import logging
 import threading
+
+logger = logging.getLogger(__name__)
 from .models import UserProfile, CalculationJob, GeneratedSiteNdc
 from .serializers import (
     UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer,
@@ -213,12 +216,23 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         # 2. Check Database Cache for Instant Hit
         if not force_recalculate:
-            cached_job = CalculationJob.objects.filter(
+            from .services import validate_calculation_artifacts
+            candidate_cached = CalculationJob.objects.filter(
                 ndc_hash=ndc_hash,
                 status="COMPLETED"
-            ).order_by("-id").first()
+            ).order_by("-id")
 
-            if cached_job and (cached_job.compiled_pdf or cached_job.result_data):
+            cached_job = None
+            for cand in candidate_cached:
+                if (cand.compiled_pdf or cand.result_data):
+                    missing_in_cand = validate_calculation_artifacts(cand)
+                    if not missing_in_cand:
+                        cached_job = cand
+                        break
+                    else:
+                        print(f"[NDC HARDENING] Skipping cached Job {cand.id} with incomplete artifacts: {missing_in_cand}")
+
+            if cached_job:
                 # Create a cloned record or return the cached calculation directly
                 new_job = CalculationJob.objects.create(
                     user=user,
@@ -317,17 +331,35 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # Save uploaded artifact files from worker (Base Antenna & Dedicated RRH)
         files = request.FILES
         
-        # 1. Base Antenna Files
+        # 1. Base Antenna Files (accepting standard and worker aliases)
         if 'screenshot' in files:
             job.screenshot = files['screenshot']
+        elif 'antenna_screenshot' in files:
+            job.screenshot = files['antenna_screenshot']
+
         if 'verification_screenshot' in files:
             job.verification_screenshot = files['verification_screenshot']
+        elif 'antenna_verification_screenshot' in files:
+            job.verification_screenshot = files['antenna_verification_screenshot']
+        elif 'verification_view' in files:
+            job.verification_screenshot = files['verification_view']
+
         if 'note_de_calcul' in files:
             job.note_de_calcul = files['note_de_calcul']
+        elif 'antenna_note_de_calcul' in files:
+            job.note_de_calcul = files['antenna_note_de_calcul']
+        elif 'antenna_note_mat' in files:
+            job.note_de_calcul = files['antenna_note_mat']
+
         if 'assemblage_note' in files:
             job.assemblage_note = files['assemblage_note']
+        elif 'antenna_assemblage_note' in files:
+            job.assemblage_note = files['antenna_assemblage_note']
+
         if 'reactions_file' in files:
             job.reactions_file = files['reactions_file']
+        elif 'antenna_reactions_file' in files:
+            job.reactions_file = files['antenna_reactions_file']
 
         is_rru_job = bool(result_data.get("has_rru")) and not bool(result_data.get("has_rrh"))
 
@@ -375,11 +407,11 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             if rrh_ndc:
                 job.note_de_calcul_rrh = rrh_ndc
 
-            note_mat = files.get("note_mat") or files.get("rrh_note_mat")
+            note_mat = files.get("rrh_note_mat") or files.get("note_mat")
             if note_mat and "_rru_" not in (getattr(note_mat, "name", "") or "").lower():
                 job.note_mat = note_mat
 
-            note_plot = files.get("note_plot") or files.get("rrh_note_plot")
+            note_plot = files.get("rrh_note_plot") or files.get("note_plot")
             if note_plot and "_rru_" not in (getattr(note_plot, "name", "") or "").lower():
                 job.note_plot = note_plot
 
@@ -399,6 +431,24 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             if 'rrh_screenshot' in files:
                 job.rrh_screenshot = files['rrh_screenshot']
 
+        # 4. Strict Quality & Completeness Validation
+        from .services import validate_calculation_artifacts
+        missing_artifacts = []
+        if job_status == 'COMPLETED':
+            missing_artifacts = validate_calculation_artifacts(job, files)
+            if missing_artifacts:
+                job_status = 'FAILED'
+                error_message = (
+                    f"Calcul Robot rejeté : le worker a signalé un statut COMPLETED, mais "
+                    f"les artéfacts obligatoires suivants sont manquants : {', '.join(missing_artifacts)}. "
+                    f"La note de calcul ne sera pas finalisée afin de ne pas transmettre un document incomplet."
+                )
+                print(f"[NDC HARDENING ERROR] Job {job.id} REJECTED due to missing artifacts: {missing_artifacts}")
+                logger.error(f"[NDC HARDENING ERROR] Job {job.id} REJECTED due to missing artifacts: {error_message}")
+
+        job.status = job_status
+        job.error_message = error_message
+
         # Manage user quota if completed
         if job_status == 'COMPLETED':
             if job.user and hasattr(job.user, 'subscription'):
@@ -415,7 +465,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 print(f"Document compilation warning for Job {job.id}: {e}")
 
-        # Broadcast completion to WebSocket listeners
+        # Broadcast completion or failure to WebSocket listeners
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
@@ -429,7 +479,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                             "job_id": job.id,
                             "stage": "COMPLETED" if job_status == "COMPLETED" else "FAILED",
                             "percent": 100 if job_status == "COMPLETED" else 0,
-                            "message": "Calcul terminé avec succès" if job_status == "COMPLETED" else f"Échec: {error_message}",
+                            "message": "Calcul terminé avec succès" if job_status == "COMPLETED" else "Échec du calcul Robot",
                             "status": job_status,
                             "is_completed": job_status == "COMPLETED"
                         }
@@ -437,6 +487,13 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 )
         except Exception as ws_err:
             print(f"WebSocket broadcast warning: {ws_err}")
+
+        if job_status != 'COMPLETED':
+            return Response({
+                "status": "FAILED",
+                "error": job.error_message,
+                "missing_artifacts": missing_artifacts,
+            }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -700,6 +757,25 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             # Guarantees zero cross-job leakage and reduces multiple LibreOffice cold starts to one.
             from geodata.ndc_generator import collect_site_ndc_rtf_specs, _batch_convert_rtf_files
             jobs = [CalculationJob.objects.get(id=job_id) for job_id in job_ids]
+
+            # Hardened Validation: Never assemble a site NDC if any sector calculation failed or is incomplete
+            from .services import validate_calculation_artifacts
+            for i, job in enumerate(jobs):
+                if job.status != 'COMPLETED':
+                    return Response({
+                        'error': f"Le secteur {i+1} (Job {job.id}) a le statut '{job.status}'. "
+                                 f"Erreur associée : {job.error_message or 'Calcul en cours ou incomplet'}. "
+                                 f"La génération du document de synthèse est bloquée pour éviter un PDF tronqué."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                missing_artifacts = validate_calculation_artifacts(job)
+                if missing_artifacts:
+                    return Response({
+                        'error': f"Le secteur {i+1} (Job {job.id}) est incomplet : artéfacts obligatoires manquants ({', '.join(missing_artifacts)}). "
+                                 f"La génération du document de synthèse est bloquée pour éviter la livraison d'un PDF incomplet. "
+                                 f"Veuillez relancer le calcul pour ce secteur."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
             rtf_specs = collect_site_ndc_rtf_specs(jobs)
             preconverted_images = _batch_convert_rtf_files(rtf_specs) if rtf_specs else {}
 

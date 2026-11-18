@@ -538,8 +538,8 @@ export function useSiteNdcGenerator({
           jobIds.push(calcData.data.id);
         } else {
           const errorText = await res.text();
-          console.error(`Erreur création job groupe ${i + 1}:`, errorText);
-          throw new Error(`Erreur lors de la création du job pour le groupe ${i + 1}: ${errorText}`);
+          console.error(`[NDC Job Creation Error - Groupe ${i + 1}]:`, errorText);
+          throw new Error("Impossible d'initialiser le calcul sur le serveur. Veuillez réessayer.");
         }
       }
 
@@ -603,7 +603,8 @@ export function useSiteNdcGenerator({
                 isCompleted = true;
               } else if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR') {
                 const errMsg = jobResult.error_message || "Calcul échoué sur le serveur Robot pour l'un des secteurs.";
-                throw new Error(errMsg);
+                console.error(`[Robot Worker Calculation Failure - Job ${jobId}]:`, errMsg, jobResult);
+                throw new Error("Le calcul Robot a échoué. Veuillez réessayer.");
               }
             }
             attempts++;
@@ -615,7 +616,8 @@ export function useSiteNdcGenerator({
         }
 
         if (!isCompleted) {
-          throw new Error(`Délai d'attente dépassé pour le calcul du secteur ${idx + 1}.`);
+          console.error(`[NDC Timeout]: Délai d'attente dépassé pour le calcul du secteur ${idx + 1}. JobId: ${jobId}`);
+          throw new Error("Le délai d'attente du calcul Robot a été dépassé. Veuillez réessayer.");
         }
       }
 
@@ -641,8 +643,8 @@ export function useSiteNdcGenerator({
 
       if (!mergeRes.ok) {
         const errorText = await mergeRes.text();
-        console.error('Erreur génération globale:', errorText);
-        throw new Error(`Erreur lors de la génération du document global: ${errorText}`);
+        console.error('[NDC Site Merge Error]:', errorText);
+        throw new Error("Erreur lors de la génération du document global. Veuillez réessayer.");
       }
 
       const mergeData = await mergeRes.json();
@@ -657,8 +659,15 @@ export function useSiteNdcGenerator({
       }
 
     } catch (e: any) {
-      console.error(e);
-      setSiteNdcError(e.message || 'Une erreur est survenue.');
+      console.error('[NDC Generation Failed - Technical Error Details]:', e);
+      const rawMessage = e?.message || '';
+      let friendlyMessage = 'Le calcul Robot a échoué. Veuillez réessayer.';
+      if (rawMessage.startsWith('Veuillez ') || rawMessage.includes('saisir') || rawMessage.includes('uploader')) {
+        friendlyMessage = rawMessage;
+      } else if (rawMessage && !rawMessage.includes('Calcul Robot rejeté') && !rawMessage.includes('500') && !rawMessage.includes('Traceback')) {
+        friendlyMessage = rawMessage;
+      }
+      setSiteNdcError(friendlyMessage);
     } finally {
       setIsGeneratingSiteNdc(false);
       setSiteNdcPollingMsg('');
