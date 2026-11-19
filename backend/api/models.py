@@ -143,6 +143,10 @@ class CalculationJob(models.Model):
         verbose_name = _("Calculation Job")
         verbose_name_plural = _("Calculation Jobs")
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['ndc_hash', 'status', '-created_at'], name='calcjob_hash_status_created'),
+            models.Index(fields=['user', '-created_at'], name='calcjob_user_created'),
+        ]
 
     def __str__(self):
         return f"Job {self.id} [{self.calculation_type}] - {self.status}"
@@ -166,6 +170,9 @@ class GeneratedSiteNdc(models.Model):
         verbose_name = _("Note de Calcul Générée")
         verbose_name_plural = _("Notes de Calcul Générées")
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at'], name='sitendc_user_created'),
+        ]
 
     def __str__(self):
         return f"NDC - {self.code_site or self.site_name or 'Site'} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"

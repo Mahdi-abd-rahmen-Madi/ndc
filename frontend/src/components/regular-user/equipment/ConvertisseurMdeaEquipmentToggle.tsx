@@ -1,7 +1,5 @@
-import React from 'react';
 import { Zap } from 'lucide-react';
-import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
-import { QuantityInput } from '../../ui/QuantityInput';
+import { QuantityOnlyEquipmentToggle } from './shared/QuantityOnlyEquipmentToggle';
 
 export interface ConvertisseurMdeaEquipmentToggleProps {
   hasConvertisseurMdea: boolean;
@@ -14,26 +12,18 @@ export function ConvertisseurMdeaEquipmentToggle({
   hasConvertisseurMdea,
   setHasConvertisseurMdea,
   convertisseurMdeaQuantity,
-  setConvertisseurMdeaQuantity
+  setConvertisseurMdeaQuantity,
 }: ConvertisseurMdeaEquipmentToggleProps) {
   return (
-    <EquipmentToggleCard
+    <QuantityOnlyEquipmentToggle
       title="Présence convertisseur MDEA"
       enabled={hasConvertisseurMdea}
       onToggle={setHasConvertisseurMdea}
+      quantity={convertisseurMdeaQuantity}
+      onQuantityChange={setConvertisseurMdeaQuantity}
       icon={Zap}
-      color="violet"
       scopeBadgeText="par site"
-    >
-      <div className="flex flex-col gap-3">
-        <QuantityInput
-          value={convertisseurMdeaQuantity || 1}
-          onChange={setConvertisseurMdeaQuantity}
-          label="Qté :"
-          size="md"
-        />
-      </div>
-    </EquipmentToggleCard>
+    />
   );
 }
 

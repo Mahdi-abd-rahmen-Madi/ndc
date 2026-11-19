@@ -1,11 +1,10 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies required for GeoDjango and PostGIS
-RUN apt-get update && apt-get install -y \
+# Install system dependencies required for GeoDjango, PostGIS, WeasyPrint, and headless LibreOffice
+RUN apt-get update && apt-get install -y --no-install-recommends \
     binutils \
     libproj-dev \
     gdal-bin \
@@ -17,23 +16,27 @@ RUN apt-get update && apt-get install -y \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
+    libreoffice-writer-nogui \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Install pinned Python dependencies
 COPY requirements.txt /app/
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    pip install uvicorn gunicorn psycopg2-binary
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy project and create non-root runtime user
 COPY . /app/
+RUN useradd --create-home --shell /bin/bash appuser && \
+    mkdir -p /app/media /app/staticfiles && \
+    chown -R appuser:appuser /app
 
-# Expose port
+USER appuser
+
 EXPOSE 8000
 
-# Start server
-# Using uvicorn worker for ASGI
-CMD ["gunicorn", "asgi:application", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+# Single async ASGI worker keeps InMemoryChannelLayer WebSockets reliable without Redis,
+# while heavy CPU/blocking tasks run in the separate `qcluster` container.
+CMD ["gunicorn", "asgi:application", "-k", "uvicorn_worker.UvicornWorker", "--workers", "1", "--timeout", "180", "--graceful-timeout", "30", "--bind", "0.0.0.0:8000"]

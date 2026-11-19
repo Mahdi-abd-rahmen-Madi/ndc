@@ -2,10 +2,12 @@ import { create } from 'zustand';
 import type { GeocodingAddress } from '../utils/types';
 
 interface AppState {
-  // Auth State
+  // Auth & Profile State
   token: string | null;
   userEmail: string | null;
   isAdmin: boolean;
+  clientLogoUrl: string | null;
+  setClientLogoUrl: (url: string | null) => void;
   setAuth: (token: string | null, email: string | null, isAdmin: boolean) => void;
   logout: () => void;
 
@@ -39,10 +41,16 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  // Auth State
+  // Auth & Profile State
   token: localStorage.getItem('ndc_auth_token'),
   userEmail: localStorage.getItem('ndc_user_email'),
   isAdmin: localStorage.getItem('ndc_is_admin') === 'true',
+  clientLogoUrl: localStorage.getItem('ndc_client_logo'),
+  setClientLogoUrl: (url) => {
+    if (url) localStorage.setItem('ndc_client_logo', url);
+    else localStorage.removeItem('ndc_client_logo');
+    set({ clientLogoUrl: url });
+  },
   setAuth: (token, email, isAdmin) => {
     if (token) localStorage.setItem('ndc_auth_token', token);
     else localStorage.removeItem('ndc_auth_token');
@@ -58,7 +66,8 @@ export const useAppStore = create<AppState>((set) => ({
     localStorage.removeItem('ndc_auth_token');
     localStorage.removeItem('ndc_user_email');
     localStorage.removeItem('ndc_is_admin');
-    set({ token: null, userEmail: null, isAdmin: false });
+    localStorage.removeItem('ndc_client_logo');
+    set({ token: null, userEmail: null, isAdmin: false, clientLogoUrl: null });
   },
 
   // Engineer UI State

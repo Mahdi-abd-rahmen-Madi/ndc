@@ -16,31 +16,52 @@ class TerrainConfigService:
     
     def __init__(self):
         self.config_file = os.path.join(settings.BASE_DIR, 'geodata', 'terrain_config.json')
+        self.default_config_file = os.path.join(settings.BASE_DIR, 'geodata', 'terrain_config.defaults.json')
         self._config = None
+        self._config_mtime = None
+        self._initial_defaults = None
         self.cache_timeout = 1800  # 30 minutes cache
-        
+
+    def _get_file_mtime(self) -> Optional[float]:
+        try:
+            return os.path.getmtime(self.config_file)
+        except OSError:
+            return None
+
     def load_config(self) -> Dict[str, Any]:
-        """Load terrain configuration from JSON file."""
-        if self._config is not None:
+        """Load terrain configuration from JSON file with mtime invalidation."""
+        current_mtime = self._get_file_mtime()
+        if self._config is not None and current_mtime is not None and current_mtime == self._config_mtime:
             return self._config
-            
-        cache_key = 'terrain_config'
-        cached_config = cache.get(cache_key)
+
+        cache_key = f'terrain_config_{current_mtime}' if current_mtime is not None else 'terrain_config'
+        cached_config = None
+        try:
+            cached_config = cache.get(cache_key)
+        except Exception as cache_err:
+            logger.debug("Cache unavailable while loading terrain config: %s", cache_err)
         if cached_config is not None:
             self._config = cached_config
+            self._config_mtime = current_mtime
+            if self._initial_defaults is None:
+                self._initial_defaults = json.loads(json.dumps(cached_config))
             return cached_config
-            
+
         try:
             with open(self.config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                
-            # Validate configuration structure
+
             self._validate_config(config)
-            
-            # Cache the configuration
-            cache.set(cache_key, config, self.cache_timeout)
+
+            try:
+                cache.set(cache_key, config, self.cache_timeout)
+            except Exception as cache_err:
+                logger.debug("Cache unavailable while storing terrain config: %s", cache_err)
             self._config = config
-            
+            self._config_mtime = current_mtime
+            if self._initial_defaults is None:
+                self._initial_defaults = json.loads(json.dumps(config))
+
             logger.info(f"Loaded terrain configuration from {self.config_file}")
             return config
             
@@ -298,8 +319,12 @@ class TerrainConfigService:
                 json.dump(new_config, f, indent=2, ensure_ascii=False)
             
             # Clear cache and reload
+            old_mtime = self._config_mtime
             self._config = None
+            self._config_mtime = None
             cache.delete('terrain_config')
+            if old_mtime is not None:
+                cache.delete(f'terrain_config_{old_mtime}')
             self.load_config()
             
             logger.info("Terrain configuration updated successfully")
@@ -310,12 +335,30 @@ class TerrainConfigService:
             return False
     
     def reset_to_defaults(self) -> bool:
-        """Reset configuration to default values."""
+        """Reset configuration to defaults (from defaults file, backup, or initial snapshot)."""
         try:
-            # This would load from a default template or recreate the initial config
-            # For now, we'll just clear the cache and reload
+            default_config = None
+            backup_file = f"{self.config_file}.backup"
+            for candidate in (self.default_config_file, backup_file):
+                if os.path.exists(candidate):
+                    with open(candidate, 'r', encoding='utf-8') as f:
+                        default_config = json.load(f)
+                    break
+
+            if default_config is None and self._initial_defaults is not None:
+                default_config = json.loads(json.dumps(self._initial_defaults))
+
+            if default_config is not None:
+                self._validate_config(default_config)
+                with open(self.config_file, 'w', encoding='utf-8') as f:
+                    json.dump(default_config, f, indent=2, ensure_ascii=False)
+
+            old_mtime = self._config_mtime
             self._config = None
+            self._config_mtime = None
             cache.delete('terrain_config')
+            if old_mtime is not None:
+                cache.delete(f'terrain_config_{old_mtime}')
             self.load_config()
             return True
         except Exception as e:

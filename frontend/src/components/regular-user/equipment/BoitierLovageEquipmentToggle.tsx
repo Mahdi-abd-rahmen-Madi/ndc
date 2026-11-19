@@ -1,8 +1,7 @@
-import React from 'react';
+import { useEffect, useMemo } from 'react';
 import { Activity } from 'lucide-react';
-import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
-import { CustomSelect } from '../../ui/CustomSelect';
-import { QuantityInput } from '../../ui/QuantityInput';
+import { DEFAULT_BOITIER_LOVAGE_OPTIONS } from '../../../config/catalogueDefaults';
+import { SelectEquipmentToggle } from './shared/SelectEquipmentToggle';
 
 export interface BoitierLovageEquipmentToggleProps {
   hasBoitierLovage: boolean;
@@ -23,71 +22,47 @@ export function BoitierLovageEquipmentToggle({
   boitierLovageQuantity,
   setBoitierLovageQuantity,
   boitierOptions = [],
-  operator
+  operator,
 }: BoitierLovageEquipmentToggleProps) {
-  const defaultOptions = [
-    { id: 'BLM-515709', name: 'Boîte de dérivation OPTIBOX IP55', reference: 'BLM-515709', operator: 'free' }
-  ];
+  const selectOptions = useMemo(() => {
+    const src = boitierOptions.length > 0 ? boitierOptions : DEFAULT_BOITIER_LOVAGE_OPTIONS;
+    return src
+      .filter(opt => {
+        if (!opt.operator || opt.operator === 'all') return true;
+        if (operator) return opt.operator.toLowerCase() === operator.toLowerCase();
+        return true;
+      })
+      .map(opt => ({ value: opt.id, label: opt.reference }));
+  }, [boitierOptions, operator]);
 
-  const allOptions = boitierOptions.length > 0 ? boitierOptions : defaultOptions;
-
-  const options = allOptions.filter(opt => {
-    if (!opt.operator || opt.operator === 'all') return true;
-    if (operator) return opt.operator.toLowerCase() === operator.toLowerCase();
-    return true;
-  });
-
-  const isFree = operator === 'free';
-
-  React.useEffect(() => {
-    if (options.length === 0) {
+  useEffect(() => {
+    if (selectOptions.length === 0) {
       if (hasBoitierLovage) setHasBoitierLovage(false);
       if (boitierLovageReference) setBoitierLovageReference('');
-    } else if (hasBoitierLovage && !boitierLovageReference) {
-      setBoitierLovageReference(options[0].id);
     }
-  }, [hasBoitierLovage, boitierLovageReference, options, setBoitierLovageReference, setHasBoitierLovage]);
+  }, [selectOptions.length, hasBoitierLovage, boitierLovageReference, setHasBoitierLovage, setBoitierLovageReference]);
 
-  if (options.length === 0 && !isFree) {
+  if (selectOptions.length === 0 && operator !== 'free') {
     return null;
   }
 
   return (
-    <EquipmentToggleCard
+    <SelectEquipmentToggle
       title="Présence Boitiers de lovage"
       enabled={hasBoitierLovage}
       onToggle={setHasBoitierLovage}
+      value={boitierLovageReference}
+      onChange={setBoitierLovageReference}
+      options={selectOptions}
+      fieldLabel="Référence"
+      placeholder="Sélectionner une référence"
       icon={Activity}
-      color="violet"
       scopeBadgeText="par site"
-    >
-      <div className="flex flex-col md:flex-row md:items-center gap-3">
-        <QuantityInput
-          value={boitierLovageQuantity}
-          onChange={setBoitierLovageQuantity}
-          label="Qté :"
-          size="md"
-        />
-
-        <div className="flex flex-col flex-1 min-w-0">
-          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-            Référence
-          </label>
-          <CustomSelect
-            value={boitierLovageReference}
-            onChange={(val) => setBoitierLovageReference(val)}
-            className="focus:ring-2 focus:ring-violet-500"
-            options={options.map((opt) => ({
-              value: opt.id,
-              label: opt.reference
-            }))}
-            placeholder="Sélectionner une référence"
-          />
-        </div>
-      </div>
-    </EquipmentToggleCard>
+      quantity={boitierLovageQuantity}
+      onQuantityChange={setBoitierLovageQuantity}
+      quantityPosition="top-inline"
+    />
   );
 }
 
 export default BoitierLovageEquipmentToggle;
-

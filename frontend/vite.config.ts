@@ -22,9 +22,11 @@ export default defineConfig({
     },
   },
   build: {
+    chunkSizeWarningLimit: 850,
     rollupOptions: {
       output: {
         manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom', 'zustand'],
           'maplibre': ['maplibre-gl'],
           'lucide': ['lucide-react'],
         },

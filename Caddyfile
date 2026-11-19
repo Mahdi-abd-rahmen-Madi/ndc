@@ -1,28 +1,57 @@
-# Caddyfile for NDC (Reverse Proxy & Edge Server)
+# Caddyfile for NDC (Go-native Reverse Proxy, Edge Compression & Direct Media Serving)
 # Automatically provides HTTPS, HTTP/2, HTTP/3, and Zstandard/Gzip compression.
 
 {
     email admin@heliosys.io
 }
 
+# Reusable backend proxy snippet
+(backend_proxy) {
+    reverse_proxy backend:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Reusable media serving snippet:
+# Serves /media/* directly at native Go speed if mounted at /srv/media,
+# otherwise proxies cleanly to Django backend.
+(media_handler) {
+    handle_path /media/* {
+        @has_local_media file {
+            root /srv/media
+        }
+        handle @has_local_media {
+            root * /srv/media
+            header Content-Security-Policy "frame-ancestors 'self' https://ndc.heliosys.io"
+            header Cache-Control "public, max-age=3600"
+            file_server
+        }
+        handle {
+            rewrite * /media{uri}
+            import backend_proxy
+        }
+    }
+}
+
 # Production Frontend & Reverse Proxy
 ndc.heliosys.io {
     encode zstd gzip
 
-    # Proxy API and Admin calls directly to backend if on same domain
     handle /api/* {
-        reverse_proxy backend:8000 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-        }
+        import backend_proxy
     }
-
     handle /admin/* {
-        reverse_proxy backend:8000 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-        }
+        import backend_proxy
     }
+    handle /static/* {
+        import backend_proxy
+    }
+    handle /ws/* {
+        import backend_proxy
+    }
+    import media_handler
 
     # All other traffic directed to frontend container
     handle {
@@ -34,9 +63,10 @@ ndc.heliosys.io {
 api-ndc.heliosys.io {
     encode zstd gzip
 
-    reverse_proxy backend:8000 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
+    import media_handler
+
+    handle {
+        import backend_proxy
     }
 }
 
@@ -45,13 +75,20 @@ api-ndc.heliosys.io {
     encode zstd gzip
 
     handle /api/* {
-        reverse_proxy backend:8000
+        import backend_proxy
     }
     handle /admin/* {
-        reverse_proxy backend:8000
+        import backend_proxy
     }
+    handle /static/* {
+        import backend_proxy
+    }
+    handle /ws/* {
+        import backend_proxy
+    }
+    import media_handler
+
     handle {
         reverse_proxy frontend:80
     }
 }
-

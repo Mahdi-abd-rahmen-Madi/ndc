@@ -1,15 +1,18 @@
-
 services:
   db:
-    # Using Postgres 16 with PostGIS
     image: postgis/postgis:16-3.4
     container_name: ndc_postgis_prod
     environment:
-      POSTGRES_USER: ndc_user
-      POSTGRES_PASSWORD: ndc_password
-      POSTGRES_DB: ndc_db
+      POSTGRES_USER: ${POSTGRES_USER:-ndc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ndc_password}
+      POSTGRES_DB: ${POSTGRES_DB:-ndc_db}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ndc_user} -d ${POSTGRES_DB:-ndc_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
     networks:
       - ndc_network
@@ -22,20 +25,48 @@ services:
     env_file:
       - .env
     environment:
-      - POSTGRES_USER=ndc_user
-      - POSTGRES_PASSWORD=ndc_password
-      - POSTGRES_DB=ndc_db
-      - DATABASE_URL=postgis://ndc_user:ndc_password@db:5432/ndc_db
-      # The production allowed hosts should be passed or managed in settings
-      - ALLOWED_HOSTS=api-ndc.heliosys.io,localhost,127.0.0.1
-      - CORS_ALLOWED_ORIGINS=https://ndc.heliosys.io,http://localhost:5178
+      - POSTGRES_USER=${POSTGRES_USER:-ndc_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ndc_password}
+      - POSTGRES_DB=${POSTGRES_DB:-ndc_db}
+      - DATABASE_URL=postgis://${POSTGRES_USER:-ndc_user}:${POSTGRES_PASSWORD:-ndc_password}@db:5432/${POSTGRES_DB:-ndc_db}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-api-ndc.heliosys.io,localhost,127.0.0.1}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://ndc.heliosys.io,http://localhost:5178}
+      - USE_DB_CACHE=true
     ports:
       - "8008:8000"
     volumes:
       - ./backend/data:/app/data
       - ./backend/media:/app/media
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ndc_network
+
+  qcluster:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ndc_qcluster_prod
+    command: ["python", "manage.py", "qcluster"]
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-ndc_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-ndc_password}
+      - POSTGRES_DB=${POSTGRES_DB:-ndc_db}
+      - DATABASE_URL=postgis://${POSTGRES_USER:-ndc_user}:${POSTGRES_PASSWORD:-ndc_password}@db:5432/${POSTGRES_DB:-ndc_db}
+      - USE_DB_CACHE=true
+      - Q_CLUSTER_WORKERS=${Q_CLUSTER_WORKERS:-2}
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
     restart: unless-stopped
     networks:
       - ndc_network
@@ -46,7 +77,6 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=https://api-ndc.heliosys.io
-        - VITE_WORKER_URL=https://api-ndc.heliosys.io
     container_name: ndc_frontend_prod
     ports:
       - "5178:80"

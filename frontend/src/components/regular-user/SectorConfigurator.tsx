@@ -44,41 +44,34 @@ export default function SectorConfigurator({
     }
   }, [sectorData.selectedHeight, isStandardHeight]);
 
-  const handleMontage4GChange = (val: string) => {
-    const updates: Partial<SectorData> = { selectedMontage4G: val };
+  const createMontageHandler = (band: '4g' | '5g') => (val: string) => {
+    const montageKey = band === '4g' ? 'selectedMontage4G' : 'selectedMontage5G';
+    const configKey = band === '4g' ? 'ant4gConfig' : 'ant5gConfig';
+    const specKey = band === '4g' ? 'ant4g' : 'ant5g';
+    const updates: Partial<SectorData> = { [montageKey]: val };
 
     if (!val) {
-      updates.ant4gConfig = { model: '', height: 0, width: 0, thickness: 0, weight: 0 };
+      updates[configKey] = { model: '', height: 0, width: 0, thickness: 0, weight: 0 };
     } else if (val !== 'custom') {
       const spec = config?.standard_montages.find(m => m.id === val);
       if (spec) {
-        updates.ant4gConfig = { model: val, height: spec.ant4g.height, width: spec.ant4g.width, thickness: spec.ant4g.thickness, weight: spec.ant4g.weight };
+        const ant = spec[specKey];
+        updates[configKey] = { model: val, height: ant.height, width: ant.width, thickness: ant.thickness, weight: ant.weight };
       }
     }
     updateSector(index, updates);
   };
 
-  const handleMontage5GChange = (val: string) => {
-    const updates: Partial<SectorData> = { selectedMontage5G: val };
+  const createAntConfigSetter = (band: '4g' | '5g') =>
+    (val: AntennaConfigState | ((prev: AntennaConfigState) => AntennaConfigState)) => {
+      const configKey = band === '4g' ? 'ant4gConfig' : 'ant5gConfig';
+      updateSector(index, { [configKey]: typeof val === 'function' ? val(sectorData[configKey]) : val });
+    };
 
-    if (!val) {
-      updates.ant5gConfig = { model: '', height: 0, width: 0, thickness: 0, weight: 0 };
-    } else if (val !== 'custom') {
-      const spec = config?.standard_montages.find(m => m.id === val);
-      if (spec) {
-        updates.ant5gConfig = { model: val, height: spec.ant5g.height, width: spec.ant5g.width, thickness: spec.ant5g.thickness, weight: spec.ant5g.weight };
-      }
-    }
-    updateSector(index, updates);
-  };
-
-  const handleSetAnt4gConfig = (val: AntennaConfigState | ((prev: AntennaConfigState) => AntennaConfigState)) => {
-    updateSector(index, { ant4gConfig: typeof val === 'function' ? val(sectorData.ant4gConfig) : val });
-  };
-
-  const handleSetAnt5gConfig = (val: AntennaConfigState | ((prev: AntennaConfigState) => AntennaConfigState)) => {
-    updateSector(index, { ant5gConfig: typeof val === 'function' ? val(sectorData.ant5gConfig) : val });
-  };
+  const handleMontage4GChange = createMontageHandler('4g');
+  const handleMontage5GChange = createMontageHandler('5g');
+  const handleSetAnt4gConfig = createAntConfigSetter('4g');
+  const handleSetAnt5gConfig = createAntConfigSetter('5g');
 
   if (collapsed) {
     return (

@@ -23,7 +23,9 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import imageCompression from 'browser-image-compression';
+import { apiClient, getAuthToken, resolveMediaUrl } from '../services/apiClient';
+import { validateImageFile, compressImageIfNeeded } from '../utils/imageUpload';
+import { useAppStore } from '../stores/useAppStore';
 
 export interface CalculationHistoryItem {
   id: number;
@@ -53,8 +55,9 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOperator, setSelectedOperator] = useState<string>('all');
 
-  // Branding & Logo state
-  const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
+  // Branding & Logo state (synced with global app store)
+  const clientLogoUrl = useAppStore((s) => s.clientLogoUrl);
+  const setClientLogoUrl = useAppStore((s) => s.setClientLogoUrl);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
   const [logoUploadSuccess, setLogoUploadSuccess] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
@@ -67,16 +70,12 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('ndc_auth_token');
-      if (!token) return;
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/me/`, {
-        headers: { 'Authorization': `Token ${token}` }
+      if (!getAuthToken()) return;
+      const data = await apiClient.get<{ client_logo?: string | null }>('/api/user-profiles/me/', {
+        baseUrl: apiBaseUrl,
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.client_logo) {
-          setClientLogoUrl(data.client_logo);
-        }
+      if (data.client_logo !== undefined) {
+        setClientLogoUrl(data.client_logo || null);
       }
     } catch (err) {
       console.error('Failed to load user profile:', err);
@@ -87,19 +86,14 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
     try {
       setIsLoadingHistory(true);
       setHistoryError(null);
-      const token = localStorage.getItem('ndc_auth_token');
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/calculations_history/`, {
-        headers: token ? { 'Authorization': `Token ${token}` } : {},
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistoryItems(data);
-      } else {
-        setHistoryError('Impossible de charger l\'historique des calculs.');
-      }
+      const data = await apiClient.get<CalculationHistoryItem[]>(
+        '/api/user-profiles/calculations_history/',
+        { baseUrl: apiBaseUrl }
+      );
+      setHistoryItems(data);
     } catch (err) {
       console.error('Failed to load calculations history:', err);
-      setHistoryError('Erreur de connexion au serveur.');
+      setHistoryError('Impossible de charger l\'historique des calculs.');
     } finally {
       setIsLoadingHistory(false);
     }
@@ -112,52 +106,30 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
     setLogoUploadError(null);
     setLogoUploadSuccess(false);
 
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setLogoUploadError('Format invalide. Seuls les formats PNG et JPG sont acceptés.');
-      e.target.value = '';
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setLogoUploadError('Fichier trop lourd (maximum 10 Mo).');
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setLogoUploadError(validationError);
       e.target.value = '';
       return;
     }
 
     try {
       setIsLogoUploading(true);
-      let fileToUpload = file;
-
-      if (file.size > 1024 * 1024) {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1200,
-          useWebWorker: true,
-        };
-        fileToUpload = await imageCompression(file, options);
-      }
+      const fileToUpload = await compressImageIfNeeded(file, { maxSizeMB: 1, maxWidthOrHeight: 1200 });
 
       const formData = new FormData();
       formData.append('file', fileToUpload);
 
-      const token = localStorage.getItem('ndc_auth_token');
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/upload_logo/`, {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Token ${token}` } : {},
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setClientLogoUrl(data.client_logo);
-        setLogoUploadSuccess(true);
-        setTimeout(() => setLogoUploadSuccess(false), 4000);
-      } else {
-        const errText = await res.text();
-        setLogoUploadError(`Erreur lors du téléversement (${res.status})`);
-      }
-    } catch (err) {
-      setLogoUploadError('Erreur de connexion. Veuillez réessayer.');
+      const data = await apiClient.post<{ client_logo: string }>(
+        '/api/user-profiles/upload_logo/',
+        formData,
+        { baseUrl: apiBaseUrl }
+      );
+      setClientLogoUrl(data.client_logo);
+      setLogoUploadSuccess(true);
+      setTimeout(() => setLogoUploadSuccess(false), 4000);
+    } catch (err: any) {
+      setLogoUploadError(err?.message || 'Erreur lors du téléversement. Veuillez réessayer.');
     } finally {
       setIsLogoUploading(false);
       e.target.value = '';
@@ -168,18 +140,8 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
     if (!window.confirm('Voulez-vous vraiment supprimer votre logo personnalisé ?')) return;
     try {
       setIsLogoUploading(true);
-      const token = localStorage.getItem('ndc_auth_token');
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/me/`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': token ? `Token ${token}` : '',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ client_logo: null })
-      });
-      if (res.ok) {
-        setClientLogoUrl(null);
-      }
+      await apiClient.patch('/api/user-profiles/me/', { client_logo: null }, { baseUrl: apiBaseUrl });
+      setClientLogoUrl(null);
     } catch (err) {
       console.error('Failed to remove logo:', err);
     } finally {
@@ -187,11 +149,7 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
     }
   };
 
-  const getFullPdfUrl = (url: string) => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${apiBaseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
-  };
+  const getFullPdfUrl = (url: string) => resolveMediaUrl(url, apiBaseUrl);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -235,11 +193,7 @@ export default function AccountView({ apiBaseUrl, userEmail, onLogout }: Account
     return Array.from(set);
   }, [historyItems]);
 
-  const resolvedLogoUrl = clientLogoUrl
-    ? clientLogoUrl.startsWith('http') || clientLogoUrl.startsWith('data:')
-      ? clientLogoUrl
-      : `${apiBaseUrl}${clientLogoUrl.startsWith('/') ? '' : '/'}${clientLogoUrl}`
-    : null;
+  const resolvedLogoUrl = clientLogoUrl ? resolveMediaUrl(clientLogoUrl, apiBaseUrl) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">

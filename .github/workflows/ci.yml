@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  backend:
+    name: Backend Checks & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install GIS & WeasyPrint system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gdal-bin libgdal-dev libgeos-dev libproj-dev libspatialite-dev \
+            libpango-1.0-0 libpangoft2-1.0-0 libgdk-pixbuf-2.0-0 libffi-dev
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Django system, migration & catalogue checks
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///:memory:
+          USE_DB_CACHE: "false"
+          DEBUG: "true"
+        run: |
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py sync_catalogue --dry-run
+
+      - name: Run Django test suite
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///:memory:
+          USE_DB_CACHE: "false"
+          DEBUG: "true"
+        run: |
+          python manage.py test api geodata.tests.test_models geodata.tests.test_phase_regressions --verbosity=2
+
+  frontend:
+    name: Frontend Typecheck, Tests & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --no-frozen-lockfile
+
+      - name: TypeScript check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: pnpm test
+
+      - name: Production Vite build
+        working-directory: frontend
+        run: pnpm build
+

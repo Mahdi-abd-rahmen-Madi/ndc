@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
+import { useMemo } from 'react';
 import { Zap } from 'lucide-react';
-import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
-import { CustomSelect } from '../../ui/CustomSelect';
-import { EquipmentSpecsGrid } from '../../ui/EquipmentSpecsGrid';
+import { DEFAULT_TGBT_OPTIONS, STATIC_EQUIPMENT_SPECS } from '../../../config/catalogueDefaults';
+import { SelectEquipmentToggle } from './shared/SelectEquipmentToggle';
 
 export interface TGBTItem {
   id: string;
@@ -23,71 +22,55 @@ export interface TGBTEquipmentToggleProps {
   options?: TGBTItem[];
 }
 
-const DEFAULT_TGBT_OPTIONS: TGBTItem[] = [
-  { id: 'tgbt_actia', name: 'ACTIA', reference: 'ACTIA', vendor: 'ACTIA', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 },
-  { id: 'tgbt_tlti', name: 'TLTI', reference: 'TLTI', vendor: 'TLTI', operator: 'bouygues', dimensions: '500x400x230mm', weight: 15 }
-];
-
 export function TGBTEquipmentToggle({
   hasTgbt,
   setHasTgbt,
   tgbtReference,
   setTgbtReference,
-  options = []
+  options = [],
 }: TGBTEquipmentToggleProps) {
-  const availableOptions = options.length > 0 ? options : DEFAULT_TGBT_OPTIONS;
+  const availableOptions = useMemo(
+    () => (options.length > 0 ? options : DEFAULT_TGBT_OPTIONS),
+    [options]
+  );
 
-  useEffect(() => {
-    if (hasTgbt && !tgbtReference && availableOptions.length > 0) {
-      setTgbtReference(availableOptions[0].reference || availableOptions[0].name || availableOptions[0].id);
-    }
-  }, [hasTgbt, tgbtReference, setTgbtReference, availableOptions]);
+  const selectOptions = useMemo(
+    () =>
+      availableOptions.map(opt => ({
+        value: opt.reference || opt.name || opt.id,
+        label: (opt.name || opt.reference || '').replace(/^TGBT\s+/i, ''),
+      })),
+    [availableOptions]
+  );
 
-  const selectedItem = availableOptions.find(
-    o => o.id === tgbtReference || o.name === tgbtReference || o.reference === tgbtReference
-  ) || availableOptions[0];
+  const selectedItem = useMemo(
+    () =>
+      availableOptions.find(
+        o => o.id === tgbtReference || o.name === tgbtReference || o.reference === tgbtReference
+      ) || availableOptions[0],
+    [availableOptions, tgbtReference]
+  );
+
+  const specs = selectedItem
+    ? [
+        { label: 'Dimensions', value: selectedItem.dimensions || STATIC_EQUIPMENT_SPECS.tgbt.dimensions },
+        { label: 'Poids', value: selectedItem.weight ? `${selectedItem.weight} kg` : `${STATIC_EQUIPMENT_SPECS.tgbt.weightKg} kg` },
+      ]
+    : undefined;
 
   return (
-    <EquipmentToggleCard
+    <SelectEquipmentToggle
       title="TGBT"
       enabled={hasTgbt}
-      onToggle={(checked: boolean) => {
-        setHasTgbt(checked);
-        if (checked && !tgbtReference && availableOptions.length > 0) {
-          setTgbtReference(availableOptions[0].reference || availableOptions[0].name || availableOptions[0].id);
-        }
-      }}
+      onToggle={setHasTgbt}
+      value={tgbtReference}
+      onChange={setTgbtReference}
+      options={selectOptions}
+      fieldLabel="Modèle TGBT"
+      placeholder="Sélectionner un TGBT"
       icon={Zap}
-      color="violet"
-    >
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col">
-          <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-            Modèle TGBT
-          </label>
-          <CustomSelect
-            value={tgbtReference || availableOptions[0]?.reference || 'ACTIA'}
-            onChange={(val) => setTgbtReference(val)}
-            className="focus:ring-2 focus:ring-violet-500"
-            options={availableOptions.map(opt => ({
-              value: opt.reference || opt.name || opt.id,
-              label: (opt.name || opt.reference || '').replace(/^TGBT\s+/i, '')
-            }))}
-            placeholder="Sélectionner un TGBT"
-          />
-        </div>
-
-        {selectedItem && (
-          <EquipmentSpecsGrid
-            columns={2}
-            items={[
-              { label: 'Dimensions', value: selectedItem.dimensions || '500x400x230mm' },
-              { label: 'Poids', value: selectedItem.weight ? `${selectedItem.weight} kg` : '15 kg' }
-            ]}
-          />
-        )}
-      </div>
-    </EquipmentToggleCard>
+      specs={specs}
+    />
   );
 }
 

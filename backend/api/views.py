@@ -5,6 +5,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from django_filters.rest_framework import DjangoFilterBackend
@@ -16,39 +20,78 @@ import logging
 import threading
 
 logger = logging.getLogger(__name__)
-from .models import UserProfile, CalculationJob, GeneratedSiteNdc
+from .models import UserProfile, CalculationJob, GeneratedSiteNdc, ClientSubscription
+from .permissions import IsRobotWorkerOrAdminPermission
 from .serializers import (
     UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer,
     GeneratedSiteNdcSerializer
 )
 from .aps_service import get_aps_token
-from .tasks import send_job_to_worker
+from .tasks import enqueue_task
 from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
+from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator
+from utils.path_security import safe_media_path, safe_resolve_under
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 import os
 import uuid
 
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+def _broadcast_calc_progress(job_id: int, data: dict):
+    """Broadcast a calculation progress/completion event to WebSocket listeners."""
+    try:
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"calc_{job_id}",
+                {"type": "calc_progress", "data": data},
+            )
+    except Exception as ws_err:
+        logger.warning("WebSocket broadcast warning for job %s: %s", job_id, ws_err)
+
+
+def _validate_image_upload(file_obj):
+    ext = os.path.splitext(file_obj.name or '')[1].lower()
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return "Format d'image non supporté (JPG, PNG, WEBP uniquement)."
+    content_type = getattr(file_obj, 'content_type', '') or ''
+    if content_type and not content_type.startswith('image/'):
+        return "Type MIME invalide : une image est attendue."
+    if getattr(file_obj, 'size', 0) > MAX_IMAGE_UPLOAD_BYTES:
+        return "Fichier trop volumineux (10 Mo maximum)."
+    return None
+
 
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.all().select_related('user')
+    queryset = UserProfile.objects.all().select_related('user', 'role')
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['department', 'role']
-    search_fields = ['user__username', 'user__email', 'department', 'role']
+    search_fields = ['user__username', 'user__email', 'department', 'role__name']
     ordering_fields = ['user__username', 'department', 'role', 'created_at', 'updated_at']
     ordering = ['user__username']
+
+    def get_queryset(self):
+        qs = UserProfile.objects.select_related('user', 'role')
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return qs
+        return qs.filter(user=self.request.user)
 
     @action(detail=False, methods=['get', 'patch'])
     def me(self, request):
         if request.method == 'GET':
-            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            profile, _ = UserProfile.objects.select_related('user', 'role').get_or_create(user=request.user)
             serializer = self.get_serializer(profile)
             return Response(serializer.data)
 
         elif request.method == 'PATCH':
-            profile, _ = UserProfile.objects.get_or_create(user=request.user)
+            profile, _ = UserProfile.objects.select_related('user', 'role').get_or_create(user=request.user)
             serializer = self.get_serializer(profile, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -61,12 +104,13 @@ class UserProfileViewSet(viewsets.ModelViewSet):
             
         file_obj = request.data.get('file')
         if not file_obj:
-            file_keys = list(request.FILES.keys())
-            data_keys = list(request.data.keys())
-            return Response({'error': f'No file provided. FILES keys: {file_keys}, data keys: {data_keys}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        err = _validate_image_upload(file_obj)
+        if err:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
             
-        import uuid
-        ext = file_obj.name.split('.')[-1] if '.' in file_obj.name else 'png'
+        ext = os.path.splitext(file_obj.name or '')[1].lower().lstrip('.') or 'png'
         file_obj.name = f"{uuid.uuid4().hex}.{ext}"
             
         profile.client_logo = file_obj
@@ -104,8 +148,10 @@ class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = (request.data.get('email') or '').strip()
+        password = request.data.get('password') or ''
+        if not email or not password:
+            return Response({'error': 'Email and password required'}, status=status.HTTP_400_BAD_REQUEST)
         
         user_obj = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
         user = None
@@ -121,14 +167,19 @@ class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = (request.data.get('email') or '').strip()
+        password = request.data.get('password') or ''
         
         if not email or not password:
             return Response({'error': 'Email and password required'}, status=status.HTTP_400_BAD_REQUEST)
             
         if User.objects.filter(username=email).exists():
             return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_password(password)
+        except DjangoValidationError as exc:
+            return Response({'error': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
             
         user = User.objects.create_user(username=email, email=email, password=password)
         token, _ = Token.objects.get_or_create(user=user)
@@ -139,14 +190,15 @@ class APSTokenView(APIView):
     """
     Returns a 2-legged APS access token.
     """
-    permission_classes = [permissions.AllowAny] # Change to IsAuthenticated if needed in production
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         try:
             token_info = get_aps_token()
             return Response(token_info, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Failed to fetch APS token")
+            return Response({'error': 'Failed to obtain APS token'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PhotoUploadView(APIView):
@@ -154,19 +206,24 @@ class PhotoUploadView(APIView):
     Endpoint for uploading a photo before starting a calculation.
     Returns the temporary photo URL.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         photo = request.FILES.get('photo')
         if not photo:
             return Response({'error': 'No photo provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+        err = _validate_image_upload(photo)
+        if err:
+            return Response({'error': err}, status=status.HTTP_400_BAD_REQUEST)
+
         # Ensure media/uploads directory exists
         upload_dir = os.path.join(settings.MEDIA_ROOT, 'uploads')
         os.makedirs(upload_dir, exist_ok=True)
 
+        ext = os.path.splitext(os.path.basename(photo.name or ''))[1].lower() or '.jpg'
         fs = FileSystemStorage(location=upload_dir, base_url=settings.MEDIA_URL + 'uploads/')
-        filename = fs.save(f"{uuid.uuid4()}_{photo.name}", photo)
+        filename = fs.save(f"{uuid.uuid4().hex}{ext}", photo)
         photo_url = fs.url(filename)
 
         return Response({'photo_url': photo_url}, status=status.HTTP_201_CREATED)
@@ -178,12 +235,13 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
     """
     queryset = CalculationJob.objects.select_related('user').all()
     serializer_class = CalculationJobSerializer
-    permission_classes = [permissions.AllowAny] # Adjust as per your auth requirements
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Return only the current user's jobs if authenticated
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return CalculationJob.objects.select_related('user').all()
         if self.request.user.is_authenticated:
-            return CalculationJob.objects.filter(user=self.request.user)
+            return CalculationJob.objects.select_related('user').filter(user=self.request.user)
         return CalculationJob.objects.none()
 
     def create(self, request, *args, **kwargs):
@@ -411,12 +469,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             input_data=input_data
         )
 
-        # 4. Dispatch to Unified Robot Worker in a background thread
-        threading.Thread(
-            target=send_job_to_worker,
-            args=(job.id,),
-            daemon=True
-        ).start()
+        # 4. Dispatch to Unified Robot Worker via Django-Q2 (zero-Redis PostgreSQL queue)
+        job_id = job.id
+        transaction.on_commit(lambda: enqueue_task('api.tasks.send_job_to_worker', job_id))
 
         serializer = self.get_serializer(job)
         return Response({
@@ -428,13 +483,19 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             "data": serializer.data
         }, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser, JSONParser])
+    @action(
+        detail=True,
+        methods=['post'],
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
+        permission_classes=[IsRobotWorkerOrAdminPermission],
+    )
     def complete(self, request, pk=None):
         """
         Endpoint for Unified Robot Worker to submit calculation results and artifacts.
         Worker calls POST /api/calculations/<id>/complete/
         """
         job = get_object_or_404(CalculationJob, pk=pk)
+        previous_status = job.status
 
         # Parse result_data
         raw_result_data = request.data.get('result_data') or request.POST.get('result_data')
@@ -582,44 +643,30 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         job.status = job_status
         job.error_message = error_message
 
-        # Manage user quota if completed
-        if job_status == 'COMPLETED':
-            if job.user and hasattr(job.user, 'subscription'):
-                job.user.subscription.used_quota += job.credits_consumed
-                job.user.subscription.save()
-
-        job.save()
-
-        # Trigger backend document compilation (DOCX / PDF) before announcing completion
-        if job_status == 'COMPLETED':
-            try:
-                from .services import assemble_ndc_document
-                assemble_ndc_document(job.id)
-            except Exception as e:
-                print(f"Document compilation warning for Job {job.id}: {e}")
-
-        # Broadcast completion or failure to WebSocket listeners
-        try:
-            from asgiref.sync import async_to_sync
-            from channels.layers import get_channel_layer
-            channel_layer = get_channel_layer()
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    f"calc_{job.id}",
-                    {
-                        "type": "calc_progress",
-                        "data": {
-                            "job_id": job.id,
-                            "stage": "COMPLETED" if job_status == "COMPLETED" else "FAILED",
-                            "percent": 100 if job_status == "COMPLETED" else 0,
-                            "message": "Calcul terminé avec succès" if job_status == "COMPLETED" else "Échec du calcul Robot",
-                            "status": job_status,
-                            "is_completed": job_status == "COMPLETED"
-                        }
-                    }
+        # Atomic & idempotent quota update: only charge when transitioning into COMPLETED
+        with transaction.atomic():
+            if job_status == 'COMPLETED' and previous_status != 'COMPLETED' and job.user_id:
+                ClientSubscription.objects.filter(user_id=job.user_id).update(
+                    used_quota=F('used_quota') + job.credits_consumed
                 )
-        except Exception as ws_err:
-            print(f"WebSocket broadcast warning: {ws_err}")
+            job.save()
+
+        # Enqueue backend document compilation (DOCX / PDF) on qcluster so callback returns fast
+        if job_status == 'COMPLETED':
+            job_id_to_compile = job.id
+            transaction.on_commit(
+                lambda: enqueue_task('api.tasks.compile_job_documents_task', job_id_to_compile)
+            )
+
+        # Broadcast completion or failure to WebSocket listeners immediately
+        _broadcast_calc_progress(job.id, {
+            "job_id": job.id,
+            "stage": "COMPLETED" if job_status == "COMPLETED" else "FAILED",
+            "percent": 100 if job_status == "COMPLETED" else 0,
+            "message": "Calcul terminé avec succès" if job_status == "COMPLETED" else "Échec du calcul Robot",
+            "status": job_status,
+            "is_completed": job_status == "COMPLETED",
+        })
 
         if job_status != 'COMPLETED':
             return Response({
@@ -631,7 +678,12 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(job)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser, JSONParser])
+    @action(
+        detail=True,
+        methods=['post'],
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
+        permission_classes=[IsRobotWorkerOrAdminPermission],
+    )
     def progress(self, request, pk=None):
         """
         Called by Windows Robot Worker during execution to push live milestones.
@@ -665,28 +717,15 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         job.save(update_fields=['status', 'result_data', 'updated_at'])
 
         # Broadcast event to WebSocket channel group
-        try:
-            from asgiref.sync import async_to_sync
-            from channels.layers import get_channel_layer
-            channel_layer = get_channel_layer()
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    f"calc_{job.id}",
-                    {
-                        "type": "calc_progress",
-                        "data": {
-                            "job_id": job.id,
-                            "stage": stage,
-                            "percent": percent,
-                            "message": message,
-                            "details": details,
-                            "status": job.status,
-                            "is_completed": False
-                        }
-                    }
-                )
-        except Exception as ws_err:
-            print(f"WebSocket broadcast error: {ws_err}")
+        _broadcast_calc_progress(job.id, {
+            "job_id": job.id,
+            "stage": stage,
+            "percent": percent,
+            "message": message,
+            "details": details,
+            "status": job.status,
+            "is_completed": False,
+        })
 
         return Response({"status": "ok", "job_id": job.id, "stage": stage, "percent": percent})
 
@@ -776,8 +815,11 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         except json.JSONDecodeError:
                             pass
 
-                operator_name = (preview_data.get('site', {}).get('operator') or request.data.get('operator') or '').lower().strip()
-                if (operator_name == 'bouygues' or operator_name == 'orange') and 'td_equipment' in preview_data and isinstance(preview_data['td_equipment'], dict):
+                operator_name = normalize_operator(
+                    request.data.get('operator') or request.data.get('operateur'),
+                    fallback_site=preview_data.get('site'),
+                )
+                if operator_name in OPERATORS_WITHOUT_TD and 'td_equipment' in preview_data and isinstance(preview_data['td_equipment'], dict):
                     preview_data['td_equipment']['enabled'] = False
 
                 code_val = request.data.get('code_site') or request.data.get('ref_site') or ''
@@ -813,33 +855,30 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     if os.path.exists(cover_abs_path):
                         merger.append(cover_abs_path)
                         
-                # Catalogue paths
+                # Catalogue paths (strictly confined to MEDIA_ROOT)
                 for cat_url in catalogue_pdf_urls:
-                    if cat_url.startswith(settings.MEDIA_URL):
-                        cat_rel_path = cat_url[len(settings.MEDIA_URL):]
-                        cat_rel_path = urllib.parse.unquote(cat_rel_path)
-                        
-                        # Ensure we are dealing with a PDF file (convert .docx if necessary)
-                        if not cat_rel_path.lower().endswith('.pdf'):
-                            from geodata.utils_preview import get_pdf_preview_path
-                            pdf_rel_path = get_pdf_preview_path(cat_rel_path)
-                            if pdf_rel_path:
-                                cat_rel_path = pdf_rel_path
-                        
-                        cat_abs_path = os.path.join(settings.MEDIA_ROOT, cat_rel_path)
-                        if os.path.exists(cat_abs_path):
-                            from pypdf import PdfReader
-                            reader = PdfReader(cat_abs_path)
-                            for i, page in enumerate(reader.pages):
-                                if i in [0, 1]: # Skip pages 1-2 of catalogue (Description/Equipment table + Wind hypotheses) - already generated by template
-                                    continue
-                                merger.add_page(page)
+                    cat_abs_path = safe_media_path(cat_url)
+                    if not cat_abs_path:
+                        continue
+                    cat_rel_path = os.path.relpath(cat_abs_path, settings.MEDIA_ROOT)
+                    if not cat_rel_path.lower().endswith('.pdf'):
+                        from geodata.utils_preview import get_pdf_preview_path
+                        pdf_rel_path = get_pdf_preview_path(cat_rel_path)
+                        if pdf_rel_path:
+                            cat_abs_path = safe_media_path(pdf_rel_path)
+                    if cat_abs_path and os.path.isfile(cat_abs_path):
+                        from pypdf import PdfReader
+                        reader = PdfReader(cat_abs_path)
+                        for i, page in enumerate(reader.pages):
+                            if i in [0, 1]:  # Skip pages 1-2 of catalogue - already generated by template
+                                continue
+                            merger.add_page(page)
                 
                 has_any_eq = False
                 for eq_key in ['fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre']:
                     eq = preview_data.get(eq_key, {})
                     if isinstance(eq, dict) and eq.get('enabled'):
-                        if eq_key == 'td_equipment' and (operator_name == 'bouygues' or operator_name == 'orange'):
+                        if eq_key == 'td_equipment' and operator_name in OPERATORS_WITHOUT_TD:
                             continue
                         has_any_eq = True
                         break
@@ -889,7 +928,23 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             # Batch pre-conversion of all RTF files across jobs and auxiliary equipment
             # Guarantees zero cross-job leakage and reduces multiple LibreOffice cold starts to one.
             from geodata.ndc_generator import collect_site_ndc_rtf_specs, _batch_convert_rtf_files
-            jobs = [CalculationJob.objects.get(id=job_id) for job_id in job_ids]
+            jobs_by_id = CalculationJob.objects.select_related('user').in_bulk(job_ids)
+            missing_ids = [jid for jid in job_ids if jid not in jobs_by_id]
+            if missing_ids:
+                return Response(
+                    {'error': f"Job(s) introuvable(s): {missing_ids}"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            jobs = [jobs_by_id[jid] for jid in job_ids]
+
+            # Ownership check (prevent IDOR across users)
+            if not (request.user.is_staff or request.user.is_superuser):
+                for job in jobs:
+                    if job.user_id and job.user_id != request.user.id:
+                        return Response(
+                            {'error': "Accès refusé à l'un des calculs demandés."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
 
             # Hardened Validation: Never assemble a site NDC if any sector calculation failed or is incomplete
             from .services import validate_calculation_artifacts
@@ -957,10 +1012,16 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             os.makedirs(outdir, exist_ok=True)
             
             merged_pdf_path = os.path.join(outdir, output_filename)
-            merger.write(merged_pdf_path)
-            merger.close()
-    
-            # Clean up temp pdfs if we want to, but it's fine to leave them since they are in uploads
+            try:
+                merger.write(merged_pdf_path)
+            finally:
+                merger.close()
+                for tmp_pdf in temp_pdfs:
+                    if tmp_pdf and tmp_pdf != merged_pdf_path and os.path.isfile(tmp_pdf):
+                        try:
+                            os.remove(tmp_pdf)
+                        except OSError:
+                            pass
             
             final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
 
@@ -987,7 +1048,7 @@ class WorkerControlView(APIView):
     """
     Endpoint for Windows Server to ping heartbeat and push logs.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsRobotWorkerOrAdminPermission]
 
     def get(self, request):
         from django.core.cache import cache
@@ -1017,16 +1078,26 @@ class WorkerControlView(APIView):
         cache.set('worker_last_seen', time.time(), timeout=3600)
         return Response({'status': 'ok'})
 
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import FileResponse, Http404, HttpResponseForbidden
+import mimetypes
+
 
 def download_note_de_calcul(request, client_id, filename):
-    # 1. Verify user owns this client_id
-    if not request.user.is_authenticated or f"client_{request.user.id}" != client_id:
+    # 1. Verify user owns this client_id (or is staff)
+    if not request.user.is_authenticated or (
+        f"client_{request.user.id}" != client_id and not request.user.is_staff
+    ):
         return HttpResponseForbidden("Unauthorized")
-        
-    # 2. Instruct Caddy to serve the file
-    response = HttpResponse()
-    # The header tells Caddy to fetch the file from the local root
-    response['X-Accel-Redirect'] = f"/{client_id}/{filename}"
-    response['Content-Type'] = "application/rtf"
-    return response
+
+    # 2. Stream safely from MEDIA_ROOT (Caddy compatible, no Nginx X-Accel-Redirect)
+    full_path = safe_resolve_under(settings.MEDIA_ROOT, os.path.join(client_id, os.path.basename(filename)))
+    if not full_path or not os.path.isfile(full_path):
+        raise Http404("File not found")
+
+    content_type, _ = mimetypes.guess_type(full_path)
+    return FileResponse(
+        open(full_path, 'rb'),
+        content_type=content_type or 'application/octet-stream',
+        as_attachment=True,
+        filename=os.path.basename(full_path),
+    )

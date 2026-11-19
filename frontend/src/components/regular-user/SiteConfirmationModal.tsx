@@ -3,7 +3,14 @@ import {
   X, FileText, CheckCircle2, ChevronDown, AlertTriangle, Layers, Radio, Server
 } from 'lucide-react';
 import type { SectorData, CatalogueConfig, ZoneTechniqueData, SelectedBaieItem, EquipmentItem } from './types';
-import { DEFAULT_ORANGE_BAIES } from './equipment/BaieEquipmentToggle';
+import { DEFAULT_ORANGE_BAIES } from '../../config/catalogueDefaults';
+import {
+  AMOD_LABELS,
+  CAB_SUPPORT_LABELS,
+  extractSectorAerialState,
+  formatFoundationLabel,
+  hasAnyZoneTechnique,
+} from '../../config/equipmentRegistry';
 
 export interface SiteConfirmationModalProps {
   isOpen: boolean;
@@ -122,19 +129,11 @@ export function SiteConfirmationModal({
 
   if (!isOpen) return null;
 
-  const s1 = activeSectors[0];
-  const hasFhEquipment = !!s1?.hasFhEquipment;
-  const fhQuantity = s1?.fhQuantity ?? 1;
-  const fhReference = s1?.fhReference ?? '';
-  const fhItems = s1?.fhItems ?? [];
-  const hasRruEquipment = !!s1?.hasRruEquipment;
-  const rruItems = s1?.rruItems ?? [];
-  const hasRrhEquipment = !!s1?.hasRrhEquipment;
-  const rrhItems = s1?.rrhItems ?? [];
-  const hasCoffret = !!s1?.hasCoffret;
-  const coffretReference = s1?.coffretReference ?? '';
-  const hasBoitierJonction = !!s1?.hasBoitierJonction;
-  const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
+  const {
+    hasFhEquipment, fhQuantity, fhReference, fhItems,
+    hasRruEquipment, rruItems, hasRrhEquipment, rrhItems,
+    hasCoffret, coffretReference, hasBoitierJonction, boitierJonctionQuantity,
+  } = extractSectorAerialState(activeSectors[0]);
 
   const {
     hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
@@ -241,7 +240,7 @@ export function SiteConfirmationModal({
               </div>
               {(hasFhEquipment || hasRruEquipment || hasRrhEquipment || hasCoffret || hasBoitierJonction) && (
                 <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full">
-                  Ancrage : {s1?.equipmentFoundationType === 'beton' ? 'Plot Béton' : s1?.equipmentFoundationType === 'dallettes' ? 'Dallettes' : 'Plot Métallique'}
+                  Ancrage : {formatFoundationLabel(activeSectors[0]?.equipmentFoundationType)}
                 </span>
               )}
             </div>
@@ -367,7 +366,7 @@ export function SiteConfirmationModal({
           </div>
 
           {/* 3. Zone Technique */}
-          {((operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasCoffretTransFo || hasPileAmod)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)) && (
+          {hasAnyZoneTechnique(zoneTechnique, operator) && (
             <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200/60">
                 <div className="p-1 bg-indigo-50 text-indigo-600 rounded-md">
@@ -424,7 +423,7 @@ export function SiteConfirmationModal({
                   </ZoneTechniqueCard>
                 )}
                 {operator === 'free' && hasCab && (
-                  <ZoneTechniqueCard title={`Baie CAB (${cabSupport ? { plinthes: 'Plinthes', support_autostable: 'Support Autostable', support_fimo: 'Support FIMO', support_muraux: 'Supports Muraux' }[cabSupport] || cabSupport : 'Support'})`}>
+                  <ZoneTechniqueCard title={`Baie CAB (${cabSupport ? CAB_SUPPORT_LABELS[cabSupport] || cabSupport : 'Support'})`}>
                     <span className="text-xs font-bold text-slate-900 block">
                       {[cabOne ? 'CAB ONE' : null, cabTwo ? 'CAB TWO' : null, cabThree ? 'CAB THREE' : null].filter(Boolean).join(', ') || 'Sélectionnée'}
                     </span>
@@ -467,16 +466,9 @@ export function SiteConfirmationModal({
                 {operator === 'free' && hasPileAmod && (
                   <ZoneTechniqueCard title="Pile système AMOD (Nokia)">
                     {(() => {
-                      const labels: Record<string, string> = {
-                        free_amod_asib_4g: 'ASIB (4G)',
-                        free_amod_asik_5g: 'ASIK (5G)',
-                        free_amod_abia_4g: 'ABIA (4G)',
-                        free_amod_abil_5g: 'ABIL (5G)',
-                        free_amod_abio_4g_5g: 'ABIO (4G/5G)',
-                      };
                       const active = Object.entries(amodModules || {})
                         .filter(([_, m]) => m?.enabled)
-                        .map(([id, m]) => (m.quantity > 1 ? `${m.quantity}x ` : '') + (labels[id] || id));
+                        .map(([id, m]) => (m.quantity > 1 ? `${m.quantity}x ` : '') + (AMOD_LABELS[id] || id));
                       return (
                         <span className="text-xs font-bold text-slate-900 block">
                           {active.join(', ') || 'Sélectionnée'}

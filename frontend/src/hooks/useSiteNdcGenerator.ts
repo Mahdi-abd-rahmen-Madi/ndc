@@ -6,7 +6,8 @@ import type {
   SelectedBaieItem
 } from '../components/regular-user/types';
 import { getTerrainDetails } from '../utils/terrainDetails';
-import { DEFAULT_ORANGE_BAIES } from '../components/regular-user/equipment/BaieEquipmentToggle';
+import { buildSectorEquipmentPayload } from '../config/equipmentRegistry';
+import { apiClient, buildWebSocketUrl } from '../services/apiClient';
 
 /**
  * DEVELOPMENT FLAG:
@@ -122,38 +123,7 @@ export function useSiteNdcGenerator({
     setIsGeneratingSiteNdc(true);
     setSiteNdcError(null);
 
-    const s1 = activeSectors[0];
-    const hasFhEquipment = !!s1?.hasFhEquipment;
-    const fhDiameter = s1?.fhDiameter ?? 300;
-    const fhReference = s1?.fhReference ?? '';
-    const fhQuantity = s1?.fhQuantity ?? 1;
-    const fhItems = s1?.fhItems ?? [];
-    const hasRrhEquipment = !!s1?.hasRrhEquipment;
-    const rrhItems = s1?.rrhItems ?? [];
-    const hasRruEquipment = !!s1?.hasRruEquipment;
-    const rruItems = s1?.rruItems ?? [];
-    const hasCoffret = !!s1?.hasCoffret;
-    const coffretReference = s1?.coffretReference ?? '';
-    const hasBoitierJonction = !!s1?.hasBoitierJonction;
-    const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
-
-    const {
-      hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
-      hasGps, gpsReference, gpsMarque,
-      hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
-      hasAtelierEnergie, bcubeReference,
-      hasBcubeRadio, bcubeRadioReference,
-      hasBaie, baieRadio, baieEnergie, baieItems,
-      hasCab, cabOne, cabTwo, cabThree, cabSupport,
-      atelierFprb, atelierFprbQuantity, atelierFpbc, atelierFpbcQuantity,
-      hasConvertisseurMdea, convertisseurMdeaQuantity,
-      hasCoffretTransFo, coffretTransFoQuantity,
-      hasPileAmod, amodModules
-    } = zoneTechnique;
-
     try {
-      const token = localStorage.getItem('ndc_auth_token') || '';
-
       // --- FAST TRACK (INSTANT NDC) ---
       if (!FORCE_WORKER_CALCULATION && isFullyStandard()) {
         setSiteNdcPollingMsg('Génération du document Standard (Instantané)...');
@@ -184,10 +154,14 @@ export function useSiteNdcGenerator({
               params.append('item_id', eq.item_id);
             }
 
-            const response = await fetch(`${apiBaseUrl}/api/geodata/matching-catalogue-pdf/?${params.toString()}`);
-            if (response.ok) {
-              const data = await response.json();
+            try {
+              const data = await apiClient.get<{ url?: string }>(
+                `/api/geodata/matching-catalogue-pdf/?${params.toString()}`,
+                { baseUrl: apiBaseUrl }
+              );
               if (data.url) catalogueUrls.push(data.url);
+            } catch {
+              // Skip unmatched catalogue item
             }
           }
         }
@@ -239,111 +213,24 @@ export function useSiteNdcGenerator({
             epaisseur_mm: activeSectors[0]?.ant5gConfig?.thickness,
             poids_kg: activeSectors[0]?.ant5gConfig?.weight
           },
-          fh_equipment: {
-            enabled: hasFhEquipment,
-            diameter_mm: hasFhEquipment ? fhDiameter : null,
-            reference: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.reference || null) : null,
-            quantity: hasFhEquipment ? fhQuantity : null,
-            weight_kg: hasFhEquipment ? (config?.fh_references?.find((r: any) => r.id === fhReference)?.weight || null) : null,
-            items: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ reference: fhReference, quantity: fhQuantity }]).map(item => ({
-              reference: config?.fh_references?.find((r: any) => r.id === item.reference)?.reference || item.reference,
-              quantity: item.quantity
-            })) : []
-          },
-          rrh_equipment: {
-            enabled: operator !== 'bouygues' && hasRrhEquipment,
-            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
-          },
-          rru_equipment: {
-            enabled: hasRruEquipment,
-            sans_plot: true,
-            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
-          },
-          td_equipment: {
-            enabled: operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment,
-            type: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdType : null,
-            reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdReference : null,
-            tgbt_reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
-          },
-          tgbt_equipment: {
-            enabled: operator === 'bouygues' && hasTgbt,
-            reference: operator === 'bouygues' && hasTgbt ? (tgbtReference || 'TGBT ACTIA') : null
-          },
-          gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
-          boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
-          boitier_jonction: {
-            enabled: operator === 'free' && hasBoitierJonction,
-            quantity: operator === 'free' && hasBoitierJonction ? (boitierJonctionQuantity || 1) : null,
-            marque: 'Aginode',
-            dimensions: '427*380*127mm',
-            weight: 0
-          },
-          coffrets_fibre: {
-            enabled: operator === 'free' ? !!hasCoffretTransFo : hasCoffret,
-            quantity: operator === 'free' ? (coffretTransFoQuantity || 1) : (hasCoffret ? nombreSecteurs : 1),
-            reference: operator === 'free' ? (hasCoffretTransFo ? 'TRANS_FO' : null) : (hasCoffret ? coffretReference : null)
-          },
-          coffrets_hybride: {
-            enabled: operator === 'free' && !!hasCoffretTransFo,
-            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
-            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
-          },
-          coffret_trans_fo: {
-            enabled: operator === 'free' && !!hasCoffretTransFo,
-            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
-            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
-          },
-          baie: {
-            enabled: operator === 'orange' && hasBaie,
-            items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],
-            baie_radio: operator === 'orange' && hasBaie && (baieRadio || baieItems.some(i => {
-              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
-              return ref?.category === 'radio_trans';
-            })),
-            baie_energie: operator === 'orange' && hasBaie && (baieEnergie || baieItems.some(i => {
-              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
-              return ref?.category === 'energie';
-            }))
-          },
-          cab: {
-            enabled: operator === 'free' && hasCab,
-            cab_one: operator === 'free' && hasCab && cabOne,
-            cab_two: operator === 'free' && hasCab && cabTwo,
-            cab_three: operator === 'free' && hasCab && cabThree,
-            support: operator === 'free' && hasCab ? cabSupport : null
-          },
-          atelier_energie: {
-            enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
-            module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
-            module_fprb_quantity: operator === 'free' && hasAtelierEnergie && atelierFprb ? atelierFprbQuantity : 0,
-            module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
-            module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
-            bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
-          },
-          bcube_radio: {
-            enabled: operator === 'bouygues' && hasBcubeRadio,
-            reference: (operator === 'bouygues' && hasBcubeRadio) ? (bcubeRadioReference || 'RP6647 5G TDD') : null
-          },
-          convertisseur_mdea: {
-            enabled: operator === 'free' && hasConvertisseurMdea,
-            quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
-            dimensions: '338*295*140mm',
-            poids: 10
-          },
-          pile_amod: {
-            enabled: operator === 'free' && hasPileAmod,
-            modules: operator === 'free' && hasPileAmod ? amodModules : {}
-          }
+          ...buildSectorEquipmentPayload({
+            sector: activeSectors[0],
+            zoneTechnique,
+            operator,
+            config,
+            coffretQuantityMultiplier: nombreSecteurs,
+            resolveRru,
+            resolveRrh,
+            resolveBaieItems,
+          }),
         };
 
-        const res = await fetch(`${apiBaseUrl}/api/calculations/generate_site_ndc/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}` },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          const mergeData = await res.json();
+        try {
+          const mergeData = await apiClient.post<{ ndc_pdf_url?: string }>(
+            '/api/calculations/generate_site_ndc/',
+            payload,
+            { baseUrl: apiBaseUrl }
+          );
           if (mergeData.ndc_pdf_url) {
             const fullUrl = mergeData.ndc_pdf_url.startsWith('http')
               ? mergeData.ndc_pdf_url
@@ -353,6 +240,8 @@ export function useSiteNdcGenerator({
             setNdcPdfUrl(fullUrl);
             return; // Done! Bypassed Robot!
           }
+        } catch {
+          // Fall through to Robot Calculation
         }
         // If Fast-Track fails for some reason, fall through to Robot Calculation
         console.warn("Fast-Track failed, falling back to Robot calculation");
@@ -362,7 +251,7 @@ export function useSiteNdcGenerator({
       setSiteNdcPollingMsg('Lancement des calculs Robot pour chaque secteur...');
       const jobIds: string[] = [];
 
-      // Create a job for each unique group
+      // Create a job for each unique group (using each group's own sector aerial equipment!)
       for (let i = 0; i < uniqueGroups.length; i++) {
         const group = uniqueGroups[i];
         const sector = group.sector;
@@ -426,120 +315,29 @@ export function useSiteNdcGenerator({
             epaisseur_mm: sector.ant5gConfig.thickness,
             poids_kg: sector.ant5gConfig.weight
           },
-          fh_equipment: {
-            enabled: hasFhEquipment,
-            diameter_mm: hasFhEquipment ? fhDiameter : null,
-            reference: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.reference || null) : null,
-            quantity: hasFhEquipment ? fhQuantity : null,
-            weight_kg: hasFhEquipment ? (config?.fh_references?.find(r => r.id === fhReference)?.weight || null) : null,
-            items: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ reference: fhReference, quantity: fhQuantity }]).map(item => ({
-              reference: config?.fh_references?.find(r => r.id === item.reference)?.reference || item.reference,
-              quantity: item.quantity
-            })) : []
-          },
-          rrh_equipment: {
-            enabled: operator !== 'bouygues' && hasRrhEquipment,
-            items: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity })) : []
-          },
-          rru_equipment: {
-            enabled: hasRruEquipment,
-            sans_plot: true,
-            items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
-          },
-          td_equipment: {
-            enabled: operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment,
-            type: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdType : null,
-            reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? tdReference : null,
-            tgbt_reference: (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment && tdType === 'monophase') ? tgbtReference : null
-          },
-          tgbt_equipment: {
-            enabled: operator === 'bouygues' && hasTgbt,
-            reference: operator === 'bouygues' && hasTgbt ? (tgbtReference || 'TGBT ACTIA') : null
-          },
-          gps: { enabled: hasGps, quantity: 1, marque: hasGps ? gpsMarque : null, reference: hasGps ? gpsReference : null },
-          boitier_lovage: { enabled: hasBoitierLovage, quantity: boitierLovageQuantity, reference: hasBoitierLovage ? boitierLovageReference : null },
-          boitier_jonction: {
-            enabled: operator === 'free' && hasBoitierJonction,
-            quantity: operator === 'free' && hasBoitierJonction ? (boitierJonctionQuantity || 1) : null,
-            marque: 'Aginode',
-            dimensions: '427*380*127mm',
-            weight: 0
-          },
-          coffrets_fibre: {
-            enabled: operator === 'free' ? !!hasCoffretTransFo : hasCoffret,
-            quantity: operator === 'free' ? (coffretTransFoQuantity || 1) : (hasCoffret ? nombreSecteurs : 1),
-            reference: operator === 'free' ? (hasCoffretTransFo ? 'TRANS_FO' : null) : (hasCoffret ? coffretReference : null)
-          },
-          coffrets_hybride: {
-            enabled: operator === 'free' && !!hasCoffretTransFo,
-            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
-            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
-          },
-          coffret_trans_fo: {
-            enabled: operator === 'free' && !!hasCoffretTransFo,
-            quantity: operator === 'free' && hasCoffretTransFo ? (coffretTransFoQuantity || 1) : null,
-            reference: operator === 'free' && hasCoffretTransFo ? 'TRANS_FO' : null
-          },
-          baie: {
-            enabled: operator === 'orange' && hasBaie,
-            items: operator === 'orange' && hasBaie ? resolveBaieItems(baieItems) : [],
-            baie_radio: operator === 'orange' && hasBaie && (baieRadio || baieItems.some(i => {
-              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
-              return ref?.category === 'radio_trans';
-            })),
-            baie_energie: operator === 'orange' && hasBaie && (baieEnergie || baieItems.some(i => {
-              const ref = (config?.baie_references || DEFAULT_ORANGE_BAIES).find(b => b.id === i.referenceId);
-              return ref?.category === 'energie';
-            }))
-          },
-          cab: {
-            enabled: operator === 'free' && hasCab,
-            cab_one: operator === 'free' && hasCab && cabOne,
-            cab_two: operator === 'free' && hasCab && cabTwo,
-            cab_three: operator === 'free' && hasCab && cabThree,
-            support: operator === 'free' && hasCab ? cabSupport : null
-          },
-          atelier_energie: {
-            enabled: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
-            module_fprb: operator === 'free' && hasAtelierEnergie && atelierFprb,
-            module_fprb_quantity: operator === 'free' && hasAtelierEnergie && atelierFprb ? atelierFprbQuantity : 0,
-            module_fpbc: operator === 'free' && hasAtelierEnergie && atelierFpbc,
-            module_fpbc_quantity: operator === 'free' && hasAtelierEnergie && atelierFpbc ? atelierFpbcQuantity : 0,
-            bcube: (operator === 'bouygues' && hasAtelierEnergie) ? bcubeReference : null
-          },
-          bcube_radio: {
-            enabled: operator === 'bouygues' && hasBcubeRadio,
-            reference: (operator === 'bouygues' && hasBcubeRadio) ? (bcubeRadioReference || 'RP6647 5G TDD') : null
-          },
-          convertisseur_mdea: {
-            enabled: operator === 'free' && hasConvertisseurMdea,
-            quantite: operator === 'free' && hasConvertisseurMdea ? convertisseurMdeaQuantity : 0,
-            dimensions: '338*295*140mm',
-            poids: 10
-          },
-          pile_amod: {
-            enabled: operator === 'free' && hasPileAmod,
-            modules: operator === 'free' && hasPileAmod ? amodModules : {}
-          },
+          ...buildSectorEquipmentPayload({
+            sector,
+            zoneTechnique,
+            operator,
+            config,
+            coffretQuantityMultiplier: groupIndicesCount,
+            resolveRru,
+            resolveRrh,
+            resolveBaieItems,
+          }),
           site_image_url: siteImageUrl,
           force_recalculate: Boolean(forceRecalculate)
         };
 
-        const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Token ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          const calcData = await res.json();
+        try {
+          const calcData = await apiClient.post<{ data: { id: string } }>(
+            '/api/calculations/',
+            payload,
+            { baseUrl: apiBaseUrl }
+          );
           jobIds.push(calcData.data.id);
-        } else {
-          const errorText = await res.text();
-          console.error(`[NDC Job Creation Error - Groupe ${i + 1}]:`, errorText);
+        } catch (err) {
+          console.error(`[NDC Job Creation Error - Groupe ${i + 1}]:`, err);
           throw new Error("Impossible d'initialiser le calcul sur le serveur. Veuillez réessayer.");
         }
       }
@@ -558,9 +356,8 @@ export function useSiteNdcGenerator({
         // Open WebSocket connection for real-time progress push
         let ws: WebSocket | null = null;
         try {
-          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const host = window.location.host;
-          ws = new WebSocket(`${wsProtocol}//${host}/ws/calculations/${jobId}/`);
+          const wsUrl = buildWebSocketUrl(`/ws/calculations/${jobId}/`, undefined, apiBaseUrl);
+          ws = new WebSocket(wsUrl);
           ws.onmessage = (event) => {
             try {
               const data = JSON.parse(event.data);
@@ -585,13 +382,10 @@ export function useSiteNdcGenerator({
         try {
           while (!isCompleted && attempts < maxAttempts) {
             await new Promise(r => setTimeout(r, 2000));
-            const pollRes = await fetch(`${apiBaseUrl}/api/calculations/${jobId}/`, {
-              headers: { 'Authorization': `Token ${token}` }
-            });
-            if (pollRes.ok) {
-              const jobResult = await pollRes.json();
-              
-              // Update visual progress from worker progress data if available
+            try {
+              const jobResult = await apiClient.get<any>(`/api/calculations/${jobId}/`, {
+                baseUrl: apiBaseUrl,
+              });
               const prog = jobResult.result_data?.progress;
               if (prog && prog.message) {
                 const pctStr = typeof prog.percent === 'number' ? ` (${prog.percent}%)` : '';
@@ -607,6 +401,11 @@ export function useSiteNdcGenerator({
                 console.error(`[Robot Worker Calculation Failure - Job ${jobId}]:`, errMsg, jobResult);
                 throw new Error("Le calcul Robot a échoué. Veuillez réessayer.");
               }
+            } catch (pollErr: any) {
+              if (pollErr?.message === 'Le calcul Robot a échoué. Veuillez réessayer.') {
+                throw pollErr;
+              }
+              // Transient network glitch during poll; continue retrying
             }
             attempts++;
           }
@@ -625,39 +424,26 @@ export function useSiteNdcGenerator({
       setSiteNdcPollingMsg('Fusion des documents PDF...');
 
       // Call the merge endpoint
-      const mergeRes = await fetch(`${apiBaseUrl}/api/calculations/generate_site_ndc/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`
-        },
-        body: JSON.stringify({
-          job_ids: jobIds,
-          photo_url: siteImageUrl,
-          site_name: siteName,
-          code_site: codeSite,
-          ref_site: codeSite,
-          client_name: clientName,
-          address: selectedAddress?.label || selectedAddress?.name || ''
-        })
-      });
-
-      if (!mergeRes.ok) {
-        let serverError = "Erreur lors de la génération du document global. Veuillez réessayer.";
-        try {
-          const errorJson = await mergeRes.json();
-          if (errorJson && errorJson.error) {
-            serverError = errorJson.error;
-          }
-        } catch (_) {
-          const errorText = await mergeRes.text();
-          if (errorText) serverError = errorText;
-        }
+      let mergeData: { ndc_pdf_url?: string };
+      try {
+        mergeData = await apiClient.post<{ ndc_pdf_url?: string }>(
+          '/api/calculations/generate_site_ndc/',
+          {
+            job_ids: jobIds,
+            photo_url: siteImageUrl,
+            site_name: siteName,
+            code_site: codeSite,
+            ref_site: codeSite,
+            client_name: clientName,
+            address: selectedAddress?.label || selectedAddress?.name || ''
+          },
+          { baseUrl: apiBaseUrl }
+        );
+      } catch (mergeErr: any) {
+        const serverError = mergeErr?.message || "Erreur lors de la génération du document global. Veuillez réessayer.";
         console.error('[NDC Site Merge Error]:', serverError);
         throw new Error(serverError);
       }
-
-      const mergeData = await mergeRes.json();
 
       if (mergeData.ndc_pdf_url) {
         const fullUrl = mergeData.ndc_pdf_url.startsWith('http')

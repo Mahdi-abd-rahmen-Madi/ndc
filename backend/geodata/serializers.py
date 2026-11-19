@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import (
@@ -78,15 +79,19 @@ class AntennaEquipmentSerializer(serializers.ModelSerializer):
                         file_types.append(ext)
         return file_types
 
+    @transaction.atomic
     def create(self, validated_data):
         specs_data = validated_data.pop('specifications', [])
         calcs_data = validated_data.pop('terrain_calculations', [])
 
         equipment = AntennaEquipment.objects.create(**validated_data)
 
-        # Create specifications
-        for spec_data in specs_data:
-            AntennaSpecification.objects.create(equipment=equipment, **spec_data)
+        # Create specifications in a single batch
+        if specs_data:
+            AntennaSpecification.objects.bulk_create([
+                AntennaSpecification(equipment=equipment, **spec_data)
+                for spec_data in specs_data
+            ])
 
         # Create terrain calculations and documentations
         for calc_data in calcs_data:
@@ -110,6 +115,7 @@ class AntennaEquipmentSerializer(serializers.ModelSerializer):
 
         return equipment
 
+    @transaction.atomic
     def update(self, instance, validated_data):
         specs_data = validated_data.pop('specifications', None)
         calcs_data = validated_data.pop('terrain_calculations', None)
@@ -122,8 +128,11 @@ class AntennaEquipmentSerializer(serializers.ModelSerializer):
         # Update specifications if provided
         if specs_data is not None:
             instance.specifications.all().delete()
-            for spec_data in specs_data:
-                AntennaSpecification.objects.create(equipment=instance, **spec_data)
+            if specs_data:
+                AntennaSpecification.objects.bulk_create([
+                    AntennaSpecification(equipment=instance, **spec_data)
+                    for spec_data in specs_data
+                ])
 
         # Update terrain calculations if provided
         if calcs_data is not None:
@@ -190,9 +199,15 @@ class AntennaEquipmentListSerializer(serializers.ModelSerializer):
         ]
 
     def get_specifications_count(self, obj):
+        annotated = getattr(obj, 'specifications_count_annotated', None)
+        if annotated is not None:
+            return annotated
         return obj.specifications.count()
 
     def get_terrain_calculations_count(self, obj):
+        annotated = getattr(obj, 'terrain_calculations_count_annotated', None)
+        if annotated is not None:
+            return annotated
         return obj.terrain_calculations.count()
     
     def get_responsible_display(self, obj):

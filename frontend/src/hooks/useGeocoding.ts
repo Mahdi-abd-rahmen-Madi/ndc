@@ -1,9 +1,8 @@
 // Custom hook for IGN geocoding and reverse geocoding API calls
 
 import { useState, useCallback, useRef } from 'react';
+import { apiClient } from '../services/apiClient';
 import type { GeocodingAddress } from '../utils/types';
-
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata/geocoding-search`;
 
 interface UseGeocodingReturn {
   search: (query: string, limit?: number) => Promise<GeocodingAddress[]>;
@@ -22,7 +21,6 @@ export function useGeocoding(): UseGeocodingReturn {
     async (query: string, limit: number = 5): Promise<GeocodingAddress[]> => {
       if (!query.trim()) return [];
 
-      // Cancel any pending search request
       if (searchAbortControllerRef.current) {
         searchAbortControllerRef.current.abort();
       }
@@ -32,24 +30,13 @@ export function useGeocoding(): UseGeocodingReturn {
       setError(null);
 
       try {
-        const url = `${API_BASE_URL}/search/?q=${encodeURIComponent(query)}&limit=${limit}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: searchAbortControllerRef.current.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await apiClient.get<{ results?: GeocodingAddress[] }>(
+          `/api/geodata/geocoding-search/search/?q=${encodeURIComponent(query)}&limit=${limit}`,
+          { signal: searchAbortControllerRef.current.signal }
+        );
         return data.results || [];
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('Search request aborted');
           return [];
         }
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -66,7 +53,6 @@ export function useGeocoding(): UseGeocodingReturn {
 
   const reverseGeocode = useCallback(
     async (lat: number, lng: number): Promise<GeocodingAddress | null> => {
-      // Cancel any pending reverse geocode request
       if (reverseAbortControllerRef.current) {
         reverseAbortControllerRef.current.abort();
       }
@@ -76,24 +62,12 @@ export function useGeocoding(): UseGeocodingReturn {
       setError(null);
 
       try {
-        const url = `${API_BASE_URL}/reverse/?latitude=${lat}&longitude=${lng}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          signal: reverseAbortControllerRef.current.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data: GeocodingAddress = await response.json();
-        return data;
+        return await apiClient.get<GeocodingAddress>(
+          `/api/geodata/geocoding-search/reverse/?latitude=${lat}&longitude=${lng}`,
+          { signal: reverseAbortControllerRef.current.signal }
+        );
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('Reverse geocoding request aborted');
           return null;
         }
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';

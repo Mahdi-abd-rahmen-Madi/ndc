@@ -2,6 +2,7 @@
 Address generation and geocoding service for terrain classification testing.
 """
 import requests
+from requests.adapters import HTTPAdapter
 import random
 import json
 import time
@@ -20,7 +21,10 @@ class AddressGenerationService:
     def __init__(self):
         self.geocoding_url = "https://data.geopf.fr/geocodage/search"
         self.cache_timeout = 86400  # 24 hours cache
-        self.request_delay = 0.1  # 100ms delay between requests
+        self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=10)
+        self.session.mount('https://', adapter)
+        self.session.mount('http://', adapter)
         
         # Predefined search terms for different terrain types
         self.terrain_search_terms = {
@@ -93,12 +97,12 @@ class AddressGenerationService:
             }
             
             try:
-                response = requests.get(self.geocoding_url, params=params, timeout=5)
+                response = self.session.get(self.geocoding_url, params=params, timeout=5)
                 response.raise_for_status()
             except Exception as err:
                 logger.warning(f"Primary geocoding URL failed ({err}), falling back to api-adresse.data.gouv.fr")
                 fallback_url = "https://api-adresse.data.gouv.fr/search/"
-                response = requests.get(fallback_url, params=params, timeout=5)
+                response = self.session.get(fallback_url, params=params, timeout=5)
                 response.raise_for_status()
             
             data = response.json()
@@ -106,9 +110,6 @@ class AddressGenerationService:
             
             # Cache the result
             cache.set(cache_key, addresses, self.cache_timeout)
-            
-            # Add delay to respect API limits
-            time.sleep(self.request_delay)
             
             return addresses
             
@@ -214,7 +215,7 @@ class AddressGenerationService:
         Returns:
             Address information or None if not found
         """
-        cache_key = f"reverse_geocode_{longitude}_{latitude}"
+        cache_key = f"reverse_geocode_{round(float(longitude), 5):.5f}_{round(float(latitude), 5):.5f}"
         cached_result = cache.get(cache_key)
         
         if cached_result:
@@ -230,12 +231,12 @@ class AddressGenerationService:
             try:
                 # The base url is ending in /search, so we replace it with /reverse
                 reverse_url = self.geocoding_url.replace('/search', '/reverse')
-                response = requests.get(reverse_url, params=params, timeout=5)
+                response = self.session.get(reverse_url, params=params, timeout=5)
                 response.raise_for_status()
             except Exception as err:
                 logger.warning(f"Primary reverse geocoding failed ({err}), falling back to api-adresse.data.gouv.fr")
                 fallback_url = "https://api-adresse.data.gouv.fr/reverse/"
-                response = requests.get(fallback_url, params=params, timeout=5)
+                response = self.session.get(fallback_url, params=params, timeout=5)
                 response.raise_for_status()
             
             data = response.json()
@@ -247,13 +248,11 @@ class AddressGenerationService:
                 for feature in features:
                     if feature.get('properties', {}).get('type') in exact_types:
                         cache.set(cache_key, feature, self.cache_timeout)
-                        time.sleep(self.request_delay)
                         return feature
                 
                 # fallback to first if no exact match found
                 address = features[0]
                 cache.set(cache_key, address, self.cache_timeout)
-                time.sleep(self.request_delay)
                 return address
             
             return None

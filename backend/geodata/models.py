@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.gis.db import models as gis_models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
+from utils.domain_constants import V_B0_TO_REGION as _CANONICAL_VB0_TO_REGION
 
 
 class AntennaEquipment(models.Model):
@@ -14,13 +15,8 @@ class AntennaEquipment(models.Model):
         (4, "Region 4"),
     ]
     
-    # Mapping from V_B0 values to region numbers
-    V_B0_TO_REGION = {
-        22: 1,  # Region 1
-        24: 2,  # Region 2
-        26: 3,  # Region 3
-        28: 4,  # Region 4
-    }
+    # Mapping from V_B0 values to region numbers (canonical single source of truth)
+    V_B0_TO_REGION = dict(_CANONICAL_VB0_TO_REGION)
     
     # Terrain classification mapping from CLC Code_18 to terrain types
     CLC_CODE_TO_TERRAIN = {
@@ -64,7 +60,8 @@ class AntennaEquipment(models.Model):
         '411': 'IIIa', # Inland marshes
         '412': 'IIIa', # Peat bogs
         
-        # Terrain IIIb: Zone semi-urbaine / plus dense - Zones industrielles, zones agricoles denses, vergers, maisons rapprochées
+        # Terrain IIIb: Zone semi-urbaine / plus dense - Zones industrielles, tissu urbain discontinu, espaces verts urbains
+        '112': 'IIIb', # Discontinuous urban fabric (aligned with terrain_config.json)
         '121': 'IIIb', # Industrial or commercial units
         '122': 'IIIb', # Road and rail networks and associated land
         '123': 'IIIb', # Port areas
@@ -72,12 +69,11 @@ class AntennaEquipment(models.Model):
         '131': 'IIIb', # Mineral extraction sites
         '132': 'IIIb', # Dump sites
         '133': 'IIIb', # Construction sites
+        '141': 'IIIb', # Green urban areas (aligned with terrain_config.json)
         '142': 'IIIb', # Sport and leisure facilities
         
         # Terrain IV: Zone urbaine dense - Ville, immeubles, bâtiments hauts (>15m), densité importante
         '111': 'IV',   # Continuous urban fabric
-        '112': 'IV',   # Discontinuous urban fabric
-        '141': 'IV',   # Green urban areas
     }
     
     name = models.CharField(max_length=255, verbose_name=_("Equipment Name"))
@@ -101,6 +97,10 @@ class AntennaEquipment(models.Model):
         verbose_name = _("Antenna Equipment")
         verbose_name_plural = _("Antenna Equipment")
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['is_deleted', 'region', 'building_height', 'mast_height'], name='ant_eq_lookup_idx'),
+            models.Index(fields=['is_deleted', 'name'], name='ant_eq_active_name_idx'),
+        ]
 
     def create_snapshot(self):
         """Creates a complete JSON-serializable snapshot of this equipment configuration"""
@@ -115,7 +115,7 @@ class AntennaEquipment(models.Model):
             })
         
         calcs = []
-        for c in self.terrain_calculations.all():
+        for c in self.terrain_calculations.select_related('documentation').all():
             doc_urls = c.documentation.document_urls if c.documentation else ""
             local_urls = c.documentation.local_document_urls if c.documentation else ""
             doc_types = c.documentation.document_types if c.documentation else []
@@ -123,6 +123,9 @@ class AntennaEquipment(models.Model):
                 'terrain_type': c.terrain_type,
                 'section_material': c.section_material,
                 'material_specification': c.material_specification,
+                'plot_metallique': c.plot_metallique,
+                'bras_de_deport': c.bras_de_deport,
+                'mat_secondaire': c.mat_secondaire,
                 'load_calculations': c.load_calculations,
                 'documentation': {
                     'document_urls': doc_urls,
@@ -170,8 +173,8 @@ class AntennaEquipment(models.Model):
 
             # Restore specifications
             self.specifications.all().delete()
-            for s in snapshot.get('specifications', []):
-                AntennaSpecification.objects.create(
+            spec_objs = [
+                AntennaSpecification(
                     equipment=self,
                     antenna_type=s['antenna_type'],
                     height_mm=s['height_mm'],
@@ -179,17 +182,26 @@ class AntennaEquipment(models.Model):
                     thickness_mm=s['thickness_mm'],
                     weight_dan=s['weight_dan'],
                 )
+                for s in snapshot.get('specifications', [])
+            ]
+            if spec_objs:
+                AntennaSpecification.objects.bulk_create(spec_objs)
 
-            # Restore calculations and documentations
-            for c in self.terrain_calculations.all():
+            # Restore calculations and documentations (clear any orphaned docs too)
+            for c in self.terrain_calculations.select_related('documentation').all():
                 if c.documentation:
                     c.documentation.delete()
                 c.delete()
+            self.terrain_documentations.all().delete()
 
             for c in snapshot.get('calculations', []):
                 doc_data = c.get('documentation', {})
                 doc = None
-                if doc_data:
+                if doc_data and (
+                    doc_data.get('document_urls')
+                    or doc_data.get('local_document_urls')
+                    or doc_data.get('document_types')
+                ):
                     doc = TerrainDocumentation.objects.create(
                         equipment=self,
                         terrain_type=c['terrain_type'],
@@ -201,9 +213,12 @@ class AntennaEquipment(models.Model):
                 TerrainLoadCalculation.objects.create(
                     equipment=self,
                     terrain_type=c['terrain_type'],
-                    section_material=c['section_material'],
-                    material_specification=c['material_specification'],
-                    load_calculations=c['load_calculations'],
+                    section_material=c.get('section_material', ''),
+                    material_specification=c.get('material_specification', ''),
+                    plot_metallique=c.get('plot_metallique'),
+                    bras_de_deport=c.get('bras_de_deport'),
+                    mat_secondaire=c.get('mat_secondaire'),
+                    load_calculations=c.get('load_calculations', {}),
                     documentation=doc,
                 )
 
@@ -400,6 +415,9 @@ class AntennaEquipmentHistory(models.Model):
         verbose_name = _("Antenna Equipment History")
         verbose_name_plural = _("Antenna Equipment Histories")
         ordering = ['-changed_at']
+        indexes = [
+            models.Index(fields=['equipment', '-changed_at'], name='ant_hist_eq_changed_idx'),
+        ]
 
     def __str__(self):
         return f"{self.equipment.name} - {self.action} at {self.changed_at}"
@@ -463,6 +481,10 @@ class HeightCalculationRequest(models.Model):
         verbose_name = _("Demande de calcul de hauteur")
         verbose_name_plural = _("Demandes de calcul de hauteur")
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['requester_email', '-created_at'], name='hreq_email_created_idx'),
+            models.Index(fields=['status', '-created_at'], name='hreq_status_created_idx'),
+        ]
 
     def __str__(self):
         return f"Demande #{self.pk} — {self.requested_building_height}m ({self.get_status_display()})"
@@ -500,6 +522,9 @@ class Notification(models.Model):
         verbose_name = _("Notification")
         verbose_name_plural = _("Notifications")
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient_email', 'is_read', '-created_at'], name='notif_email_read_created_idx'),
+        ]
 
     def __str__(self):
         return f"[{self.notification_type}] {self.title} → {self.recipient_email}"

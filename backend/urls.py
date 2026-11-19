@@ -17,40 +17,37 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from django.http import FileResponse, Http404
+from django.views.decorators.clickjacking import xframe_options_exempt
+import mimetypes
 import os
-from django.http import HttpResponse, Http404
 
+from utils.path_security import safe_resolve_under
+
+
+@xframe_options_exempt
 def serve_media_custom(request, path):
-    full_path = os.path.join(settings.MEDIA_ROOT, path)
-    if not os.path.exists(full_path) or os.path.isdir(full_path):
+    full_path = safe_resolve_under(settings.MEDIA_ROOT, path)
+    if not full_path or not os.path.isfile(full_path):
         raise Http404("File not found")
-        
-    content_type = 'application/octet-stream'
-    if path.lower().endswith('.pdf'):
-        content_type = 'application/pdf'
-    elif path.lower().endswith('.docx'):
-        content_type = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    elif path.lower().endswith('.doc'):
-        content_type = 'application/msword'
-    elif path.lower().endswith('.png'):
-        content_type = 'image/png'
-    elif path.lower().endswith('.jpg') or path.lower().endswith('.jpeg'):
-        content_type = 'image/jpeg'
-        
-    with open(full_path, 'rb') as f:
-        content = f.read()
-        
-    response = HttpResponse(content, content_type=content_type)
-    response['X-Frame-Options'] = 'ALLOWALL'
+
+    content_type, _ = mimetypes.guess_type(full_path)
+    content_type = content_type or 'application/octet-stream'
+
+    response = FileResponse(open(full_path, 'rb'), content_type=content_type)
+    allowed_origins = " ".join(getattr(settings, 'CORS_ALLOWED_ORIGINS', []))
+    response['Content-Security-Policy'] = f"frame-ancestors 'self' {allowed_origins}".strip()
     response['Content-Disposition'] = f'inline; filename="{os.path.basename(full_path)}"'
     return response
 
-from geodata.views import test_catalogue_equipment_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api/geodata/', include('geodata.urls')),
-    path('test-catalogue/', test_catalogue_equipment_view, name='test-catalogue'),
     path('media/<path:path>', serve_media_custom),
 ]
+
+if settings.DEBUG:
+    from geodata.views import test_catalogue_equipment_view
+    urlpatterns.append(path('test-catalogue/', test_catalogue_equipment_view, name='test-catalogue'))

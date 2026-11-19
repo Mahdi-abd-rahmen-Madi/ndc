@@ -1,0 +1,938 @@
+"""WeasyPrint HTML-to-PDF rendering for primary site NDC and auxiliary (TD, FH, RRH, RRU) annexes."""
+import logging
+import os
+import uuid
+from datetime import datetime
+
+from django.conf import settings
+from django.template.loader import render_to_string
+from weasyprint import HTML
+
+from utils.domain_constants import (
+    WIND_REGION_VB0,
+    OPERATORS_WITHOUT_TD,
+    normalize_operator,
+    resolve_sans_plot,
+)
+from utils.path_security import safe_media_path
+
+from .artifact_locator import (
+    _first_existing_file,
+    _worker_screenshots_dir,
+    find_job_assemblage_note_path,
+    find_job_note_de_calcul_path,
+    find_job_rrh_rtf_paths,
+    find_job_rru_rtf_paths,
+)
+from .equipment_context import (
+    clean_equipment_designation,
+    extract_rrh_ndc_context,
+    extract_rru_ndc_context,
+)
+from .image_cropper import (
+    _crop_tableau_charges_image,
+    crop_verification_screenshot,
+)
+from .rtf_converter import _convert_rtf_file_to_images
+from .wind_ec1 import (
+    _parse_section_dimensions,
+    _resolve_support_wind_params,
+    calculate_wind_params,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def generate_ndc_pdf(
+    job,
+    photo_url_or_path,
+    preview_data=None,
+    is_subsequent_sector=False,
+    is_cover_only=False,
+    start_page=1,
+    preconverted_images=None,
+):
+    """
+    Generates a PDF from HTML templates using WeasyPrint based on job calculation results.
+    Accepts preconverted_images mapping to reuse images generated in batch, avoiding
+    redundant LibreOffice startup overhead.
+    """
+    context = {
+        'is_subsequent_sector': is_subsequent_sector,
+        'is_cover_only': is_cover_only,
+        'start_page': start_page,
+    }
+
+    input_data = job.input_data if job else {}
+
+    if not job:
+        for i in range(1, 64):
+            context[f'var_{i}'] = f'[VAR_{i}]'
+
+    site_info = input_data.get('site', {})
+    if not job and preview_data:
+        site_info = preview_data.get('site', {})
+
+    active_data = input_data if job else (preview_data or {})
+
+    context['site_address'] = site_info.get('address') or active_data.get('address') or '[ADRESSE_DU_SITE]'
+    context['site_name'] = site_info.get('name') or active_data.get('site_name') or '[NOM_DU_SITE]'
+    code_site_val = (
+        site_info.get('code_site')
+        or site_info.get('ref_site')
+        or active_data.get('code_site')
+        or active_data.get('ref_site')
+    )
+    context['code_site'] = code_site_val or '[RÉF_DU_SITE]'
+    context['ref_site'] = context['code_site']
+    context['client_name'] = site_info.get('client') or active_data.get('client_name') or '[CLIENT]'
+    context['current_date'] = datetime.now().strftime("%d/%m/%Y")
+
+    # Page 3 Variables Mapping
+    structure_data = active_data.get('structure', {})
+    parse_dimensions = _parse_section_dimensions
+
+    mat_principal_str = structure_data.get('mat_principal') or ''
+    diam_4g, epaisseur_4g = parse_dimensions(mat_principal_str)
+    context['mat_4g_diam'] = diam_4g or '[DIAM_4G]'
+    context['mat_4g_epaisseur'] = epaisseur_4g or '[EPAISSEUR_4G]'
+
+    mast_height_m = structure_data.get('mast_height_m') or structure_data.get('hauteur_mat_m')
+    if mast_height_m:
+        try:
+            context['mat_4g_longueur'] = int(float(mast_height_m) * 1000)
+        except (ValueError, TypeError):
+            context['mat_4g_longueur'] = '[LONGUEUR_4G]'
+    else:
+        context['mat_4g_longueur'] = '[LONGUEUR_4G]'
+
+    mat_secondaire_str = structure_data.get('mat_secondaire') or ''
+    diam_5g, epaisseur_5g = parse_dimensions(mat_secondaire_str)
+    context['mat_5g_diam'] = diam_5g or '[DIAM_5G]'
+    context['mat_5g_epaisseur'] = epaisseur_5g or '[EPAISSEUR_5G]'
+    context['mat_5g_longueur'] = 1000
+
+    bras_str = structure_data.get('bras_de_deport') or 'TCAR 50x5'
+    diam_bras, epaisseur_bras = parse_dimensions(bras_str)
+    context['bras_deport_diam'] = diam_bras or '[DIAM_BRAS]'
+    context['bras_deport_epaisseur'] = epaisseur_bras or '[EPAISSEUR_BRAS]'
+    context['bras_deport_longueur'] = 300
+
+    plot_str = structure_data.get('plot_metallique') or ''
+    diam_plot, epaisseur_plot = parse_dimensions(plot_str)
+    context['plot_diam'] = diam_plot or '[PLOT_DIAM]'
+    context['plot_epaisseur'] = epaisseur_plot or '[PLOT_EPAISSEUR]'
+
+    antenna_4g = active_data.get('antenna_4g', {})
+    a4g_w = antenna_4g.get('largeur_mm') or antenna_4g.get('width_mm')
+    a4g_h = antenna_4g.get('hauteur_mm') or antenna_4g.get('height_mm')
+    a4g_t = antenna_4g.get('epaisseur_mm') or antenna_4g.get('thickness_mm')
+    if a4g_h and a4g_w and a4g_t:
+        context['ant_4g_dims'] = f"{int(float(a4g_h))}x{int(float(a4g_w))}x{int(float(a4g_t))}"
+    else:
+        context['ant_4g_dims'] = '[ANT_4G_DIMS]'
+    context['ant_4g_weight'] = antenna_4g.get('poids_kg') or antenna_4g.get('weight_dan') or '[ANT_4G_WEIGHT]'
+
+    antenna_5g = active_data.get('antenna_5g', {})
+    a5g_w = antenna_5g.get('largeur_mm') or antenna_5g.get('width_mm')
+    a5g_h = antenna_5g.get('hauteur_mm') or antenna_5g.get('height_mm')
+    a5g_t = antenna_5g.get('epaisseur_mm') or antenna_5g.get('thickness_mm')
+    if a5g_h and a5g_w and a5g_t:
+        context['ant_5g_dims'] = f"{int(float(a5g_h))}x{int(float(a5g_w))}x{int(float(a5g_t))}"
+    else:
+        context['ant_5g_dims'] = '[ANT_5G_DIMS]'
+    context['ant_5g_weight'] = antenna_5g.get('poids_kg') or antenna_5g.get('weight_dan') or '[ANT_5G_WEIGHT]'
+
+    if mast_height_m:
+        try:
+            context['ant_5g_hba'] = round(float(mast_height_m) + 0.2, 2)
+        except (ValueError, TypeError):
+            context['ant_5g_hba'] = '[ANT_5G_HBA]'
+    else:
+        context['ant_5g_hba'] = '[ANT_5G_HBA]'
+
+    context['hauteur_mat_m'] = '[HAUTEUR_MAT_M]' if mast_height_m is None else mast_height_m
+
+    # Environment
+    env = active_data.get('environment', {})
+    region_data = env.get('region')
+    if isinstance(region_data, dict):
+        region_num = region_data.get('number')
+        region_name = region_data.get('name')
+    else:
+        try:
+            region_num = int(str(region_data).replace('Region ', '').strip())
+            region_name = f"Region {region_num}"
+        except (ValueError, TypeError):
+            region_num = None
+            region_name = str(region_data) if region_data else '[REGION_VENT]'
+
+    context['region_vent'] = region_name
+    context['categorie_terrain'] = env.get('terrain_type') or '[CATEGORIE_TERRAIN]'
+    context['hauteur_m'] = env.get('building_height_m') or '[HAUTEUR_M]'
+    context['plot_height_m'] = env.get('plot_height_m') or '[PLOT_HEIGHT_M]'
+    context['etancheite'] = env.get('etancheite') or '[ETANCHEITE]'
+
+    dalle_m = env.get('dalle_thickness_m')
+    if dalle_m:
+        try:
+            context['epaisseur_dalle_mm'] = int(float(dalle_m) * 1000)
+        except (ValueError, TypeError):
+            context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
+    else:
+        context['epaisseur_dalle_mm'] = '[EPAISSEUR_DALLE_MM]'
+    context['nombre_secteurs'] = structure_data.get('nombre_secteurs') or 3
+
+    raw_echelle = (
+        structure_data.get('echelle')
+        or active_data.get('echelle')
+        or env.get('echelle')
+        or 'Echelle Söll'
+    )
+    if raw_echelle and ("pas d'echelle" in raw_echelle.lower() or "pas d'échelle" in raw_echelle.lower()):
+        context['echelle_name'] = None
+        context['has_echelle'] = False
+    else:
+        context['echelle_name'] = raw_echelle
+        context['has_echelle'] = True
+
+    vb = WIND_REGION_VB0.get(region_num)
+    context['vb_m_s'] = vb if vb is not None else '[Vb_m/s]'
+
+    terrain_type_str = str(env.get('terrain_type') or 'IIIa')
+    try:
+        h_bat = float(env.get('building_height_m') or 0)
+    except (ValueError, TypeError):
+        h_bat = 0.0
+    try:
+        h_plot = float(env.get('plot_height_m') or 0)
+    except (ValueError, TypeError):
+        h_plot = 0.0
+    try:
+        h_mat = float(mast_height_m or 0)
+    except (ValueError, TypeError):
+        h_mat = 0.0
+
+    z_total = h_bat + h_plot + h_mat
+    if vb is not None and z_total > 0:
+        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
+        context['vm_z'] = wind['vm']
+        context['iv_z'] = wind['iv_z']
+        context['qp_z'] = wind['qp_dan']
+        context['cr_z'] = wind['cr_z']
+        context['kr_z'] = wind['kr']
+        context['z_total'] = wind['z_used']
+    else:
+        context['vm_z'] = '[Vm]'
+        context['iv_z'] = '[Iv(z)]'
+        context['qp_z'] = '[qp]'
+        context['cr_z'] = '[cr(z)]'
+        context['kr_z'] = '[kr]'
+        context['z_total'] = '[z]'
+
+    # Client Logo & Site Photo (confined to MEDIA_ROOT)
+    client_logo_url = site_info.get('client_logo_url')
+    if client_logo_url:
+        client_logo_abs = safe_media_path(client_logo_url)
+        context['client_logo_abs'] = client_logo_abs if (client_logo_abs and os.path.exists(client_logo_abs)) else None
+    else:
+        context['client_logo_abs'] = None
+
+    photo_abs = safe_media_path(photo_url_or_path)
+    context['photo_abs'] = photo_abs if (photo_abs and os.path.exists(photo_abs)) else None
+
+    # Robot 3D Screenshot
+    ws_dir = _worker_screenshots_dir()
+    screenshot_found = False
+    if job:
+        if hasattr(job, 'screenshot') and job.screenshot:
+            try:
+                screenshot_path = job.screenshot.path
+                if os.path.exists(screenshot_path):
+                    context['robot_screenshot_abs'] = screenshot_path
+                    screenshot_found = True
+            except Exception:
+                pass
+        if not screenshot_found:
+            found = _first_existing_file([
+                f"{ws_dir}/job_{job.id}_3d_view.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_3d_view.jpg'),
+            ])
+            if found:
+                context['robot_screenshot_abs'] = found
+                screenshot_found = True
+    if not screenshot_found:
+        context['robot_screenshot_abs'] = None
+
+    # Verification Screenshot
+    verification_screenshot_found = False
+    if job:
+        if hasattr(job, 'verification_screenshot') and job.verification_screenshot:
+            try:
+                verification_screenshot_path = job.verification_screenshot.path
+                if os.path.exists(verification_screenshot_path):
+                    context['verification_screenshot_abs'] = verification_screenshot_path
+                    verification_screenshot_found = True
+            except Exception:
+                pass
+        if not verification_screenshot_found:
+            found = _first_existing_file([
+                f"{ws_dir}/job_{job.id}_verification_view.jpg",
+                f"{ws_dir}/job_{job.id}_verification.jpg",
+                f"{ws_dir}/job_{job.id}_antenna_verification.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', f'job_{job.id}_verification.jpg'),
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', f'job_{job.id}_antenna_verification.jpg'),
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_verification.jpg'),
+                os.path.join(settings.MEDIA_ROOT, 'screenshots', f'job_{job.id}_antenna_verification.jpg'),
+            ])
+            if found:
+                context['verification_screenshot_abs'] = found
+                verification_screenshot_found = True
+        if not verification_screenshot_found and isinstance(getattr(job, 'result_data', None), dict):
+            for k in ['verification_screenshot_path', 'antenna_verification_screenshot_path', 'verification_view_path']:
+                raw_path = job.result_data.get(k)
+                if raw_path and isinstance(raw_path, str):
+                    base = os.path.basename(raw_path.replace('\\', '/'))
+                    found = _first_existing_file([
+                        os.path.join(settings.MEDIA_ROOT, 'screenshots', 'verification', base),
+                        os.path.join(settings.MEDIA_ROOT, 'screenshots', base),
+                        f"{ws_dir}/{base}",
+                    ])
+                    if found:
+                        context['verification_screenshot_abs'] = found
+                        verification_screenshot_found = True
+                        break
+
+    if not verification_screenshot_found:
+        context['verification_screenshot_abs'] = None
+    elif context.get('verification_screenshot_abs') and os.path.exists(context['verification_screenshot_abs']):
+        context['verification_screenshot_abs'] = crop_verification_screenshot(context['verification_screenshot_abs'])
+
+    # Note de Calcul & Assemblage RTFs
+    context['note_de_calcul_abs'] = find_job_note_de_calcul_path(job)
+    context['note_de_calcul_images'] = []
+    job_prefix = f"job_{job.id if job else 'preview'}_note_de_calcul"
+    if preconverted_images and job_prefix in preconverted_images and preconverted_images[job_prefix]:
+        context['note_de_calcul_images'] = preconverted_images[job_prefix]
+    elif context.get('note_de_calcul_abs') and os.path.exists(context['note_de_calcul_abs']):
+        convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul')
+        try:
+            context['note_de_calcul_images'] = _convert_rtf_file_to_images(
+                context['note_de_calcul_abs'], convert_dir, job_prefix
+            )
+        except Exception as e:
+            logger.warning("Failed to convert RTF note de calcul to images: %s", e)
+
+    context['assemblage_note_abs'] = find_job_assemblage_note_path(job)
+    context['assemblage_note_images'] = []
+    job_prefix = f"job_{job.id if job else 'preview'}_assemblage"
+    if preconverted_images and job_prefix in preconverted_images and preconverted_images[job_prefix]:
+        context['assemblage_note_images'] = preconverted_images[job_prefix]
+    elif context.get('assemblage_note_abs') and os.path.exists(context['assemblage_note_abs']):
+        convert_dir = os.path.join(settings.MEDIA_ROOT, 'assemblages')
+        try:
+            context['assemblage_note_images'] = _convert_rtf_file_to_images(
+                context['assemblage_note_abs'], convert_dir, job_prefix, is_assemblage=True
+            )
+        except Exception as e:
+            logger.warning("Failed to convert Assemblage RTF to images: %s", e)
+
+    combinaisons_path = os.path.join(settings.MEDIA_ROOT, 'combinaisons', 'table.png')
+    context['combinaisons_abs'] = combinaisons_path if os.path.exists(combinaisons_path) else None
+
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')
+    context['logo_abs'] = logo_path if os.path.exists(logo_path) else None
+
+    # Hardened Artifact Guard
+    if job and job.id != 'preview' and job.id != 'fast':
+        missing_mandatory = []
+        if not context.get('robot_screenshot_abs') or not os.path.exists(context['robot_screenshot_abs']):
+            missing_mandatory.append("Capture 3D modélisation Robot (page 4)")
+        if not context.get('verification_screenshot_abs') or not os.path.exists(context['verification_screenshot_abs']):
+            missing_mandatory.append("Capture de vérification Robot ELU/ELS (page 7)")
+        if not context.get('note_de_calcul_images'):
+            missing_mandatory.append("Note de calcul RTF du mât principal (page 8)")
+        if not context.get('assemblage_note_images'):
+            missing_mandatory.append("Note de calcul d'assemblage Robot (page 9+)")
+
+        if missing_mandatory:
+            err_msg = (
+                f"Génération NDC bloquée pour le Job {job.id} : artéfacts obligatoires manquants ({', '.join(missing_mandatory)}). "
+                f"La création d'un PDF incomplet est strictement interdite afin de ne jamais transmettre un document tronqué au client."
+            )
+            logger.error("[NDC HARDENING ERROR] %s", err_msg)
+            raise ValueError(err_msg)
+
+    html_string = render_to_string('ndc/base.html', context)
+
+    job_id_str = job.id if job else "preview"
+    output_filename = f"NDC_{job_id_str}_{uuid.uuid4().hex[:8]}"
+    outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+    os.makedirs(outdir, exist_ok=True)
+    pdf_path = os.path.join(outdir, f"{output_filename}.pdf")
+
+    html = HTML(string=html_string, base_url=f"file://{settings.MEDIA_ROOT}")
+    html.write_pdf(pdf_path)
+
+    if not os.path.exists(pdf_path):
+        raise RuntimeError("PDF file was not generated.")
+
+    return settings.MEDIA_URL + f"uploads/{output_filename}.pdf"
+
+
+def generate_ndc_pdf_task(job_id, photo_url_or_path):
+    from api.models import CalculationJob
+    try:
+        job = CalculationJob.objects.get(id=job_id)
+        pdf_url = generate_ndc_pdf(job, photo_url_or_path)
+        if not isinstance(job.result_data, dict):
+            job.result_data = {}
+        job.result_data['ndc_pdf_url'] = pdf_url
+        job.save()
+        return pdf_url
+    except CalculationJob.DoesNotExist:
+        logger.warning("Job %s not found for PDF generation", job_id)
+        return None
+
+
+def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
+    """
+    Generate auxiliary PDFs (TD, FH, RRH, RRU) based on job.input_data.
+    Returns a list of absolute paths to the generated PDFs.
+    """
+    input_data = job.input_data if job else {}
+    generated_pdfs = []
+
+    context = {'start_page': start_page}
+    env = input_data.get('environment', {})
+    structure_data = input_data.get('structure', {})
+    parse_dimensions = _parse_section_dimensions
+
+    mat_principal_str = structure_data.get('mat_principal') or ''
+    diam, epaisseur = parse_dimensions(mat_principal_str)
+    context['mat_diam'] = diam or '[DIAM]'
+    context['mat_epaisseur'] = epaisseur or '[EPAISSEUR]'
+
+    mast_height_m = structure_data.get('mast_height_m') or structure_data.get('hauteur_mat_m')
+    try:
+        context['mat_longueur'] = int(float(mast_height_m) * 1000) if mast_height_m else '[LONGUEUR]'
+        context['mat_longueur_m'] = float(mast_height_m) if mast_height_m else '[LONGUEUR_M]'
+    except (ValueError, TypeError):
+        context['mat_longueur'] = '[LONGUEUR]'
+        context['mat_longueur_m'] = '[LONGUEUR_M]'
+    context['mat_section'] = mat_principal_str or '[MAT_SECTION]'
+
+    plot_str = structure_data.get('plot_metallique') or ''
+    context['plot_section'] = plot_str or '[PLOT_SECTION]'
+    context['plot_longueur_m'] = env.get('plot_height_m') or '[PLOT_HEIGHT_M]'
+
+    region_data = env.get('region')
+    if isinstance(region_data, dict):
+        region_num = region_data.get('number')
+        region_name = region_data.get('name')
+    else:
+        try:
+            region_num = int(str(region_data).replace('Region ', '').strip())
+            region_name = f"Region {region_num}"
+        except (ValueError, TypeError):
+            region_num = None
+            region_name = str(region_data) if region_data else '[REGION_VENT]'
+
+    context['region'] = region_name
+    context['terrain_type'] = env.get('terrain_type') or '[CATEGORIE_TERRAIN]'
+    context['building_height'] = env.get('building_height_m') or '[HAUTEUR_BATIMENT]'
+
+    vb = WIND_REGION_VB0.get(region_num)
+    context['vb_m_s'] = vb if vb is not None else '[Vb]'
+
+    try:
+        h_bat = float(env.get('building_height_m') or 0)
+        h_plot = float(env.get('plot_height_m') or 0)
+        h_mat = float(mast_height_m or 0)
+        z_total = h_bat + h_plot + h_mat
+    except (ValueError, TypeError):
+        z_total = 0
+
+    if vb is not None and z_total > 0:
+        terrain_type_str = str(env.get('terrain_type') or 'IIIa')
+        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
+        context['vm_z'] = wind['vm']
+        context['iv_z'] = wind['iv_z']
+        context['qp_z'] = wind['qp_dan']
+        context['cr_z'] = wind['cr_z']
+        context['kr_z'] = wind['kr']
+    else:
+        context['vm_z'] = '[Vm]'
+        context['iv_z'] = '[Iv(z)]'
+        context['qp_z'] = '[qp]'
+        context['cr_z'] = '[cr(z)]'
+        context['kr_z'] = '[kr]'
+
+    site_info = input_data.get('site', {})
+    client_logo_url = site_info.get('client_logo_url')
+    client_logo_abs = safe_media_path(client_logo_url) if client_logo_url else None
+    context['client_logo_abs'] = client_logo_abs if (client_logo_abs and os.path.exists(client_logo_abs)) else None
+
+    logo_path = os.path.join(settings.MEDIA_ROOT, 'uploads', 'logo_cometa.png')
+    context['logo_abs'] = logo_path if os.path.exists(logo_path) else None
+
+    def _render_and_save(template_name, equipment_context):
+        ctx = context.copy()
+        ctx.update(equipment_context)
+        html_string = render_to_string(f'ndc/{template_name}.html', ctx)
+        output_filename = f"{template_name.upper()}_{job.id if job else 'preview'}_{uuid.uuid4().hex[:8]}.pdf"
+        outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+        os.makedirs(outdir, exist_ok=True)
+        pdf_path = os.path.join(outdir, output_filename)
+        html = HTML(string=html_string, base_url=f"file://{settings.MEDIA_ROOT}")
+        html.write_pdf(pdf_path)
+
+        if os.path.exists(pdf_path):
+            try:
+                from pypdf import PdfReader
+                reader = PdfReader(pdf_path)
+                context['start_page'] += len(reader.pages)
+            except Exception:
+                context['start_page'] += 1
+
+        return pdf_path
+
+    td_eq = input_data.get('td_equipment', {})
+    operator = normalize_operator(input_data.get('operateur'), fallback_site=input_data.get('site'))
+    if td_eq.get('enabled') and operator not in OPERATORS_WITHOUT_TD:
+        generated_pdfs.append(_render_and_save('td', {
+            'eq_qty': 1,
+            'eq_dims': '[TD_DIMS]',
+            'eq_weight': '[TD_WEIGHT]',
+        }))
+
+    fh_eq = input_data.get('fh_equipment', {})
+    if fh_eq.get('enabled'):
+        diameter = fh_eq.get('diameter_mm')
+        generated_pdfs.append(_render_and_save('fh', {
+            'eq_qty': fh_eq.get('quantity') or 1,
+            'eq_dims': f"Ø{diameter}" if diameter else '[FH_DIMS]',
+            'eq_weight': fh_eq.get('weight_kg') or '[FH_WEIGHT]',
+        }))
+
+    rru_eq = input_data.get('rru_equipment', {})
+    rrh_eq = input_data.get('rrh_equipment', {})
+    res_data = getattr(job, 'result_data', {}) if job else {}
+    if not isinstance(res_data, dict):
+        res_data = {}
+    calc_type = getattr(job, 'calculation_type', '') if job else ''
+
+    is_rru_only_job = (
+        res_data.get('has_rrh') is False
+        or (
+            isinstance(rru_eq, dict) and rru_eq.get('enabled')
+            and not (isinstance(rrh_eq, dict) and rrh_eq.get('enabled'))
+            and res_data.get('has_rrh') is not True
+        )
+    )
+    has_rrh_result = (
+        not is_rru_only_job
+        and (
+            res_data.get('has_rrh') is True
+            or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
+            or bool(res_data.get('rrh_items'))
+            or bool(res_data.get('rrh_totals'))
+        )
+    )
+    is_rrh_calc = (
+        not is_rru_only_job
+        and bool(input_data.get('is_rrh') or calc_type in ['rrh', 'antenna_with_rrh'] or getattr(job, 'note_de_calcul_rrh', None))
+    )
+
+    def _get_or_convert_rtf_images(key_prefix, rtf_abs, convert_dir, is_assemblage=False):
+        if preconverted_images and key_prefix in preconverted_images and preconverted_images[key_prefix]:
+            return preconverted_images[key_prefix]
+        if rtf_abs and os.path.exists(rtf_abs):
+            try:
+                return _convert_rtf_file_to_images(rtf_abs, convert_dir, key_prefix, is_assemblage=is_assemblage)
+            except Exception as e:
+                logger.warning("Failed to convert %s RTF to images: %s", key_prefix, e)
+        return []
+
+    ws_dir = _worker_screenshots_dir()
+
+    if (not is_rru_only_job) and ((isinstance(rrh_eq, dict) and rrh_eq.get('enabled')) or has_rrh_result or is_rrh_calc):
+        try:
+            qp_val = float(context.get('qp_z', 0))
+        except (ValueError, TypeError):
+            qp_val = 0.0
+
+        rrh_ctx = extract_rrh_ndc_context(res_data, input_data=input_data, qp_val=qp_val)
+        items = rrh_ctx['items']
+        totals = rrh_ctx['totals']
+        wind_p = rrh_ctx['wind']
+        is_multi = rrh_ctx['is_multi']
+        qty_total = rrh_ctx['qty_total']
+
+        first_item = items[0] if items else {}
+        eq_dims = first_item.get('dimensions_str', '[RRH_DIMS]')
+        eq_weight = first_item.get('weight_kg', '[RRH_WEIGHT]')
+        cx_front = first_item.get('cf_front', 0.1352)
+        cx_lat = first_item.get('cf_lat', 0.0523)
+        fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
+        fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+
+        worker_rrh = res_data.get('rrh', {}) if isinstance(res_data.get('rrh'), dict) else {}
+        extremes = rrh_ctx.get('extremes') or worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = rrh_ctx.get('structure') or worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
+
+        rrh_mat_section = struct_p.get('mast_section') or context.get('mat_section')
+        rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
+        rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
+        rrh_mat_longueur_m = struct_p.get('hauteur_mat_m') or context.get('mat_longueur_m')
+
+        rrh_wind = _resolve_support_wind_params(wind_p, context, env, vb, rrh_plot_longueur_m, rrh_mat_longueur_m)
+        rrh_qp_z = rrh_wind['qp_z']
+
+        try:
+            rrh_mat_longueur = int(float(rrh_mat_longueur_m) * 1000) if rrh_mat_longueur_m else context.get('mat_longueur')
+        except (ValueError, TypeError):
+            rrh_mat_longueur = context.get('mat_longueur')
+
+        m_diam, m_ep = parse_dimensions(rrh_mat_section)
+        try:
+            rrh_mat_diam = m_diam or (int(float(struct_p.get('mast_d_m')) * 1000) if struct_p.get('mast_d_m') else context.get('mat_diam'))
+        except (ValueError, TypeError):
+            rrh_mat_diam = context.get('mat_diam')
+
+        try:
+            rrh_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else context.get('mat_epaisseur'))
+        except (ValueError, TypeError):
+            rrh_mat_epaisseur = context.get('mat_epaisseur')
+
+        rrh_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
+        try:
+            m_diam_m = float(
+                struct_p.get('mast_d_m')
+                or (float(rrh_mat_diam) / 1000.0 if rrh_mat_diam and str(rrh_mat_diam).replace('.', '').isdigit() else 0.088)
+            )
+        except (ValueError, TypeError):
+            m_diam_m = 0.088
+
+        if wind_p.get('fw_mast') is not None:
+            fw_mat = wind_p.get('fw_mast')
+        else:
+            try:
+                fw_mat = round(1.0 * float(rrh_cf_mat) * m_diam_m * float(rrh_qp_z or context.get('qp_z', 0)), 2)
+            except (ValueError, TypeError):
+                fw_mat = '[Fw,Mat]'
+
+        rrh_screenshot_abs = None
+        if job and getattr(job, 'rrh_screenshot', None) and job.rrh_screenshot:
+            try:
+                if os.path.exists(job.rrh_screenshot.path):
+                    rrh_screenshot_abs = job.rrh_screenshot.path
+            except Exception:
+                pass
+        if not rrh_screenshot_abs and job:
+            rrh_screenshot_abs = _first_existing_file([
+                f"{ws_dir}/job_{job.id}_rrh_3d_view.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg'),
+            ])
+
+        rrh_tableau_charges_abs = None
+        if job and getattr(job, 'rrh_tableau_charges', None) and job.rrh_tableau_charges:
+            try:
+                if os.path.exists(job.rrh_tableau_charges.path):
+                    rrh_tableau_charges_abs = job.rrh_tableau_charges.path
+            except Exception:
+                pass
+        if not rrh_tableau_charges_abs and job:
+            rrh_tableau_charges_abs = _first_existing_file([
+                f"{ws_dir}/job_{job.id}_rrh_tableau_charges.png",
+                os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png'),
+            ])
+        rrh_tableau_charges_abs = _crop_tableau_charges_image(rrh_tableau_charges_abs)
+
+        rrh_verification_screenshot_abs = None
+        if job and getattr(job, 'rrh_verification_screenshot', None) and job.rrh_verification_screenshot:
+            try:
+                if os.path.exists(job.rrh_verification_screenshot.path):
+                    rrh_verification_screenshot_abs = job.rrh_verification_screenshot.path
+            except Exception:
+                pass
+        if not rrh_verification_screenshot_abs and job:
+            rrh_verification_screenshot_abs = _first_existing_file([
+                f"{ws_dir}/job_{job.id}_rrh_verification.jpg",
+                os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg'),
+            ])
+
+        rrh_paths = find_job_rrh_rtf_paths(job)
+        rrh_convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rrh')
+        job_id_lbl = job.id if job else 'preview'
+        rrh_note_mat_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_note_mat", rrh_paths.get('note_mat'), rrh_convert_dir)
+        rrh_note_plot_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_note_plot", rrh_paths.get('note_plot'), rrh_convert_dir)
+        rrh_assemblage_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_assemblage", rrh_paths.get('assemblage_note'), rrh_convert_dir, is_assemblage=True)
+
+        res_d = getattr(job, 'result_data', {}) if isinstance(getattr(job, 'result_data', None), dict) else {}
+        inp_d = getattr(job, 'input_data', {}) if isinstance(getattr(job, 'input_data', None), dict) else (input_data if isinstance(input_data, dict) else {})
+        is_rrh_sans_plot = resolve_sans_plot(
+            inp_d,
+            res_d,
+            calc_type=getattr(job, "calculation_type", ""),
+            kind="rrh",
+        )
+
+        if job and job.id != 'preview' and job.id != 'fast':
+            missing_rrh = []
+            if not rrh_screenshot_abs or not os.path.exists(rrh_screenshot_abs):
+                missing_rrh.append("Capture 3D modélisation RRH (page 14)")
+            if not rrh_tableau_charges_abs or not os.path.exists(rrh_tableau_charges_abs):
+                missing_rrh.append("Tableau des charges RRH (page 15)")
+            if not rrh_verification_screenshot_abs or not os.path.exists(rrh_verification_screenshot_abs):
+                missing_rrh.append("Capture de vérification Robot RRH (page 16)")
+            if not rrh_note_mat_images:
+                missing_rrh.append("Note de calcul RTF du mât RRH (page 17)")
+            if not is_rrh_sans_plot and not rrh_assemblage_images:
+                missing_rrh.append("Note d'assemblage Robot RRH (page 21+)")
+
+            if missing_rrh:
+                err_msg = f"Génération annexe RRH bloquée pour le Job {job.id} : artéfacts obligatoires manquants ({', '.join(missing_rrh)})."
+                logger.error("[NDC HARDENING ERROR] %s", err_msg)
+                raise ValueError(err_msg)
+
+        generated_pdfs.append(_render_and_save('rrh', {
+            'region': rrh_wind['region'],
+            'terrain_type': rrh_wind['terrain_type'],
+            'building_height': rrh_wind['building_height'],
+            'vb_m_s': rrh_wind['vb_m_s'],
+            'cr_z': rrh_wind['cr_z'],
+            'vm_z': rrh_wind['vm_z'],
+            'iv_z': rrh_wind['iv_z'],
+            'kr_z': rrh_wind['kr_z'],
+            'qp_z': rrh_qp_z,
+            'eq_qty': qty_total,
+            'rrh_name': clean_equipment_designation(first_item.get('name', 'RRH')),
+            'eq_dims': eq_dims,
+            'eq_weight': eq_weight,
+            'cx_front': cx_front,
+            'cx_lat': cx_lat,
+            'fw_front': fw_front,
+            'fw_lat': fw_lat,
+            'fw_mat': fw_mat,
+            'extremes': extremes,
+            'rrh_mat_section': rrh_mat_section,
+            'rrh_mat_diam': rrh_mat_diam,
+            'rrh_mat_epaisseur': rrh_mat_epaisseur,
+            'rrh_mat_longueur': rrh_mat_longueur,
+            'rrh_mat_longueur_m': rrh_mat_longueur_m,
+            'rrh_plot_section': rrh_plot_section,
+            'rrh_plot_longueur_m': rrh_plot_longueur_m,
+            'rrh_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
+            'rrh_cf_mat': rrh_cf_mat,
+            'rrh_screenshot_abs': rrh_screenshot_abs,
+            'rrh_tableau_charges_abs': rrh_tableau_charges_abs,
+            'rrh_verification_screenshot_abs': rrh_verification_screenshot_abs,
+            'rrh_note_mat_images': rrh_note_mat_images,
+            'rrh_note_plot_images': rrh_note_plot_images,
+            'rrh_assemblage_images': rrh_assemblage_images,
+            'rrh_items': items,
+            'rrh_totals': totals,
+            'rrh_is_multi': is_multi,
+            'rrh_qty_total': qty_total,
+            'is_sans_plot': is_rrh_sans_plot,
+        }))
+
+    # Check for RRU
+    has_rru_result = (
+        res_data.get('has_rru') is True
+        or ('rru' in res_data and isinstance(res_data['rru'], dict))
+        or bool(res_data.get('rru_items'))
+        or bool(res_data.get('rru_totals'))
+    )
+    is_rru_calc = bool(input_data.get('is_rru') or calc_type in ['rru', 'antenna_with_rru'])
+
+    if (isinstance(rru_eq, dict) and rru_eq.get('enabled')) or has_rru_result or is_rru_calc:
+        try:
+            qp_val = float(context.get('qp_z', 0))
+        except (ValueError, TypeError):
+            qp_val = 0.0
+
+        rru_ctx = extract_rru_ndc_context(res_data, input_data=input_data, qp_val=qp_val)
+        items = rru_ctx['items']
+        totals = rru_ctx['totals']
+        wind_p = rru_ctx['wind']
+        is_multi = rru_ctx['is_multi']
+        qty_total = rru_ctx['qty_total']
+        rru_sans_plot = rru_ctx['is_sans_plot']
+
+        first_item = items[0] if items else {}
+        eq_dims = first_item.get('dimensions_str', '[RRU_DIMS]')
+        eq_weight = first_item.get('weight_kg', '[RRU_WEIGHT]')
+        cx_front = first_item.get('cf_front', 1.38)
+        cx_lat = first_item.get('cf_lat', 1.11)
+        fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
+        fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+
+        worker_rru = res_data.get('rru', {}) if isinstance(res_data.get('rru'), dict) else {}
+        extremes = rru_ctx.get('extremes') or worker_rru.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = rru_ctx.get('structure') or worker_rru.get('structure_params', {}) or res_data.get('structure_params', {})
+        is_standalone_rru = bool(input_data.get('is_rru') and not input_data.get('antenna_4g') and not input_data.get('antenna_5g'))
+
+        rru_mat_section = (
+            struct_p.get('mast_section')
+            or (structure_data.get('mast_section') if is_standalone_rru else None)
+            or 'TRON 88x2.5'
+        )
+        rru_mat_longueur_m = (
+            struct_p.get('hauteur_mat_m')
+            if struct_p.get('hauteur_mat_m') is not None
+            else (structure_data.get('hauteur_mat_m') if is_standalone_rru and structure_data.get('hauteur_mat_m') is not None else 1.5)
+        )
+        if rru_sans_plot:
+            rru_plot_section = 'Sans plot'
+            rru_plot_longueur_m = 0
+        else:
+            rru_plot_section = (
+                struct_p.get('plot_section')
+                or (structure_data.get('plot_section') if is_standalone_rru else None)
+                or 'TCAR 150x5'
+            )
+            rru_plot_longueur_m = (
+                struct_p.get('plot_h_m')
+                if struct_p.get('plot_h_m') is not None
+                else (structure_data.get('plot_h_m') if is_standalone_rru and structure_data.get('plot_h_m') is not None else 0.5)
+            )
+
+        rru_wind = _resolve_support_wind_params(wind_p, context, env, vb, rru_plot_longueur_m, rru_mat_longueur_m)
+        rru_qp_z = rru_wind['qp_z']
+
+        if (not wind_p.get('qp_dan')) and rru_qp_z and rru_qp_z != '[qp]':
+            try:
+                rru_qp_num = float(rru_qp_z)
+                if rru_qp_num > 0 and rru_qp_num != qp_val:
+                    rru_ctx = extract_rru_ndc_context(res_data, input_data=input_data, qp_val=rru_qp_num)
+                    items = rru_ctx['items']
+                    totals = rru_ctx['totals']
+                    first_item = items[0] if items else {}
+                    fw_front = totals.get('fw_front', fw_front)
+                    fw_lat = totals.get('fw_lat', fw_lat)
+            except (ValueError, TypeError):
+                pass
+
+        try:
+            rru_mat_longueur = int(float(rru_mat_longueur_m) * 1000)
+        except (ValueError, TypeError):
+            rru_mat_longueur = 1500
+
+        m_diam, m_ep = parse_dimensions(rru_mat_section)
+        try:
+            rru_mat_diam = m_diam or (int(float(struct_p.get('mast_d_m')) * 1000) if struct_p.get('mast_d_m') else '88')
+        except (ValueError, TypeError):
+            rru_mat_diam = '88'
+
+        try:
+            rru_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '2.5')
+        except (ValueError, TypeError):
+            rru_mat_epaisseur = '2.5'
+
+        rru_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
+        try:
+            m_diam_m = float(
+                struct_p.get('mast_d_m')
+                or (float(rru_mat_diam) / 1000.0 if rru_mat_diam and str(rru_mat_diam).replace('.', '').isdigit() else 0.088)
+            )
+        except (ValueError, TypeError):
+            m_diam_m = 0.088
+
+        if wind_p.get('fw_mast') is not None:
+            fw_mat = wind_p.get('fw_mast')
+        else:
+            try:
+                fw_mat = round(1.0 * float(rru_cf_mat) * m_diam_m * float(rru_qp_z or context.get('qp_z', 0)), 2)
+            except (ValueError, TypeError):
+                fw_mat = '[Fw,Mat]'
+
+        rru_files = res_data.get('rru_files') if isinstance(res_data.get('rru_files'), dict) else {}
+
+        rru_screenshot_abs = _first_existing_file([
+            rru_files.get('rru_screenshot'),
+            rru_files.get('screenshot'),
+            res_data.get('rru_screenshot_path'),
+            worker_rru.get('screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_rru', f'job_{job.id}_rru_3d_view.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_rru', f'job_{job.id}_rru_3d_view.png') if job else None,
+            f"{ws_dir}/job_{job.id}_rru_3d_view.jpg" if job else None,
+            f"{ws_dir}/job_{job.id}_rru_3d_view.png" if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rru_3d_view.jpg') if job else None,
+        ])
+
+        rru_tableau_charges_abs = _first_existing_file([
+            rru_files.get('rru_tableau_charges'),
+            rru_files.get('tableau_charges'),
+            res_data.get('rru_tableau_charges_path'),
+            worker_rru.get('tableau_charges_path'),
+            os.path.join(settings.MEDIA_ROOT, 'charges_rru', f'job_{job.id}_rru_tableau_charges.png') if job else None,
+            f"{ws_dir}/job_{job.id}_rru_tableau_charges.png" if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rru_tableau_charges.png') if job else None,
+        ])
+        rru_tableau_charges_abs = _crop_tableau_charges_image(rru_tableau_charges_abs)
+
+        rru_verification_screenshot_abs = _first_existing_file([
+            rru_files.get('rru_verification_screenshot'),
+            rru_files.get('verification_screenshot'),
+            res_data.get('rru_verification_screenshot_path'),
+            worker_rru.get('verification_screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'verif_rru', f'job_{job.id}_rru_verification.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'verif_rru', f'job_{job.id}_rru_verification.png') if job else None,
+            f"{ws_dir}/job_{job.id}_rru_verification.jpg" if job else None,
+            f"{ws_dir}/job_{job.id}_rru_verification.png" if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rru_verification.jpg') if job else None,
+        ])
+
+        rru_paths = find_job_rru_rtf_paths(job)
+        rru_convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_rru')
+        job_id_lbl = job.id if job else 'preview'
+        rru_note_mat_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rru_note_mat", rru_paths.get('note_mat'), rru_convert_dir)
+        rru_note_plot_images = [] if rru_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_rru_note_plot", rru_paths.get('note_plot'), rru_convert_dir)
+        rru_assemblage_images = [] if rru_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_rru_assemblage", rru_paths.get('assemblage_note'), rru_convert_dir, is_assemblage=True)
+
+        generated_pdfs.append(_render_and_save('rru', {
+            'region': rru_wind['region'],
+            'terrain_type': rru_wind['terrain_type'],
+            'building_height': rru_wind['building_height'],
+            'vb_m_s': rru_wind['vb_m_s'],
+            'cr_z': rru_wind['cr_z'],
+            'vm_z': rru_wind['vm_z'],
+            'iv_z': rru_wind['iv_z'],
+            'kr_z': rru_wind['kr_z'],
+            'qp_z': rru_qp_z,
+            'eq_qty': qty_total,
+            'rru_name': clean_equipment_designation(first_item.get('name', 'RRU')),
+            'eq_dims': eq_dims,
+            'eq_weight': eq_weight,
+            'cx_front': cx_front,
+            'cx_lat': cx_lat,
+            'fw_front': fw_front,
+            'fw_lat': fw_lat,
+            'fw_mat': fw_mat,
+            'extremes': extremes,
+            'rru_sans_plot': rru_sans_plot,
+            'rru_mat_section': rru_mat_section,
+            'rru_mat_diam': rru_mat_diam,
+            'rru_mat_epaisseur': rru_mat_epaisseur,
+            'rru_mat_longueur': rru_mat_longueur,
+            'rru_mat_longueur_m': rru_mat_longueur_m,
+            'rru_plot_section': rru_plot_section,
+            'rru_plot_longueur_m': rru_plot_longueur_m,
+            'rru_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
+            'rru_cf_mat': rru_cf_mat,
+            'rru_screenshot_abs': rru_screenshot_abs,
+            'rru_tableau_charges_abs': rru_tableau_charges_abs,
+            'rru_verification_screenshot_abs': rru_verification_screenshot_abs,
+            'rru_note_mat_images': rru_note_mat_images,
+            'rru_note_plot_images': rru_note_plot_images,
+            'rru_assemblage_images': rru_assemblage_images,
+            'rru_items': items,
+            'rru_totals': totals,
+            'rru_is_multi': is_multi,
+            'rru_qty_total': qty_total,
+        }))
+
+    return generated_pdfs
+

@@ -1,7 +1,10 @@
 import os
 import json
+import copy
 import datetime
+import threading
 from django.conf import settings
+from utils.domain_constants import normalize_operator
 
 CATALOGUE_DIR = os.path.join(settings.BASE_DIR, 'geodata', 'fixtures', 'catalogue')
 FIXTURE_PATH = os.path.join(settings.BASE_DIR, 'geodata', 'fixtures', 'catalogue_config.json')
@@ -20,30 +23,59 @@ FILE_MAPPING = {
     'standards': 'standards.json',
 }
 
+# Thread-safe mtime-keyed cache so repeated catalogue lookups don't re-parse JSON from disk
+_CACHE_LOCK = threading.Lock()
+_RAW_FILE_CACHE = {}  # filename -> (mtime, parsed_data)
+_CATALOGUE_CACHE = None  # (mtimes_tuple, catalogue_dict)
+
+
+def clear_catalogue_cache():
+    """Explicitly invalidate the in-memory catalogue JSON cache."""
+    global _CATALOGUE_CACHE
+    with _CACHE_LOCK:
+        _RAW_FILE_CACHE.clear()
+        _CATALOGUE_CACHE = None
+
 
 def load_raw_file(filename: str):
-    """Load JSON from a specific catalogue file."""
+    """Load JSON from a specific catalogue file with mtime-based in-memory caching."""
     path = os.path.join(CATALOGUE_DIR, filename)
     if not os.path.exists(path):
         return None
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return None
+
+    with _CACHE_LOCK:
+        cached = _RAW_FILE_CACHE.get(filename)
+        if cached is not None and cached[0] == mtime:
+            return cached[1]
+
     with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+        data = json.load(f)
+
+    with _CACHE_LOCK:
+        _RAW_FILE_CACHE[filename] = (mtime, data)
+    return data
 
 
 def load_catalogue_dict() -> dict:
     """
-    Assemble the complete catalogue configuration from individual dedicated JSON files:
-    - antennas.json -> real_world_references (4G & 5G)
-    - rrh.json -> rrh_references
-    - rru.json -> rru_references
-    - td.json -> td_references
-    - tgbt.json -> tgbt_references
-    - fh.json -> fh_references
-    - coffrets.json -> coffret_references
-    - atelier_energie.json -> atelier_energie_references
-    - baies.json -> baie_references
-    - standards.json -> standard_montages, building_heights, mast_heights, fh_weights
+    Assemble the complete catalogue configuration from individual dedicated JSON files
+    with mtime-validated in-memory caching.
     """
+    global _CATALOGUE_CACHE
+    mtimes = []
+    for filename in FILE_MAPPING.values():
+        path = os.path.join(CATALOGUE_DIR, filename)
+        mtimes.append(os.path.getmtime(path) if os.path.exists(path) else None)
+    mtimes_key = tuple(mtimes)
+
+    with _CACHE_LOCK:
+        if _CATALOGUE_CACHE is not None and _CATALOGUE_CACHE[0] == mtimes_key:
+            return copy.deepcopy(_CATALOGUE_CACHE[1])
+
     standards = load_raw_file(FILE_MAPPING['standards']) or {}
     
     catalogue = {
@@ -72,7 +104,9 @@ def load_catalogue_dict() -> dict:
         'orange_antennas': standards.get('orange_antennas', []),
         'updated_at': datetime.datetime.utcnow().isoformat() + 'Z'
     }
-    return catalogue
+    with _CACHE_LOCK:
+        _CATALOGUE_CACHE = (mtimes_key, catalogue)
+    return copy.deepcopy(catalogue)
 
 
 def get_catalogue_files_info() -> list:
@@ -147,13 +181,17 @@ def sync_catalogue_to_db(save_fixtures: bool = True):
     config.baie_references = catalogue['baie_references']
     config.save()
 
-    # 2. Update combined fixture catalogue_config.json
+    # 2. Update combined fixture catalogue_config.json (strictly valid Django model fields)
     if save_fixtures:
+        model_field_names = {
+            f.name for f in CatalogueConfig._meta.fields if f.name not in ('id', 'pk')
+        }
+        fixture_fields = {k: v for k, v in catalogue.items() if k in model_field_names}
         fixture_payload = [
             {
                 "model": "geodata.catalogueconfig",
                 "pk": 1,
-                "fields": catalogue
+                "fields": fixture_fields
             }
         ]
         with open(FIXTURE_PATH, 'w', encoding='utf-8') as f:
@@ -168,7 +206,7 @@ def sync_catalogue_to_db(save_fixtures: bool = True):
                 found = False
                 for item in all_data:
                     if item.get('model') == 'geodata.catalogueconfig' and item.get('pk') == 1:
-                        item['fields'] = catalogue
+                        item['fields'] = fixture_fields
                         found = True
                         break
 
@@ -176,7 +214,7 @@ def sync_catalogue_to_db(save_fixtures: bool = True):
                     all_data.append({
                         "model": "geodata.catalogueconfig",
                         "pk": 1,
-                        "fields": catalogue
+                        "fields": fixture_fields
                     })
 
                 with open(ALL_GEODATA_PATH, 'w', encoding='utf-8') as f:
@@ -187,65 +225,56 @@ def sync_catalogue_to_db(save_fixtures: bool = True):
     return catalogue
 
 
-def find_rrh_reference(identifier_or_ref: str, operator: str = None) -> dict:
+def find_equipment_reference(kind: str, identifier_or_ref: str, operator: str = None) -> dict:
     """
-    Helper to search for an RRH reference in rrh.json by ID, reference, or name.
+    Unified 3-tier catalogue reference lookup (exact ID -> exact ref/short_ref/name -> partial)
+    backed by mtime-cached JSON data. Supports any list-based category in FILE_MAPPING (`rrh`, `rru`, etc.).
     """
-    rrh_list = load_raw_file(FILE_MAPPING['rrh']) or []
+    filename = FILE_MAPPING.get(kind)
+    if not filename:
+        return None
+    items = load_raw_file(filename) or []
     query = (identifier_or_ref or '').strip().lower()
-    
+    if not query:
+        return None
+    norm_op = normalize_operator(operator) if operator else ''
+
+    def _op_matches(item: dict) -> bool:
+        if not norm_op:
+            return True
+        return normalize_operator(item.get('operator')) == norm_op
+
     # 1. Exact ID match
-    for item in rrh_list:
-        if item.get('id', '').lower() == query:
-            if not operator or item.get('operator') == operator.lower():
-                return item
+    for item in items:
+        if (item.get('id') or '').lower() == query and _op_matches(item):
+            return item
 
-    # 2. Exact reference or name match
-    for item in rrh_list:
-        ref = item.get('reference', '').lower()
-        short_ref = item.get('short_reference', '').lower()
-        name = item.get('name', '').lower()
-        if query in [ref, short_ref, name]:
-            if not operator or item.get('operator') == operator.lower():
-                return item
+    # 2. Exact reference, short_reference, or name match
+    for item in items:
+        candidates = (
+            (item.get('reference') or '').lower(),
+            (item.get('short_reference') or '').lower(),
+            (item.get('name') or '').lower(),
+        )
+        if query in candidates and _op_matches(item):
+            return item
 
-    # 3. Partial match
-    for item in rrh_list:
-        ref = item.get('reference', '').lower()
-        short_ref = item.get('short_reference', '').lower()
-        if (query in ref or ref in query or query in short_ref or short_ref in query):
-            if not operator or item.get('operator') == operator.lower():
-                return item
+    # 3. Partial match on reference or short_reference
+    for item in items:
+        ref = (item.get('reference') or '').lower()
+        short_ref = (item.get('short_reference') or '').lower()
+        if ((ref and (query in ref or ref in query)) or (short_ref and (query in short_ref or short_ref in query))) and _op_matches(item):
+            return item
 
     return None
+
+
+def find_rrh_reference(identifier_or_ref: str, operator: str = None) -> dict:
+    """Search for an RRH reference in rrh.json by ID, reference, or name."""
+    return find_equipment_reference('rrh', identifier_or_ref, operator=operator)
 
 
 def find_rru_reference(identifier_or_ref: str, operator: str = None) -> dict:
-    """
-    Helper to search for an RRU reference in rru.json by ID, reference, or name.
-    """
-    rru_list = load_raw_file(FILE_MAPPING['rru']) or []
-    query = (identifier_or_ref or '').strip().lower()
-
-    # 1. Exact ID match
-    for item in rru_list:
-        if item.get('id', '').lower() == query:
-            if not operator or item.get('operator') == operator.lower():
-                return item
-
-    # 2. Exact reference match
-    for item in rru_list:
-        ref = item.get('reference', '').lower()
-        if query == ref:
-            if not operator or item.get('operator') == operator.lower():
-                return item
-
-    # 3. Partial match
-    for item in rru_list:
-        ref = item.get('reference', '').lower()
-        if (query in ref or ref in query):
-            if not operator or item.get('operator') == operator.lower():
-                return item
-
-    return None
+    """Search for an RRU reference in rru.json by ID, reference, or name."""
+    return find_equipment_reference('rru', identifier_or_ref, operator=operator)
 

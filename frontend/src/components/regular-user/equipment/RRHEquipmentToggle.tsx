@@ -1,9 +1,6 @@
-import React, { useMemo, useEffect, useRef } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
-import { CustomSelect } from '../../ui/CustomSelect';
-import { QuantityInput } from '../../ui/QuantityInput';
-import type { EquipmentItem } from '../../RegularUserView';
+import { useMemo } from 'react';
+import type { EquipmentItem } from '../types';
+import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
 
 export interface RRHEquipmentToggleProps {
   hasRrhEquipment: boolean;
@@ -26,172 +23,31 @@ export function RRHEquipmentToggle({
   operator = 'free',
   nombreSecteurs = 1,
   disabled = false,
-  disabledReason
+  disabledReason,
 }: RRHEquipmentToggleProps) {
-  const filteredRrhOptions = useMemo(() => {
-    return rrhOptions.filter(o =>
-      o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false
-    );
-  }, [rrhOptions, operator]);
-
-  const uniqueVendors = useMemo(() => {
-    return Array.from(new Set(filteredRrhOptions.map(o => o.vendor)));
-  }, [filteredRrhOptions]);
-
-  const addRrhRow = () => {
-    setRrhItems(prev => [...prev, {
-      id: crypto.randomUUID(),
-      reference: '',
-      quantity: 1,
-      vendor: uniqueVendors.length === 1 ? uniqueVendors[0] : undefined
-    }]);
-  };
-
-  // Only validate & sanitize if items actually changed or became invalid for current operator options
-  const rrhItemsRef = useRef(rrhItems);
-  rrhItemsRef.current = rrhItems;
-
-  useEffect(() => {
-    const current = rrhItemsRef.current;
-    let hasChanges = false;
-
-    const sanitized = current.map(item => {
-      let updated = { ...item };
-      let itemChanged = false;
-
-      if (uniqueVendors.length === 1 && updated.vendor !== uniqueVendors[0]) {
-        updated.vendor = uniqueVendors[0];
-        updated.reference = '';
-        itemChanged = true;
-      } else if (updated.vendor && !uniqueVendors.includes(updated.vendor)) {
-        updated.vendor = uniqueVendors.length === 1 ? uniqueVendors[0] : undefined;
-        updated.reference = '';
-        itemChanged = true;
-      }
-
-      if (updated.reference) {
-        const exists = filteredRrhOptions.some(o => o.id === updated.reference && (!updated.vendor || o.vendor === updated.vendor));
-        if (!exists) {
-          updated.reference = '';
-          itemChanged = true;
-        }
-      }
-
-      if (itemChanged) {
-        hasChanges = true;
-        return updated;
-      }
-      return item;
-    });
-
-    if (hasChanges) {
-      setRrhItems(sanitized);
-    }
-  }, [operator, filteredRrhOptions, uniqueVendors]);
-
-  const removeRrhRow = (id: string) => {
-    if (rrhItems.length > 1) {
-      setRrhItems(prev => prev.filter(item => item.id !== id));
-    }
-  };
-
-  const updateRrhItem = (id: string, field: 'reference' | 'quantity' | 'vendor', value: any) => {
-    setRrhItems(prev => prev.map(item => {
-      if (item.id === id) {
-        if (field === 'vendor') {
-          return { ...item, vendor: value, reference: '' };
-        }
-        return { ...item, [field]: value };
-      }
-      return item;
-    }));
-  };
-
-  const isRrhIncomplete = hasRrhEquipment && (rrhItems.length === 0 || rrhItems.some(i => !i.vendor || !i.reference));
+  const options = useMemo(
+    () =>
+      rrhOptions
+        .filter(o => (o.operator ? o.operator.toLowerCase() === operator.toLowerCase() : false))
+        .map(o => ({ id: o.id, vendor: o.vendor, label: o.reference })),
+    [rrhOptions, operator]
+  );
 
   return (
-    <EquipmentToggleCard
+    <MultiRowEquipmentToggle
       title="Présence RRH"
       enabled={hasRrhEquipment}
       onToggle={setHasRrhEquipment}
+      items={rrhItems}
+      onItemsChange={setRrhItems}
+      options={options}
+      scopeBadgeText="Par secteur"
+      selectRingClass="focus:ring-2 focus:ring-rose-500"
+      unitLabel="/ secteur"
+      nombreSecteurs={nombreSecteurs}
       disabled={disabled}
       disabledReason={disabledReason}
-      color="violet"
-      scopeBadgeText="Par secteur"
-      isIncomplete={isRrhIncomplete}
-    >
-      {rrhItems.map((item) => (
-        <div key={item.id} className={`flex flex-col gap-3 p-3 rounded-lg border transition-all ${(!item.vendor || !item.reference)
-          ? 'bg-amber-50/20 border-amber-200'
-          : 'bg-slate-50 border-slate-200'
-          }`}>
-          <div className="flex gap-3">
-            {/* Marque */}
-            <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
-                Marque
-                {!item.vendor && <span className="text-amber-600 font-bold">*</span>}
-              </label>
-              <CustomSelect
-                value={item.vendor || ''}
-                onChange={(val) => updateRrhItem(item.id, 'vendor', val)}
-                className="focus:ring-2 focus:ring-rose-500"
-                options={uniqueVendors.map(vendor => ({ value: vendor, label: vendor }))}
-                placeholder="Sélectionner"
-                error={!item.vendor}
-              />
-            </div>
-
-            {/* Modèle */}
-            <div className="flex flex-col flex-1 min-w-0">
-              <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
-                Modèle
-                {!item.reference && <span className="text-amber-600 font-bold">*</span>}
-              </label>
-              <CustomSelect
-                value={item.reference}
-                onChange={(val) => updateRrhItem(item.id, 'reference', val)}
-                disabled={!item.vendor}
-                className="focus:ring-2 focus:ring-rose-500"
-                options={filteredRrhOptions.filter(o => o.vendor === item.vendor).map(opt => {
-                  const isSelectedElsewhere = rrhItems.some(otherItem => otherItem.id !== item.id && otherItem.reference === opt.id);
-                  return { value: opt.id, label: opt.reference + (isSelectedElsewhere ? ' (Déjà utilisé)' : ''), disabled: isSelectedElsewhere };
-                })}
-                placeholder="Sélectionner"
-                error={!item.reference}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-slate-200 pt-2">
-            <QuantityInput
-              value={item.quantity || 1}
-              onChange={(val) => updateRrhItem(item.id, 'quantity', val)}
-              unitLabel="/ secteur"
-              nombreSecteurs={nombreSecteurs}
-            />
-
-            <button
-              type="button"
-              onClick={() => removeRrhRow(item.id)}
-              disabled={rrhItems.length === 1}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      ))}
-
-      <button
-        type="button"
-        onClick={addRrhRow}
-        className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
-      >
-        <Plus className="w-3.5 h-3.5" />
-        Ajouter
-      </button>
-    </EquipmentToggleCard>
+    />
   );
 }
 

@@ -54,7 +54,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -101,9 +101,16 @@ import dj_database_url
 DATABASE_URL = config('DATABASE_URL', default='sqlite:///db.sqlite3')
 
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL)
+    'default': dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=config('DB_CONN_MAX_AGE', default=60, cast=int),
+        conn_health_checks=True,
+    )
 }
-DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
+if DATABASE_URL.startswith('sqlite'):
+    DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.spatialite'
+else:
+    DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 
 # Alternative manual configuration (uncomment if you prefer this approach)
 # DATABASES = {
@@ -153,6 +160,28 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Shared cache (PostgreSQL DatabaseCache in production so web + qcluster share state without Redis)
+USE_DB_CACHE = config('USE_DB_CACHE', default=(not DEBUG and not DATABASE_URL.startswith('sqlite')), cast=bool)
+if USE_DB_CACHE:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'django_cache_table',
+            'OPTIONS': {
+                'MAX_ENTRIES': 5000,
+                'CULL_FREQUENCY': 4,
+            },
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'ndc-local-cache',
+        }
+    }
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -168,35 +197,67 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': config('DRF_THROTTLE_ANON', default='300/min'),
+        'user': config('DRF_THROTTLE_USER', default='1200/min'),
+    },
 }
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173', cast=lambda v: [s.strip() for s in v.split(',')])
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
-# Security settings for mobile access
-X_FRAME_OPTIONS = 'ALLOWALL'
-SECURE_BROWSER_XSS_FILTER = False
-SECURE_CONTENT_TYPE_NOSNIFF = False
-CORS_ALLOW_ALL_ORIGINS = True
+# Security settings
+X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='SAMEORIGIN')
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Media files configuration for local downloads
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Django Q2 Settings
+# Shared directory for robot worker screenshots & RTF notes
+WORKER_SHARE_DIR = config('WORKER_SHARE_DIR', default='/home/mahdi/worker_share')
+# Optional shared API key for robot worker callbacks (set in production env)
+ROBOT_WORKER_API_KEY = config('ROBOT_WORKER_API_KEY', default='')
+
+# Django Q2 Settings (PostgreSQL ORM broker — zero Redis)
 Q_CLUSTER = {
     'name': 'ndc_cluster',
-    'workers': 4,
+    'workers': config('Q_CLUSTER_WORKERS', default=2, cast=int),
     'recycle': 500,
     'timeout': 300,
     'retry': 360,
     'compress': True,
     'save_limit': 250,
     'queue_limit': 500,
-    'cpu_affinity': 1,
+    'sync': config('Q_CLUSTER_SYNC', default=False, cast=bool),
     'label': 'Django Q',
     'orm': 'default'
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': config('LOG_LEVEL', default='INFO'),
+    },
 }
 
 # Unified Robot Worker (Handles Antenna base, RRH, and future equipment)

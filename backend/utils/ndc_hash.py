@@ -2,6 +2,8 @@ import json
 import hashlib
 from typing import Dict, Any
 
+from utils.domain_constants import normalize_operator, resolve_sans_plot
+
 VOLATILE_KEYS = {
     "id", "job_id", "client_id", "client", "project_name", "site_name", "site",
     "user_id", "author", "created_at", "updated_at", "timestamp", "date",
@@ -92,12 +94,13 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     if isinstance(rrh_eq, dict) and rrh_eq.get("enabled"):
         canonical["rrh_equipment"] = _normalize(rrh_eq)
 
-    if data.get("sans_plot") is True:
+    is_rru = normalized_type == "rru" or data.get("is_rru") is True
+    if resolve_sans_plot(data, calc_type=normalized_type, kind="rru" if is_rru else normalized_type):
         canonical["sans_plot"] = True
-    elif (normalized_type == "rru" or data.get("is_rru") is True) and data.get("sans_plot") is not False:
-        canonical["sans_plot"] = True
-    if data.get("operateur"):
-        canonical["operateur"] = _normalize(data["operateur"])
+
+    op = normalize_operator(data.get("operateur") or data.get("operator"), fallback_site=data.get("site"))
+    if op:
+        canonical["operateur"] = op
 
     if "deflection_limit" in data:
         canonical["deflection_limit"] = _normalize(data["deflection_limit"])

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { apiClient } from '../services/apiClient';
 
 interface LoginViewProps {
   onLoginSuccess: (token: string, email: string, isAdmin: boolean) => void;
@@ -21,23 +22,14 @@ export default function LoginView({ onLoginSuccess, apiBaseUrl }: LoginViewProps
     const endpoint = isLogin ? '/api/auth/login/' : '/api/auth/register/';
     
     try {
-      const res = await fetch(`${apiBaseUrl}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        onLoginSuccess(data.token, data.email, !!data.is_admin);
-      } else {
-        setError(data.error || 'Une erreur est survenue.');
-      }
+      const data = await apiClient.post<{ token: string; email: string; is_admin?: boolean }>(
+        endpoint,
+        { email, password },
+        { baseUrl: apiBaseUrl, auth: false }
+      );
+      onLoginSuccess(data.token, data.email, !!data.is_admin);
     } catch (err: any) {
-      setError(err.message || 'Erreur réseau.');
+      setError(err.message || 'Une erreur est survenue.');
     } finally {
       setLoading(false);
     }

@@ -26,7 +26,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     role = RoleSerializer(read_only=True)
-    engineer_profile = EngineerProfileSerializer(read_only=True)
+    engineer_profile = EngineerProfileSerializer(source='user.engineer_profile', read_only=True)
     
     class Meta:
         model = UserProfile
@@ -35,7 +35,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'phone', 'department', 'role', 'engineer_profile', 'avatar',
             'client_logo', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
 
 class CalculationJobSerializer(serializers.ModelSerializer):
     class Meta:

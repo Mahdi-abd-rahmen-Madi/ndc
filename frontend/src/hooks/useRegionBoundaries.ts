@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
+import { apiClient } from '../services/apiClient';
 import type { RegionGeoJSON } from '../utils/types';
-
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata/regions`;
 
 interface UseRegionBoundariesReturn {
   regions: RegionGeoJSON | null;
@@ -20,24 +19,19 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const sourceIdRef = useRef<string>('');
+  const popupRef = useRef<maplibregl.Popup | null>(null);
+  const handlersRef = useRef<{
+    layerId: string;
+    onMove: (e: any) => void;
+    onLeave: () => void;
+  } | null>(null);
 
   const fetchRegions = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/regions/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: RegionGeoJSON = await response.json();
+      const data = await apiClient.get<RegionGeoJSON>('/api/geodata/regions/regions/');
       setRegions(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -48,15 +42,41 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
     }
   }, []);
 
+  const removeRegionsFromMap = useCallback(
+    (map: maplibregl.Map, layerId: string): void => {
+      const sourceId = sourceIdRef.current;
+
+      if (handlersRef.current && handlersRef.current.layerId === layerId) {
+        map.off('mousemove', layerId, handlersRef.current.onMove);
+        map.off('mouseleave', layerId, handlersRef.current.onLeave);
+        handlersRef.current = null;
+      }
+      if (popupRef.current) {
+        popupRef.current.remove();
+        popupRef.current = null;
+      }
+      if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
+      }
+      if (map.getLayer(`${layerId}-border`)) {
+        map.removeLayer(`${layerId}-border`);
+      }
+      if (sourceId && map.getSource(sourceId)) {
+        map.removeSource(sourceId);
+      }
+    },
+    []
+  );
+
   const addRegionsToMap = useCallback(
     (map: maplibregl.Map, sourceId: string, layerId: string): void => {
       if (!regions) return;
 
       sourceIdRef.current = sourceId;
 
-      // Check if source already exists
+      // Cleanly remove any previous layers, listeners, popup, and source
+      removeRegionsFromMap(map, layerId);
       if (map.getSource(sourceId)) {
-        // Remove existing source and add new one
         map.removeSource(sourceId);
       }
       
@@ -134,10 +154,11 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
           closeOnClick: false,
           className: 'region-map-popup',
         });
+        popupRef.current = popup;
 
         let hoveredFeatureId: number | undefined = undefined;
 
-        map.on('mousemove', layerId, (e) => {
+        const onMove = (e: any) => {
           if (!e.features || e.features.length === 0) return;
           map.getCanvas().style.cursor = 'pointer';
 
@@ -171,9 +192,9 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
               </div>
             `)
             .addTo(map);
-        });
+        };
 
-        map.on('mouseleave', layerId, () => {
+        const onLeave = () => {
           map.getCanvas().style.cursor = '';
           popup.remove();
 
@@ -184,27 +205,14 @@ export function useRegionBoundaries(): UseRegionBoundariesReturn {
             );
             hoveredFeatureId = undefined;
           }
-        });
+        };
+
+        map.on('mousemove', layerId, onMove);
+        map.on('mouseleave', layerId, onLeave);
+        handlersRef.current = { layerId, onMove, onLeave };
       }
     },
-    [regions]
-  );
-
-  const removeRegionsFromMap = useCallback(
-    (map: maplibregl.Map, layerId: string): void => {
-      const sourceId = sourceIdRef.current;
-
-      if (map.getLayer(layerId)) {
-        map.removeLayer(layerId);
-      }
-      if (map.getLayer(`${layerId}-border`)) {
-        map.removeLayer(`${layerId}-border`);
-      }
-      if (sourceId && map.getSource(sourceId)) {
-        map.removeSource(sourceId);
-      }
-    },
-    []
+    [regions, removeRegionsFromMap]
   );
 
   return {

@@ -148,10 +148,8 @@ export function EquipmentOptionCard({
             <input
               type="checkbox"
               checked={isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onToggle(e.target.checked);
-              }}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onToggle(e.target.checked)}
               className="w-4 h-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 shrink-0 mt-0.5"
             />
           )}

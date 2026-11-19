@@ -1,6 +1,12 @@
 import React from 'react';
 import { Radio, Server, Activity } from 'lucide-react';
 import { EquipmentConfig } from '../../../config/equipmentConfig';
+import {
+  AMOD_LABELS,
+  CAB_SUPPORT_LABELS,
+  isEquipmentAllowedForOperator,
+  stripVendorPrefix,
+} from '../../../config/equipmentRegistry';
 import { EquipmentPreviewCard } from '../../ui/EquipmentPreviewCard';
 
 export interface EquipmentPreviewRendererProps {
@@ -18,6 +24,10 @@ export function renderEquipmentPreviewCard({
 }: EquipmentPreviewRendererProps): React.ReactNode {
   const IconComponent = config.icon === 'Radio' ? Radio : config.icon === 'Server' ? Server : Activity;
 
+  if (!isEquipmentAllowedForOperator(config.id, operator)) {
+    return null;
+  }
+
   // 1. Faisceau Hertzien (FH)
   if (config.id === 'fh') {
     if (equipmentValues.fhItems && Array.isArray(equipmentValues.fhItems) && equipmentValues.fhItems.length > 0) {
@@ -25,10 +35,7 @@ export function renderEquipmentPreviewCard({
         const qVal = item.quantity || 1;
         const ref = item.reference || item.name || 'N/A';
         const vendor = item.vendor;
-        let model = ref;
-        if (vendor && model.startsWith(vendor)) {
-          model = model.substring(vendor.length).trim();
-        }
+        const model = stripVendorPrefix(ref, vendor);
 
         return (
           <EquipmentPreviewCard
@@ -53,10 +60,7 @@ export function renderEquipmentPreviewCard({
     const qVal = fhVal.quantité || 1;
     const ref = fhVal.référence || 'N/A';
     const vendor = fhVal.marque;
-    let model = ref;
-    if (vendor && model.startsWith(vendor)) {
-      model = model.substring(vendor.length).trim();
-    }
+    const model = stripVendorPrefix(ref, vendor);
 
     return (
       <EquipmentPreviewCard
@@ -78,16 +82,13 @@ export function renderEquipmentPreviewCard({
 
   // 2. RRH
   if (config.id === 'rrh') {
-    if (operator === 'bouygues') return null;
     if (equipmentValues.rrhItems && Array.isArray(equipmentValues.rrhItems)) {
       return equipmentValues.rrhItems.map((item: any, index: number) => {
         const qty = item.quantity || 1;
         const totalQty = qty * (nombreSecteurs || 1);
         const typeName = 'RRH';
         const vendor = item.vendor;
-        const model = vendor && item.reference && item.reference.startsWith(vendor)
-          ? item.reference.substring(vendor.length).trim()
-          : item.reference;
+        const model = stripVendorPrefix(item.reference, vendor);
 
         return (
           <EquipmentPreviewCard
@@ -122,9 +123,7 @@ export function renderEquipmentPreviewCard({
       const totalQty = qty * (nombreSecteurs || 1);
       const typeName = operator === 'free' ? 'RF NSN' : 'RRU';
       const vendor = item.vendor;
-      const model = vendor && item.reference && item.reference.startsWith(vendor)
-        ? item.reference.substring(vendor.length).trim()
-        : item.reference;
+      const model = stripVendorPrefix(item.reference, vendor);
 
       return (
         <EquipmentPreviewCard
@@ -296,7 +295,7 @@ export function renderEquipmentPreviewCard({
 
   // 6. TD
   if (config.id === 'td') {
-    if (operator === 'bouygues') return null;
+    if (operator === 'bouygues' || operator === 'orange') return null;
     const tdVal = equipmentValues.td || {};
     const typeLabel = tdVal.type || 'TD 5G V5';
     const refLabel = tdVal.référence || 'N/A';
@@ -389,13 +388,7 @@ export function renderEquipmentPreviewCard({
     if (equipmentValues.cab?.cabOne) types.push('CAB ONE');
     if (equipmentValues.cab?.cabTwo) types.push('CAB TWO');
     if (equipmentValues.cab?.cabThree) types.push('CAB THREE');
-    const supportMap: Record<string, string> = {
-      plinthes: 'Plinthes',
-      support_autostable: 'Support Autostable',
-      support_fimo: 'Support FIMO',
-      support_muraux: 'Supports Muraux'
-    };
-    const supportLabel = supportMap[equipmentValues.cab?.support] || equipmentValues.cab?.support || 'N/A';
+    const supportLabel = CAB_SUPPORT_LABELS[equipmentValues.cab?.support] || equipmentValues.cab?.support || 'N/A';
 
     return (
       <EquipmentPreviewCard
@@ -568,13 +561,6 @@ export function renderEquipmentPreviewCard({
   if (config.id === 'pile_amod') {
     const amod = equipmentValues.pile_amod || {};
     const modulesObj = amod.modules || {};
-    const AMOD_LABELS: Record<string, string> = {
-      free_amod_asib_4g: 'ASIB (4G)',
-      free_amod_asik_5g: 'ASIK (5G)',
-      free_amod_abia_4g: 'ABIA (4G)',
-      free_amod_abil_5g: 'ABIL (5G)',
-      free_amod_abio_4g_5g: 'ABIO (4G/5G)',
-    };
     const activeModules = Object.entries(modulesObj)
       .filter(([_, m]: [string, any]) => m?.enabled)
       .map(([id, m]: [string, any]) => {

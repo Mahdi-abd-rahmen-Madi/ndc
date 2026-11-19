@@ -6,6 +6,7 @@ import {
   Server, Zap, BatteryCharging, HardDrive, ShieldCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { apiClient, buildApiUrl } from '../services/apiClient';
 
 interface EquipmentItem {
   category: string;
@@ -79,24 +80,21 @@ export default function CatalogueTestView() {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [showModularFiles, setShowModularFiles] = useState(false);
 
-  const API_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata/test-catalogue/?format=json`;
+  const API_PATH = '/api/geodata/test-catalogue/?format=json';
+  const API_URL = buildApiUrl(API_PATH);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(API_URL);
-      if (!res.ok) {
-        throw new Error(`Erreur lors du chargement: HTTP ${res.status}`);
-      }
-      const json: ApiResponse = await res.json();
+      const json = await apiClient.get<ApiResponse>(API_PATH);
       setData(json);
     } catch (err: any) {
       setError(err.message || 'Impossible de charger les données du catalogue');
     } finally {
       setLoading(false);
     }
-  }, [API_URL]);
+  }, []);
 
   useEffect(() => {
     fetchData();

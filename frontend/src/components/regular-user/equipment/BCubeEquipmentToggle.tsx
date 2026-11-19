@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Zap } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
+import { ALLOWED_BCUBE_OPTIONS } from '../../../config/catalogueDefaults';
+
+export { ALLOWED_BCUBE_OPTIONS };
 
 export interface BCubeItem {
   id: string;
@@ -19,37 +22,6 @@ export interface BCubeEquipmentToggleProps {
   options?: BCubeItem[];
 }
 
-export const ALLOWED_BCUBE_OPTIONS: BCubeItem[] = [
-  {
-    id: 'bcube_actia_ae_eltek_9kw',
-    name: 'AE ELTEK 9kw',
-    reference: 'AE ELTEK 9kw',
-    operator: 'bouygues',
-    supplier: 'ACTIA'
-  },
-  {
-    id: 'bcube_actia_ae_huawei_15kw',
-    name: 'AE HUAWEI 15kw',
-    reference: 'AE HUAWEI 15kw',
-    operator: 'bouygues',
-    supplier: 'ACTIA'
-  },
-  {
-    id: 'bcube_tlti_ae_huawei_9kw',
-    name: 'AE HUAWEI 9kw',
-    reference: 'AE HUAWEI 9kw',
-    operator: 'bouygues',
-    supplier: 'TLTI'
-  },
-  {
-    id: 'bcube_tlti_ae_huawei_15kw',
-    name: 'AE HUAWEI 15kw',
-    reference: 'AE HUAWEI 15kw',
-    operator: 'bouygues',
-    supplier: 'TLTI'
-  }
-];
-
 export function BCubeEquipmentToggle({
   hasAtelierEnergie,
   setHasAtelierEnergie,
@@ -57,29 +29,29 @@ export function BCubeEquipmentToggle({
   setBcubeReference,
   options = []
 }: BCubeEquipmentToggleProps) {
-  // Use options from config if valid/complete, otherwise fallback to ALLOWED_BCUBE_OPTIONS
-  const bouyguesOptions = options.filter(o => o.operator === 'bouygues' && (o.supplier === 'ACTIA' || o.supplier === 'TLTI'));
-  const allBcubeOptions = bouyguesOptions.length >= 4 ? bouyguesOptions : ALLOWED_BCUBE_OPTIONS;
+  const allBcubeOptions = useMemo(() => {
+    const bouyguesOptions = options.filter(
+      o => o.operator === 'bouygues' && (o.supplier === 'ACTIA' || o.supplier === 'TLTI')
+    );
+    return bouyguesOptions.length >= 4 ? bouyguesOptions : ALLOWED_BCUBE_OPTIONS;
+  }, [options]);
 
-  // Determine current marque based on current selected reference
-  const currentItem = allBcubeOptions.find(
-    o => o.id === bcubeReference || o.name === bcubeReference || o.reference === bcubeReference
+  const currentItem = useMemo(
+    () => allBcubeOptions.find(o => o.id === bcubeReference || o.name === bcubeReference || o.reference === bcubeReference),
+    [allBcubeOptions, bcubeReference]
   );
 
-  const [selectedMarque, setSelectedMarque] = useState<string>(() => {
-    return currentItem?.supplier || 'ACTIA';
-  });
+  const [selectedMarque, setSelectedMarque] = useState<string>(() => currentItem?.supplier || 'ACTIA');
 
-  // Keep selectedMarque in sync if bcubeReference changes externally
   useEffect(() => {
     if (currentItem?.supplier && currentItem.supplier !== selectedMarque) {
       setSelectedMarque(currentItem.supplier);
     }
   }, [currentItem, selectedMarque]);
 
-  // Filter options by selected marque
-  const filteredOptions = allBcubeOptions.filter(
-    o => (o.supplier || '').toUpperCase() === selectedMarque.toUpperCase()
+  const filteredOptions = useMemo(
+    () => allBcubeOptions.filter(o => (o.supplier || '').toUpperCase() === selectedMarque.toUpperCase()),
+    [allBcubeOptions, selectedMarque]
   );
 
   // Check if current reference is valid for the current marque

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Upload, X, Loader2, History, FileText, Download, Eye, Calendar, MapPin, Building2, Radio } from 'lucide-react';
-import imageCompression from 'browser-image-compression';
+import { apiClient, resolveMediaUrl } from '../../services/apiClient';
+import { validateImageFile, compressImageIfNeeded } from '../../utils/imageUpload';
 import { styles } from './styles/UserProfileModal.styles';
 
 export interface CalculationHistoryItem {
@@ -42,19 +43,14 @@ export default function UserProfileModal({
     try {
       setIsLoadingHistory(true);
       setHistoryError(null);
-      const token = localStorage.getItem('ndc_auth_token');
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/calculations_history/`, {
-        headers: token ? { 'Authorization': `Token ${token}` } : {},
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistoryItems(data);
-      } else {
-        setHistoryError('Impossible de charger l\'historique des calculs.');
-      }
+      const data = await apiClient.get<CalculationHistoryItem[]>(
+        '/api/user-profiles/calculations_history/',
+        { baseUrl: apiBaseUrl }
+      );
+      setHistoryItems(data);
     } catch (err) {
       console.error('Failed to load calculations history:', err);
-      setHistoryError('Erreur de connexion.');
+      setHistoryError('Impossible de charger l\'historique des calculs.');
     } finally {
       setIsLoadingHistory(false);
     }
@@ -70,64 +66,36 @@ export default function UserProfileModal({
 
     setLogoUploadError(null);
 
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setLogoUploadError('Format invalide. Seuls JPG et PNG sont acceptés.');
-      e.target.value = '';
-      return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) {
-      setLogoUploadError('Fichier trop volumineux (max 10MB).');
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setLogoUploadError(validationError);
       e.target.value = '';
       return;
     }
 
     try {
       setIsLogoUploading(true);
-      let fileToUpload = file;
-      
-      // Compress if larger than 1MB
-      if (file.size > 1024 * 1024) {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1024,
-          useWebWorker: true
-        };
-        fileToUpload = await imageCompression(file, options);
-      }
+      const fileToUpload = await compressImageIfNeeded(file, { maxSizeMB: 1, maxWidthOrHeight: 1024 });
 
       const formData = new FormData();
       formData.append('file', fileToUpload);
 
-      const token = localStorage.getItem('ndc_auth_token');
-      const res = await fetch(`${apiBaseUrl}/api/user-profiles/upload_logo/`, {
-        method: 'POST',
-        headers: token ? { 'Authorization': `Token ${token}` } : {},
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        onClientLogoUploaded(data.client_logo);
-      } else {
-        const errText = await res.text();
-        console.error('Logo upload failed:', errText);
-        setLogoUploadError(`Erreur: ${res.status} ${errText.substring(0, 50)}`);
-      }
-    } catch (err) {
+      const data = await apiClient.post<{ client_logo: string }>(
+        '/api/user-profiles/upload_logo/',
+        formData,
+        { baseUrl: apiBaseUrl }
+      );
+      onClientLogoUploaded(data.client_logo);
+    } catch (err: any) {
       console.error('Logo upload failed:', err);
-      setLogoUploadError('Erreur de connexion. Veuillez réessayer.');
+      setLogoUploadError(err?.message || 'Erreur de connexion. Veuillez réessayer.');
     } finally {
       setIsLogoUploading(false);
       e.target.value = '';
     }
   };
 
-  const getFullPdfUrl = (url: string) => {
-    if (!url) return '';
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${apiBaseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
-  };
+  const getFullPdfUrl = (url: string) => resolveMediaUrl(url, apiBaseUrl);
 
   const formatDate = (dateStr: string) => {
     try {

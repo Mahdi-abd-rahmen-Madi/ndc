@@ -1,9 +1,10 @@
 // Custom hook for terrain configuration management
 
 import { useState, useCallback } from 'react';
+import { apiClient } from '../services/apiClient';
 import type { TerrainConfig } from '../utils/types';
 
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata/terrain-config`;
+const CONFIG_BASE = '/api/geodata/terrain-config';
 
 interface UseTerrainConfigReturn {
   config: TerrainConfig | null;
@@ -24,20 +25,8 @@ export function useTerrainConfig(): UseTerrainConfigReturn {
   const fetchConfig = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/config/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: TerrainConfig = await response.json();
+      const data = await apiClient.get<TerrainConfig>(`${CONFIG_BASE}/config/`);
       setConfig(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -51,22 +40,12 @@ export function useTerrainConfig(): UseTerrainConfigReturn {
   const saveConfig = useCallback(async (newConfig: TerrainConfig): Promise<boolean> => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/update_config/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newConfig),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: TerrainConfig = await response.json();
-      setConfig(data);
+      const data = await apiClient.post<{ config?: TerrainConfig } & TerrainConfig>(
+        `${CONFIG_BASE}/update_config/`,
+        newConfig
+      );
+      setConfig(data.config ?? data);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -81,21 +60,11 @@ export function useTerrainConfig(): UseTerrainConfigReturn {
   const resetConfig = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/reset/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: TerrainConfig = await response.json();
-      setConfig(data);
+      const data = await apiClient.post<{ config?: TerrainConfig } & TerrainConfig>(
+        `${CONFIG_BASE}/reset/`
+      );
+      setConfig(data.config ?? data);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -110,20 +79,8 @@ export function useTerrainConfig(): UseTerrainConfigReturn {
   const exportConfig = useCallback(async (): Promise<string | null> => {
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/export/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get(`${CONFIG_BASE}/export/`);
       return JSON.stringify(data, null, 2);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -138,24 +95,14 @@ export function useTerrainConfig(): UseTerrainConfigReturn {
   const importConfig = useCallback(async (configJson: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
-
     try {
-      const parsedConfig = JSON.parse(configJson);
-      
-      const response = await fetch(`${API_BASE_URL}/import_config/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(parsedConfig),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: TerrainConfig = await response.json();
-      setConfig(data);
+      // Validate JSON before sending
+      JSON.parse(configJson);
+      const data = await apiClient.post<{ config?: TerrainConfig } & TerrainConfig>(
+        `${CONFIG_BASE}/import_config/`,
+        { config: configJson }
+      );
+      setConfig(data.config ?? data);
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';

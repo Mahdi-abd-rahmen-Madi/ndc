@@ -8,6 +8,21 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.email = self.scope['url_route']['kwargs']['email']
+        self.group_name = None
+
+        user = self.scope.get('user')
+        if not user or not user.is_authenticated:
+            await self.close(code=4401)
+            return
+
+        allowed_emails = {
+            (user.email or '').strip().lower(),
+            (user.username or '').strip().lower(),
+        }
+        if not (user.is_staff or user.is_superuser or self.email.strip().lower() in allowed_emails):
+            await self.close(code=4403)
+            return
+
         # Create a safe group name from email
         email_hash = hashlib.md5(self.email.encode()).hexdigest()
         self.group_name = f'notifications_{email_hash}'
@@ -26,11 +41,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        # Leave the notification group
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        if self.group_name:
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
 
     async def receive(self, text_data):
         """Handle incoming messages from the client (e.g., mark as read)"""

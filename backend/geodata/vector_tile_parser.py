@@ -10,6 +10,7 @@ import math
 from typing import Dict, List, Any, Optional, Tuple
 import mapbox_vector_tile
 import requests
+from requests.adapters import HTTPAdapter
 from shapely.geometry import Polygon, Point, shape
 from shapely.ops import transform
 from functools import partial
@@ -42,6 +43,9 @@ class VectorTileParser:
     def __init__(self, config: Optional[Dict] = None):
         self.config = config or BDTOPO_CONFIG
         self.session = requests.Session()
+        adapter = HTTPAdapter(pool_connections=12, pool_maxsize=12)
+        self.session.mount('https://', adapter)
+        self.session.mount('http://', adapter)
         self.session.headers.update({
             'User-Agent': 'NDC-BDTOPO-Service/1.0'
         })
@@ -75,12 +79,14 @@ class VectorTileParser:
             logger.error(f"Failed to fetch tile {z}/{x}/{y}: {e}")
             return None
     
-    def parse_vector_tile(self, tile_data: bytes) -> Dict[str, List[Dict]]:
+    def parse_vector_tile(self, tile_data: bytes, z: Optional[int] = None, x: Optional[int] = None, y: Optional[int] = None) -> Dict[str, List[Dict]]:
         """
         Parse vector tile data and extract features by layer.
         
         Args:
             tile_data: Raw MVT tile data
+            z, x, y: Optional slippy tile coordinates used to project tile-local
+                     [0..extent] coordinates into Web Mercator meters before WGS84.
             
         Returns:
             Dictionary mapping layer names to feature lists
@@ -91,10 +97,11 @@ class VectorTileParser:
             
             layers_features = {}
             for layer_name, layer_data in decoded.items():
+                extent = float(layer_data.get('extent') or 4096)
                 features = []
                 for feature in layer_data.get('features', []):
                     # Convert feature to GeoJSON-like format
-                    geojson_feature = self._convert_feature_to_geojson(feature)
+                    geojson_feature = self._convert_feature_to_geojson(feature, z=z, x=x, y=y, extent=extent)
                     if geojson_feature:
                         features.append(geojson_feature)
                 
@@ -108,7 +115,18 @@ class VectorTileParser:
             logger.error(f"Failed to parse vector tile: {e}")
             return {}
     
-    def _convert_feature_to_geojson(self, feature: Dict) -> Optional[Dict]:
+    def _tile_coord_to_wgs84(self, cx: float, cy: float, z: Optional[int], x: Optional[int], y: Optional[int], extent: float) -> Tuple[float, float]:
+        """Convert MVT tile-local coordinate (or Web Mercator meter coordinate if z/x/y omitted) to (lon, lat)."""
+        if z is not None and x is not None and y is not None:
+            origin_shift = 20037508.342789244
+            tile_size = (2.0 * origin_shift) / (2 ** z)
+            merc_x = -origin_shift + (x + (cx / extent)) * tile_size
+            # mapbox_vector_tile.decode uses y_coord_down=False (bottom-left origin) by default
+            merc_y = origin_shift - (y + ((extent - cy) / extent)) * tile_size
+            return web_mercator_to_wgs84(merc_x, merc_y)
+        return web_mercator_to_wgs84(cx, cy)
+
+    def _convert_feature_to_geojson(self, feature: Dict, z: Optional[int] = None, x: Optional[int] = None, y: Optional[int] = None, extent: float = 4096.0) -> Optional[Dict]:
         """Convert vector tile feature to GeoJSON format."""
         try:
             # Extract geometry
@@ -116,9 +134,8 @@ class VectorTileParser:
             if not geometry:
                 return None
             
-            # Convert vector tile coordinates to geographic coordinates
-            # Vector tiles use Web Mercator, need to transform to WGS84
-            transformed_geometry = self._transform_geometry(geometry)
+            # Convert vector tile coordinates to geographic coordinates (WGS84)
+            transformed_geometry = self._transform_geometry(geometry, z=z, x=x, y=y, extent=extent)
             
             # Extract properties
             properties = feature.get('properties', {})
@@ -133,89 +150,30 @@ class VectorTileParser:
             logger.warning(f"Failed to convert feature to GeoJSON: {e}")
             return None
     
-    def _transform_geometry(self, geometry: Dict) -> Optional[Dict]:
-        """Transform geometry from Web Mercator to WGS84."""
+    def _transform_geometry(self, geometry: Dict, z: Optional[int] = None, x: Optional[int] = None, y: Optional[int] = None, extent: float = 4096.0) -> Optional[Dict]:
+        """Transform geometry from tile-local MVT / Web Mercator coordinates to WGS84."""
         try:
-            if geometry['type'] == 'Polygon':
-                # Transform each coordinate in the polygon
-                transformed_coords = []
-                for ring in geometry['coordinates']:
-                    transformed_ring = []
-                    for coord in ring:
-                        # Transform from Web Mercator to WGS84
-                        lon, lat = web_mercator_to_wgs84(coord[0], coord[1])
-                        transformed_ring.append([lon, lat])
-                    transformed_coords.append(transformed_ring)
-                
-                return {
-                    'type': 'Polygon',
-                    'coordinates': transformed_coords
-                }
-            
-            elif geometry['type'] == 'MultiPolygon':
-                transformed_coords = []
-                for polygon in geometry['coordinates']:
-                    transformed_polygon = []
-                    for ring in polygon:
-                        transformed_ring = []
-                        for coord in ring:
-                            lon, lat = web_mercator_to_wgs84(coord[0], coord[1])
-                            transformed_ring.append([lon, lat])
-                        transformed_polygon.append(transformed_ring)
-                    transformed_coords.append(transformed_polygon)
-                
-                return {
-                    'type': 'MultiPolygon',
-                    'coordinates': transformed_coords
-                }
-            
-            elif geometry['type'] == 'LineString':
-                # Transform each coordinate in the linestring
-                transformed_coords = []
-                for coord in geometry['coordinates']:
-                    lon, lat = web_mercator_to_wgs84(coord[0], coord[1])
-                    transformed_coords.append([lon, lat])
-                
-                return {
-                    'type': 'LineString',
-                    'coordinates': transformed_coords
-                }
-            
-            elif geometry['type'] == 'MultiLineString':
-                transformed_coords = []
-                for line in geometry['coordinates']:
-                    transformed_line = []
-                    for coord in line:
-                        lon, lat = web_mercator_to_wgs84(coord[0], coord[1])
-                        transformed_line.append([lon, lat])
-                    transformed_coords.append(transformed_line)
-                
-                return {
-                    'type': 'MultiLineString',
-                    'coordinates': transformed_coords
-                }
-            
-            elif geometry['type'] == 'Point':
-                # Transform point coordinate
-                lon, lat = web_mercator_to_wgs84(geometry['coordinates'][0], geometry['coordinates'][1])
-                return {
-                    'type': 'Point',
-                    'coordinates': [lon, lat]
-                }
-            
-            elif geometry['type'] == 'MultiPoint':
-                transformed_coords = []
-                for coord in geometry['coordinates']:
-                    lon, lat = web_mercator_to_wgs84(coord[0], coord[1])
-                    transformed_coords.append([lon, lat])
-                
-                return {
-                    'type': 'MultiPoint',
-                    'coordinates': transformed_coords
-                }
-            
+            def _tx(coord):
+                lon, lat = self._tile_coord_to_wgs84(coord[0], coord[1], z, x, y, extent)
+                return [lon, lat]
+
+            gtype = geometry['type']
+            coords = geometry['coordinates']
+
+            if gtype == 'Polygon':
+                return {'type': 'Polygon', 'coordinates': [[_tx(c) for c in ring] for ring in coords]}
+            elif gtype == 'MultiPolygon':
+                return {'type': 'MultiPolygon', 'coordinates': [[[_tx(c) for c in ring] for ring in poly] for poly in coords]}
+            elif gtype == 'LineString':
+                return {'type': 'LineString', 'coordinates': [_tx(c) for c in coords]}
+            elif gtype == 'MultiLineString':
+                return {'type': 'MultiLineString', 'coordinates': [[_tx(c) for c in line] for line in coords]}
+            elif gtype == 'Point':
+                return {'type': 'Point', 'coordinates': _tx(coords)}
+            elif gtype == 'MultiPoint':
+                return {'type': 'MultiPoint', 'coordinates': [_tx(c) for c in coords]}
             else:
-                logger.debug(f"Unsupported geometry type: {geometry['type']}")
+                logger.debug(f"Unsupported geometry type: {gtype}")
                 return None
                 
         except Exception as e:
@@ -408,26 +366,34 @@ class VectorTileParser:
         BDTOPO data uses specific French property names for height information.
         """
         height_fields = [
-            'altitude_minimale_toit', 'altitude_maximale_toit', 'hauteur', 'height', 
-            'alti_sol', 'z_min', 'z_max', 'hauteur_moyenne', 'building_height', 'elevation'
+            'hauteur', 'height', 'hauteur_moyenne', 'building_height'
         ]
         
         for field in height_fields:
-            if field in properties:
+            if field in properties and properties[field] is not None:
                 try:
                     height = float(properties[field])
-                    if height > 0 and height < 1000:  # Reasonable height range
+                    if 0 < height < 1000:  # Reasonable height range
                         return height
                 except (ValueError, TypeError):
                     continue
         
-        # If no explicit height, try to calculate from min/max roof altitude
+        # If no explicit height, derive from roof altitude minus ground altitude when available
+        if 'altitude_maximale_toit' in properties and 'altitude_minimale_sol' in properties:
+            try:
+                height = float(properties['altitude_maximale_toit']) - float(properties['altitude_minimale_sol'])
+                if 0 < height < 1000:
+                    return height
+            except (ValueError, TypeError):
+                pass
+
+        # Fallback: roof span
         if 'altitude_minimale_toit' in properties and 'altitude_maximale_toit' in properties:
             try:
                 min_roof = float(properties['altitude_minimale_toit'])
                 max_roof = float(properties['altitude_maximale_toit'])
                 height = max_roof - min_roof
-                if height > 0 and height < 1000:
+                if 0 < height < 1000:
                     return height
             except (ValueError, TypeError):
                 pass

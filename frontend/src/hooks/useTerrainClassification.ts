@@ -1,13 +1,12 @@
 // Custom hook for terrain classification API calls
 
 import { useState, useCallback, useRef } from 'react';
+import { apiClient } from '../services/apiClient';
 import type {
   TerrainClassificationResponse,
   FastClassificationResponse,
   TerrainConfig,
 } from '../utils/types';
-
-const API_BASE_URL = `${import.meta.env.VITE_API_URL || ''}/api/geodata`;
 
 interface UseTerrainClassificationReturn {
   classify: (
@@ -47,7 +46,6 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
       config?: TerrainConfig,
       analysisRadius?: number
     ): Promise<TerrainClassificationResponse | null> => {
-      // Cancel any pending request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -57,38 +55,22 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
       setError(null);
 
       try {
-        const payload: any = {
+        const payload: Record<string, unknown> = {
           latitude: lat,
           longitude: lng,
         };
+        if (config) payload.config = config;
+        if (analysisRadius !== undefined) payload.analysis_radius_km = analysisRadius;
 
-        if (config) {
-          payload.config = config;
-        }
-
-        if (analysisRadius !== undefined) {
-          payload.analysis_radius_km = analysisRadius;
-        }
-
-        const response = await fetch(`${API_BASE_URL}/terrain-config/test_coordinates/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          signal: abortControllerRef.current.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data: TerrainClassificationResponse = await response.json();
+        const data = await apiClient.post<TerrainClassificationResponse>(
+          '/api/geodata/terrain-config/test_coordinates/',
+          payload,
+          { signal: abortControllerRef.current.signal }
+        );
         setResult(data);
         return data;
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('Request aborted');
           return null;
         }
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -105,7 +87,6 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
 
   const classifyFast = useCallback(
     async (lat: number, lng: number): Promise<FastClassificationResponse | null> => {
-      // Cancel any pending request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -115,28 +96,15 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/terrain-classify-fast/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            latitude: lat,
-            longitude: lng,
-          }),
-          signal: abortControllerRef.current.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data: FastClassificationResponse = await response.json();
+        const data = await apiClient.post<FastClassificationResponse>(
+          '/api/geodata/terrain-classify-fast/',
+          { latitude: lat, longitude: lng },
+          { signal: abortControllerRef.current.signal }
+        );
         setFastResult(data);
         return data;
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('Request aborted');
           return null;
         }
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -161,4 +129,3 @@ export function useTerrainClassification(): UseTerrainClassificationReturn {
     fastResult,
   };
 }
-

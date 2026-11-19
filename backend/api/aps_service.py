@@ -35,7 +35,7 @@ def get_aps_token():
         'scope': 'data:read data:write data:create'
     }
     
-    response = requests.post(url, headers=headers, data=data)
+    response = requests.post(url, headers=headers, data=data, timeout=15)
     
     if response.status_code == 200:
         token_data = response.json()

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { apiClient } from '../services/apiClient';
 import {
   SectorData,
   SimilarityMode,
@@ -32,7 +33,7 @@ export function useSectorManager({
 }: UseSectorManagerOptions) {
   const [nombreSecteurs, setNombreSecteurs] = useState<number>(3);
   const [similarityMode, setSimilarityMode] = useState<SimilarityMode>('all_similar');
-  const [sectors, setSectors] = useState<SectorData[]>(
+  const [sectors, setSectors] = useState<SectorData[]>(() =>
     Array.from({ length: 3 }, (_, i) => defaultSectorData(i))
   );
 
@@ -47,20 +48,6 @@ export function useSectorManager({
       ...((operator === 'bouygues' || operator === 'orange') ? { hasTdEquipment: false, tdReference: '' } : {})
     }));
 
-    const defaultRrh = [{
-      id: crypto.randomUUID(),
-      reference: '',
-      quantity: 1,
-      vendor: operator !== 'bouygues' ? 'NOKIA' : undefined
-    }];
-
-    const defaultRru = [{
-      id: crypto.randomUUID(),
-      reference: '',
-      quantity: 1,
-      vendor: operator === 'free' ? 'NOKIA' : operator === 'orange' ? 'ERICSSON' : undefined
-    }];
-
     setSectors(prev => prev.map(s => {
       let hasRrh = operator === 'bouygues' ? false : s.hasRrhEquipment;
       let hasRru = s.hasRruEquipment;
@@ -71,8 +58,18 @@ export function useSectorManager({
         ...s,
         hasRrhEquipment: hasRrh,
         hasRruEquipment: hasRru,
-        rrhItems: defaultRrh,
-        rruItems: defaultRru
+        rrhItems: [{
+          id: crypto.randomUUID(),
+          reference: '',
+          quantity: 1,
+          vendor: operator !== 'bouygues' ? 'NOKIA' : undefined
+        }],
+        rruItems: [{
+          id: crypto.randomUUID(),
+          reference: '',
+          quantity: 1,
+          vendor: operator === 'free' ? 'NOKIA' : operator === 'orange' ? 'ERICSSON' : undefined
+        }]
       };
     }));
   }, [operator, setZoneTechnique]);
@@ -148,19 +145,18 @@ export function useSectorManager({
 
           const isCustom = sector.selectedMontage4G !== sector.selectedMontage5G || sector.selectedMontage4G === 'custom';
 
-          let url = `${apiBaseUrl}/api/geodata/antenna-equipment/public_lookup/?latitude=${selectedCoords!.latitude}&longitude=${selectedCoords!.longitude}&building_height=${queryHeight}&mast_height=${sector.selectedHeight}`;
+          let path = `/api/geodata/antenna-equipment/public_lookup/?latitude=${selectedCoords!.latitude}&longitude=${selectedCoords!.longitude}&building_height=${queryHeight}&mast_height=${sector.selectedHeight}`;
           if (!isCustom) {
-            url += `&montage=${encodeURIComponent(sector.selectedMontage4G)}`;
+            path += `&montage=${encodeURIComponent(sector.selectedMontage4G)}`;
           }
+          const cacheKey = `${apiBaseUrl}${path}`;
 
-          if (lookupCache.has(url)) {
-            return { hash, data: lookupCache.get(url), error: null };
+          if (lookupCache.has(cacheKey)) {
+            return { hash, data: lookupCache.get(cacheKey), error: null };
           }
 
           try {
-            const res = await fetch(url);
-            if (!res.ok) throw new Error("Erreur de communication avec le catalogue.");
-            const data = await res.json();
+            const data = await apiClient.get(path, { baseUrl: apiBaseUrl });
 
             if (!isCustom) {
               data.equipment = data.equipment || [];
@@ -168,7 +164,7 @@ export function useSectorManager({
               data.equipment = [];
             }
 
-            lookupCache.set(url, data);
+            lookupCache.set(cacheKey, data);
             return { hash, data, error: null };
           } catch (e: any) {
             return { hash, data: null, error: e.message || "Erreur" };

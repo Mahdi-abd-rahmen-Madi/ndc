@@ -5,6 +5,10 @@ import {
   Camera, Layers, ShieldCheck, Ruler, UserCheck, Hash, Check
 } from 'lucide-react';
 import ResultsPanel from './ResultsPanel';
+import {
+  buildEquipmentTogglesMap,
+  extractSectorAerialState,
+} from '../../config/equipmentRegistry';
 import type {
   SectorData,
   ZoneTechniqueData,
@@ -110,20 +114,12 @@ function RightPreviewPanel({
     plotHeight
   } = project;
 
-  const s1 = sectors[0];
-  const hasFhEquipment = !!s1?.hasFhEquipment;
-  const fhDiameter = s1?.fhDiameter ?? 300;
-  const fhReference = s1?.fhReference ?? '';
-  const fhQuantity = s1?.fhQuantity ?? 1;
-  const fhItems = s1?.fhItems ?? [];
-  const hasRrhEquipment = !!s1?.hasRrhEquipment;
-  const rrhItems = s1?.rrhItems ?? [];
-  const hasRruEquipment = !!s1?.hasRruEquipment;
-  const rruItems = s1?.rruItems ?? [];
-  const hasCoffret = !!s1?.hasCoffret;
-  const coffretReference = s1?.coffretReference ?? '';
-  const hasBoitierJonction = !!s1?.hasBoitierJonction;
-  const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
+  const {
+    hasFhEquipment, fhDiameter, fhReference, fhQuantity, fhItems,
+    hasRrhEquipment, rrhItems, hasRruEquipment, rruItems,
+    hasCoffret, coffretReference, hasBoitierJonction, boitierJonctionQuantity,
+  } = extractSectorAerialState(sectors[0]);
+  const selectedFhOpt = config?.fh_references?.find(r => r.id === fhReference);
 
   const {
     hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
@@ -202,16 +198,17 @@ function RightPreviewPanel({
 
                 {/* Progress Ring / Percentage */}
                 {(() => {
-                  const totalFields = foundationType === 'encastre' ? 6 : 7;
-                  const filledCount = [
+                  const isEncastre = foundationType === 'encastre';
+                  const requiredChecks = [
                     !!siteName,
                     !!clientName,
                     !!buildingHeight,
-                    !!dalleThickness,
-                    foundationType !== 'encastre' ? !!etancheite : true,
+                    ...(isEncastre ? [] : [!!dalleThickness, !!etancheite]),
                     !!siteImageUrl,
                     !!operator
-                  ].filter(Boolean).length;
+                  ];
+                  const totalFields = requiredChecks.length;
+                  const filledCount = requiredChecks.filter(Boolean).length;
                   const percentage = Math.round((filledCount / totalFields) * 100);
 
                   return (
@@ -779,30 +776,14 @@ function RightPreviewPanel({
                   matSecondaire={group.sector.matSecondaire}
                   hideAnalysisHeader={true}
                   operator={operator}
-                  equipmentToggles={{
-                    fh: hasFhEquipment,
-                    rrh: operator !== 'bouygues' && hasRrhEquipment,
-                    rru: hasRruEquipment,
-                    td: operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment,
-                    gps: hasGps,
-                    boitier_lovage: hasBoitierLovage,
-                    coffrets_fibre: operator !== 'free' && hasCoffret,
-                    boitier_jonction: operator === 'free' && hasBoitierJonction,
-                    coffret_trans_fo: operator === 'free' && !!hasCoffretTransFo,
-                    coffrets_hybride: false,
-                    baie: operator === 'orange' && hasBaie,
-                    cab: operator === 'free' && hasCab,
-                    atelier_energie: (operator === 'free' || operator === 'bouygues') && hasAtelierEnergie,
-                    convertisseur_mdea: operator === 'free' && hasConvertisseurMdea,
-                    tgbt: operator === 'bouygues' && hasTgbt
-                  }}
+                  equipmentToggles={buildEquipmentTogglesMap(group.sector, zoneTechnique, operator)}
                   equipmentValues={{
                     fh: {
                       diamètre: `${fhDiameter} mm`,
-                      référence: config?.fh_references?.find(r => r.id === fhReference)?.reference || 'N/A',
-                      marque: config?.fh_references?.find(r => r.id === fhReference)?.vendor || '',
+                      référence: selectedFhOpt?.reference || 'N/A',
+                      marque: selectedFhOpt?.vendor || '',
                       quantité: fhQuantity,
-                      poids: config?.fh_references?.find(r => r.id === fhReference)?.weight ? `${config.fh_references.find(r => r.id === fhReference)?.weight} kg` : 'N/A'
+                      poids: selectedFhOpt?.weight ? `${selectedFhOpt.weight} kg` : 'N/A'
                     },
                     fhItems: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ id: 'fh-1', reference: fhReference, quantity: fhQuantity }]).map(item => {
                       const fhOpt = config?.fh_references?.find(r => r.id === item.reference || r.reference === item.reference || r.name === item.reference);

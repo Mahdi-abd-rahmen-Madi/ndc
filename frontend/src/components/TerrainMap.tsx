@@ -5,6 +5,7 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { TerrainMapProps } from '../utils/types';
 import { getCLCColor, getCLCDescription } from '../utils/clcColors';
+import { apiClient } from '../services/apiClient';
 import { Search, AlertCircle } from 'lucide-react';
 
 
@@ -352,6 +353,10 @@ export default function TerrainMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
+  const onMapClickRef = useRef(onMapClick);
+  const onMapLoadRef = useRef(onMapLoad);
+  onMapClickRef.current = onMapClick;
+  onMapLoadRef.current = onMapLoad;
   const [coastlineGeoJSON, setCoastlineGeoJSON] = useState<any>(null);
   const [coastlineBufferGeoJSON, setCoastlineBufferGeoJSON] = useState<any>(null);
   const [viewportTransitionZones, setViewportTransitionZones] = useState<any>(null);
@@ -381,83 +386,52 @@ export default function TerrainMap({
     const maxLat = bounds.getNorth();
     const bbox = `${minLon},${minLat},${maxLon},${maxLat}`;
 
-    const baseUrl = import.meta.env.VITE_API_URL || '';
     try {
-      const response = await fetch(`${baseUrl}/api/geodata/regions/transition_zones/?bbox=${bbox}`);
-      if (response.ok) {
-        const data = await response.json();
-        setViewportTransitionZones(data);
-      }
+      const data = await apiClient.get(`/api/geodata/regions/transition_zones/?bbox=${bbox}`);
+      setViewportTransitionZones(data);
     } catch (err) {
       console.error('Failed to fetch viewport transition zones:', err);
     }
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
     const fetchCoastlineData = async () => {
-      const baseUrl = import.meta.env.VITE_API_URL || '';
       try {
-        const [coastlineRes, bufferRes] = await Promise.all([
-          fetch(`${baseUrl}/api/geodata/regions/coastline/`).catch(err => {
-            console.error('Failed to fetch coastline:', err);
+        const [coastlineData, bufferData] = await Promise.all([
+          apiClient.get('/api/geodata/regions/coastline/', { signal: controller.signal }).catch(err => {
+            if (err?.name !== 'AbortError') console.error('Failed to fetch coastline:', err);
             return null;
           }),
-          fetch(`${baseUrl}/api/geodata/regions/coastline_buffer/`).catch(err => {
-            console.error('Failed to fetch coastline buffer:', err);
+          apiClient.get('/api/geodata/regions/coastline_buffer/', { signal: controller.signal }).catch(err => {
+            if (err?.name !== 'AbortError') console.error('Failed to fetch coastline buffer:', err);
             return null;
-          })
+          }),
         ]);
 
-        if (isMounted && coastlineRes && coastlineRes.ok) {
-          const data = await coastlineRes.json();
-          setCoastlineGeoJSON(data);
+        if (!controller.signal.aborted && coastlineData) {
+          setCoastlineGeoJSON(coastlineData);
         }
-        if (isMounted && bufferRes && bufferRes.ok) {
-          const data = await bufferRes.json();
-          setCoastlineBufferGeoJSON(data);
+        if (!controller.signal.aborted && bufferData) {
+          setCoastlineBufferGeoJSON(bufferData);
         }
-      } catch (err) {
-        console.error('Failed to fetch coastline data:', err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') console.error('Failed to fetch coastline data:', err);
       }
     };
     fetchCoastlineData();
     return () => {
-      isMounted = false;
+      controller.abort();
     };
   }, []);
-
-  // Listen to map moveend/load events to fetch transition zones
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const handleMove = () => {
-      fetchViewportTransitionZones(map);
-    };
-
-    map.on('moveend', handleMove);
-
-    // Fetch immediately if already loaded
-    if (map.isStyleLoaded()) {
-      handleMove();
-    } else {
-      map.once('load', handleMove);
-    }
-
-    return () => {
-      map.off('moveend', handleMove);
-    };
-  }, [fetchViewportTransitionZones]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Initialize the map
+    // Initialize the map once per mount (callbacks accessed via refs)
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       attributionControl: false,
-      preserveDrawingBuffer: true,
       style: {
         version: 8,
         sources: {
@@ -489,15 +463,23 @@ export default function TerrainMap({
     // Add scale control
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
 
+    const handleMoveEnd = () => {
+      fetchViewportTransitionZones(map);
+    };
+
     map.on('load', () => {
       ensureMapLayers(map);
-      if (onMapLoad) {
-        onMapLoad(map);
+      handleMoveEnd();
+      if (onMapLoadRef.current) {
+        onMapLoadRef.current(map);
       }
     });
 
+    map.on('moveend', handleMoveEnd);
+
     map.on('zoom', () => {
-      setZoom(map.getZoom());
+      const quantized = Math.round(map.getZoom() * 2) / 2;
+      setZoom(prev => (prev === quantized ? prev : quantized));
     });
 
     map.on('click', (e) => {
@@ -506,7 +488,7 @@ export default function TerrainMap({
         setShowWarning(true);
         return;
       }
-      onMapClick(lat, lng);
+      onMapClickRef.current(lat, lng);
     });
 
     // Handle container resizing
@@ -518,16 +500,18 @@ export default function TerrainMap({
     }
 
     return () => {
+      map.off('moveend', handleMoveEnd);
       resizeObserver.disconnect();
       if (markerRef.current) {
         markerRef.current.remove();
         markerRef.current = null;
       }
       map.remove();
+      mapRef.current = null;
     };
-  }, [onMapClick, onMapLoad]);
+  }, [fetchViewportTransitionZones]);
 
-  // Manage CLC polygons, radius circle, and coastline reactively
+  // Manage CLC polygons, transition zones, and analysis radius reactively
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -535,18 +519,6 @@ export default function TerrainMap({
     const applyUpdates = () => {
       ensureMapLayers(map);
       updateMapLayers(map, selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius);
-
-      // Update coastline source with fetched data
-      const coastlineSource = map.getSource('france-coastline') as maplibregl.GeoJSONSource | undefined;
-      if (coastlineSource && coastlineGeoJSON) {
-        coastlineSource.setData(coastlineGeoJSON);
-      }
-
-      // Update coastline buffer source with fetched data
-      const bufferSource = map.getSource('france-coastline-buffer') as maplibregl.GeoJSONSource | undefined;
-      if (bufferSource && coastlineBufferGeoJSON) {
-        bufferSource.setData(coastlineBufferGeoJSON);
-      }
     };
 
     if (map.isStyleLoaded()) {
@@ -554,7 +526,31 @@ export default function TerrainMap({
     } else {
       map.once('load', applyUpdates);
     }
-  }, [selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius, coastlineGeoJSON, coastlineBufferGeoJSON]);
+  }, [selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius]);
+
+  // Manage static France coastline & buffer layers independently so selection updates don't re-upload them
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || (!coastlineGeoJSON && !coastlineBufferGeoJSON)) return;
+
+    const applyCoastline = () => {
+      ensureMapLayers(map);
+      const coastlineSource = map.getSource('france-coastline') as maplibregl.GeoJSONSource | undefined;
+      if (coastlineSource && coastlineGeoJSON) {
+        coastlineSource.setData(coastlineGeoJSON);
+      }
+      const bufferSource = map.getSource('france-coastline-buffer') as maplibregl.GeoJSONSource | undefined;
+      if (bufferSource && coastlineBufferGeoJSON) {
+        bufferSource.setData(coastlineBufferGeoJSON);
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      applyCoastline();
+    } else {
+      map.once('load', applyCoastline);
+    }
+  }, [coastlineGeoJSON, coastlineBufferGeoJSON]);
 
   // Handle flying to a requested location (e.g. generic commune or street)
   useEffect(() => {

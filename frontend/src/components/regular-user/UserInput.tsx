@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowUpToLine, Layers, FileStack, GitMerge, Camera, Loader2, CheckCircle2, AlertCircle, MapPin, Settings2, Anchor } from 'lucide-react';
-import imageCompression from 'browser-image-compression';
+import { apiClient } from '../../services/apiClient';
+import { validateImageFile, compressImageIfNeeded } from '../../utils/imageUpload';
 import { SimilarityMode, ProjectData } from './types';
 
 interface UserInputProps {
@@ -51,54 +52,31 @@ export default function UserInput({
     setUploadError(null);
     setUploadSuccess(false);
 
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setUploadError('Format invalide. Seuls JPG et PNG sont acceptés.');
-      e.target.value = '';
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) { // 10MB max
-      setUploadError('Fichier trop volumineux (max 10MB).');
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setUploadError(validationError);
       e.target.value = '';
       return;
     }
 
     try {
       setIsUploading(true);
-
-      let fileToUpload = file;
-
-      // Compress if larger than 1MB
-      if (file.size > 1024 * 1024) {
-        const options = {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1920,
-          useWebWorker: true
-        };
-        fileToUpload = await imageCompression(file, options);
-      }
+      const fileToUpload = await compressImageIfNeeded(file, { maxSizeMB: 1, maxWidthOrHeight: 1920 });
 
       const formData = new FormData();
       formData.append('photo', fileToUpload);
 
-      const res = await fetch(`${apiBaseUrl}/api/upload-photo/`, {
-        method: 'POST',
-        body: formData,
+      const data = await apiClient.post<{ photo_url: string }>('/api/upload-photo/', formData, {
+        baseUrl: apiBaseUrl,
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        onChange({ siteImageUrl: data.photo_url });
-        setUploadSuccess(true);
-      } else {
-        setUploadError('Erreur lors de l\'upload de l\'image.');
-      }
+      onChange({ siteImageUrl: data.photo_url });
+      setUploadSuccess(true);
     } catch (err) {
       console.error('Image upload failed:', err);
-      setUploadError('Erreur de connexion. Veuillez réessayer.');
+      setUploadError('Erreur lors de l\'upload de l\'image.');
     } finally {
       setIsUploading(false);
-      e.target.value = ''; // Reset input to allow re-uploading the same file
+      e.target.value = '';
     }
   };
 

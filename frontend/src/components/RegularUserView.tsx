@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment, Suspense, lazy } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment, Suspense, lazy } from 'react';
 import {
   Layers, Loader2, AlertCircle, Compass, MapPin, Map as MapIcon, User as UserIcon,
   FileText, AlertTriangle, Eye, CheckCircle2, Settings, RefreshCw,
@@ -15,6 +15,7 @@ export interface EquipmentItem {
 
 import { useCatalogueConfig } from '../hooks/useCatalogueConfig';
 import { useAppStore } from '../stores/useAppStore';
+import { apiClient, getAuthToken } from '../services/apiClient';
 const TerrainMap = lazy(() => import('./TerrainMap'));
 import type { GeocodingAddress } from '../utils/types';
 import { useGeocoding } from '../hooks/useGeocoding';
@@ -23,6 +24,12 @@ import { useLocationSelection } from '../hooks/useLocationSelection';
 import { useSectorManager } from '../hooks/useSectorManager';
 
 import { CustomSelect } from './ui/CustomSelect';
+import {
+  extractSectorAerialState,
+  formatFoundationLabel,
+  hasAnyZoneTechnique,
+  getZoneTechniqueSummary,
+} from '../config/equipmentRegistry';
 
 // Sub-components
 import AddressSearchSection from './regular-user/AddressSearchSection';
@@ -171,27 +178,21 @@ export default function RegularUserView({
     setZoneTechnique
   });
 
-  // Mast equipment derived directly from Sector 1 (single source of truth)
-  const s1 = sectors[0];
-  const hasFhEquipment = !!s1?.hasFhEquipment;
-  const fhDiameter = s1?.fhDiameter ?? 300;
-  const fhReference = s1?.fhReference ?? '';
-  const fhQuantity = s1?.fhQuantity ?? 1;
-  const fhItems = s1?.fhItems ?? [];
-  const hasRrhEquipment = !!s1?.hasRrhEquipment;
-  const rrhItems = s1?.rrhItems ?? [];
-  const hasRruEquipment = !!s1?.hasRruEquipment;
-  const rruItems = s1?.rruItems ?? [];
-  const hasCoffret = !!s1?.hasCoffret;
-  const coffretReference = s1?.coffretReference ?? '';
-  const hasBoitierJonction = !!s1?.hasBoitierJonction;
-  const boitierJonctionQuantity = s1?.boitierJonctionQuantity ?? 1;
+  // Mast equipment derived from Sector 1 via canonical helper
+  const {
+    hasFhEquipment,
+    hasRrhEquipment,
+    hasRruEquipment,
+    hasCoffret,
+    hasBoitierJonction,
+  } = extractSectorAerialState(sectors[0]);
 
   // Status State
   const [showPdfPreview, setShowPdfPreview] = useState<boolean>(false);
 
-  // Photo & Profile State
-  const [clientLogoUrl, setClientLogoUrl] = useState<string | null>(null);
+  // Photo & Profile State (logo synced with global app store)
+  const clientLogoUrl = useAppStore((s) => s.clientLogoUrl);
+  const setClientLogoUrl = useAppStore((s) => s.setClientLogoUrl);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
 
@@ -202,36 +203,28 @@ export default function RegularUserView({
   const [notifications, setNotifications] = useState<any[]>([]);
   const [previewDoc, setPreviewDoc] = useState<PreviewDocState | null>(null);
 
-  // Fetch user profile on mount to prefill client logo if available
+  // Fetch user profile on mount to sync client logo if available
   useEffect(() => {
-    const savedLogo = localStorage.getItem('ndc_client_logo');
-    if (savedLogo) {
-      setClientLogoUrl(savedLogo);
-    }
-
     const fetchProfile = async () => {
       try {
-        if (!apiBaseUrl) return;
-        const token = localStorage.getItem('ndc_auth_token');
-        if (!token) return;
-        const res = await fetch(`${apiBaseUrl}/api/user-profiles/me/`, {
-          headers: { 'Authorization': `Token ${token}` }
+        if (!getAuthToken()) return;
+        const data = await apiClient.get<{ client_logo?: string | null }>('/api/user-profiles/me/', {
+          baseUrl: apiBaseUrl,
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.client_logo) {
-            setClientLogoUrl(data.client_logo);
-            localStorage.setItem('ndc_client_logo', data.client_logo);
-          }
+        if (data.client_logo !== undefined) {
+          setClientLogoUrl(data.client_logo || null);
         }
-      } catch (err) {
-        // Offline fallback already loaded
+      } catch {
+        // Cached value from store/localStorage already loaded
       }
     };
     fetchProfile();
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, setClientLogoUrl]);
 
-  const { resolveRru, resolveRrh, resolveTd, resolveBaieItems } = createResolvers(config, operator);
+  const { resolveRru, resolveRrh, resolveTd, resolveBaieItems } = useMemo(
+    () => createResolvers(config, operator),
+    [config, operator]
+  );
 
   const {
     isGeneratingSiteNdc,
@@ -515,7 +508,7 @@ export default function RegularUserView({
                       `${nombreSecteurs} secteur(s)`,
                       selectedEchelle && selectedEchelle !== "Pas d'échelle" ? selectedEchelle : null,
                       (hasFhEquipment || (operator !== 'bouygues' && hasRrhEquipment) || hasRruEquipment || (operator !== 'free' && hasCoffret) || (operator === 'free' && hasBoitierJonction))
-                        ? `Ancrage: ${s1?.equipmentFoundationType === 'beton' ? 'Plot Béton' : s1?.equipmentFoundationType === 'dallettes' ? 'Dallettes' : 'Plot Métallique'}`
+                        ? `Ancrage: ${formatFoundationLabel(sectors[0]?.equipmentFoundationType)}`
                         : null,
                       hasFhEquipment ? 'FH' : null,
                       (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
@@ -621,22 +614,9 @@ export default function RegularUserView({
                 title="Zone Technique"
                 activeStep={activeStep}
                 setActiveStep={setActiveStep}
-                isCompleted={(operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) || hasGps || hasBoitierLovage || (operator === 'orange' && hasBaie) || (operator === 'free' && (hasCab || hasAtelierEnergie || hasConvertisseurMdea || hasPileAmod || !!zoneTechnique.hasCoffretTransFo)) || ((operator === 'free' || operator === 'bouygues') && hasAtelierEnergie) || (operator === 'bouygues' && hasTgbt)}
+                isCompleted={hasAnyZoneTechnique(zoneTechnique, operator)}
                 disabled={!selectedCoords || !!pendingGenericAddress}
-                summary={[
-                  (operator !== 'bouygues' && operator !== 'orange' && hasTdEquipment) ? 'TD' : null,
-                  hasGps ? 'GPS' : null,
-                  hasBoitierLovage ? 'Lovage' : null,
-                  (operator === 'orange' && hasBaie) ? 'Baie' : null,
-                  (operator === 'free' && hasCab) ? 'CAB' : null,
-                  (operator === 'free' && hasAtelierEnergie) ? 'Atelier énergie' : null,
-                  (operator === 'free' && hasConvertisseurMdea) ? 'Convertisseur MDEA' : null,
-                  (operator === 'free' && zoneTechnique.hasCoffretTransFo) ? 'Coffret hybride' : null,
-                  (operator === 'free' && hasPileAmod) ? 'Pile AMOD' : null,
-                  (operator === 'bouygues' && hasAtelierEnergie) ? 'B-cube énergie' : null,
-                  (operator === 'bouygues' && hasBcubeRadio) ? 'BCube RADIO' : null,
-                  (operator === 'bouygues' && hasTgbt) ? 'TGBT' : null
-                ].filter(Boolean).join(' • ') || 'Aucun équipement en zone technique'}
+                summary={getZoneTechniqueSummary(zoneTechnique, operator)}
                 hideContinue={true}
               >
                 <div className="space-y-4">
@@ -760,7 +740,7 @@ export default function RegularUserView({
                 </div>
               }>
                 <TerrainMap
-                  selectedCoordinates={selectedCoords ? { latitude: selectedCoords.latitude, longitude: selectedCoords.longitude } : null}
+                  selectedCoordinates={selectedCoords}
                   flyToLocation={flyToLocation}
                   onMapClick={handleMapLocationSelect}
                 />
