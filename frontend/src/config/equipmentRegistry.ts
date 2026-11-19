@@ -85,20 +85,27 @@ export function isEquipmentAllowedForOperator(equipmentId: string, operator: str
 }
 
 export function extractSectorAerialState(sector?: SectorData) {
+  const fallbackFoundation = sector?.equipmentFoundationType || 'metallique';
   return {
     hasFhEquipment: !!sector?.hasFhEquipment,
     fhDiameter: sector?.fhDiameter ?? 300,
     fhReference: sector?.fhReference ?? '',
     fhQuantity: sector?.fhQuantity ?? 1,
     fhItems: sector?.fhItems ?? [],
+    fhFoundationType: sector?.fhFoundationType || fallbackFoundation,
     hasRrhEquipment: !!sector?.hasRrhEquipment,
     rrhItems: sector?.rrhItems ?? [],
+    rrhFoundationType: sector?.rrhFoundationType || fallbackFoundation,
     hasRruEquipment: !!sector?.hasRruEquipment,
     rruItems: sector?.rruItems ?? [],
+    rruFoundationType: sector?.rruFoundationType || fallbackFoundation,
     hasCoffret: !!sector?.hasCoffret,
     coffretReference: sector?.coffretReference ?? '',
+    coffretFoundationType: sector?.coffretFoundationType || fallbackFoundation,
     hasBoitierJonction: !!sector?.hasBoitierJonction,
     boitierJonctionQuantity: sector?.boitierJonctionQuantity ?? 1,
+    boitierJonctionFoundationType: sector?.boitierJonctionFoundationType || fallbackFoundation,
+    equipmentFoundationType: fallbackFoundation,
   };
 }
 
@@ -217,6 +224,7 @@ export function buildSectorEquipmentPayload({
       reference: aerial.hasFhEquipment ? (fhOpt?.reference || null) : null,
       quantity: aerial.hasFhEquipment ? aerial.fhQuantity : null,
       weight_kg: aerial.hasFhEquipment ? (fhOpt?.weight || null) : null,
+      ancrage: aerial.hasFhEquipment ? aerial.fhFoundationType : null,
       items: aerial.hasFhEquipment
         ? (aerial.fhItems.length > 0
             ? aerial.fhItems
@@ -229,6 +237,7 @@ export function buildSectorEquipmentPayload({
     },
     rrh_equipment: {
       enabled: allowRrh && aerial.hasRrhEquipment,
+      ancrage: allowRrh && aerial.hasRrhEquipment ? aerial.rrhFoundationType : null,
       items: allowRrh && aerial.hasRrhEquipment
         ? aerial.rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity }))
         : [],
@@ -236,6 +245,7 @@ export function buildSectorEquipmentPayload({
     rru_equipment: {
       enabled: aerial.hasRruEquipment,
       sans_plot: true,
+      ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
       items: aerial.hasRruEquipment
         ? aerial.rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity }))
         : [],
@@ -274,6 +284,9 @@ export function buildSectorEquipmentPayload({
       reference: isFree
         ? (zt.hasCoffretTransFo ? STATIC_EQUIPMENT_SPECS.transFo.reference : null)
         : (aerial.hasCoffret ? aerial.coffretReference : null),
+      ancrage: isFree
+        ? (zt.hasCoffretTransFo ? aerial.boitierJonctionFoundationType : null)
+        : (aerial.hasCoffret ? aerial.coffretFoundationType : null),
     },
     coffrets_hybride: {
       enabled: allowTransFo && !!zt.hasCoffretTransFo,

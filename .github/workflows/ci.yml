@@ -36,6 +36,7 @@ jobs:
       - name: Django system, migration & catalogue checks
         working-directory: backend
         env:
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
           DATABASE_URL: sqlite:///:memory:
           USE_DB_CACHE: "false"
           DEBUG: "true"
@@ -47,6 +48,7 @@ jobs:
       - name: Run Django test suite
         working-directory: backend
         env:
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
           DATABASE_URL: sqlite:///:memory:
           USE_DB_CACHE: "false"
           DEBUG: "true"

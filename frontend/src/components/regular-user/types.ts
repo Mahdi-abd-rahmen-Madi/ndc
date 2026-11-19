@@ -235,14 +235,19 @@ export interface SectorData {
   fhReference?: string;
   fhQuantity?: number;
   fhItems?: EquipmentItem[];
+  fhFoundationType?: 'metallique' | 'beton' | 'dallettes';
   hasRrhEquipment?: boolean;
   rrhItems?: EquipmentItem[];
+  rrhFoundationType?: 'metallique' | 'beton' | 'dallettes';
   hasRruEquipment?: boolean;
   rruItems?: EquipmentItem[];
+  rruFoundationType?: 'metallique' | 'beton' | 'dallettes';
   hasCoffret?: boolean;
   coffretReference?: string;
+  coffretFoundationType?: 'metallique' | 'beton' | 'dallettes';
   hasBoitierJonction?: boolean;
   boitierJonctionQuantity?: number;
+  boitierJonctionFoundationType?: 'metallique' | 'beton' | 'dallettes';
   equipmentFoundationType?: 'metallique' | 'beton' | 'dallettes';
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
@@ -401,14 +406,19 @@ export const defaultSectorData = (id: number): SectorData => ({
   fhReference: '',
   fhQuantity: 1,
   fhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
+  fhFoundationType: 'metallique',
   hasRrhEquipment: false,
   rrhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
+  rrhFoundationType: 'metallique',
   hasRruEquipment: false,
   rruItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
+  rruFoundationType: 'metallique',
   hasCoffret: false,
   coffretReference: '',
+  coffretFoundationType: 'metallique',
   hasBoitierJonction: false,
   boitierJonctionQuantity: 1,
+  boitierJonctionFoundationType: 'metallique',
   equipmentFoundationType: 'metallique',
   lookupResult: null,
   loading: false,

@@ -8,6 +8,7 @@ import ResultsPanel from './ResultsPanel';
 import {
   buildEquipmentTogglesMap,
   extractSectorAerialState,
+  formatFoundationLabel,
 } from '../../config/equipmentRegistry';
 import type {
   SectorData,
@@ -591,36 +592,47 @@ function RightPreviewPanel({
                 {/* Équipements Aériens Additionnels */}
                 {(() => {
                   const sec = activeSectors[0] || sectors[0];
-                  const hasEq = Boolean(
-                    sec?.hasFhEquipment ||
-                    (operator !== 'bouygues' && sec?.hasRrhEquipment) ||
-                    sec?.hasRruEquipment ||
+                  const activeEquipments = [
+                    sec?.hasFhEquipment
+                      ? { label: 'FH', ancrage: formatFoundationLabel(sec.fhFoundationType || sec.equipmentFoundationType) }
+                      : null,
+                    (operator !== 'bouygues' && sec?.hasRrhEquipment)
+                      ? { label: 'RRH', ancrage: formatFoundationLabel(sec.rrhFoundationType || sec.equipmentFoundationType) }
+                      : null,
+                    sec?.hasRruEquipment
+                      ? { label: operator === 'free' ? 'RF NSN' : 'RRU', ancrage: formatFoundationLabel(sec.rruFoundationType || sec.equipmentFoundationType) }
+                      : null,
                     (operator === 'free' ? sec?.hasBoitierJonction : sec?.hasCoffret)
-                  );
-                  if (!hasEq) return null;
-                  const eqAncrage = sec?.equipmentFoundationType === 'beton'
-                    ? 'Plot Béton'
-                    : sec?.equipmentFoundationType === 'dallettes'
-                      ? 'Dallettes'
-                      : 'Plot Métallique';
+                      ? {
+                          label: operator === 'free' ? 'Boîtier jonction FO' : 'Coffret fibre',
+                          ancrage: formatFoundationLabel(operator === 'free' ? (sec.boitierJonctionFoundationType || sec.equipmentFoundationType) : (sec.coffretFoundationType || sec.equipmentFoundationType))
+                        }
+                      : null,
+                  ].filter(Boolean) as { label: string; ancrage: string }[];
+
+                  if (activeEquipments.length === 0) return null;
 
                   return (
                     <div>
                       <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
                         Équipements Aériens Additionnels
                       </div>
-                      <div className="p-3.5 rounded-xl border bg-violet-50/40 border-violet-200/80 text-violet-950 flex items-center justify-between">
-                        <div>
-                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
-                            Type d'ancrage (Équipements)
-                          </span>
-                          <span className="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">
-                            {eqAncrage}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-                          Défini
-                        </span>
+                      <div className="space-y-2">
+                        {activeEquipments.map((eq, i) => (
+                          <div key={i} className="p-3.5 rounded-xl border bg-violet-50/40 border-violet-200/80 text-violet-950 flex items-center justify-between">
+                            <div>
+                              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                                Type d'ancrage • {eq.label}
+                              </span>
+                              <span className="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">
+                                {eq.ancrage}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              Défini
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   );

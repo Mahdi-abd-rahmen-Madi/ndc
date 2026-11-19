@@ -132,14 +132,14 @@ class ApiAuthAndPermissionsTest(TestCase):
         # Valid worker key with complete artifacts succeeds and increments quota exactly once even if retried
         with patch("api.services.validate_calculation_artifacts", return_value=[]), \
              patch("api.views.enqueue_task") as mock_enqueue, \
-             patch("api.views._broadcast_calc_progress"):
+             patch("api.views._broadcast_calc_progress"), \
+             self.captureOnCommitCallbacks(execute=True):
             first = self.client.post(
                 f"/api/calculations/{job.id}/complete/",
                 {"status": "COMPLETED", "result_data": {"ok": True}},
                 format="json",
             )
             self.assertEqual(first.status_code, 200)
-            self.assertTrue(mock_enqueue.called)
 
             second = self.client.post(
                 f"/api/calculations/{job.id}/complete/",
@@ -147,6 +147,7 @@ class ApiAuthAndPermissionsTest(TestCase):
                 format="json",
             )
             self.assertEqual(second.status_code, 200)
+        self.assertTrue(mock_enqueue.called)
 
         sub.refresh_from_db()
         self.assertEqual(sub.used_quota, 1)

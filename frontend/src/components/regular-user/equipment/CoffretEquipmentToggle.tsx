@@ -1,6 +1,7 @@
 import React from 'react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
+import { EquipmentAncrageSelector, EquipmentFoundationType } from './shared/EquipmentAncrageSelector';
 
 export interface CoffretEquipmentToggleProps {
   hasCoffret: boolean;
@@ -10,6 +11,8 @@ export interface CoffretEquipmentToggleProps {
   coffretOptions: { id: string; name: string; operator?: string }[];
   operator?: string;
   nombreSecteurs?: number;
+  foundationType?: EquipmentFoundationType;
+  setFoundationType?: (val: EquipmentFoundationType) => void;
 }
 
 export function CoffretEquipmentToggle({
@@ -19,6 +22,8 @@ export function CoffretEquipmentToggle({
   setCoffretReference,
   coffretOptions,
   operator,
+  foundationType,
+  setFoundationType,
 }: CoffretEquipmentToggleProps) {
   const filteredOptions = coffretOptions.filter(opt => {
     if (!opt.operator || opt.operator === 'all') return true;
@@ -105,6 +110,13 @@ export function CoffretEquipmentToggle({
           </div>
         );
       })()}
+
+      {setFoundationType && (
+        <EquipmentAncrageSelector
+          value={foundationType}
+          onChange={setFoundationType}
+        />
+      )}
     </EquipmentToggleCard>
   );
 }

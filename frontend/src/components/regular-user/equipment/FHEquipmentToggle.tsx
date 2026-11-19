@@ -26,6 +26,8 @@ export interface FHEquipmentToggleProps {
   nombreSecteurs?: number;
   disabled?: boolean;
   disabledReason?: string;
+  foundationType?: 'metallique' | 'beton' | 'dallettes';
+  setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
 }
 
 export function FHEquipmentToggle({
@@ -41,6 +43,8 @@ export function FHEquipmentToggle({
   fhOptions = [],
   disabled = false,
   disabledReason,
+  foundationType,
+  setFoundationType,
 }: FHEquipmentToggleProps) {
   const options = useMemo(
     () => fhOptions.map(o => ({ id: o.id, vendor: o.vendor, label: o.name })),
@@ -93,6 +97,8 @@ export function FHEquipmentToggle({
       quantityLabel="Qté :"
       disabled={disabled}
       disabledReason={disabledReason}
+      foundationType={foundationType}
+      onFoundationTypeChange={setFoundationType}
     />
   );
 }

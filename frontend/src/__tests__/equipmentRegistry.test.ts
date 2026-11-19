@@ -46,9 +46,12 @@ describe('equipmentRegistry', () => {
       ...defaultSectorData(1),
       hasFhEquipment: true,
       fhQuantity: 2,
+      fhFoundationType: 'dallettes' as const,
       hasRrhEquipment: true,
       rrhItems: [{ id: '1', reference: 'AHHB', quantity: 2 }],
+      rrhFoundationType: 'beton' as const,
       hasCoffret: true,
+      coffretFoundationType: 'metallique' as const,
     };
     const zt = {
       ...defaultZoneTechniqueData,
@@ -59,6 +62,9 @@ describe('equipmentRegistry', () => {
     const aerial = extractSectorAerialState(sector);
     assert.equal(aerial.hasFhEquipment, true);
     assert.equal(aerial.fhQuantity, 2);
+    assert.equal(aerial.fhFoundationType, 'dallettes');
+    assert.equal(aerial.rrhFoundationType, 'beton');
+    assert.equal(aerial.coffretFoundationType, 'metallique');
 
     const bouyguesToggles = buildEquipmentTogglesMap(sector, zt, 'bouygues');
     assert.equal(bouyguesToggles.fh, true);
@@ -90,8 +96,10 @@ describe('equipmentRegistry', () => {
       ...defaultSectorData(1),
       hasRruEquipment: true,
       rruItems: [{ id: 'r1', reference: 'Radio 4486', quantity: 3 }],
+      rruFoundationType: 'dallettes' as const,
       hasCoffret: true,
       coffretReference: 'UTEL V3',
+      coffretFoundationType: 'beton' as const,
     };
     const zt = {
       ...defaultZoneTechniqueData,
@@ -112,7 +120,9 @@ describe('equipmentRegistry', () => {
     assert.equal(payload.td_equipment.enabled, false);
     assert.equal(payload.rru_equipment.enabled, true);
     assert.equal(payload.rru_equipment.items.length, 1);
+    assert.equal(payload.rru_equipment.ancrage, 'dallettes');
     assert.equal(payload.coffrets_fibre.enabled, true);
     assert.equal(payload.coffrets_fibre.quantity, 3);
+    assert.equal(payload.coffrets_fibre.ancrage, 'beton');
   });
 });

@@ -130,6 +130,7 @@ class FHEquipmentSerializer(serializers.Serializer):
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     quantity = serializers.IntegerField(required=False, allow_null=True)
     weight_kg = serializers.FloatField(required=False, allow_null=True)
+    ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class EquipmentPayloadSerializer(serializers.Serializer):
@@ -144,11 +145,13 @@ class EquipmentPayloadSerializer(serializers.Serializer):
 
 class RRHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
+    ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     sans_plot = serializers.BooleanField(required=False, default=True)
+    ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class CatalogueMatchSerializer(serializers.Serializer):

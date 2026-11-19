@@ -1,6 +1,7 @@
 import { LucideIcon } from 'lucide-react';
 import { EquipmentToggleCard, EquipmentToggleCardProps } from '../../../ui/EquipmentToggleCard';
 import { QuantityInput } from '../../../ui/QuantityInput';
+import { EquipmentAncrageSelector, EquipmentFoundationType } from './EquipmentAncrageSelector';
 
 export interface StaticSpecField {
   label: string;
@@ -19,6 +20,8 @@ export interface QuantityOnlyEquipmentToggleProps {
   scopeBadgeText?: string;
   disabled?: boolean;
   disabledReason?: string;
+  foundationType?: EquipmentFoundationType;
+  onFoundationTypeChange?: (val: EquipmentFoundationType) => void;
 }
 
 export function QuantityOnlyEquipmentToggle({
@@ -33,6 +36,8 @@ export function QuantityOnlyEquipmentToggle({
   scopeBadgeText = 'par site',
   disabled = false,
   disabledReason,
+  foundationType,
+  onFoundationTypeChange,
 }: QuantityOnlyEquipmentToggleProps) {
   return (
     <EquipmentToggleCard
@@ -70,6 +75,14 @@ export function QuantityOnlyEquipmentToggle({
               size="md"
             />
           </div>
+        )}
+
+        {onFoundationTypeChange && (
+          <EquipmentAncrageSelector
+            value={foundationType}
+            onChange={onFoundationTypeChange}
+            disabled={disabled}
+          />
         )}
       </div>
     </EquipmentToggleCard>

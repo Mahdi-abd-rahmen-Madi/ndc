@@ -30,6 +30,7 @@ jobs:
           # Here we just execute commands remotely.
           
           ssh -o StrictHostKeyChecking=no root@heliosys-debian-prod << 'EOF'
+            set -e
             # Ensure the project directory exists
             mkdir -p /opt/ndc
             cd /opt/ndc

@@ -9,6 +9,8 @@ export interface BoitierJonctionEquipmentToggleProps {
   setBoitierJonctionQuantity?: (val: number) => void;
   disabled?: boolean;
   disabledReason?: string;
+  foundationType?: 'metallique' | 'beton' | 'dallettes';
+  setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
 }
 
 const SPECS = [
@@ -23,6 +25,8 @@ export function BoitierJonctionEquipmentToggle({
   setBoitierJonctionQuantity,
   disabled = false,
   disabledReason,
+  foundationType,
+  setFoundationType,
 }: BoitierJonctionEquipmentToggleProps) {
   return (
     <QuantityOnlyEquipmentToggle
@@ -36,6 +40,8 @@ export function BoitierJonctionEquipmentToggle({
       scopeBadgeText="Par secteur"
       disabled={disabled}
       disabledReason={disabledReason}
+      foundationType={foundationType}
+      onFoundationTypeChange={setFoundationType}
     />
   );
 }

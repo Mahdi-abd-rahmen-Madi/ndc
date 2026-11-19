@@ -162,8 +162,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Shared cache (PostgreSQL DatabaseCache in production so web + qcluster share state without Redis)
-USE_DB_CACHE = config('USE_DB_CACHE', default=(not DEBUG and not DATABASE_URL.startswith('sqlite')), cast=bool)
+# Shared cache (PostgreSQL DatabaseCache when USE_DB_CACHE=true, e.g. in docker-compose.prod.yml,
+# so web + qcluster share state without Redis; LocMemCache by default for local dev)
+USE_DB_CACHE = config('USE_DB_CACHE', default=False, cast=bool)
 if USE_DB_CACHE:
     CACHES = {
         'default': {

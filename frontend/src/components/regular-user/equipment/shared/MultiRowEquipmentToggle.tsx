@@ -4,6 +4,7 @@ import { EquipmentToggleCard, EquipmentToggleCardProps } from '../../../ui/Equip
 import { CustomSelect } from '../../../ui/CustomSelect';
 import { QuantityInput } from '../../../ui/QuantityInput';
 import type { EquipmentItem } from '../../types';
+import { EquipmentAncrageSelector, EquipmentFoundationType } from './EquipmentAncrageSelector';
 
 export interface MultiRowOption {
   id: string;
@@ -28,6 +29,8 @@ export interface MultiRowEquipmentToggleProps {
   nombreSecteurs?: number;
   disabled?: boolean;
   disabledReason?: string;
+  foundationType?: EquipmentFoundationType;
+  onFoundationTypeChange?: (val: EquipmentFoundationType) => void;
 }
 
 export function MultiRowEquipmentToggle({
@@ -47,6 +50,8 @@ export function MultiRowEquipmentToggle({
   nombreSecteurs,
   disabled = false,
   disabledReason,
+  foundationType,
+  onFoundationTypeChange,
 }: MultiRowEquipmentToggleProps) {
   const uniqueVendors = useMemo(
     () => Array.from(new Set(options.map(o => o.vendor))),
@@ -224,6 +229,14 @@ export function MultiRowEquipmentToggle({
         <Plus className="w-3.5 h-3.5" />
         Ajouter
       </button>
+
+      {onFoundationTypeChange && (
+        <EquipmentAncrageSelector
+          value={foundationType}
+          onChange={onFoundationTypeChange}
+          disabled={disabled}
+        />
+      )}
     </EquipmentToggleCard>
   );
 }

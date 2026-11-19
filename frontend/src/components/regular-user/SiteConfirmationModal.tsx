@@ -240,7 +240,7 @@ export function SiteConfirmationModal({
               </div>
               {(hasFhEquipment || hasRruEquipment || hasRrhEquipment || hasCoffret || hasBoitierJonction) && (
                 <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full">
-                  Ancrage : {formatFoundationLabel(activeSectors[0]?.equipmentFoundationType)}
+                  Ancrages définis
                 </span>
               )}
             </div>
@@ -290,7 +290,7 @@ export function SiteConfirmationModal({
                         key={`fh-${idx}`}
                         borderClass="border-l-amber-500"
                         title="Faisceau Hertzien (FH)"
-                        badgeText="par site"
+                        badgeText={`par site • ${formatFoundationLabel(activeSectors[0]?.fhFoundationType)}`}
                         badgeClass="bg-amber-50 text-amber-700 border-amber-200"
                         quantityText={`${item.quantity} unité`}
                         detailLabel="Modèle"
@@ -302,7 +302,7 @@ export function SiteConfirmationModal({
                   <MastEquipmentCard
                     borderClass="border-l-amber-500"
                     title="Faisceau Hertzien (FH)"
-                    badgeText="par site"
+                    badgeText={`par site • ${formatFoundationLabel(activeSectors[0]?.fhFoundationType)}`}
                     badgeClass="bg-amber-50 text-amber-700 border-amber-200"
                     quantityText={`${fhQuantity} unité`}
                     detailLabel="Modèle"
@@ -316,7 +316,7 @@ export function SiteConfirmationModal({
                     key={`rru-${idx}`}
                     borderClass="border-l-emerald-500"
                     title={operator === 'free' ? 'RF NSN' : 'RRU'}
-                    badgeText="Par secteur"
+                    badgeText={`Par secteur • ${formatFoundationLabel(activeSectors[0]?.rruFoundationType)}`}
                     quantityText={`${item.quantity} / sect.`}
                     totalCount={(item.quantity || 1) * nombreSecteurs}
                     detailValue={resolveRru(item.reference) || item.reference || 'N/A'}
@@ -329,7 +329,7 @@ export function SiteConfirmationModal({
                     key={`rrh-${idx}`}
                     borderClass="border-l-rose-500"
                     title="RRH"
-                    badgeText="Par secteur"
+                    badgeText={`Par secteur • ${formatFoundationLabel(activeSectors[0]?.rrhFoundationType)}`}
                     quantityText={`${item.quantity} / sect.`}
                     totalCount={(item.quantity || 1) * nombreSecteurs}
                     detailValue={resolveRrh(item.reference) || item.reference || 'N/A'}
@@ -341,7 +341,7 @@ export function SiteConfirmationModal({
                   <MastEquipmentCard
                     borderClass="border-l-pink-500"
                     title="Coffret Fibre / Hybride"
-                    badgeText="Par secteur"
+                    badgeText={`Par secteur • ${formatFoundationLabel(activeSectors[0]?.coffretFoundationType)}`}
                     quantityText="1 / sect."
                     totalCount={nombreSecteurs}
                     detailLabel="Modèle"
@@ -354,7 +354,7 @@ export function SiteConfirmationModal({
                   <MastEquipmentCard
                     borderClass="border-l-cyan-500"
                     title="Boitier de jonction FO"
-                    badgeText="Par secteur"
+                    badgeText={`Par secteur • ${formatFoundationLabel(activeSectors[0]?.boitierJonctionFoundationType)}`}
                     quantityText={`${boitierJonctionQuantity || 1} / sect.`}
                     totalCount={(boitierJonctionQuantity || 1) * nombreSecteurs}
                     detailLabel="Modèle"

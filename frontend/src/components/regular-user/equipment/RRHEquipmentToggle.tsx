@@ -12,6 +12,8 @@ export interface RRHEquipmentToggleProps {
   nombreSecteurs?: number;
   disabled?: boolean;
   disabledReason?: string;
+  foundationType?: 'metallique' | 'beton' | 'dallettes';
+  setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
 }
 
 export function RRHEquipmentToggle({
@@ -24,6 +26,8 @@ export function RRHEquipmentToggle({
   nombreSecteurs = 1,
   disabled = false,
   disabledReason,
+  foundationType,
+  setFoundationType,
 }: RRHEquipmentToggleProps) {
   const options = useMemo(
     () =>
@@ -47,6 +51,8 @@ export function RRHEquipmentToggle({
       nombreSecteurs={nombreSecteurs}
       disabled={disabled}
       disabledReason={disabledReason}
+      foundationType={foundationType}
+      onFoundationTypeChange={setFoundationType}
     />
   );
 }

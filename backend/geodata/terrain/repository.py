@@ -122,21 +122,31 @@ def fetch_local_land_use_gdf(
 
     logger.debug("Querying local land use data within bbox: %s", (minx, miny, maxx, maxy))
 
+    from shapely import wkb
     from sqlalchemy import text
 
     engine = _get_land_use_engine()
     sql = text(
-        "SELECT * FROM land_use_data "
+        "SELECT *, ST_AsBinary(geometry) AS _geom_wkb FROM land_use_data "
         "WHERE geometry && ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326)"
     )
     with engine.connect() as conn:
-        gdf = gpd.read_postgis(
+        rows = conn.execute(
             sql,
-            conn,
-            params={"minx": minx, "miny": miny, "maxx": maxx, "maxy": maxy},
-            geom_col='geometry',
-        )
+            {"minx": minx, "miny": miny, "maxx": maxx, "maxy": maxy},
+        ).mappings().all()
 
+    if not rows:
+        return gpd.GeoDataFrame(columns=['Code_18', 'geometry'], geometry='geometry', crs='EPSG:4326')
+
+    records = []
+    geometries = []
+    for row in rows:
+        raw_wkb = row['_geom_wkb']
+        geometries.append(wkb.loads(bytes(raw_wkb)) if raw_wkb is not None else None)
+        records.append({k: v for k, v in row.items() if k not in ('geometry', '_geom_wkb')})
+
+    gdf = gpd.GeoDataFrame(records, geometry=geometries, crs='EPSG:4326')
     if not gdf.empty:
         gdf.sindex
     return gdf
