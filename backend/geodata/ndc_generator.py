@@ -1479,13 +1479,24 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         or input_data.get("site", {}).get("operator")
         or "bouygues"
     )
-    is_sans_plot = bool(
+    raw_sans_plot = (
         result_data.get("rru_sans_plot")
-        or rru_sub.get("sans_plot")
-        or structure.get("sans_plot")
-        or input_data.get("sans_plot")
-        or (input_data.get("rru_equipment") or {}).get("sans_plot", False)
+        if result_data.get("rru_sans_plot") is not None
+        else (
+            rru_sub.get("sans_plot")
+            if rru_sub.get("sans_plot") is not None
+            else (
+                structure.get("sans_plot")
+                if structure.get("sans_plot") is not None
+                else (
+                    input_data.get("sans_plot")
+                    if input_data.get("sans_plot") is not None
+                    else (input_data.get("rru_equipment") or {}).get("sans_plot")
+                )
+            )
+        )
     )
+    is_sans_plot = True if raw_sans_plot is None else bool(raw_sans_plot)
 
     try:
         qp = float(wind.get("qp_dan") or qp_val or 0.0)

@@ -118,7 +118,7 @@ export function useSiteNdcGenerator({
     return true;
   }, [uniqueGroups, config, foundationType, selectedBuildingHeight, activeSectors, operator]);
 
-  const confirmGenerateSiteNdc = useCallback(async () => {
+  const confirmGenerateSiteNdc = useCallback(async (forceRecalculate: boolean = false) => {
     setIsGeneratingSiteNdc(true);
     setSiteNdcError(null);
 
@@ -256,7 +256,7 @@ export function useSiteNdcGenerator({
           },
           rru_equipment: {
             enabled: hasRruEquipment,
-            sans_plot: false,
+            sans_plot: true,
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
@@ -443,7 +443,7 @@ export function useSiteNdcGenerator({
           },
           rru_equipment: {
             enabled: hasRruEquipment,
-            sans_plot: false,
+            sans_plot: true,
             items: hasRruEquipment ? rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity })) : []
           },
           td_equipment: {
@@ -521,7 +521,8 @@ export function useSiteNdcGenerator({
             enabled: operator === 'free' && hasPileAmod,
             modules: operator === 'free' && hasPileAmod ? amodModules : {}
           },
-          site_image_url: siteImageUrl
+          site_image_url: siteImageUrl,
+          force_recalculate: Boolean(forceRecalculate)
         };
 
         const res = await fetch(`${apiBaseUrl}/api/calculations/`, {
@@ -642,9 +643,18 @@ export function useSiteNdcGenerator({
       });
 
       if (!mergeRes.ok) {
-        const errorText = await mergeRes.text();
-        console.error('[NDC Site Merge Error]:', errorText);
-        throw new Error("Erreur lors de la génération du document global. Veuillez réessayer.");
+        let serverError = "Erreur lors de la génération du document global. Veuillez réessayer.";
+        try {
+          const errorJson = await mergeRes.json();
+          if (errorJson && errorJson.error) {
+            serverError = errorJson.error;
+          }
+        } catch (_) {
+          const errorText = await mergeRes.text();
+          if (errorText) serverError = errorText;
+        }
+        console.error('[NDC Site Merge Error]:', serverError);
+        throw new Error(serverError);
       }
 
       const mergeData = await mergeRes.json();
@@ -662,7 +672,7 @@ export function useSiteNdcGenerator({
       console.error('[NDC Generation Failed - Technical Error Details]:', e);
       const rawMessage = e?.message || '';
       let friendlyMessage = 'Le calcul Robot a échoué. Veuillez réessayer.';
-      if (rawMessage.startsWith('Veuillez ') || rawMessage.includes('saisir') || rawMessage.includes('uploader')) {
+      if (rawMessage.startsWith('Veuillez ') || rawMessage.includes('saisir') || rawMessage.includes('uploader') || rawMessage.includes('incomplet') || rawMessage.includes('artéfacts')) {
         friendlyMessage = rawMessage;
       } else if (rawMessage && !rawMessage.includes('Calcul Robot rejeté') && !rawMessage.includes('500') && !rawMessage.includes('Traceback')) {
         friendlyMessage = rawMessage;

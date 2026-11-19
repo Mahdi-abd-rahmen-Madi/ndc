@@ -38,7 +38,7 @@ export default function UserInput({
     hasChauffageAuSol,
     fausseDalleThickness
   } = project;
-  const currentFoundationType = project.foundationType || foundationType || 'metallique';
+  const currentFoundationType = (project.foundationType === 'dallettes' ? 'metallique' : project.foundationType) || foundationType || 'metallique';
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -273,7 +273,7 @@ export default function UserInput({
                 Type d'ancrage <span className="text-red-500 font-bold">*</span>
               </span>
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md">
               <button
                 type="button"
                 onClick={() => onChange({ foundationType: 'metallique' })}
@@ -298,20 +298,6 @@ export default function UserInput({
                 }`}
               >
                 <span className="text-xs font-bold">Plot Béton</span>
-                <span className="text-[9px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">Indispo.</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChange({ foundationType: 'dallettes' })}
-                disabled
-                className={`py-2 px-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-not-allowed opacity-60 ${
-                  currentFoundationType === 'dallettes'
-                    ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
-                    : 'border-slate-200 bg-slate-50 text-slate-500'
-                }`}
-              >
-                <span className="text-xs font-bold">Dallettes</span>
                 <span className="text-[9px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">Indispo.</span>
               </button>
             </div>

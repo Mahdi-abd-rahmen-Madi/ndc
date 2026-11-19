@@ -148,7 +148,7 @@ class RRHEquipmentSerializer(serializers.Serializer):
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
-    sans_plot = serializers.BooleanField(required=False, default=False)
+    sans_plot = serializers.BooleanField(required=False, default=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class CatalogueMatchSerializer(serializers.Serializer):
@@ -161,7 +161,7 @@ class CalculationPayloadSerializer(serializers.Serializer):
     client_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     is_rrh = serializers.BooleanField(required=False, default=False)
     is_rru = serializers.BooleanField(required=False, default=False)
-    sans_plot = serializers.BooleanField(required=False, default=False)
+    sans_plot = serializers.BooleanField(required=False, default=None, allow_null=True)
     operateur = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     calculation_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     force_recalculate = serializers.BooleanField(required=False, default=False)

@@ -270,7 +270,9 @@ export default function RegularUserView({
     resolveBaieItems
   });
 
-  const handleGenerateSiteNdc = () => {
+  const [forceRecalculateOnConfirm, setForceRecalculateOnConfirm] = useState(false);
+
+  const handleGenerateSiteNdc = (options?: { forceRecalculate?: boolean }) => {
     if (!siteName.trim() || !clientName.trim()) {
       setSiteNdcError('Veuillez saisir le nom du site et le nom du client.');
       return;
@@ -279,6 +281,7 @@ export default function RegularUserView({
       setSiteNdcError('Veuillez uploader la photo du site.');
       return;
     }
+    setForceRecalculateOnConfirm(!!options?.forceRecalculate);
     setShowConfirmationModal(true);
   };
 
@@ -340,7 +343,8 @@ export default function RegularUserView({
         onClose={() => setShowConfirmationModal(false)}
         onConfirm={() => {
           setShowConfirmationModal(false);
-          confirmGenerateSiteNdc();
+          confirmGenerateSiteNdc(forceRecalculateOnConfirm);
+          setForceRecalculateOnConfirm(false);
         }}
         nombreSecteurs={nombreSecteurs}
         activeSectors={activeSectors}
@@ -510,6 +514,9 @@ export default function RegularUserView({
                     ? [
                       `${nombreSecteurs} secteur(s)`,
                       selectedEchelle && selectedEchelle !== "Pas d'échelle" ? selectedEchelle : null,
+                      (hasFhEquipment || (operator !== 'bouygues' && hasRrhEquipment) || hasRruEquipment || (operator !== 'free' && hasCoffret) || (operator === 'free' && hasBoitierJonction))
+                        ? `Ancrage: ${s1?.equipmentFoundationType === 'beton' ? 'Plot Béton' : s1?.equipmentFoundationType === 'dallettes' ? 'Dallettes' : 'Plot Métallique'}`
+                        : null,
                       hasFhEquipment ? 'FH' : null,
                       (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
                       hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,

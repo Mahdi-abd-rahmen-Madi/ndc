@@ -18,9 +18,6 @@ interface CaseStructure {
   image: string;
   title: string;
   subtitle: string;
-  highlight: string;
-  differenceNote: string;
-  antennasCount: string;
   status: 'available' | 'development';
   statusLabel: string;
 }
@@ -33,9 +30,6 @@ const CASES_DATA: CaseStructure[] = [
     image: '/cas1.png',
     title: 'Mât + Plot',
     subtitle: 'Ant. 4G intégrée + 5G sur bras',
-    highlight: 'Antenne 4G sur mât + 1 antenne 5G déportée sur bras',
-    differenceNote: '1 bras support déporté',
-    antennasCount: '2 antennes (1 directe + 1 bras)',
     status: 'available',
     statusLabel: 'En exploitation',
   },
@@ -46,9 +40,6 @@ const CASES_DATA: CaseStructure[] = [
     image: '/cas2.png',
     title: 'Mât + Plot',
     subtitle: 'Ant. 4G/5G – bras séparés',
-    highlight: 'Antennes 4G et 5G montées chacune sur bras individuel',
-    differenceNote: '2 bras supports indépendants',
-    antennasCount: '2 antennes (2 bras séparés)',
     status: 'development',
     statusLabel: 'En développement',
   },
@@ -59,9 +50,6 @@ const CASES_DATA: CaseStructure[] = [
     image: '/cas3.png',
     title: 'Mât + Plot',
     subtitle: 'Ant. 4G/5G – mât commun',
-    highlight: 'Antennes 4G et 5G colocalisées sur un même support commun',
-    differenceNote: 'Support commun partagé',
-    antennasCount: 'Support commun',
     status: 'development',
     statusLabel: 'En développement',
   },
@@ -72,9 +60,6 @@ const CASES_DATA: CaseStructure[] = [
     image: '/cas4.png',
     title: 'Mât + Plot',
     subtitle: 'Antenne multitechno',
-    highlight: 'Antenne multibande intégrée haute capacité sans déport',
-    differenceNote: 'Antenne multitechnologie unique',
-    antennasCount: 'Mono-antenne tout-en-un',
     status: 'development',
     statusLabel: 'En développement',
   },
@@ -234,19 +219,6 @@ export default function MontageSelectionModal({
                       </span>
                     )}
                   </div>
-
-                  {/* Bottom Image Tag: Distinctive Architectural Feature */}
-                  <div className="absolute bottom-2 left-2 right-2 text-center pointer-events-none">
-                    <span
-                      className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-2xs backdrop-blur-xs border ${
-                        isCas1Available
-                          ? 'bg-violet-50/95 text-violet-900 border-violet-200'
-                          : 'bg-white/95 text-slate-700 border-slate-200'
-                      }`}
-                    >
-                      {item.differenceNote}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Card Info Section */}
@@ -271,10 +243,6 @@ export default function MontageSelectionModal({
                       }`}
                     >
                       {item.subtitle}
-                    </p>
-
-                    <p className="text-[11px] text-slate-500 mt-1 leading-normal line-clamp-2">
-                      {item.highlight}
                     </p>
                   </div>
 
@@ -341,40 +309,29 @@ export default function MontageSelectionModal({
                 />
               </div>
 
-              {/* Spec explanation */}
-              <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-2">
-                <div className="flex items-start gap-2 bg-violet-50/80 p-2.5 rounded-xl border border-violet-100">
-                  <div className="text-violet-600 font-bold text-xs shrink-0 mt-0.5">
-                    Spécificité :
-                  </div>
-                  <div className="text-xs text-violet-950 leading-relaxed">
-                    {zoomedCase.highlight} ({zoomedCase.differenceNote})
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  {zoomedCase.id === 'A1' && selectedSiteType === 'nouveau' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onCasSelect('A1');
-                        setZoomedCase(null);
-                        onClose();
-                      }}
-                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition shadow-sm"
-                    >
-                      Choisir ce Cas (A1)
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setZoomedCase(null)}
-                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition"
-                    >
-                      Fermer l'aperçu
-                    </button>
-                  )}
-                </div>
+              {/* Actions Footer */}
+              <div className="p-4 bg-white border-t border-slate-100 flex justify-end">
+                {zoomedCase.id === 'A1' && selectedSiteType === 'nouveau' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCasSelect('A1');
+                      setZoomedCase(null);
+                      onClose();
+                    }}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                  >
+                    Choisir ce Cas (A1)
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setZoomedCase(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition cursor-pointer"
+                  >
+                    Fermer l'aperçu
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -83,13 +83,18 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
 
     rru_eq = data.get("rru_equipment")
     if isinstance(rru_eq, dict) and rru_eq.get("enabled"):
-        canonical["rru_equipment"] = _normalize(rru_eq)
+        rru_eq_copy = dict(rru_eq)
+        if rru_eq_copy.get("sans_plot") is None:
+            rru_eq_copy["sans_plot"] = True
+        canonical["rru_equipment"] = _normalize(rru_eq_copy)
 
     rrh_eq = data.get("rrh_equipment")
     if isinstance(rrh_eq, dict) and rrh_eq.get("enabled"):
         canonical["rrh_equipment"] = _normalize(rrh_eq)
 
     if data.get("sans_plot") is True:
+        canonical["sans_plot"] = True
+    elif (normalized_type == "rru" or data.get("is_rru") is True) and data.get("sans_plot") is not False:
         canonical["sans_plot"] = True
     if data.get("operateur"):
         canonical["operateur"] = _normalize(data["operateur"])

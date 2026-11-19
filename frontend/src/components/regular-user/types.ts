@@ -243,6 +243,7 @@ export interface SectorData {
   coffretReference?: string;
   hasBoitierJonction?: boolean;
   boitierJonctionQuantity?: number;
+  equipmentFoundationType?: 'metallique' | 'beton' | 'dallettes';
   // State for catalogue results specific to this sector
   lookupResult?: LookupResult | null;
   loading?: boolean;
@@ -408,6 +409,7 @@ export const defaultSectorData = (id: number): SectorData => ({
   coffretReference: '',
   hasBoitierJonction: false,
   boitierJonctionQuantity: 1,
+  equipmentFoundationType: 'metallique',
   lookupResult: null,
   loading: false,
   error: null

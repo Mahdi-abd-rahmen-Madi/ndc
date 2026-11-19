@@ -239,6 +239,11 @@ export function SiteConfirmationModal({
                   Équipements Aériens
                 </h4>
               </div>
+              {(hasFhEquipment || hasRruEquipment || hasRrhEquipment || hasCoffret || hasBoitierJonction) && (
+                <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full">
+                  Ancrage : {s1?.equipmentFoundationType === 'beton' ? 'Plot Béton' : s1?.equipmentFoundationType === 'dallettes' ? 'Dallettes' : 'Plot Métallique'}
+                </span>
+              )}
             </div>
 
             {/* Sectors montage summary */}

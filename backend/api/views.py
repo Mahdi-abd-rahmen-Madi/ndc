@@ -212,15 +212,31 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         # 1. Detect type and compute unique deterministic NDC hash
         calc_type = detect_calculation_type(input_data)
+
+        # Default new RRU queries to sans_plot=True if not explicitly specified
+        if calc_type == "rru" or input_data.get("is_rru"):
+            if input_data.get("sans_plot") is None:
+                input_data["sans_plot"] = True
+            rru_eq = input_data.get("rru_equipment")
+            if isinstance(rru_eq, dict) and rru_eq.get("sans_plot") is None:
+                rru_eq["sans_plot"] = True
+        elif isinstance(input_data.get("rru_equipment"), dict):
+            rru_eq = input_data["rru_equipment"]
+            if rru_eq.get("enabled") and rru_eq.get("sans_plot") is None:
+                rru_eq["sans_plot"] = True
+        elif input_data.get("sans_plot") is None:
+            input_data["sans_plot"] = False
+
         ndc_hash = compute_ndc_hash(calc_type, input_data)
 
         # 2. Check Database Cache for Instant Hit
         if not force_recalculate:
             from .services import validate_calculation_artifacts
+            # Prefer original non-cached worker jobs first (is_cached=False before is_cached=True), then newest id
             candidate_cached = CalculationJob.objects.filter(
                 ndc_hash=ndc_hash,
                 status="COMPLETED"
-            ).order_by("-id")
+            ).order_by("is_cached", "-id")
 
             cached_job = None
             for cand in candidate_cached:
@@ -231,9 +247,111 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         break
                     else:
                         print(f"[NDC HARDENING] Skipping cached Job {cand.id} with incomplete artifacts: {missing_in_cand}")
+                        # Immediately mark invalid cached job so it doesn't pollute subsequent queries
+                        try:
+                            cand.status = 'FAILED'
+                            cand.error_message = f"Cache incomplet rejeté : artéfacts obligatoires manquants ({', '.join(missing_in_cand)})."
+                            cand.save(update_fields=['status', 'error_message'])
+                        except Exception:
+                            pass
 
             if cached_job:
-                # Create a cloned record or return the cached calculation directly
+                def _resolve_cached_file(source_job, field_name, candidate_rel_paths):
+                    field_val = getattr(source_job, field_name, None)
+                    if field_val and bool(getattr(field_val, 'name', None)):
+                        abs_p = os.path.join(settings.MEDIA_ROOT, field_val.name)
+                        if os.path.exists(abs_p):
+                            return field_val.name
+                    for rel_p in candidate_rel_paths:
+                        abs_p = os.path.join(settings.MEDIA_ROOT, rel_p)
+                        if os.path.exists(abs_p):
+                            return rel_p
+                    return None
+
+                screenshot = _resolve_cached_file(
+                    cached_job, 'screenshot',
+                    [f'screenshots/job_{cached_job.id}_3d_view.jpg']
+                )
+                verification_screenshot = _resolve_cached_file(
+                    cached_job, 'verification_screenshot',
+                    [
+                        f'screenshots/verification/job_{cached_job.id}_verification.jpg',
+                        f'screenshots/job_{cached_job.id}_verification.jpg',
+                        f'screenshots/verification/job_{cached_job.id}_antenna_verification.jpg',
+                        f'screenshots/job_{cached_job.id}_antenna_verification.jpg'
+                    ]
+                )
+                note_de_calcul = _resolve_cached_file(
+                    cached_job, 'note_de_calcul',
+                    [
+                        f'notes_de_calcul/job_{cached_job.id}_note_de_calcul.rtf',
+                        f'notes_de_calcul/job_{cached_job.id}_antenna_note_de_calcul.rtf'
+                    ]
+                )
+                note_mat = _resolve_cached_file(
+                    cached_job, 'note_mat',
+                    [
+                        f'notes_de_calcul/job_{cached_job.id}_antenna_note_mat.rtf',
+                        f'notes_rrh/job_{cached_job.id}_rrh_note_mat.rtf',
+                        f'notes_de_calcul/job_{cached_job.id}_rrh_note_mat.rtf'
+                    ]
+                )
+                note_plot = _resolve_cached_file(
+                    cached_job, 'note_plot',
+                    [
+                        f'notes_de_calcul/job_{cached_job.id}_antenna_note_plot.rtf',
+                        f'notes_rrh/job_{cached_job.id}_rrh_note_plot.rtf',
+                        f'notes_de_calcul/job_{cached_job.id}_rrh_note_plot.rtf'
+                    ]
+                )
+                assemblage_note = _resolve_cached_file(
+                    cached_job, 'assemblage_note',
+                    [
+                        f'assemblages/job_{cached_job.id}_assemblage_note.rtf',
+                        f'assemblages/job_{cached_job.id}_antenna_assemblage_note.rtf'
+                    ]
+                )
+                reactions_file = _resolve_cached_file(
+                    cached_job, 'reactions_file',
+                    [f'reactions/job_{cached_job.id}_reactions.txt']
+                )
+
+                # Dedicated RRH Support Files
+                note_de_calcul_rrh = _resolve_cached_file(
+                    cached_job, 'note_de_calcul_rrh',
+                    [
+                        f'notes_rrh/job_{cached_job.id}_rrh_note_de_calcul.rtf',
+                        f'notes_de_calcul/job_{cached_job.id}_rrh_note_de_calcul.rtf'
+                    ]
+                )
+                rrh_assemblage_note = _resolve_cached_file(
+                    cached_job, 'rrh_assemblage_note',
+                    [
+                        f'notes_rrh/job_{cached_job.id}_rrh_assemblage_note.rtf',
+                        f'assemblages/job_{cached_job.id}_rrh_assemblage_note.rtf'
+                    ]
+                )
+                rrh_verification_screenshot = _resolve_cached_file(
+                    cached_job, 'rrh_verification_screenshot',
+                    [f'verif_rrh/job_{cached_job.id}_rrh_verification.jpg']
+                )
+                rrh_tableau_charges = _resolve_cached_file(
+                    cached_job, 'rrh_tableau_charges',
+                    [f'charges_rrh/job_{cached_job.id}_rrh_tableau_charges.png']
+                )
+                rrh_reactions_file = _resolve_cached_file(
+                    cached_job, 'rrh_reactions_file',
+                    [f'reactions_rrh/job_{cached_job.id}_rrh_reactions.txt']
+                )
+                rrh_screenshot = _resolve_cached_file(
+                    cached_job, 'rrh_screenshot',
+                    [f'screenshots_rrh/job_{cached_job.id}_rrh_3d_view.jpg']
+                )
+
+                compiled_docx = cached_job.compiled_docx.name if (cached_job.compiled_docx and bool(cached_job.compiled_docx.name)) else None
+                compiled_pdf = cached_job.compiled_pdf.name if (cached_job.compiled_pdf and bool(cached_job.compiled_pdf.name)) else None
+
+                # Create a cloned record with all artifacts preserved
                 new_job = CalculationJob.objects.create(
                     user=user,
                     client_id=client_id,
@@ -244,27 +362,42 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     status="COMPLETED",
                     input_data=input_data,
                     result_data=cached_job.result_data,
-                    screenshot=cached_job.screenshot,
-                    verification_screenshot=cached_job.verification_screenshot,
-                    note_de_calcul=cached_job.note_de_calcul,
-                    note_mat=cached_job.note_mat,
-                    note_plot=cached_job.note_plot,
-                    assemblage_note=cached_job.assemblage_note,
-                    reactions_file=cached_job.reactions_file,
-                    compiled_docx=cached_job.compiled_docx,
-                    compiled_pdf=cached_job.compiled_pdf,
+                    screenshot=screenshot,
+                    verification_screenshot=verification_screenshot,
+                    note_de_calcul=note_de_calcul,
+                    note_mat=note_mat,
+                    note_plot=note_plot,
+                    assemblage_note=assemblage_note,
+                    reactions_file=reactions_file,
+                    note_de_calcul_rrh=note_de_calcul_rrh,
+                    rrh_assemblage_note=rrh_assemblage_note,
+                    rrh_verification_screenshot=rrh_verification_screenshot,
+                    rrh_tableau_charges=rrh_tableau_charges,
+                    rrh_reactions_file=rrh_reactions_file,
+                    rrh_screenshot=rrh_screenshot,
+                    compiled_docx=compiled_docx,
+                    compiled_pdf=compiled_pdf,
                 )
-                serializer = self.get_serializer(new_job)
-                return Response({
-                    "message": "Instant Cache Hit! NDC loaded without recalculation.",
-                    "calculation_id": new_job.id,
-                    "cached": True,
-                    "ndc_hash": ndc_hash,
-                    "status": "COMPLETED",
-                    "data": serializer.data,
-                    "pdf_url": new_job.compiled_pdf.url if new_job.compiled_pdf else None,
-                    "result_data": new_job.result_data,
-                }, status=status.HTTP_200_OK)
+
+                # Post-clone hardened validation: verify the cloned job is 100% complete
+                missing_in_new = validate_calculation_artifacts(new_job)
+                if missing_in_new:
+                    print(f"[NDC HARDENING ERROR] Cloned Job {new_job.id} failed artifact validation: {missing_in_new}. Discarding cache hit and recalculating.")
+                    new_job.status = 'FAILED'
+                    new_job.error_message = f"Calcul dupliqué incomplet : artéfacts manquants ({', '.join(missing_in_new)})"
+                    new_job.save(update_fields=['status', 'error_message'])
+                else:
+                    serializer = self.get_serializer(new_job)
+                    return Response({
+                        "message": "Instant Cache Hit! NDC loaded without recalculation.",
+                        "calculation_id": new_job.id,
+                        "cached": True,
+                        "ndc_hash": ndc_hash,
+                        "status": "COMPLETED",
+                        "data": serializer.data,
+                        "pdf_url": new_job.compiled_pdf.url if new_job.compiled_pdf else None,
+                        "result_data": new_job.result_data,
+                    }, status=status.HTTP_200_OK)
 
         # 3. Create Pending Job
         job = CalculationJob.objects.create(

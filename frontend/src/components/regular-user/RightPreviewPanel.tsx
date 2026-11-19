@@ -48,7 +48,7 @@ export interface RightPreviewPanelProps {
   showPdfPreview: boolean;
   setShowPdfPreview: (show: boolean) => void;
   isFullyStandard: () => boolean;
-  handleGenerateSiteNdc: () => void;
+  handleGenerateSiteNdc: (options?: { forceRecalculate?: boolean }) => void;
   resolveRrh: (id: string) => string;
   resolveRru: (id: string) => string;
   resolveTd: (id: string) => string;
@@ -590,6 +590,44 @@ function RightPreviewPanel({
                     );
                   })()}
                 </div>
+
+                {/* Équipements Aériens Additionnels */}
+                {(() => {
+                  const sec = activeSectors[0] || sectors[0];
+                  const hasEq = Boolean(
+                    sec?.hasFhEquipment ||
+                    (operator !== 'bouygues' && sec?.hasRrhEquipment) ||
+                    sec?.hasRruEquipment ||
+                    (operator === 'free' ? sec?.hasBoitierJonction : sec?.hasCoffret)
+                  );
+                  if (!hasEq) return null;
+                  const eqAncrage = sec?.equipmentFoundationType === 'beton'
+                    ? 'Plot Béton'
+                    : sec?.equipmentFoundationType === 'dallettes'
+                      ? 'Dallettes'
+                      : 'Plot Métallique';
+
+                  return (
+                    <div>
+                      <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        Équipements Aériens Additionnels
+                      </div>
+                      <div className="p-3.5 rounded-xl border bg-violet-50/40 border-violet-200/80 text-violet-950 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                            Type d'ancrage (Équipements)
+                          </span>
+                          <span className="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">
+                            {eqAncrage}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                          Défini
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Status indicator bar */}
@@ -938,7 +976,7 @@ function RightPreviewPanel({
                       <button
                         onClick={() => {
                           setSiteNdcError(null);
-                          handleGenerateSiteNdc();
+                          handleGenerateSiteNdc({ forceRecalculate: true });
                         }}
                         disabled={!canGenerate}
                         className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md shadow-rose-500/25 transition-all text-base cursor-pointer hover:shadow-lg"
@@ -949,7 +987,7 @@ function RightPreviewPanel({
                     </div>
                   ) : (
                     <button
-                      onClick={handleGenerateSiteNdc}
+                      onClick={() => handleGenerateSiteNdc()}
                       disabled={!canGenerate}
                       className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base cursor-pointer ${!canGenerate
                         ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
