@@ -47,6 +47,14 @@ export function CoffretEquipmentToggle({
       scopeBadgeText="Par secteur"
       isIncomplete={isCoffretIncomplete}
     >
+      {setFoundationType && (
+        <EquipmentAncrageSelector
+          value={foundationType}
+          onChange={setFoundationType}
+          className="pb-3 mb-1 border-b border-slate-200/70"
+        />
+      )}
+
       <div className="flex flex-col min-w-0">
         <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1 flex items-center gap-1">
           Type
@@ -110,13 +118,6 @@ export function CoffretEquipmentToggle({
           </div>
         );
       })()}
-
-      {setFoundationType && (
-        <EquipmentAncrageSelector
-          value={foundationType}
-          onChange={setFoundationType}
-        />
-      )}
     </EquipmentToggleCard>
   );
 }

@@ -51,6 +51,15 @@ export function QuantityOnlyEquipmentToggle({
       scopeBadgeText={scopeBadgeText}
     >
       <div className="flex flex-col gap-3">
+        {onFoundationTypeChange && (
+          <EquipmentAncrageSelector
+            value={foundationType}
+            onChange={onFoundationTypeChange}
+            disabled={disabled}
+            className="pb-3 mb-1 border-b border-slate-200/70"
+          />
+        )}
+
         {staticSpecs && staticSpecs.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {staticSpecs.map(spec => (
@@ -75,14 +84,6 @@ export function QuantityOnlyEquipmentToggle({
               size="md"
             />
           </div>
-        )}
-
-        {onFoundationTypeChange && (
-          <EquipmentAncrageSelector
-            value={foundationType}
-            onChange={onFoundationTypeChange}
-            disabled={disabled}
-          />
         )}
       </div>
     </EquipmentToggleCard>

@@ -145,6 +145,15 @@ export function MultiRowEquipmentToggle({
       scopeBadgeText={scopeBadgeText}
       isIncomplete={isIncomplete}
     >
+      {onFoundationTypeChange && (
+        <EquipmentAncrageSelector
+          value={foundationType}
+          onChange={onFoundationTypeChange}
+          disabled={disabled}
+          className="pb-3 mb-1 border-b border-slate-200/70"
+        />
+      )}
+
       {items.map((item) => (
         <div
           key={item.id}
@@ -229,14 +238,6 @@ export function MultiRowEquipmentToggle({
         <Plus className="w-3.5 h-3.5" />
         Ajouter
       </button>
-
-      {onFoundationTypeChange && (
-        <EquipmentAncrageSelector
-          value={foundationType}
-          onChange={onFoundationTypeChange}
-          disabled={disabled}
-        />
-      )}
     </EquipmentToggleCard>
   );
 }

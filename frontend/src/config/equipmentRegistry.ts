@@ -85,7 +85,7 @@ export function isEquipmentAllowedForOperator(equipmentId: string, operator: str
 }
 
 export function extractSectorAerialState(sector?: SectorData) {
-  const fallbackFoundation = sector?.equipmentFoundationType || 'metallique';
+  const fallbackFoundation = sector?.equipmentFoundationType || 'dallettes';
   return {
     hasFhEquipment: !!sector?.hasFhEquipment,
     fhDiameter: sector?.fhDiameter ?? 300,

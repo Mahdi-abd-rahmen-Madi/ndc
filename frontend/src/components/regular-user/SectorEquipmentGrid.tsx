@@ -50,7 +50,7 @@ export function SectorEquipmentGrid({
         setFhQuantity={(val) => syncUpdates({ fhQuantity: val })}
         fhOptions={config?.fh_references || []}
         nombreSecteurs={nombreSecteurs}
-        foundationType={sector.fhFoundationType || sector.equipmentFoundationType || 'metallique'}
+        foundationType={sector.fhFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ fhFoundationType: val, equipmentFoundationType: val })}
       />
 
@@ -75,7 +75,7 @@ export function SectorEquipmentGrid({
           nombreSecteurs={nombreSecteurs}
           disabled={isRrhDisabled}
           disabledReason={isRrhDisabled ? 'Non cumulable avec RRU' : undefined}
-          foundationType={sector.rrhFoundationType || sector.equipmentFoundationType || 'metallique'}
+          foundationType={sector.rrhFoundationType || sector.equipmentFoundationType || 'dallettes'}
           setFoundationType={(val) => syncUpdates({ rrhFoundationType: val, equipmentFoundationType: val })}
         />
       )}
@@ -101,7 +101,7 @@ export function SectorEquipmentGrid({
         nombreSecteurs={nombreSecteurs}
         disabled={isRruDisabled}
         disabledReason={isRruDisabled ? 'Non cumulable avec RRH' : undefined}
-        foundationType={sector.rruFoundationType || sector.equipmentFoundationType || 'metallique'}
+        foundationType={sector.rruFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ rruFoundationType: val, equipmentFoundationType: val })}
       />
 
@@ -112,7 +112,7 @@ export function SectorEquipmentGrid({
           setHasBoitierJonction={(val) => syncUpdates({ hasBoitierJonction: val })}
           boitierJonctionQuantity={sector.boitierJonctionQuantity || 1}
           setBoitierJonctionQuantity={(val) => syncUpdates({ boitierJonctionQuantity: val })}
-          foundationType={sector.boitierJonctionFoundationType || sector.equipmentFoundationType || 'metallique'}
+          foundationType={sector.boitierJonctionFoundationType || sector.equipmentFoundationType || 'dallettes'}
           setFoundationType={(val) => syncUpdates({ boitierJonctionFoundationType: val, equipmentFoundationType: val })}
         />
       ) : (
@@ -124,7 +124,7 @@ export function SectorEquipmentGrid({
           coffretOptions={config?.coffret_references || []}
           operator={operator}
           nombreSecteurs={nombreSecteurs}
-          foundationType={sector.coffretFoundationType || sector.equipmentFoundationType || 'metallique'}
+          foundationType={sector.coffretFoundationType || sector.equipmentFoundationType || 'dallettes'}
           setFoundationType={(val) => syncUpdates({ coffretFoundationType: val, equipmentFoundationType: val })}
         />
       )}
