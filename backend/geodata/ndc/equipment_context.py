@@ -299,7 +299,7 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
             )
         )
     )
-    is_sans_plot = True if raw_sans_plot is None else bool(raw_sans_plot)
+    is_sans_plot = False if raw_sans_plot is None else bool(raw_sans_plot)
 
     try:
         qp = float(wind.get("qp_dan") or qp_val or 0.0)

@@ -150,7 +150,7 @@ class RRHEquipmentSerializer(serializers.Serializer):
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
-    sans_plot = serializers.BooleanField(required=False, default=True)
+    sans_plot = serializers.BooleanField(required=False, default=False)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 

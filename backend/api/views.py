@@ -271,17 +271,17 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # 1. Detect type and compute unique deterministic NDC hash
         calc_type = detect_calculation_type(input_data)
 
-        # Default new RRU queries to sans_plot=True if not explicitly specified
+        # Default new RRU queries to sans_plot=False (with plot) if not explicitly specified
         if calc_type == "rru" or input_data.get("is_rru"):
             if input_data.get("sans_plot") is None:
-                input_data["sans_plot"] = True
+                input_data["sans_plot"] = False
             rru_eq = input_data.get("rru_equipment")
             if isinstance(rru_eq, dict) and rru_eq.get("sans_plot") is None:
-                rru_eq["sans_plot"] = True
+                rru_eq["sans_plot"] = False
         elif isinstance(input_data.get("rru_equipment"), dict):
             rru_eq = input_data["rru_equipment"]
             if rru_eq.get("enabled") and rru_eq.get("sans_plot") is None:
-                rru_eq["sans_plot"] = True
+                rru_eq["sans_plot"] = False
         elif input_data.get("sans_plot") is None:
             input_data["sans_plot"] = False
 

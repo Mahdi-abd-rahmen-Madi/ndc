@@ -63,7 +63,8 @@ def resolve_sans_plot(
 
     Rules:
     - Explicit True on top-level, nested structure, equipment sub-dict, or result_data wins.
-    - For RRU (standalone or composite), defaults to True unless explicitly set to False.
+    - Explicit False on top-level, nested structure, equipment sub-dict, or result_data wins.
+    - Defaults to False (with plot) unless explicitly set to True (sans plot).
     - For RRH, checks `rrh_sans_plot`, `rrh_equipment.sans_plot`, `rrh.sans_plot`,
       top-level `sans_plot`, and `"sans_plot"` in `calculation_type`.
     """
@@ -89,11 +90,11 @@ def resolve_sans_plot(
             inp.get("sans_plot"),
             struct.get("sans_plot"),
         ):
-            if explicit is False:
-                return False
             if explicit is True:
                 return True
-        return True
+            if explicit is False:
+                return False
+        return False
 
     rrh_eq = inp.get("rrh_equipment") if isinstance(inp.get("rrh_equipment"), dict) else {}
     rrh_sub = res.get("rrh") if isinstance(res.get("rrh"), dict) else {}

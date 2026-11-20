@@ -87,7 +87,7 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     if isinstance(rru_eq, dict) and rru_eq.get("enabled"):
         rru_eq_copy = dict(rru_eq)
         if rru_eq_copy.get("sans_plot") is None:
-            rru_eq_copy["sans_plot"] = True
+            rru_eq_copy["sans_plot"] = False
         canonical["rru_equipment"] = _normalize(rru_eq_copy)
 
     rrh_eq = data.get("rrh_equipment")

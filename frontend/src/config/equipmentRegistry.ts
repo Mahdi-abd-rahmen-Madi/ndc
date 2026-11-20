@@ -244,7 +244,7 @@ export function buildSectorEquipmentPayload({
     },
     rru_equipment: {
       enabled: aerial.hasRruEquipment,
-      sans_plot: true,
+      sans_plot: false,
       ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
       items: aerial.hasRruEquipment
         ? aerial.rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity }))
