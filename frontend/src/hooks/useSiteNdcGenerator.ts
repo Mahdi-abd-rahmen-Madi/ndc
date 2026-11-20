@@ -20,6 +20,14 @@ import { apiClient, buildWebSocketUrl } from '../services/apiClient';
  */
 export const FORCE_WORKER_CALCULATION = true;
 
+/**
+ * DEVELOPMENT FLAG:
+ * When true, sends `force_recalculate: true` on every calculation request to bypass
+ * the backend database cache and always dispatch to the Robot worker.
+ * Set to false in production to re-enable instant cache hits.
+ */
+export const FORCE_RECALCULATE_BYPASS_CACHE = true;
+
 interface UseSiteNdcGeneratorParams {
   apiBaseUrl: string;
   config: CatalogueConfig | null;
@@ -326,7 +334,7 @@ export function useSiteNdcGenerator({
             resolveBaieItems,
           }),
           site_image_url: siteImageUrl,
-          force_recalculate: Boolean(forceRecalculate)
+          force_recalculate: FORCE_RECALCULATE_BYPASS_CACHE || Boolean(forceRecalculate)
         };
 
         try {

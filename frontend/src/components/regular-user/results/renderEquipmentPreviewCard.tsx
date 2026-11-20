@@ -33,9 +33,15 @@ export function renderEquipmentPreviewCard({
     if (equipmentValues.fhItems && Array.isArray(equipmentValues.fhItems) && equipmentValues.fhItems.length > 0) {
       return equipmentValues.fhItems.map((item: any, index: number) => {
         const qVal = item.quantity || 1;
-        const ref = item.reference || item.name || 'N/A';
+        const ref = item.reference || item.name || 'Antenne FH';
         const vendor = item.vendor;
         const model = stripVendorPrefix(ref, vendor);
+        const diameter = item.diameter_mm || equipmentValues.fhDiameter;
+        const weight = item.weight_kg || equipmentValues.fhWeight;
+
+        const extraSpecs: Record<string, any> = {};
+        if (diameter) extraSpecs['Diamètre'] = `Ø${diameter} mm`;
+        if (weight) extraSpecs['Poids'] = `${weight} kg`;
 
         return (
           <EquipmentPreviewCard
@@ -44,23 +50,30 @@ export function renderEquipmentPreviewCard({
             icon={IconComponent}
             color="amber"
             scopeBadge={{
-              text: `${qVal} par site`,
+              text: `${qVal} par secteur`,
               bg: 'bg-amber-50',
               textCol: 'text-amber-700',
               border: 'border-amber-200'
             }}
             marque={vendor}
             modele={model}
+            extraSpecs={Object.keys(extraSpecs).length > 0 ? extraSpecs : undefined}
           />
         );
       });
     }
 
     const fhVal = equipmentValues.fh || {};
-    const qVal = fhVal.quantité || 1;
-    const ref = fhVal.référence || 'N/A';
+    const qVal = fhVal.quantité || equipmentValues.fhQuantity || 1;
+    const ref = fhVal.référence || equipmentValues.fhReference || 'Antenne FH';
     const vendor = fhVal.marque;
     const model = stripVendorPrefix(ref, vendor);
+    const diameter = equipmentValues.fhDiameter;
+    const weight = equipmentValues.fhWeight;
+
+    const extraSpecs: Record<string, any> = {};
+    if (diameter) extraSpecs['Diamètre'] = `Ø${diameter} mm`;
+    if (weight) extraSpecs['Poids'] = `${weight} kg`;
 
     return (
       <EquipmentPreviewCard
@@ -76,6 +89,7 @@ export function renderEquipmentPreviewCard({
         }}
         marque={vendor}
         modele={model}
+        extraSpecs={Object.keys(extraSpecs).length > 0 ? extraSpecs : undefined}
       />
     );
   }

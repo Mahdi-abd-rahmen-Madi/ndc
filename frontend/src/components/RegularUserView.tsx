@@ -563,6 +563,17 @@ export default function RegularUserView({
                               </div>
                             ) : undefined}
                           >
+                            {isCollapsed ? (
+                              <SectorEquipmentGrid
+                                sector={sector}
+                                sectorIndex={idx}
+                                updateSector={updateSector}
+                                config={config}
+                                operator={operator}
+                                nombreSecteurs={nombreSecteurs}
+                                onlyFh
+                              />
+                            ) : (
                             <div className="mt-4 pt-4 border-t border-slate-200/80">
                               <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
@@ -587,6 +598,7 @@ export default function RegularUserView({
                                 nombreSecteurs={nombreSecteurs}
                               />
                             </div>
+                            )}
                           </SectorConfigurator>
                         </Fragment>
                       );

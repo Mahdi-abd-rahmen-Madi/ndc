@@ -23,6 +23,18 @@ interface UseSectorManagerOptions {
   setZoneTechnique: React.Dispatch<React.SetStateAction<ZoneTechniqueData>>;
 }
 
+// FH is configured per sector, even when sectors share identical antennas.
+const FH_KEYS: (keyof SectorData)[] = [
+  'hasFhEquipment', 'fhItems', 'fhReference', 'fhDiameter', 'fhQuantity', 'fhWeight', 'fhFoundationType',
+];
+
+function getFhSignature(s: SectorData): string {
+  if (!s.hasFhEquipment) return 'nofh';
+  const items = (s.fhItems && s.fhItems.length > 0 ? s.fhItems : [{ reference: s.fhReference, quantity: s.fhQuantity }])
+    .map(i => `${i.reference}x${i.quantity ?? 1}`).join(',');
+  return `fh:${items}:${s.fhFoundationType ?? ''}`;
+}
+
 export function useSectorManager({
   apiBaseUrl,
   config,
@@ -88,8 +100,14 @@ export function useSectorManager({
       next[index] = { ...next[index], ...finalUpdates };
 
       if (index === 0 && similarityMode === 'all_similar') {
-        next[1] = { ...next[1], ...finalUpdates };
-        next[2] = { ...next[2], ...finalUpdates };
+        const shared: Partial<SectorData> = { ...finalUpdates };
+        FH_KEYS.forEach(k => { delete shared[k]; });
+        // RRH/RRU and FH are mutually exclusive on a sector
+        if (shared.hasRrhEquipment || shared.hasRruEquipment) {
+          shared.hasFhEquipment = false;
+        }
+        next[1] = { ...next[1], ...shared };
+        next[2] = { ...next[2], ...shared };
       }
       return next;
     });
@@ -101,8 +119,9 @@ export function useSectorManager({
       setSectors(prev => {
         const s1 = prev[0];
         const next = [...prev];
-        next[1] = { ...s1, id: next[1].id, lookupResult: next[1].lookupResult, loading: next[1].loading, error: next[1].error };
-        next[2] = { ...s1, id: next[2].id, lookupResult: next[2].lookupResult, loading: next[2].loading, error: next[2].error };
+        const keepFh = (s: SectorData) => Object.fromEntries(FH_KEYS.map(k => [k, s[k]]));
+        next[1] = { ...s1, ...keepFh(next[1]), id: next[1].id, lookupResult: next[1].lookupResult, loading: next[1].loading, error: next[1].error };
+        next[2] = { ...s1, ...keepFh(next[2]), id: next[2].id, lookupResult: next[2].lookupResult, loading: next[2].loading, error: next[2].error };
         return next;
       });
     }
@@ -210,6 +229,7 @@ export function useSectorManager({
       if (similarityMode === 'all_similar') {
         hash = 'unified_group';
       }
+      hash += `_${getFhSignature(s)}`;
       if (!uniqueGroupsMap.has(hash)) {
         uniqueGroupsMap.set(hash, { hash, indices: [idx], sector: s });
       } else {

@@ -13,6 +13,8 @@ export interface SectorEquipmentGridProps {
   config: CatalogueConfig | null;
   operator?: string;
   nombreSecteurs?: number;
+  /** Only render the per-sector FH block (used for sectors whose antennas mirror Secteur 1). */
+  onlyFh?: boolean;
 }
 
 export function SectorEquipmentGrid({
@@ -21,7 +23,8 @@ export function SectorEquipmentGrid({
   updateSector,
   config,
   operator = 'bouygues',
-  nombreSecteurs = 1
+  nombreSecteurs = 1,
+  onlyFh = false
 }: SectorEquipmentGridProps) {
   const syncUpdates = (updates: Partial<SectorData>) => {
     updateSector(sectorIndex, updates);
@@ -32,37 +35,46 @@ export function SectorEquipmentGrid({
   const isRruDisabled = isOrange && !!sector.hasRrhEquipment;
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className={onlyFh ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
       {/* 1. FH */}
       <FHEquipmentToggle
         hasFhEquipment={!!sector.hasFhEquipment}
-        setHasFhEquipment={(val) => syncUpdates({ hasFhEquipment: val })}
+        setHasFhEquipment={(val) => {
+          if (val) {
+            syncUpdates({ hasFhEquipment: true, hasRrhEquipment: false, hasRruEquipment: false });
+          } else {
+            syncUpdates({ hasFhEquipment: false });
+          }
+        }}
         fhItems={sector.fhItems || []}
         setFhItems={(val) => {
           const newItems = typeof val === 'function' ? val(sector.fhItems || []) : val;
           syncUpdates({ fhItems: newItems });
         }}
-        fhDiameter={sector.fhDiameter || 0}
+        fhDiameter={sector.fhDiameter}
         setFhDiameter={(val) => syncUpdates({ fhDiameter: val })}
         fhReference={sector.fhReference || ''}
         setFhReference={(val) => syncUpdates({ fhReference: val })}
         fhQuantity={sector.fhQuantity || 1}
         setFhQuantity={(val) => syncUpdates({ fhQuantity: val })}
+        fhWeight={sector.fhWeight}
+        setFhWeight={(val) => syncUpdates({ fhWeight: val })}
         fhOptions={config?.fh_references || []}
         nombreSecteurs={nombreSecteurs}
         foundationType={sector.fhFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ fhFoundationType: val, equipmentFoundationType: val })}
       />
 
+      {!onlyFh && <>
       {/* 2. RRH (Non-Bouygues) */}
       {operator !== 'bouygues' && (
         <RRHEquipmentToggle
           hasRrhEquipment={!!sector.hasRrhEquipment}
           setHasRrhEquipment={(val) => {
-            if (val && isOrange) {
-              syncUpdates({ hasRrhEquipment: true, hasRruEquipment: false });
+            if (val) {
+              syncUpdates({ hasRrhEquipment: true, hasRruEquipment: false, hasFhEquipment: false });
             } else {
-              syncUpdates({ hasRrhEquipment: val });
+              syncUpdates({ hasRrhEquipment: false });
             }
           }}
           rrhItems={sector.rrhItems || []}
@@ -84,10 +96,10 @@ export function SectorEquipmentGrid({
       <RRUEquipmentToggle
         hasRruEquipment={!!sector.hasRruEquipment}
         setHasRruEquipment={(val) => {
-          if (val && isOrange) {
-            syncUpdates({ hasRruEquipment: true, hasRrhEquipment: false });
+          if (val) {
+            syncUpdates({ hasRruEquipment: true, hasRrhEquipment: false, hasFhEquipment: false });
           } else {
-            syncUpdates({ hasRruEquipment: val });
+            syncUpdates({ hasRruEquipment: false });
           }
         }}
         rruItems={sector.rruItems || []}
@@ -128,6 +140,7 @@ export function SectorEquipmentGrid({
           setFoundationType={(val) => syncUpdates({ coffretFoundationType: val, equipmentFoundationType: val })}
         />
       )}
+      </>}
     </div>
   );
 }

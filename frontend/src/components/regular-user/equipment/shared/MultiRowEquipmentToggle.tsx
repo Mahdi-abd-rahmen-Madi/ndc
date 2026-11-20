@@ -27,6 +27,10 @@ export interface MultiRowEquipmentToggleProps {
   quantityLabel?: string;
   unitLabel?: string;
   nombreSecteurs?: number;
+  /** When false, only a single row is allowed (no add / delete buttons). */
+  allowMultiple?: boolean;
+  /** Maximum number of rows when allowMultiple is true. */
+  maxRows?: number;
   disabled?: boolean;
   disabledReason?: string;
   foundationType?: EquipmentFoundationType;
@@ -48,6 +52,8 @@ export function MultiRowEquipmentToggle({
   quantityLabel,
   unitLabel,
   nombreSecteurs,
+  allowMultiple = true,
+  maxRows,
   disabled = false,
   disabledReason,
   foundationType,
@@ -217,7 +223,7 @@ export function MultiRowEquipmentToggle({
               nombreSecteurs={nombreSecteurs}
             />
 
-            <button
+            {allowMultiple && <button
               type="button"
               onClick={() => removeRow(item.id)}
               disabled={items.length === 1}
@@ -225,19 +231,22 @@ export function MultiRowEquipmentToggle({
               title="Supprimer"
             >
               <Trash2 className="w-4 h-4" />
-            </button>
+            </button>}
           </div>
         </div>
       ))}
 
-      <button
+      {allowMultiple && (maxRows === undefined || items.length < maxRows) && <button
         type="button"
         onClick={addRow}
         className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
-        Ajouter
-      </button>
+        Ajouter{maxRows !== undefined ? ` (${items.length}/${maxRows})` : ''}
+      </button>}
+      {allowMultiple && maxRows !== undefined && items.length >= maxRows && (
+        <p className="text-[11px] text-slate-500">Maximum {maxRows} références par secteur atteint.</p>
+      )}
     </EquipmentToggleCard>
   );
 }

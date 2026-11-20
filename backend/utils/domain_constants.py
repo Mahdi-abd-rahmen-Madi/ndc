@@ -14,7 +14,15 @@ WIND_REGION_VB0: Dict[int, int] = {
 
 V_B0_TO_REGION: Dict[int, int] = {vb: reg for reg, vb in WIND_REGION_VB0.items()}
 
-# Operators where TD (Tableau de Distribution) auxiliary PDF / UI is disabled
+# Strict FH antenna diameters (mm) and aerodynamic wind drag coefficients (Cf = 1.0)
+ALLOWED_FH_DIAMETERS = frozenset({300, 600, 900, 1200})
+FH_DIAMETER_COEFFICIENTS: Dict[int, float] = {
+    300: 0.03,
+    600: 0.06,
+    900: 0.09,
+    1200: 1.2,
+}
+
 OPERATORS_WITHOUT_TD = frozenset({"bouygues", "orange"})
 
 OPERATOR_ALIASES: Dict[str, str] = {
@@ -78,6 +86,25 @@ def resolve_sans_plot(
         or ""
     ).lower().strip()
     eq_kind = (kind or ct).lower().strip()
+
+    if eq_kind in ("fh", "fh_sans_plot") or inp.get("is_fh") is True or "fh" in ct:
+        fh_eq = inp.get("fh_equipment") if isinstance(inp.get("fh_equipment"), dict) else {}
+        fh_sub = res.get("fh") if isinstance(res.get("fh"), dict) else {}
+        struct_fh = inp.get("structure_fh") if isinstance(inp.get("structure_fh"), dict) else {}
+        for explicit in (
+            res.get("fh_sans_plot"),
+            fh_sub.get("sans_plot"),
+            fh_eq.get("sans_plot"),
+            inp.get("fh_sans_plot"),
+            inp.get("sans_plot"),
+            struct_fh.get("sans_plot"),
+            struct.get("sans_plot"),
+        ):
+            if explicit is True:
+                return True
+            if explicit is False:
+                return False
+        return "sans_plot" in ct
 
     if eq_kind == "rru" or inp.get("is_rru") is True:
         rru_eq = inp.get("rru_equipment") if isinstance(inp.get("rru_equipment"), dict) else {}

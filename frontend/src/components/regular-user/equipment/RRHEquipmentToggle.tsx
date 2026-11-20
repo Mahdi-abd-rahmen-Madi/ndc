@@ -48,6 +48,7 @@ export function RRHEquipmentToggle({
       scopeBadgeText="Par secteur"
       selectRingClass="focus:ring-2 focus:ring-rose-500"
       unitLabel="/ secteur"
+      maxRows={6}
       nombreSecteurs={nombreSecteurs}
       disabled={disabled}
       disabledReason={disabledReason}

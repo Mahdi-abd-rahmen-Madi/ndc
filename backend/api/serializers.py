@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import UserProfile, Role, EngineerProfile, CalculationJob, GeneratedSiteNdc
+from utils.domain_constants import ALLOWED_FH_DIAMETERS
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -47,6 +48,8 @@ class CalculationJobSerializer(serializers.ModelSerializer):
             'note_de_calcul', 'note_mat', 'note_plot', 'assemblage_note', 'reactions_file',
             'note_de_calcul_rrh', 'rrh_assemblage_note', 'rrh_verification_screenshot',
             'rrh_tableau_charges', 'rrh_reactions_file', 'rrh_screenshot',
+            'note_de_calcul_fh', 'fh_note_mat', 'fh_note_plot', 'fh_assemblage_note',
+            'fh_verification_screenshot', 'fh_tableau_charges', 'fh_reactions_file', 'fh_screenshot',
             'compiled_docx', 'compiled_pdf', 'credits_consumed',
             'created_at', 'updated_at'
         ]
@@ -56,6 +59,8 @@ class CalculationJobSerializer(serializers.ModelSerializer):
             'note_de_calcul', 'note_mat', 'note_plot', 'assemblage_note', 'reactions_file',
             'note_de_calcul_rrh', 'rrh_assemblage_note', 'rrh_verification_screenshot',
             'rrh_tableau_charges', 'rrh_reactions_file', 'rrh_screenshot',
+            'note_de_calcul_fh', 'fh_note_mat', 'fh_note_plot', 'fh_assemblage_note',
+            'fh_verification_screenshot', 'fh_tableau_charges', 'fh_reactions_file', 'fh_screenshot',
             'compiled_docx', 'compiled_pdf', 'credits_consumed',
             'created_at', 'updated_at'
         ]
@@ -120,18 +125,52 @@ class AntennaSerializer(serializers.Serializer):
     poids_kg = serializers.FloatField(required=False, allow_null=True)
     hauteur_mat_antenne_m = serializers.FloatField(required=False, allow_null=True)
 
+class StructureFHSerializer(serializers.Serializer):
+    mast_section = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="TRON 88x2.5")
+    plot_section = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="TCAR 150x5")
+    hauteur_mat_m = serializers.FloatField(required=False, allow_null=True, default=1.70)
+    hauteur_plot_m = serializers.FloatField(required=False, allow_null=True, default=0.50)
+    sans_plot = serializers.BooleanField(required=False, default=False)
+
 class EquipmentItemSerializer(serializers.Serializer):
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     quantity = serializers.IntegerField(required=False, allow_null=True)
+    diameter_mm = serializers.FloatField(required=False, allow_null=True)
+    weight_kg = serializers.FloatField(required=False, allow_null=True)
 
 class FHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
+    sans_plot = serializers.BooleanField(required=False, default=False)
     diameter_mm = serializers.FloatField(required=False, allow_null=True)
-    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    quantity = serializers.IntegerField(required=False, allow_null=True)
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="Antenne FH")
+    quantity = serializers.IntegerField(required=False, allow_null=True, default=1)
     weight_kg = serializers.FloatField(required=False, allow_null=True)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
-    items = EquipmentItemSerializer(many=True, required=False)
+    items = serializers.ListField(child=serializers.DictField(), required=False, default=list)
+
+    def validate(self, data):
+        if data.get('enabled'):
+            items = data.get('items') or []
+            if not items:
+                diam = data.get('diameter_mm')
+                weight = data.get('weight_kg')
+                if diam is None or int(float(diam)) not in ALLOWED_FH_DIAMETERS or float(diam) % 1 != 0:
+                    raise serializers.ValidationError(
+                        f"FH diameter_mm must be one of 300, 600, 900, 1200 mm (got {diam})."
+                    )
+                if weight is None or float(weight) <= 0:
+                    raise serializers.ValidationError("FH weight_kg must be > 0.")
+            else:
+                for idx, it in enumerate(items, 1):
+                    diam = it.get('diameter_mm') or data.get('diameter_mm')
+                    weight = it.get('weight_kg') or data.get('weight_kg')
+                    if diam is None or int(float(diam)) not in ALLOWED_FH_DIAMETERS or float(diam) % 1 != 0:
+                        raise serializers.ValidationError(
+                            f"FH item #{idx}: diameter_mm must be one of 300, 600, 900, 1200 mm (got {diam})."
+                        )
+                    if weight is None or float(weight) <= 0:
+                        raise serializers.ValidationError(f"FH item #{idx}: weight_kg must be > 0.")
+        return data
 
 class EquipmentPayloadSerializer(serializers.Serializer):
     model = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -164,6 +203,7 @@ class CalculationPayloadSerializer(serializers.Serializer):
     client_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     is_rrh = serializers.BooleanField(required=False, default=False)
     is_rru = serializers.BooleanField(required=False, default=False)
+    is_fh = serializers.BooleanField(required=False, default=False)
     sans_plot = serializers.BooleanField(required=False, default=None, allow_null=True)
     operateur = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     calculation_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -172,6 +212,7 @@ class CalculationPayloadSerializer(serializers.Serializer):
     site = SiteSerializer(required=False, allow_null=True)
     environment = EnvironmentSerializer()
     structure = StructureSerializer()
+    structure_fh = StructureFHSerializer(required=False, allow_null=True)
     antenna_4g = AntennaSerializer(required=False, allow_null=True)
     antenna_5g = AntennaSerializer(required=False, allow_null=True)
     equipment = EquipmentPayloadSerializer(required=False, allow_null=True)

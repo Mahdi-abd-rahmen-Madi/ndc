@@ -17,23 +17,41 @@ def detect_calculation_type(input_data: Dict[str, Any]) -> str:
         return "antenna"
     if input_data.get("calculation_type"):
         return str(input_data["calculation_type"]).lower().strip()
+    if input_data.get("is_fh") is True:
+        return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
     if input_data.get("is_rru") is True:
-        return "rru"
+        return "rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru"
     if input_data.get("is_rrh") is True:
-        return "rrh"
+        return "rrh_sans_plot" if resolve_sans_plot(input_data, kind="rrh") else "rrh"
     type_str = f"{input_data.get('type_support', '')} {input_data.get('type', '')}".lower()
+    if "fh" in type_str or "faisceau" in type_str:
+        return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
     if "rru" in type_str:
-        return "rru"
+        return "rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru"
     if "rrh" in type_str:
-        return "rrh"
+        return "rrh_sans_plot" if resolve_sans_plot(input_data, kind="rrh") else "rrh"
+
+    has_antenna = bool(input_data.get("antenna_4g") or input_data.get("antenna_5g"))
+    fh_eq = input_data.get("fh_equipment")
+    if isinstance(fh_eq, dict) and fh_eq.get("enabled"):
+        if not has_antenna:
+            return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
+        return "antenna_with_fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "antenna_with_fh"
+
+    rru_eq = input_data.get("rru_equipment")
+    if isinstance(rru_eq, dict) and rru_eq.get("enabled") and not has_antenna:
+        return "rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru"
+
     eq = input_data.get("equipment")
     if eq and isinstance(eq, dict):
         eq_label = f"{eq.get('model', '')} {eq.get('reference', '')}".lower()
+        if "fh" in eq_label:
+            return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
         if "rru" in eq_label or "radio " in eq_label:
             return "rru"
         if "rrh" in eq_label:
             return "rrh"
-        if "antenna_4g" not in input_data and "antenna_5g" not in input_data:
+        if not has_antenna:
             return "rrh"
     return "antenna"
 
@@ -94,8 +112,20 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     if isinstance(rrh_eq, dict) and rrh_eq.get("enabled"):
         canonical["rrh_equipment"] = _normalize(rrh_eq)
 
-    is_rru = normalized_type == "rru" or data.get("is_rru") is True
-    if resolve_sans_plot(data, calc_type=normalized_type, kind="rru" if is_rru else normalized_type):
+    fh_eq = data.get("fh_equipment")
+    if isinstance(fh_eq, dict) and fh_eq.get("enabled"):
+        fh_eq_copy = dict(fh_eq)
+        if fh_eq_copy.get("sans_plot") is None:
+            fh_eq_copy["sans_plot"] = False
+        canonical["fh_equipment"] = _normalize(fh_eq_copy)
+
+    if "structure_fh" in data and isinstance(data["structure_fh"], dict):
+        canonical["structure_fh"] = _normalize(data["structure_fh"])
+
+    is_rru = normalized_type in ("rru", "rru_sans_plot", "antenna_with_rru", "antenna_with_rru_sans_plot") or data.get("is_rru") is True
+    is_fh = normalized_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot") or data.get("is_fh") is True
+    target_kind = "fh" if is_fh else ("rru" if is_rru else normalized_type)
+    if resolve_sans_plot(data, calc_type=normalized_type, kind=target_kind):
         canonical["sans_plot"] = True
 
     op = normalize_operator(data.get("operateur") or data.get("operator"), fallback_site=data.get("site"))

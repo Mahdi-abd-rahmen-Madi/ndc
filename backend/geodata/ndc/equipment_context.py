@@ -548,3 +548,236 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
     }
 
+
+def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: float = 0.0) -> dict:
+    """
+    Extracts FH data from result_data with fallback to input_data for preview/pre-worker states.
+    Golden Rule: Never recalculate qp, d_coef, or FwFH in Django if already computed by worker.
+    Table 0 has 4 columns: [Désignation, Quantité, Dimensions (mm), Poids (kg)] (no État column).
+    """
+    from utils.domain_constants import FH_DIAMETER_COEFFICIENTS, resolve_sans_plot
+
+    result_data = result_data if isinstance(result_data, dict) else {}
+    input_data = input_data if isinstance(input_data, dict) else {}
+    fh_sub = result_data.get("fh") if isinstance(result_data.get("fh"), dict) else {}
+
+    raw_items = result_data.get("fh_items") or fh_sub.get("fh_items") or []
+    totals = result_data.get("fh_totals") or fh_sub.get("fh_totals") or {}
+    wind = (
+        result_data.get("fh_wind_params")
+        or fh_sub.get("wind_params")
+        or result_data.get("wind_params")
+        or {}
+    )
+    structure = fh_sub.get("structure_params") or result_data.get("structure_params") or {}
+    if not structure:
+        structure = input_data.get("structure_fh") or input_data.get("structure") or {}
+
+    is_sans_plot = resolve_sans_plot(input_data, result_data, kind="fh")
+
+    try:
+        qp = float(wind.get("qp_dan") or qp_val or 0.0)
+    except (ValueError, TypeError):
+        qp = 0.0
+
+    items = []
+    if raw_items:
+        tot_qty = 0
+        tot_weight = 0.0
+        tot_fw_fh = 0.0
+        fw_parts = []
+
+        for idx, it in enumerate(raw_items, start=1):
+            qty = int(it.get("qty") or it.get("quantity") or 1)
+            diam = float(it.get("diameter_mm") or it.get("diametre_mm") or 600.0)
+            dims_str = it.get("dimensions_str") or f"Ø{diam:g}"
+            w_kg = float(it.get("weight_kg") or 0.0)
+            w_tot = float(it.get("weight_total_kg") if it.get("weight_total_kg") is not None else round(qty * w_kg, 2))
+            d_coef = float(it.get("d_coef") or FH_DIAMETER_COEFFICIENTS.get(int(diam), 0.06))
+            cf_fh = float(it.get("cf_fh") or 1.0)
+
+            fw_raw = it.get("fw_fh") if it.get("fw_fh") is not None else it.get("fw_front")
+            fw_fh_i = float(fw_raw) if fw_raw is not None else (round(qty * cf_fh * d_coef * qp, 2) if qp else 0.0)
+
+            formula = it.get("fw_fh_formula") or (
+                f"{qty} * {cf_fh:g} * {d_coef:g} * {qp:.2f} = {fw_fh_i:.2f} daN"
+                if qp else f"{fw_fh_i:.2f} daN"
+            )
+
+            items.append({
+                "index": it.get("index", idx),
+                "name": clean_equipment_designation(it.get("name") or it.get("reference") or "Antenne FH"),
+                "qty": qty,
+                "quantity": qty,
+                "diameter_mm": diam,
+                "diametre_mm": diam,
+                "dimensions_str": dims_str,
+                "weight_kg": w_kg,
+                "weight_unit_kg": f"{w_kg:g}",
+                "weight_total_kg": w_tot,
+                "pe_dan": w_tot,
+                "d_coef": d_coef,
+                "cf_fh": cf_fh,
+                "fw_fh": fw_fh_i,
+                "fw_front": fw_fh_i,
+                "fw_lat": fw_fh_i,
+                "fw_fh_formula": formula,
+            })
+            tot_qty += qty
+            tot_weight += w_tot
+            tot_fw_fh += fw_fh_i
+            fw_parts.append(f"{fw_fh_i:.2f}")
+
+        totals = dict(totals) if isinstance(totals, dict) else {}
+        totals.setdefault("count", len(items))
+        totals.setdefault("qty_total", tot_qty)
+        totals.setdefault("weight_total_kg", round(tot_weight, 2))
+        totals.setdefault("pe_dan", totals.get("weight_total_kg", round(tot_weight, 2)))
+        if totals.get("fw_fh") is None:
+            totals["fw_fh"] = round(tot_fw_fh, 2)
+        if totals.get("fw_front") is None:
+            totals["fw_front"] = totals["fw_fh"]
+        if totals.get("fw_lat") is None:
+            totals["fw_lat"] = totals["fw_fh"]
+        if not totals.get("fw_fh_formula"):
+            totals["fw_fh_formula"] = (
+                " + ".join(fw_parts) + f" = {round(tot_fw_fh, 2):.2f} daN"
+                if len(fw_parts) > 1
+                else (f"{round(tot_fw_fh, 2):.2f} daN" if fw_parts else "0.00 daN")
+            )
+
+    # Fallback from input_data when result_data has no items
+    if not items:
+        fh_eq = input_data.get("fh_equipment") or {}
+        raw_in_items = fh_eq.get("items") or []
+        if not raw_in_items and fh_eq.get("enabled"):
+            raw_in_items = [fh_eq]
+
+        if raw_in_items:
+            from geodata.catalogue_loader import find_fh_reference
+            tot_qty = 0
+            tot_weight = 0.0
+            tot_fw_fh = 0.0
+            fw_parts = []
+
+            for idx, it in enumerate(raw_in_items, start=1):
+                ref = it.get("reference") or it.get("name") or "Antenne FH"
+                spec = find_fh_reference(ref) if ref else None
+                qty = int(it.get("quantity") or it.get("qty") or 1)
+                diam = float(it.get("diameter_mm") or (spec.get("diameter") if spec else 600.0) or 600.0)
+                dims_str = f"Ø{diam:g}"
+                w_kg = float(it.get("weight_kg") or (spec.get("weight") if spec else 15.0) or 15.0)
+                w_tot = round(qty * w_kg, 2)
+                d_coef = FH_DIAMETER_COEFFICIENTS.get(int(diam), 0.06)
+                cf_fh = 1.0
+                fw_i = round(qty * cf_fh * d_coef * qp, 2) if qp else 0.0
+                formula = f"{qty} * 1 * {d_coef:g} * {qp:.2f} = {fw_i:.2f} daN" if qp else f"{fw_i:.2f} daN"
+
+                items.append({
+                    "index": idx,
+                    "name": clean_equipment_designation(spec.get("name") if spec else ref),
+                    "qty": qty,
+                    "quantity": qty,
+                    "diameter_mm": diam,
+                    "diametre_mm": diam,
+                    "dimensions_str": dims_str,
+                    "weight_kg": w_kg,
+                    "weight_unit_kg": f"{w_kg:g}",
+                    "weight_total_kg": w_tot,
+                    "pe_dan": w_tot,
+                    "d_coef": d_coef,
+                    "cf_fh": cf_fh,
+                    "fw_fh": fw_i,
+                    "fw_front": fw_i,
+                    "fw_lat": fw_i,
+                    "fw_fh_formula": formula,
+                })
+                tot_qty += qty
+                tot_weight += w_tot
+                tot_fw_fh += fw_i
+                fw_parts.append(f"{fw_i:.2f}")
+
+            totals = {
+                "count": len(items),
+                "qty_total": tot_qty,
+                "weight_total_kg": round(tot_weight, 2),
+                "pe_dan": round(tot_weight, 2),
+                "fw_fh": round(tot_fw_fh, 2),
+                "fw_front": round(tot_fw_fh, 2),
+                "fw_lat": round(tot_fw_fh, 2),
+                "fw_fh_formula": (
+                    " + ".join(fw_parts) + f" = {round(tot_fw_fh, 2):.2f} daN"
+                    if len(fw_parts) > 1
+                    else (f"{round(tot_fw_fh, 2):.2f} daN" if fw_parts else "0.00 daN")
+                ),
+            }
+
+    if not items:
+        diam = 600.0
+        d_coef = 0.06
+        fw_i = round(1.0 * d_coef * qp, 2) if qp else 0.0
+        items = [{
+            "index": 1,
+            "name": "Antenne FH",
+            "qty": 1,
+            "quantity": 1,
+            "diameter_mm": diam,
+            "diametre_mm": diam,
+            "dimensions_str": f"Ø{diam:g}",
+            "weight_kg": 15.0,
+            "weight_unit_kg": "15",
+            "weight_total_kg": 15.0,
+            "pe_dan": 15.0,
+            "d_coef": d_coef,
+            "cf_fh": 1.0,
+            "fw_fh": fw_i,
+            "fw_front": fw_i,
+            "fw_lat": fw_i,
+            "fw_fh_formula": f"1 * 1 * {d_coef:g} * {qp:.2f} = {fw_i:.2f} daN" if qp else f"{fw_i:.2f} daN",
+        }]
+        totals = {
+            "count": 1,
+            "qty_total": 1,
+            "weight_total_kg": 15.0,
+            "pe_dan": 15.0,
+            "fw_fh": fw_i,
+            "fw_front": fw_i,
+            "fw_lat": fw_i,
+            "fw_fh_formula": f"{fw_i:.2f} daN",
+        }
+
+    table_0_rows = []
+    for it in items:
+        table_0_rows.append({
+            "name": it.get("name", "Antenne FH"),
+            "quantity": it.get("qty", 1),
+            "dimensions_str": it.get("dimensions_str", f"Ø{it.get('diameter_mm', 600):g}"),
+            "weight_unit_kg": f"{float(it.get('weight_kg', 0)):g}",
+            "diameter_mm": it.get("diameter_mm", 600),
+            "d_coef": it.get("d_coef", 0.06),
+            "fw_fh_formula": it.get("fw_fh_formula", ""),
+        })
+
+    mast_sec = structure.get("mast_section", "TRON 88x2.5")
+    plot_sec = None if is_sans_plot else structure.get("plot_section", "TCAR 150x5")
+    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.7)
+    h_plot = 0.0 if is_sans_plot else float(structure.get("plot_h_m") if structure.get("plot_h_m") is not None else (structure.get("hauteur_plot_m") if structure.get("hauteur_plot_m") is not None else 0.5))
+
+    return {
+        "is_fh": True,
+        "is_sans_plot": is_sans_plot,
+        "table_0_items": table_0_rows,
+        "items": items,
+        "totals": totals,
+        "wind": wind,
+        "structure": structure,
+        "mast_section": mast_sec,
+        "plot_section": plot_sec,
+        "hauteur_mat_m": h_mat,
+        "hauteur_plot_m": h_plot,
+        "extremes": fh_sub.get("extremes") or result_data.get("extremes") or {},
+        "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
+        "is_multi": len(items) > 1 or totals.get("qty_total", 1) > 1,
+    }
+
+

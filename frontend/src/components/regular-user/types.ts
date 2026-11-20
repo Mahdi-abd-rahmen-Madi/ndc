@@ -210,6 +210,8 @@ export interface EquipmentItem {
   reference: string;
   quantity: number;
   vendor?: string;
+  diameter_mm?: number;
+  weight_kg?: number;
 }
 
 export interface SectorData {
@@ -231,9 +233,11 @@ export interface SectorData {
   matSecondaire: string;
   // Equipment
   hasFhEquipment?: boolean;
+  fhSansPlot?: boolean;
   fhDiameter?: number;
   fhReference?: string;
   fhQuantity?: number;
+  fhWeight?: number;
   fhItems?: EquipmentItem[];
   fhFoundationType?: 'metallique' | 'beton' | 'dallettes';
   hasRrhEquipment?: boolean;

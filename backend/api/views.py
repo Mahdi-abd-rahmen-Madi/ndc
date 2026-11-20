@@ -29,7 +29,7 @@ from .serializers import (
 from .aps_service import get_aps_token
 from .tasks import enqueue_task
 from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
-from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator
+from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator, resolve_sans_plot
 from utils.path_security import safe_media_path, safe_resolve_under
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
@@ -271,6 +271,37 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # 1. Detect type and compute unique deterministic NDC hash
         calc_type = detect_calculation_type(input_data)
 
+        # Default new FH queries to sans_plot=False (with plot) if not explicitly specified
+        if calc_type in ("fh", "fh_sans_plot") or input_data.get("is_fh"):
+            if input_data.get("sans_plot") is None:
+                input_data["sans_plot"] = False
+            fh_eq = input_data.get("fh_equipment")
+            if isinstance(fh_eq, dict) and fh_eq.get("sans_plot") is None:
+                fh_eq["sans_plot"] = False
+        elif isinstance(input_data.get("fh_equipment"), dict):
+            fh_eq = input_data["fh_equipment"]
+            if fh_eq.get("enabled") and fh_eq.get("sans_plot") is None:
+                fh_eq["sans_plot"] = False
+
+        if (calc_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot")
+                or input_data.get("is_fh")
+                or (isinstance(input_data.get("fh_equipment"), dict) and input_data["fh_equipment"].get("enabled"))):
+            is_sp = resolve_sans_plot(input_data, kind="fh")
+            if not input_data.get("structure_fh") and not input_data.get("is_fh"):
+                input_data["structure_fh"] = {
+                    "mast_section": "TRON 88x2.5",
+                    "plot_section": None if is_sp else "TCAR 150x5",
+                    "hauteur_mat_m": 1.70,
+                    "hauteur_plot_m": 0.0 if is_sp else 0.50,
+                }
+            if input_data.get("is_fh") and not input_data.get("structure"):
+                input_data["structure"] = {
+                    "mast_section": "TRON 88x2.5",
+                    "plot_section": None if is_sp else "TCAR 150x5",
+                    "hauteur_mat_m": 1.70,
+                    "hauteur_plot_m": 0.0 if is_sp else 0.50,
+                }
+
         # Default new RRU queries to sans_plot=False (with plot) if not explicitly specified
         if calc_type == "rru" or input_data.get("is_rru"):
             if input_data.get("sans_plot") is None:
@@ -406,6 +437,53 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     [f'screenshots_rrh/job_{cached_job.id}_rrh_3d_view.jpg']
                 )
 
+                # Dedicated FH Support Files
+                note_de_calcul_fh = _resolve_cached_file(
+                    cached_job, 'note_de_calcul_fh',
+                    [
+                        f'notes_fh/job_{cached_job.id}_fh_note_de_calcul.rtf',
+                        f'notes_fh/job_{cached_job.id}_fh_note_de_calcul.pdf',
+                        f'notes_de_calcul/job_{cached_job.id}_fh_note_de_calcul.rtf'
+                    ]
+                )
+                fh_note_mat = _resolve_cached_file(
+                    cached_job, 'fh_note_mat',
+                    [
+                        f'notes_fh/job_{cached_job.id}_fh_note_mat.rtf',
+                        f'notes_de_calcul/job_{cached_job.id}_fh_note_mat.rtf'
+                    ]
+                )
+                fh_note_plot = _resolve_cached_file(
+                    cached_job, 'fh_note_plot',
+                    [
+                        f'notes_fh/job_{cached_job.id}_fh_note_plot.rtf',
+                        f'notes_de_calcul/job_{cached_job.id}_fh_note_plot.rtf'
+                    ]
+                )
+                fh_assemblage_note = _resolve_cached_file(
+                    cached_job, 'fh_assemblage_note',
+                    [
+                        f'notes_fh/job_{cached_job.id}_fh_assemblage_note.rtf',
+                        f'assemblages/job_{cached_job.id}_fh_assemblage_note.rtf'
+                    ]
+                )
+                fh_verification_screenshot = _resolve_cached_file(
+                    cached_job, 'fh_verification_screenshot',
+                    [f'verif_fh/job_{cached_job.id}_fh_verification.jpg']
+                )
+                fh_tableau_charges = _resolve_cached_file(
+                    cached_job, 'fh_tableau_charges',
+                    [f'charges_fh/job_{cached_job.id}_fh_tableau_charges.png']
+                )
+                fh_reactions_file = _resolve_cached_file(
+                    cached_job, 'fh_reactions_file',
+                    [f'reactions_fh/job_{cached_job.id}_fh_reactions.txt']
+                )
+                fh_screenshot = _resolve_cached_file(
+                    cached_job, 'fh_screenshot',
+                    [f'screenshots_fh/job_{cached_job.id}_fh_3d_view.jpg']
+                )
+
                 compiled_docx = cached_job.compiled_docx.name if (cached_job.compiled_docx and bool(cached_job.compiled_docx.name)) else None
                 compiled_pdf = cached_job.compiled_pdf.name if (cached_job.compiled_pdf and bool(cached_job.compiled_pdf.name)) else None
 
@@ -433,6 +511,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     rrh_tableau_charges=rrh_tableau_charges,
                     rrh_reactions_file=rrh_reactions_file,
                     rrh_screenshot=rrh_screenshot,
+                    note_de_calcul_fh=note_de_calcul_fh,
+                    fh_note_mat=fh_note_mat,
+                    fh_note_plot=fh_note_plot,
+                    fh_assemblage_note=fh_assemblage_note,
+                    fh_verification_screenshot=fh_verification_screenshot,
+                    fh_tableau_charges=fh_tableau_charges,
+                    fh_reactions_file=fh_reactions_file,
+                    fh_screenshot=fh_screenshot,
                     compiled_docx=compiled_docx,
                     compiled_pdf=compiled_pdf,
                 )
@@ -525,35 +611,44 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # Save uploaded artifact files from worker (Base Antenna & Dedicated RRH)
         files = request.FILES
         
+        is_pure_fh = (job.calculation_type in ("fh", "fh_sans_plot"))
+        is_fh_job = bool(
+            result_data.get("has_fh")
+            or result_data.get("is_fh")
+            or "fh" in str(result_data.get("calculation_type", "")).lower()
+            or "fh" in str(job.calculation_type).lower()
+        )
+
         # 1. Base Antenna Files (accepting standard and worker aliases)
-        if 'screenshot' in files:
-            job.screenshot = files['screenshot']
-        elif 'antenna_screenshot' in files:
-            job.screenshot = files['antenna_screenshot']
+        if not is_pure_fh:
+            if 'screenshot' in files:
+                job.screenshot = files['screenshot']
+            elif 'antenna_screenshot' in files:
+                job.screenshot = files['antenna_screenshot']
 
-        if 'verification_screenshot' in files:
-            job.verification_screenshot = files['verification_screenshot']
-        elif 'antenna_verification_screenshot' in files:
-            job.verification_screenshot = files['antenna_verification_screenshot']
-        elif 'verification_view' in files:
-            job.verification_screenshot = files['verification_view']
+            if 'verification_screenshot' in files:
+                job.verification_screenshot = files['verification_screenshot']
+            elif 'antenna_verification_screenshot' in files:
+                job.verification_screenshot = files['antenna_verification_screenshot']
+            elif 'verification_view' in files:
+                job.verification_screenshot = files['verification_view']
 
-        if 'note_de_calcul' in files:
-            job.note_de_calcul = files['note_de_calcul']
-        elif 'antenna_note_de_calcul' in files:
-            job.note_de_calcul = files['antenna_note_de_calcul']
-        elif 'antenna_note_mat' in files:
-            job.note_de_calcul = files['antenna_note_mat']
+            if 'note_de_calcul' in files:
+                job.note_de_calcul = files['note_de_calcul']
+            elif 'antenna_note_de_calcul' in files:
+                job.note_de_calcul = files['antenna_note_de_calcul']
+            elif 'antenna_note_mat' in files:
+                job.note_de_calcul = files['antenna_note_mat']
 
-        if 'assemblage_note' in files:
-            job.assemblage_note = files['assemblage_note']
-        elif 'antenna_assemblage_note' in files:
-            job.assemblage_note = files['antenna_assemblage_note']
+            if 'assemblage_note' in files:
+                job.assemblage_note = files['assemblage_note']
+            elif 'antenna_assemblage_note' in files:
+                job.assemblage_note = files['antenna_assemblage_note']
 
-        if 'reactions_file' in files:
-            job.reactions_file = files['reactions_file']
-        elif 'antenna_reactions_file' in files:
-            job.reactions_file = files['antenna_reactions_file']
+            if 'reactions_file' in files:
+                job.reactions_file = files['reactions_file']
+            elif 'antenna_reactions_file' in files:
+                job.reactions_file = files['antenna_reactions_file']
 
         is_rru_job = bool(result_data.get("has_rru")) and not bool(result_data.get("has_rrh"))
 
@@ -595,8 +690,68 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             existing_rru_files.update(rru_files_saved)
             job.result_data["rru_files"] = existing_rru_files
 
-        # 3. RRH Support Files (Accepts both primary and alias keys, guarded against RRU jobs)
-        if not is_rru_job:
+        # 3. FH Support Files (Preserves Antenna files in composite jobs)
+        def _save_fh_uploaded_file(file_obj, subdir, filename):
+            target_dir = os.path.join(settings.MEDIA_ROOT, subdir)
+            os.makedirs(target_dir, exist_ok=True)
+            target_path = os.path.join(target_dir, filename)
+            with open(target_path, 'wb+') as dest:
+                for chunk in file_obj.chunks():
+                    dest.write(chunk)
+            return target_path
+
+        if is_fh_job:
+            fh_files_saved = {}
+            fh_ndc = files.get("note_de_calcul_fh") or files.get("fh_note_de_calcul") or (files.get("note_de_calcul") if is_pure_fh else None)
+            if fh_ndc:
+                job.note_de_calcul_fh = fh_ndc
+                ext = os.path.splitext(fh_ndc.name)[1] or ".rtf"
+                fh_files_saved["note_de_calcul"] = _save_fh_uploaded_file(fh_ndc, "notes_fh", f"job_{job.id}_fh_note_de_calcul{ext}")
+
+            fh_mat = files.get("fh_note_mat") or (files.get("note_mat") if is_pure_fh and not is_rru_job else None)
+            if fh_mat:
+                job.fh_note_mat = fh_mat
+                fh_files_saved["note_mat"] = _save_fh_uploaded_file(fh_mat, "notes_fh", f"job_{job.id}_fh_note_mat.rtf")
+
+            fh_plot = files.get("fh_note_plot") or (files.get("note_plot") if is_pure_fh and not is_rru_job else None)
+            if fh_plot:
+                job.fh_note_plot = fh_plot
+                fh_files_saved["note_plot"] = _save_fh_uploaded_file(fh_plot, "notes_fh", f"job_{job.id}_fh_note_plot.rtf")
+
+            fh_ass = files.get("fh_assemblage_note") or (files.get("assemblage_note") if is_pure_fh and not is_rru_job else None)
+            if fh_ass:
+                job.fh_assemblage_note = fh_ass
+                fh_files_saved["assemblage_note"] = _save_fh_uploaded_file(fh_ass, "notes_fh", f"job_{job.id}_fh_assemblage_note.rtf")
+
+            fh_verif = files.get("fh_verification_screenshot") or (files.get("verification_screenshot") if is_pure_fh else None)
+            if fh_verif:
+                job.fh_verification_screenshot = fh_verif
+                fh_files_saved["fh_verification_screenshot"] = _save_fh_uploaded_file(fh_verif, "verif_fh", f"job_{job.id}_fh_verification.jpg")
+
+            fh_charges = files.get("fh_tableau_charges") or files.get("fh_loads_table") or (files.get("loads_table") if is_pure_fh else None)
+            if fh_charges:
+                job.fh_tableau_charges = fh_charges
+                fh_files_saved["fh_tableau_charges"] = _save_fh_uploaded_file(fh_charges, "charges_fh", f"job_{job.id}_fh_tableau_charges.png")
+
+            fh_reactions = files.get("fh_reactions_file") or (files.get("reactions_file") if is_pure_fh else None)
+            if fh_reactions:
+                job.fh_reactions_file = fh_reactions
+                fh_files_saved["fh_reactions_file"] = _save_fh_uploaded_file(fh_reactions, "reactions_fh", f"job_{job.id}_fh_reactions.txt")
+
+            fh_screenshot = files.get("fh_screenshot") or (files.get("screenshot") if is_pure_fh else None)
+            if fh_screenshot:
+                job.fh_screenshot = fh_screenshot
+                fh_files_saved["fh_screenshot"] = _save_fh_uploaded_file(fh_screenshot, "screenshots_fh", f"job_{job.id}_fh_3d_view.jpg")
+
+            if fh_files_saved:
+                if not isinstance(job.result_data, dict):
+                    job.result_data = {}
+                existing_fh_files = job.result_data.get("fh_files") if isinstance(job.result_data.get("fh_files"), dict) else {}
+                existing_fh_files.update(fh_files_saved)
+                job.result_data["fh_files"] = existing_fh_files
+
+        # 4. RRH Support Files (Accepts both primary and alias keys, guarded against RRU/FH jobs)
+        if not is_rru_job and not is_pure_fh and not result_data.get("has_fh"):
             rrh_ndc = files.get("note_de_calcul_rrh") or files.get("rrh_note_de_calcul")
             if rrh_ndc:
                 job.note_de_calcul_rrh = rrh_ndc
@@ -625,7 +780,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             if 'rrh_screenshot' in files:
                 job.rrh_screenshot = files['rrh_screenshot']
 
-        # 4. Strict Quality & Completeness Validation
+        # 5. Strict Quality & Completeness Validation
         from .services import validate_calculation_artifacts
         missing_artifacts = []
         if job_status == 'COMPLETED':

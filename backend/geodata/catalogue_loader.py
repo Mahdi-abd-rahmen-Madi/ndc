@@ -278,3 +278,9 @@ def find_rru_reference(identifier_or_ref: str, operator: str = None) -> dict:
     """Search for an RRU reference in rru.json by ID, reference, or name."""
     return find_equipment_reference('rru', identifier_or_ref, operator=operator)
 
+
+def find_fh_reference(identifier_or_ref: str, operator: str = None) -> dict:
+    """Search for an FH reference in fh.json by ID, reference, or name."""
+    return find_equipment_reference('fh', identifier_or_ref, operator=operator)
+
+

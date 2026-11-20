@@ -1,10 +1,11 @@
 import type {
   CatalogueConfig,
+  EquipmentItem,
   SectorData,
   SelectedBaieItem,
   ZoneTechniqueData,
 } from '../components/regular-user/types';
-import { DEFAULT_ORANGE_BAIES, STATIC_EQUIPMENT_SPECS } from './catalogueDefaults';
+import { DEFAULT_FH_REFERENCES, DEFAULT_ORANGE_BAIES, STATIC_EQUIPMENT_SPECS } from './catalogueDefaults';
 
 // ============================================================================
 // Canonical Display Labels (Single Source of Truth across UI, Modals & Results)
@@ -91,6 +92,7 @@ export function extractSectorAerialState(sector?: SectorData) {
     fhDiameter: sector?.fhDiameter ?? 300,
     fhReference: sector?.fhReference ?? '',
     fhQuantity: sector?.fhQuantity ?? 1,
+    fhWeight: sector?.fhWeight,
     fhItems: sector?.fhItems ?? [],
     fhFoundationType: sector?.fhFoundationType || fallbackFoundation,
     hasRrhEquipment: !!sector?.hasRrhEquipment,
@@ -217,36 +219,78 @@ export function buildSectorEquipmentPayload({
     ? config.baie_references
     : DEFAULT_ORANGE_BAIES;
 
+  const allFhCatalog = config?.fh_references && config.fh_references.length > 0
+    ? config.fh_references
+    : DEFAULT_FH_REFERENCES;
+
+  const ALLOWED_FH = [300, 600, 900, 1200];
+  const sanitizeFhDiameter = (d?: number | null) => {
+    const num = Number(d);
+    return ALLOWED_FH.includes(num) ? num : 600;
+  };
+
+  const rawFhItems: EquipmentItem[] = aerial.hasFhEquipment
+    ? (aerial.fhItems && aerial.fhItems.length > 0 && aerial.fhItems.some(i => i.reference)
+        ? aerial.fhItems.filter(i => i.reference)
+        : (aerial.fhReference ? [{ id: 'default-fh', reference: aerial.fhReference, quantity: aerial.fhQuantity || 1, diameter_mm: aerial.fhDiameter, weight_kg: aerial.fhWeight }] : [])
+      )
+    : [];
+
+  const fhItemsList = rawFhItems.map(item => {
+    const matchingRef = allFhCatalog.find(
+      r => r.id === item.reference || r.reference === item.reference || r.name === item.reference
+    );
+    const refName = matchingRef?.reference || matchingRef?.name || item.reference || 'Antenne FH';
+    const diam = sanitizeFhDiameter(matchingRef?.diameter ?? item.diameter_mm ?? aerial.fhDiameter ?? 600);
+    const weight = Number(matchingRef?.weight ?? item.weight_kg ?? aerial.fhWeight ?? 15.0);
+    return {
+      reference: refName,
+      diameter_mm: diam,
+      weight_kg: weight > 0 ? weight : 15.0,
+      quantity: Math.max(1, Number(item.quantity || 1)),
+    };
+  });
+
+  const primaryFh = fhItemsList[0] || (aerial.hasFhEquipment ? {
+    reference: 'Antenne FH',
+    diameter_mm: sanitizeFhDiameter(aerial.fhDiameter),
+    weight_kg: 15.0,
+    quantity: aerial.fhQuantity || 1,
+  } : null);
+
+  const finalFhItems = fhItemsList.length > 0 ? fhItemsList : (primaryFh ? [primaryFh] : []);
+
   return {
     fh_equipment: {
       enabled: aerial.hasFhEquipment,
-      diameter_mm: aerial.hasFhEquipment ? aerial.fhDiameter : null,
-      reference: aerial.hasFhEquipment ? (fhOpt?.reference || null) : null,
-      quantity: aerial.hasFhEquipment ? aerial.fhQuantity : null,
-      weight_kg: aerial.hasFhEquipment ? (fhOpt?.weight || null) : null,
+      sans_plot: false,
+      diameter_mm: aerial.hasFhEquipment && primaryFh ? primaryFh.diameter_mm : null,
+      reference: aerial.hasFhEquipment && primaryFh ? primaryFh.reference : null,
+      quantity: aerial.hasFhEquipment && primaryFh ? primaryFh.quantity : null,
+      weight_kg: aerial.hasFhEquipment && primaryFh ? primaryFh.weight_kg : null,
       ancrage: aerial.hasFhEquipment ? aerial.fhFoundationType : null,
-      items: aerial.hasFhEquipment
-        ? (aerial.fhItems.length > 0
-            ? aerial.fhItems
-            : [{ reference: aerial.fhReference, quantity: aerial.fhQuantity }]
-          ).map(item => ({
-            reference: config?.fh_references?.find(r => r.id === item.reference)?.reference || item.reference,
-            quantity: item.quantity,
-          }))
-        : [],
+      items: aerial.hasFhEquipment ? finalFhItems : [],
     },
+    structure_fh: aerial.hasFhEquipment
+      ? {
+          mast_section: 'TRON 88x2.5',
+          plot_section: 'TCAR 150x5',
+          hauteur_mat_m: 1.70,
+          hauteur_plot_m: 0.50,
+        }
+      : null,
     rrh_equipment: {
-      enabled: allowRrh && aerial.hasRrhEquipment,
+      enabled: !aerial.hasFhEquipment && allowRrh && aerial.hasRrhEquipment,
       ancrage: allowRrh && aerial.hasRrhEquipment ? aerial.rrhFoundationType : null,
-      items: allowRrh && aerial.hasRrhEquipment
+      items: !aerial.hasFhEquipment && allowRrh && aerial.hasRrhEquipment
         ? aerial.rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity }))
         : [],
     },
     rru_equipment: {
-      enabled: aerial.hasRruEquipment,
+      enabled: !aerial.hasFhEquipment && aerial.hasRruEquipment,
       sans_plot: false,
       ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
-      items: aerial.hasRruEquipment
+      items: !aerial.hasFhEquipment && aerial.hasRruEquipment
         ? aerial.rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity }))
         : [],
     },

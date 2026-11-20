@@ -23,11 +23,13 @@ from .artifact_locator import (
     find_job_note_de_calcul_path,
     find_job_rrh_rtf_paths,
     find_job_rru_rtf_paths,
+    find_job_fh_rtf_paths,
 )
 from .equipment_context import (
     clean_equipment_designation,
     extract_rrh_ndc_context,
     extract_rru_ndc_context,
+    extract_fh_ndc_context,
 )
 from .image_cropper import (
     _crop_tableau_charges_image,
@@ -507,20 +509,20 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         }))
 
     fh_eq = input_data.get('fh_equipment', {})
-    if fh_eq.get('enabled'):
-        diameter = fh_eq.get('diameter_mm')
-        generated_pdfs.append(_render_and_save('fh', {
-            'eq_qty': fh_eq.get('quantity') or 1,
-            'eq_dims': f"Ø{diameter}" if diameter else '[FH_DIMS]',
-            'eq_weight': fh_eq.get('weight_kg') or '[FH_WEIGHT]',
-        }))
-
     rru_eq = input_data.get('rru_equipment', {})
     rrh_eq = input_data.get('rrh_equipment', {})
     res_data = getattr(job, 'result_data', {}) if job else {}
     if not isinstance(res_data, dict):
         res_data = {}
     calc_type = getattr(job, 'calculation_type', '') if job else ''
+
+    is_fh_only_job = (
+        res_data.get('has_fh') is True and not bool(res_data.get('has_rrh')) and not bool(res_data.get('has_rru'))
+    ) or (
+        bool(input_data.get('is_fh')) and not bool(input_data.get('is_rrh')) and not bool(input_data.get('is_rru'))
+    ) or (
+        calc_type in ['fh', 'fh_sans_plot']
+    )
 
     is_rru_only_job = (
         res_data.get('has_rrh') is False
@@ -530,8 +532,10 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             and res_data.get('has_rrh') is not True
         )
     )
+    is_non_rrh_job = is_rru_only_job or is_fh_only_job
+
     has_rrh_result = (
-        not is_rru_only_job
+        not is_non_rrh_job
         and (
             res_data.get('has_rrh') is True
             or ('rrh' in res_data and isinstance(res_data['rrh'], dict))
@@ -540,7 +544,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         )
     )
     is_rrh_calc = (
-        not is_rru_only_job
+        not is_non_rrh_job
         and bool(input_data.get('is_rrh') or calc_type in ['rrh', 'antenna_with_rrh'] or getattr(job, 'note_de_calcul_rrh', None))
     )
 
@@ -556,7 +560,220 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
 
     ws_dir = _worker_screenshots_dir()
 
-    if (not is_rru_only_job) and ((isinstance(rrh_eq, dict) and rrh_eq.get('enabled')) or has_rrh_result or is_rrh_calc):
+    # 1. Check for FH (Faisceau Hertzien)
+    has_fh_result = (
+        res_data.get('has_fh') is True
+        or ('fh' in res_data and isinstance(res_data['fh'], dict))
+        or bool(res_data.get('fh_items'))
+        or bool(res_data.get('fh_totals'))
+    )
+    is_fh_calc = bool(input_data.get('is_fh') or 'fh' in calc_type)
+    is_fh_active = (isinstance(fh_eq, dict) and fh_eq.get('enabled')) or has_fh_result or is_fh_calc
+
+    if is_fh_active:
+        try:
+            qp_val = float(context.get('qp_z', 0))
+        except (ValueError, TypeError):
+            qp_val = 0.0
+
+        fh_ctx = extract_fh_ndc_context(res_data, input_data=input_data, qp_val=qp_val)
+        items = fh_ctx['items']
+        totals = fh_ctx['totals']
+        wind_p = fh_ctx['wind']
+        is_multi = fh_ctx['is_multi']
+        qty_total = fh_ctx['qty_total']
+        is_fh_sans_plot = fh_ctx['is_sans_plot']
+
+        first_item = items[0] if items else {}
+        eq_dims = first_item.get('dimensions_str', 'Ø600')
+        eq_weight = first_item.get('weight_unit_kg', '15')
+        fw_fh = totals.get('fw_fh', 0.0)
+
+        worker_fh = res_data.get('fh', {}) if isinstance(res_data.get('fh'), dict) else {}
+        extremes = fh_ctx.get('extremes') or worker_fh.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = fh_ctx.get('structure') or worker_fh.get('structure_params', {}) or res_data.get('structure_params', {})
+        is_standalone_fh = bool(input_data.get('is_fh') and not input_data.get('antenna_4g') and not input_data.get('antenna_5g'))
+
+        fh_mat_section = (
+            struct_p.get('mast_section')
+            or (structure_data.get('mast_section') if is_standalone_fh else None)
+            or 'TRON 88x2.5'
+        )
+        fh_mat_longueur_m = (
+            struct_p.get('hauteur_mat_m')
+            if struct_p.get('hauteur_mat_m') is not None
+            else (structure_data.get('hauteur_mat_m') if is_standalone_fh and structure_data.get('hauteur_mat_m') is not None else 1.70)
+        )
+
+        if is_fh_sans_plot:
+            fh_plot_section = None
+            fh_plot_longueur_m = 0.0
+        else:
+            fh_plot_section = (
+                struct_p.get('plot_section')
+                or (structure_data.get('plot_section') if is_standalone_fh else None)
+                or 'TCAR 150x5'
+            )
+            fh_plot_longueur_m = (
+                struct_p.get('plot_h_m')
+                if struct_p.get('plot_h_m') is not None
+                else (structure_data.get('plot_h_m') if is_standalone_fh and structure_data.get('plot_h_m') is not None else 0.50)
+            )
+
+        fh_wind = _resolve_support_wind_params(wind_p, context, env, vb, fh_plot_longueur_m, fh_mat_longueur_m)
+        fh_qp_z = fh_wind['qp_z']
+
+        if (not wind_p.get('qp_dan')) and fh_qp_z and fh_qp_z != '[qp]':
+            try:
+                fh_qp_num = float(fh_qp_z)
+                if fh_qp_num > 0 and fh_qp_num != qp_val:
+                    fh_ctx = extract_fh_ndc_context(res_data, input_data=input_data, qp_val=fh_qp_num)
+                    items = fh_ctx['items']
+                    totals = fh_ctx['totals']
+                    fw_fh = totals.get('fw_fh', fw_fh)
+            except (ValueError, TypeError):
+                pass
+
+        try:
+            fh_mat_longueur = int(float(fh_mat_longueur_m) * 1000)
+        except (ValueError, TypeError):
+            fh_mat_longueur = 1700
+
+        m_diam, m_ep = parse_dimensions(fh_mat_section)
+        try:
+            fh_mat_diam = m_diam or (f"{float(struct_p.get('mast_d_m')) * 1000:g}" if struct_p.get('mast_d_m') else '88.9')
+        except (ValueError, TypeError):
+            fh_mat_diam = '88.9'
+        if str(fh_mat_diam).strip() == '88':
+            fh_mat_diam = '88.9'
+
+        try:
+            fh_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '2.5')
+        except (ValueError, TypeError):
+            fh_mat_epaisseur = '2.5'
+
+        fh_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
+        try:
+            m_diam_m = float(
+                struct_p.get('mast_d_m')
+                or (float(fh_mat_diam) / 1000.0 if fh_mat_diam and str(fh_mat_diam).replace('.', '').isdigit() else 0.088)
+            )
+        except (ValueError, TypeError):
+            m_diam_m = 0.088
+
+        if wind_p.get('fw_mast') is not None:
+            fw_mat = wind_p.get('fw_mast')
+        else:
+            try:
+                fw_mat = round(1.0 * float(fh_cf_mat) * m_diam_m * float(fh_qp_z or context.get('qp_z', 0)), 2)
+            except (ValueError, TypeError):
+                fw_mat = '[Fw,Mat]'
+
+        fh_files = res_data.get('fh_files') if isinstance(res_data.get('fh_files'), dict) else {}
+
+        fh_screenshot_abs = _first_existing_file([
+            getattr(job.fh_screenshot, 'path', None) if getattr(job, 'fh_screenshot', None) else None,
+            getattr(job.screenshot, 'path', None) if getattr(job, 'screenshot', None) and is_standalone_fh else None,
+            fh_files.get('fh_screenshot'),
+            fh_files.get('screenshot'),
+            res_data.get('fh_screenshot_path'),
+            worker_fh.get('screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_fh', f'job_{job.id}_fh_3d_view.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_fh', f'job_{job.id}_fh_3d_view.png') if job else None,
+            f"{ws_dir}/job_{job.id}_fh_3d_view.jpg" if job else None,
+        ])
+
+        fh_tableau_charges_abs = _first_existing_file([
+            getattr(job.fh_tableau_charges, 'path', None) if getattr(job, 'fh_tableau_charges', None) else None,
+            fh_files.get('fh_tableau_charges'),
+            fh_files.get('tableau_charges'),
+            fh_files.get('fh_loads_table'),
+            res_data.get('fh_tableau_charges_path'),
+            worker_fh.get('tableau_charges_path'),
+            os.path.join(settings.MEDIA_ROOT, 'charges_fh', f'job_{job.id}_fh_tableau_charges.png') if job else None,
+            f"{ws_dir}/job_{job.id}_fh_tableau_charges.png" if job else None,
+        ])
+        fh_tableau_charges_abs = _crop_tableau_charges_image(fh_tableau_charges_abs)
+
+        fh_verification_screenshot_abs = _first_existing_file([
+            getattr(job.fh_verification_screenshot, 'path', None) if getattr(job, 'fh_verification_screenshot', None) else None,
+            getattr(job.verification_screenshot, 'path', None) if getattr(job, 'verification_screenshot', None) and is_standalone_fh else None,
+            fh_files.get('fh_verification_screenshot'),
+            fh_files.get('verification_screenshot'),
+            res_data.get('fh_verification_screenshot_path'),
+            worker_fh.get('verification_screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'verif_fh', f'job_{job.id}_fh_verification.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'verif_fh', f'job_{job.id}_fh_verification.png') if job else None,
+            f"{ws_dir}/job_{job.id}_fh_verification.jpg" if job else None,
+        ])
+
+        fh_paths = find_job_fh_rtf_paths(job)
+        fh_convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_fh')
+        job_id_lbl = job.id if job else 'preview'
+        fh_note_mat_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_fh_note_mat", fh_paths.get('note_mat'), fh_convert_dir)
+        fh_note_plot_images = [] if is_fh_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_fh_note_plot", fh_paths.get('note_plot'), fh_convert_dir)
+        fh_assemblage_images = [] if is_fh_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_fh_assemblage", fh_paths.get('assemblage_note'), fh_convert_dir, is_assemblage=True)
+
+        if job and job.id != 'preview' and job.id != 'fast' and getattr(job, 'status', None) == 'COMPLETED':
+            missing_fh = []
+            if not fh_screenshot_abs or not os.path.exists(fh_screenshot_abs):
+                missing_fh.append("Capture 3D modélisation FH")
+            if not fh_tableau_charges_abs or not os.path.exists(fh_tableau_charges_abs):
+                missing_fh.append("Tableau des charges FH")
+            if not fh_verification_screenshot_abs or not os.path.exists(fh_verification_screenshot_abs):
+                missing_fh.append("Capture de vérification Robot FH")
+            if not fh_note_mat_images:
+                missing_fh.append("Note de calcul RTF du mât FH")
+            if not is_fh_sans_plot and not fh_assemblage_images:
+                missing_fh.append("Note d'assemblage Robot FH")
+
+            if missing_fh:
+                err_msg = f"Génération annexe FH bloquée pour le Job {job.id} : artéfacts obligatoires manquants ({', '.join(missing_fh)})."
+                logger.error("[NDC HARDENING ERROR] %s", err_msg)
+                raise ValueError(err_msg)
+
+        generated_pdfs.append(_render_and_save('fh', {
+            'region': fh_wind['region'],
+            'terrain_type': fh_wind['terrain_type'],
+            'building_height': fh_wind['building_height'],
+            'vb_m_s': fh_wind['vb_m_s'],
+            'cr_z': fh_wind['cr_z'],
+            'vm_z': fh_wind['vm_z'],
+            'iv_z': fh_wind['iv_z'],
+            'kr_z': fh_wind['kr_z'],
+            'qp_z': fh_qp_z,
+            'eq_qty': qty_total,
+            'fh_name': clean_equipment_designation(first_item.get('name', 'Antenne FH')),
+            'eq_dims': eq_dims,
+            'eq_weight': eq_weight,
+            'fw_fh': fw_fh,
+            'fw_mat': fw_mat,
+            'extremes': extremes,
+            'fh_sans_plot': is_fh_sans_plot,
+            'is_sans_plot': is_fh_sans_plot,
+            'fh_mat_section': fh_mat_section,
+            'fh_mat_diam': fh_mat_diam,
+            'fh_mat_epaisseur': fh_mat_epaisseur,
+            'fh_mat_longueur': fh_mat_longueur,
+            'fh_mat_longueur_m': fh_mat_longueur_m,
+            'fh_plot_section': fh_plot_section,
+            'fh_plot_longueur_m': fh_plot_longueur_m,
+            'fh_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
+            'fh_cf_mat': fh_cf_mat,
+            'fh_screenshot_abs': fh_screenshot_abs,
+            'fh_tableau_charges_abs': fh_tableau_charges_abs,
+            'fh_verification_screenshot_abs': fh_verification_screenshot_abs,
+            'fh_note_mat_images': fh_note_mat_images,
+            'fh_note_plot_images': fh_note_plot_images,
+            'fh_assemblage_images': fh_assemblage_images,
+            'fh_items': items,
+            'fh_totals': totals,
+            'fh_is_multi': is_multi,
+            'fh_qty_total': qty_total,
+        }))
+
+    # 2. Check for RRH
+    if (not is_non_rrh_job) and ((isinstance(rrh_eq, dict) and rrh_eq.get('enabled')) or has_rrh_result or is_rrh_calc):
         try:
             qp_val = float(context.get('qp_z', 0))
         except (ValueError, TypeError):
@@ -738,7 +955,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'is_sans_plot': is_rrh_sans_plot,
         }))
 
-    # Check for RRU
+    # 3. Check for RRU
     has_rru_result = (
         res_data.get('has_rru') is True
         or ('rru' in res_data and isinstance(res_data['rru'], dict))
@@ -747,7 +964,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     )
     is_rru_calc = bool(input_data.get('is_rru') or calc_type in ['rru', 'antenna_with_rru'])
 
-    if (isinstance(rru_eq, dict) and rru_eq.get('enabled')) or has_rru_result or is_rru_calc:
+    if (not is_fh_only_job) and ((isinstance(rru_eq, dict) and rru_eq.get('enabled')) or has_rru_result or is_rru_calc):
         try:
             qp_val = float(context.get('qp_z', 0))
         except (ValueError, TypeError):

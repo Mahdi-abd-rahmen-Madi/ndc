@@ -75,16 +75,26 @@ export default function SectorConfigurator({
 
   if (collapsed) {
     return (
-      <div className={styles.collapsedContainer}>
-        <h3 className={styles.collapsedHeader}>
-          <span className={styles.collapsedBadgeNumber}>
-            {index + 1}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <h3 className={styles.collapsedHeader}>
+            <span className={styles.collapsedBadgeNumber}>
+              {index + 1}
+            </span>
+            Secteur {index + 1}
+          </h3>
+          <span className={styles.collapsedTag}>
+            Antennes identiques au Secteur 1
           </span>
-          Secteur {index + 1}
-        </h3>
-        <span className={styles.collapsedTag}>
-          Identique au Secteur 1
-        </span>
+        </div>
+        {children && (
+          <div className="mt-4 pt-4 border-t border-slate-200/80">
+            <p className="text-[11px] text-slate-500 mb-3">
+              Le FH se configure par secteur, même si les antennes sont identiques.
+            </p>
+            {children}
+          </div>
+        )}
       </div>
     );
   }

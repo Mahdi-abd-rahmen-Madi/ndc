@@ -589,28 +589,38 @@ function RightPreviewPanel({
                   })()}
                 </div>
 
-                {/* Équipements Aériens Additionnels */}
+                {/* Équipements Aériens Additionnels (partagés, sauf FH par secteur) */}
                 {(() => {
-                  const sec = activeSectors[0] || sectors[0];
-                  const activeEquipments = [
-                    sec?.hasFhEquipment
-                      ? { label: 'FH', ancrage: formatFoundationLabel(sec.fhFoundationType || sec.equipmentFoundationType) }
-                      : null,
+                  const secs = (activeSectors.length > 0 ? activeSectors : sectors.slice(0, 1));
+                  const sec = secs[0];
+                  const refList = (items?: { reference?: string; quantity?: number }[]) =>
+                    (items ?? []).filter(i => i.reference).map(i => `${i.quantity ?? 1}× ${i.reference}`).join(', ');
+                  type Eq = { label: string; ancrage: string; detail: string; scope?: string };
+                  const shared = [
                     (operator !== 'bouygues' && sec?.hasRrhEquipment)
-                      ? { label: 'RRH', ancrage: formatFoundationLabel(sec.rrhFoundationType || sec.equipmentFoundationType) }
+                      ? { label: 'RRH', ancrage: formatFoundationLabel(sec.rrhFoundationType || sec.equipmentFoundationType), detail: refList(sec.rrhItems) }
                       : null,
                     sec?.hasRruEquipment
-                      ? { label: operator === 'free' ? 'RF NSN' : 'RRU', ancrage: formatFoundationLabel(sec.rruFoundationType || sec.equipmentFoundationType) }
+                      ? { label: operator === 'free' ? 'RF NSN' : 'RRU', ancrage: formatFoundationLabel(sec.rruFoundationType || sec.equipmentFoundationType), detail: refList(sec.rruItems) }
                       : null,
                     (operator === 'free' ? sec?.hasBoitierJonction : sec?.hasCoffret)
                       ? {
                           label: operator === 'free' ? 'Boîtier jonction FO' : 'Coffret fibre',
-                          ancrage: formatFoundationLabel(operator === 'free' ? (sec.boitierJonctionFoundationType || sec.equipmentFoundationType) : (sec.coffretFoundationType || sec.equipmentFoundationType))
+                          ancrage: formatFoundationLabel(operator === 'free' ? (sec.boitierJonctionFoundationType || sec.equipmentFoundationType) : (sec.coffretFoundationType || sec.equipmentFoundationType)),
+                          detail: operator === 'free' ? `${sec.boitierJonctionQuantity ?? 1}×` : (sec.coffretReference || ''),
                         }
                       : null,
-                  ].filter(Boolean) as { label: string; ancrage: string }[];
-
-                  if (activeEquipments.length === 0) return null;
+                  ].filter(Boolean) as Eq[];
+                  const fh: Eq[] = secs.flatMap((s2, i) => s2?.hasFhEquipment
+                    ? [{
+                        label: 'FH',
+                        ancrage: formatFoundationLabel(s2.fhFoundationType || s2.equipmentFoundationType),
+                        detail: refList(s2.fhItems),
+                        scope: secs.length > 1 ? `Secteur ${i + 1}` : undefined,
+                      }]
+                    : []);
+                  const all = [...fh, ...shared];
+                  if (all.length === 0) return null;
 
                   return (
                     <div>
@@ -618,17 +628,22 @@ function RightPreviewPanel({
                         Équipements Aériens Additionnels
                       </div>
                       <div className="space-y-2">
-                        {activeEquipments.map((eq, i) => (
-                          <div key={i} className="p-3.5 rounded-xl border bg-violet-50/40 border-violet-200/80 text-violet-950 flex items-center justify-between">
-                            <div>
+                        {all.map((eq, i) => (
+                          <div key={i} className="p-3.5 rounded-xl border bg-violet-50/40 border-violet-200/80 text-violet-950 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
                               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
-                                Type d'ancrage • {eq.label}
+                                Type d'ancrage • {eq.label}{eq.scope ? ` • ${eq.scope}` : ''}
                               </span>
                               <span className="text-xs sm:text-sm font-bold text-slate-800 block mt-0.5">
                                 {eq.ancrage}
                               </span>
+                              {eq.detail && (
+                                <span className="text-[11px] text-slate-500 block mt-0.5 truncate" title={eq.detail}>
+                                  {eq.detail}
+                                </span>
+                              )}
                             </div>
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">
                               Défini
                             </span>
                           </div>
@@ -797,7 +812,7 @@ function RightPreviewPanel({
                       quantité: fhQuantity,
                       poids: selectedFhOpt?.weight ? `${selectedFhOpt.weight} kg` : 'N/A'
                     },
-                    fhItems: hasFhEquipment ? (fhItems && fhItems.length > 0 ? fhItems : [{ id: 'fh-1', reference: fhReference, quantity: fhQuantity }]).map(item => {
+                    fhItems: group.sector.hasFhEquipment ? (group.sector.fhItems && group.sector.fhItems.length > 0 ? group.sector.fhItems : [{ id: 'fh-1', reference: group.sector.fhReference || '', quantity: group.sector.fhQuantity || 1 }]).map(item => {
                       const fhOpt = config?.fh_references?.find(r => r.id === item.reference || r.reference === item.reference || r.name === item.reference);
                       return {
                         ...item,
@@ -808,8 +823,8 @@ function RightPreviewPanel({
                         weight: fhOpt?.weight
                       };
                     }) : null,
-                    rrhItems: (operator !== 'bouygues' && hasRrhEquipment) ? rrhItems.map(item => ({ ...item, reference: resolveRrh(item.reference) })) : null,
-                    rruItems: hasRruEquipment ? rruItems.map(item => {
+                    rrhItems: (operator !== 'bouygues' && group.sector.hasRrhEquipment) ? (group.sector.rrhItems ?? []).map(item => ({ ...item, reference: resolveRrh(item.reference) })) : null,
+                    rruItems: group.sector.hasRruEquipment ? (group.sector.rruItems ?? []).map(item => {
                       const rruOpt = config?.rru_references?.find(r => r.id === item.reference || r.reference === item.reference);
                       return {
                         ...item,
@@ -832,11 +847,11 @@ function RightPreviewPanel({
                     })() : null,
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
                     boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
-                    coffrets_fibre: { référence: coffretReference || 'N/A' },
-                    boitier_jonction: (operator === 'free' && hasBoitierJonction) ? {
+                    coffrets_fibre: { référence: group.sector.coffretReference || 'N/A' },
+                    boitier_jonction: (operator === 'free' && group.sector.hasBoitierJonction) ? {
                       marque: 'Aginode',
                       modèle: '427 × 380 × 127 mm',
-                      quantité: boitierJonctionQuantity || 1
+                      quantité: group.sector.boitierJonctionQuantity || 1
                     } : null,
                     coffret_trans_fo: (operator === 'free' && hasCoffretTransFo) ? {
                       modèle: 'TRANS FO',

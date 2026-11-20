@@ -1,83 +1,137 @@
 {% extends 'ndc/aux_base.html' %}
 
 {% block content %}
-<h1 id="etude-fh">ÉTUDE FH</h1>
+<style>
+    .fh-page-1 h1 {
+        margin-top: 0;
+        margin-bottom: 4mm;
+        font-size: 20pt;
+    }
 
-<h2>Description</h2>
-<p>
-    Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
-    Ajout d’un mât en tube {{ mat_diam }} mm, d’épaisseur {{ mat_epaisseur }} mm et de longueur {{ mat_longueur }} mm supportant une antenne FH. Le mât sera fixé sur un plot métallique {{ plot_section }} mm ancrés dans la dalle existante en respectant la norme du DTU.
-</p>
+    .fh-page-1 h2 {
+        margin-top: 4mm;
+        margin-bottom: 2mm;
+        font-size: 13pt;
+    }
 
-<h2>Equipements considérés :</h2>
+    .fh-page-1 p {
+        margin: 2mm 0;
+        font-size: 10.5pt;
+        line-height: 1.3;
+    }
+
+    .fh-page-1 table {
+        margin-bottom: 3mm;
+    }
+</style>
+
+<div class="fh-page-1">
+    <h1 id="etude-fh">ÉTUDE FH</h1>
+
+    <h2>Description</h2>
+    <p>
+        Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
+        Ajout d’un mât en tube {{ fh_mat_diam|default:"88.9" }} mm, d’épaisseur {{ fh_mat_epaisseur|default:"2.5" }} mm
+        et de longueur {{ fh_mat_longueur|default:"1700" }} mm supportant une antenne FH{% if fh_items|length > 1 %} ({{
+        fh_qty_total }} équipements){% endif %}.
+        {% if not fh_sans_plot and not is_sans_plot %}
+        Le mât sera fixé sur un plot métallique {{ fh_plot_section|default:"TCAR 150x5" }} ancrés dans la dalle
+        existante en respectant la norme du DTU.
+        {% endif %}
+    </p>
+
+    <h2>Equipements considérés :</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Désignation</th>
+                <th>Quantité</th>
+                <th>Dimensions (mm)</th>
+                <th>Poids (kg)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for it in fh_items %}
+            <tr>
+                <td>{{ it.name }}</td>
+                <td class="text-center">{{ it.qty }}</td>
+                <td class="text-center">{{ it.dimensions_str }}</td>
+                <td class="text-center">{{ it.weight_unit_kg|default:it.weight_kg }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td>{{ fh_name|default:"Antenne FH" }}</td>
+                <td class="text-center">{{ eq_qty|default:"1" }}</td>
+                <td class="text-center">{{ eq_dims|default:"Ø600" }}</td>
+                <td class="text-center">{{ eq_weight|default:"15" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Hypothèse de vent</h2>
+    <p>
+        Région <strong>{{ region }}</strong><br>
+        Catégorie de terrain : <strong>{{ terrain_type }}</strong><br>
+        Hauteur : <strong>{{ building_height }}</strong> m<br>
+        Vitesse de référence du vent : V<sub>b</sub> = <strong>{{ vb_m_s }}</strong> m/s
+    </p>
+    <p>
+        <strong>Vitesse moyenne du vent à la hauteur z</strong><br>
+        V<sub>m</sub> = c<sub>r</sub>(z) . c<sub>0</sub>(z) . V<sub>b</sub><br>
+        k<sub>r</sub> = 0.19.(z<sub>0</sub>/z<sub>0,II</sub>)<sup>0.07</sup> = <strong>{{ kr_z }}</strong><br>
+        c<sub>r</sub>(z) = k<sub>r</sub> ⋅ ln(z/z<sub>0</sub>) = <strong>{{ cr_z }}</strong><br>
+        V<sub>m</sub> = {{ cr_z }} x {{ vb_m_s }} = <strong>{{ vm_z }}</strong> m/s<br>
+        I<sub>v</sub>(z) = 1/ln(z/z<sub>0</sub>) = <strong>{{ iv_z }}</strong>
+    </p>
+    <p>
+        <strong>Pression dynamique de pointe à la hauteur z</strong><br>
+        q<sub>p</sub> = <strong>{{ qp_z }}</strong> daN/m²
+    </p>
+
+    <h2>Les forces exercées par le vent :</h2>
+    <p>
+        Mât : F<sub>w</sub> = 1 * {{ fh_cf_mat|default:"1" }} * {{ fh_mat_diam_m|default:"0.088" }} * {{ qp_z }} =
+        <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
+        {% if fh_items|length > 1 %}
+        {% for it in fh_items %}
+        {{ it.name }} : F<sub>wFH</sub> = {{ it.fw_fh_formula }}<br>
+        {% endfor %}
+        TOTAL Antenne FH : F<sub>wFH</sub> = <strong>{{ fh_totals.fw_fh_formula|default:fh_totals.fw_fh }}</strong> daN
+        {% elif fh_items|length == 1 %}
+        Antenne FH : F<sub>wFH</sub> = {{ fh_items.0.fw_fh_formula }}
+        {% else %}
+        Antenne FH : F<sub>wFH</sub> = 1 * 1 * {{ fh_d_coef|default:"0.06" }} * {{ qp_z }} = <strong>{{
+            fw_fh|default:"N/A" }}</strong> daN
+        {% endif %}
+    </p>
+
+    <h2>Calcul de chute</h2>
+    <p>Pas de point d’ancrage sur le mât</p>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Page 2: MODELISATION 3D & Géométrie des pièces -->
+<h2>MODELISATION 3D</h2>
+<h3>Vue structure 3D</h3>
+<div
+    style="width: 100%; height: 95mm; text-align: center; margin-bottom: 5mm; display: flex; align-items: center; justify-content: center; background-color: #f9f9f9; padding: 5px;">
+    {% if fh_screenshot_abs %}
+    <img src="file://{{ fh_screenshot_abs }}" style="max-width: 100%; max-height: 100%; object-fit: contain;"
+        alt="Vue 3D Robot Support FH" />
+    {% else %}
+    <div
+        style="width: 100%; height: 60mm; border: 1px dashed #ccc; text-align: center; display: flex; align-items: center; justify-content: center;">
+        <em>[Emplacement Vue 3D - En attente de calcul Robot]</em>
+    </div>
+    {% endif %}
+</div>
+
+<h2>Géométrie des pièces</h2>
 <table>
     <thead>
-        <tr class="bg-green">
-            <th>Désignation</th>
-            <th>Quantité</th>
-            <th>Dimensions (mm)</th>
-            <th>Poids (kg)</th>
-            <th>État</th>
-        </tr>
-    </thead>
-    <tbody>
         <tr>
-            <td>Antenne FH</td>
-            <td class="text-center">{{ eq_qty|default:"1" }}</td>
-            <td class="text-center">{{ eq_dims|default:"N/A" }}</td>
-            <td class="text-center">{{ eq_weight|default:"N/A" }}</td>
-            <td class="text-center">Projet</td>
-        </tr>
-    </tbody>
-</table>
-
-<h2>Hypothèse de vent</h2>
-<p>
-    Région <strong>{{ region }}</strong><br>
-    Catégorie de terrain : <strong>{{ terrain_type }}</strong><br>
-    Hauteur : <strong>{{ building_height }}</strong> m<br>
-    Vitesse de référence du vent : V<sub>b</sub> = <strong>{{ vb_m_s }}</strong> m/s
-</p>
-<p>
-    <strong>Vitesse moyenne du vent à la hauteur z</strong><br>
-    V<sub>m</sub> = c<sub>r</sub>(z) . c<sub>0</sub>(z) . V<sub>b</sub><br>
-    k<sub>r</sub> = 0.19.(z<sub>0</sub>/z<sub>0,II</sub>)<sup>0.07</sup> = <strong>{{ kr_z }}</strong><br>
-    c<sub>r</sub>(z) = k<sub>r</sub> ⋅ ln(z/z<sub>0</sub>) = <strong>{{ cr_z }}</strong><br>
-    V<sub>m</sub> = {{ cr_z }} x {{ vb_m_s }} = <strong>{{ vm_z }}</strong> m/s<br>
-    I<sub>v</sub>(z) = 1/ln(z/z<sub>0</sub>) = <strong>{{ iv_z }}</strong>
-</p>
-<p>
-    <strong>Pression dynamique de pointe à la hauteur z</strong><br>
-    q<sub>p</sub> = <strong>{{ qp_z }}</strong> daN/m²
-</p>
-
-<h2>Les forces exercées par le vent :</h2>
-<p>
-    Mât : F<sub>w</sub> = 1 * 1 * 0.088 * {{ qp_z }} = <strong>{{ fw_mat|default:"N/A" }}</strong> daN/ml<br>
-    FH : F<sub>w,Frontale</sub> = 1 * {{ cx_front|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_front|default:"N/A" }}</strong> daN<br>
-    FH : F<sub>w,Latéral</sub> = 1 * {{ cx_lat|default:"N/A" }} * {{ qp_z }} = <strong>{{ fw_lat|default:"N/A" }}</strong> daN
-</p>
-
-<h2>Calcul de chute</h2>
-<p>Pas de point d’ancrage sur le mât</p>
-
-<h2>Modélisation en 3D</h2>
-<p>Géométrie des pièces<br>
-Tableau des valeurs de chargements<br>
-PP : Poids propre<br>
-PE : Poids équipements<br>
-Tableau des combinaisons<br>
-Vérification à l’ELU et à l’ELS<br>
-Vérification de mat principal {{ mat_section }} mm<br>
-Vérification de plot {{ plot_section }} mm<br>
-Assemblage Mat/Plot métallique</p>
-
-<h2>CONCLUSION</h2>
-<p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de vent, types d’antennes…). On peut assurer la bonne tenue de la structure du FH.</p>
-
-<table>
-    <thead>
-        <tr class="bg-green">
             <th>Section</th>
             <th>Longueur (m)</th>
             <th>Type de barre</th>
@@ -85,16 +139,130 @@ Assemblage Mat/Plot métallique</p>
     </thead>
     <tbody>
         <tr>
-            <td>{{ mat_section }}</td>
-            <td class="text-center">{{ mat_longueur_m }}</td>
+            <td>{{ fh_mat_section|default:"TRON 88x2.5" }}</td>
+            <td class="text-center">{{ fh_mat_longueur_m|default:"1.7" }}</td>
             <td class="text-center">Mat principal</td>
         </tr>
+        {% if not fh_sans_plot and not is_sans_plot %}
         <tr>
-            <td>{{ plot_section }}</td>
-            <td class="text-center">{{ plot_longueur_m }}</td>
+            <td>{{ fh_plot_section|default:"TCAR 150x5" }}</td>
+            <td class="text-center">{{ fh_plot_longueur_m|default:"0.5" }}</td>
             <td class="text-center">Plot</td>
         </tr>
+        {% endif %}
     </tbody>
 </table>
+
+<div class="page-break"></div>
+
+<!-- Page 3: Tableau des valeurs de chargements & combinaisons -->
+<h2>Tableau des valeurs de chargements & combinaisons</h2>
+{% if fh_tableau_charges_abs %}
+<div style="text-align: center; margin: 10mm -20mm 0 -20mm;">
+    <img src="file://{{ fh_tableau_charges_abs }}"
+        style="width: 100%; max-width: 210mm; height: auto; display: block; margin: 0 auto;"
+        alt="Tableau des charges Eurocode 1" />
+</div>
+{% else %}
+<p>
+    PP : Poids propre de la structure<br>
+    PE : Poids équipements ({% if fh_items|length > 1 %}{{ fh_qty_total }}x FH{% else %}{{ fh_qty_total|default:eq_qty
+    }}x {{ fh_name|default:"Antenne FH" }}{% endif %})<br>
+    Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
+</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- Page 4: Vérification ratios acier -->
+<h2>Vérification à l’ELU et à l’ELS</h2>
+{% if fh_verification_screenshot_abs %}
+<div style="text-align: center; margin: 5px 0 10px 0;">
+    <img src="file://{{ fh_verification_screenshot_abs }}"
+        style="max-width: 100%; max-height: 120mm; object-fit: contain;"
+        alt="Vérification Ratios Robot Structural Analysis" />
+</div>
+{% endif %}
+
+<!-- Pages: Vérification mât principal -->
+{% if fh_note_mat_images %}
+<div class="page-break"></div>
+<h2>Vérification mât principal supérieur Ø {{ fh_mat_diam|default:"88.9" }}mm</h2>
+<h3>Section : {{ fh_mat_section|default:"TRON 88x2.5" }}</h3>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% for img in fh_note_mat_images %}
+    {% if forloop.first %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul mât FH">
+    {% else %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul mât FH">
+    {% endif %}
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pages: Vérification plot métallique -->
+{% if fh_note_plot_images and not fh_sans_plot and not is_sans_plot %}
+<div class="page-break"></div>
+<h2>Vérification plot métallique {{ fh_plot_section|default:"TCAR 150x5" }}</h2>
+<h3>Section : {{ fh_plot_section|default:"TCAR 150x5" }}</h3>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% for img in fh_note_plot_images %}
+    {% if forloop.first %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul plot FH">
+    {% else %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note de calcul plot FH">
+    {% endif %}
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Pages: VERIFICATION D’ASSEMBLAGES DE LA STRUCTURE -->
+{% if fh_assemblage_images and not fh_sans_plot and not is_sans_plot %}
+<div class="page-break"></div>
+<h2>VERIFICATION D’ASSEMBLAGES DE LA STRUCTURE</h2>
+<h3>Assemblage entre tube/tube par platine</h3>
+
+<div style="text-align: center; margin-top: 5mm;">
+    {% for img in fh_assemblage_images %}
+    {% if forloop.first %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 180mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note d'assemblage FH">
+    {% else %}
+    <img src="file://{{ img }}"
+        style="max-width: 100%; max-height: 240mm; width: auto; height: auto; object-fit: contain; margin-bottom: 5mm; display: block; margin-left: auto; margin-right: auto;"
+        alt="Page Note d'assemblage FH">
+    {% endif %}
+
+    {% if not forloop.last %}
+    <div class="page-break"></div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Page finale: CONCLUSION -->
+<div class="page-break"></div>
+<h2>CONCLUSION</h2>
+<p>Après vérification de la tenue de la structure en tenant compte des différentes contraintes appliquées (région de
+    vent, types d’antennes…). On peut assurer la bonne tenue de la structure de FH.</p>
 
 {% endblock %}

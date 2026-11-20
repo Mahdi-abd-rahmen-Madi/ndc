@@ -73,13 +73,14 @@ def find_job_assemblage_note_path(job):
 
 def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
     """
-    Unified RTF/PDF artifact locator for RRH and RRU jobs.
-    Strictly segregates `_rru_` vs RRH files so cross-equipment leakage cannot occur.
+    Unified RTF/PDF artifact locator for RRH, RRU, and FH jobs.
+    Strictly segregates `_rru_`, `_rrh_`, and `_fh_` files so cross-equipment leakage cannot occur.
     """
     kind = kind.lower().strip()
     is_rru = (kind == 'rru')
+    is_fh = (kind == 'fh')
     res = {'note_mat': None, 'note_plot': None, 'assemblage_note': None}
-    if is_rru:
+    if is_rru or is_fh:
         res['note_de_calcul'] = None
     if not job:
         return res
@@ -87,7 +88,9 @@ def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
     res_data = getattr(job, 'result_data', None)
     if not isinstance(res_data, dict):
         res_data = {}
-    if not is_rru and res_data.get('has_rrh') is False:
+    if not is_rru and not is_fh and res_data.get('has_rrh') is False:
+        return res
+    if is_fh and res_data.get('has_fh') is False:
         return res
 
     sub = res_data.get(kind) if isinstance(res_data.get(kind), dict) else {}
@@ -106,15 +109,20 @@ def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
             if is_rru:
                 if '_rru_' in name_low and os.path.exists(path_val):
                     return path_val
+            elif is_fh:
+                if ('_fh_' in name_low or 'notes_fh' in path_low or 'fh' in name_low) and os.path.exists(path_val):
+                    return path_val
             else:
-                if '_rru_' not in name_low and '_rru_' not in path_low and os.path.exists(path_val):
+                if '_rru_' not in name_low and '_rru_' not in path_low and '_fh_' not in name_low and os.path.exists(path_val):
                     return path_val
         except Exception:
             pass
         return None
 
     mat_cands = []
-    if not is_rru:
+    if is_fh:
+        mat_cands.append(_job_field_path('fh_note_mat'))
+    elif not is_rru:
         mat_cands.append(_job_field_path('note_mat'))
     mat_cands.extend([
         eq_files.get('note_mat'),
@@ -124,14 +132,17 @@ def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
         os.path.join(primary_media_dir, f'job_{job.id}_{kind}_note_mat.rtf'),
         f"{ws_dir}/job_{job.id}_{kind}_note_mat.rtf",
         os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_{kind}_note_mat.rtf'),
-        os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_note_mat.rtf'),
     ])
+    if not is_fh:
+        mat_cands.append(os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_note_mat.rtf'))
     if is_rru:
         mat_cands.append(_job_field_path('note_mat'))
     res['note_mat'] = _first_existing_file(mat_cands)
 
     plot_cands = []
-    if not is_rru:
+    if is_fh:
+        plot_cands.append(_job_field_path('fh_note_plot'))
+    elif not is_rru:
         plot_cands.append(_job_field_path('note_plot'))
     plot_cands.extend([
         eq_files.get('note_plot'),
@@ -141,14 +152,17 @@ def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
         os.path.join(primary_media_dir, f'job_{job.id}_{kind}_note_plot.rtf'),
         f"{ws_dir}/job_{job.id}_{kind}_note_plot.rtf",
         os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_{kind}_note_plot.rtf'),
-        os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_note_plot.rtf'),
     ])
+    if not is_fh:
+        plot_cands.append(os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_note_plot.rtf'))
     if is_rru:
         plot_cands.append(_job_field_path('note_plot'))
     res['note_plot'] = _first_existing_file(plot_cands)
 
     ass_cands = []
-    if not is_rru:
+    if is_fh:
+        ass_cands.append(_job_field_path('fh_assemblage_note'))
+    elif not is_rru:
         ass_cands.append(_job_field_path('rrh_assemblage_note'))
     ass_cands.extend([
         eq_files.get('assemblage_note'),
@@ -158,26 +172,29 @@ def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
         os.path.join(primary_media_dir, f'job_{job.id}_{kind}_assemblage_note.rtf'),
         f"{ws_dir}/job_{job.id}_{kind}_assemblage_note.rtf",
         os.path.join(settings.MEDIA_ROOT, 'assemblages', f'job_{job.id}_{kind}_assemblage_note.rtf'),
-        os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_assemblage_note.rtf'),
     ])
+    if not is_fh:
+        ass_cands.append(os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_assemblage_note.rtf'))
     if is_rru:
         ass_cands.append(_job_field_path('rrh_assemblage_note'))
     res['assemblage_note'] = _first_existing_file(ass_cands)
 
-    if is_rru:
+    if is_rru or is_fh:
+        ndc_field = 'note_de_calcul_fh' if is_fh else 'note_de_calcul'
         res['note_de_calcul'] = _first_existing_file([
+            _job_field_path(ndc_field) if is_fh else None,
             eq_files.get('note_de_calcul'),
-            eq_files.get('note_de_calcul_rru'),
-            eq_files.get('rru_note_de_calcul'),
-            res_data.get('rru_note_de_calcul_path'),
-            res_data.get('note_de_calcul_rru_path'),
+            eq_files.get(f'note_de_calcul_{kind}'),
+            eq_files.get(f'{kind}_note_de_calcul'),
+            res_data.get(f'{kind}_note_de_calcul_path'),
+            res_data.get(f'note_de_calcul_{kind}_path'),
             sub.get('note_de_calcul_path'),
-            os.path.join(primary_media_dir, f'job_{job.id}_rru_note_de_calcul.pdf'),
-            os.path.join(primary_media_dir, f'job_{job.id}_rru_note_de_calcul.rtf'),
-            os.path.join(primary_media_dir, f'job_{job.id}_note_de_calcul_rru.pdf'),
-            os.path.join(primary_media_dir, f'job_{job.id}_note_de_calcul_rru.rtf'),
-            f"{ws_dir}/job_{job.id}_rru_note_de_calcul.rtf",
-            f"{ws_dir}/job_{job.id}_rru_note_de_calcul.pdf",
+            os.path.join(primary_media_dir, f'job_{job.id}_{kind}_note_de_calcul.pdf'),
+            os.path.join(primary_media_dir, f'job_{job.id}_{kind}_note_de_calcul.rtf'),
+            os.path.join(primary_media_dir, f'job_{job.id}_note_de_calcul_{kind}.pdf'),
+            os.path.join(primary_media_dir, f'job_{job.id}_note_de_calcul_{kind}.rtf'),
+            f"{ws_dir}/job_{job.id}_{kind}_note_de_calcul.rtf",
+            f"{ws_dir}/job_{job.id}_{kind}_note_de_calcul.pdf",
         ])
 
     return res
@@ -191,6 +208,11 @@ def find_job_rrh_rtf_paths(job):
 def find_job_rru_rtf_paths(job):
     """Strictly find the RRU RTF/PDF files belonging to this job."""
     return find_job_equipment_rtf_paths(job, kind='rru')
+
+
+def find_job_fh_rtf_paths(job):
+    """Strictly find the FH RTF/PDF files belonging to this job."""
+    return find_job_equipment_rtf_paths(job, kind='fh')
 
 
 def collect_site_ndc_rtf_specs(jobs):
@@ -282,6 +304,32 @@ def collect_site_ndc_rtf_specs(jobs):
                     specs.append({
                         'rtf_path': rru_paths[field],
                         'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_rru'),
+                        'prefix': prefix,
+                        'is_assemblage': is_ass,
+                        'key': prefix,
+                    })
+
+        fh_data = input_data.get('fh_equipment', {})
+        fh_enabled = isinstance(fh_data, dict) and fh_data.get('enabled', False)
+        is_fh_eligible = (
+            fh_enabled
+            or res_data.get('has_fh') is True
+            or bool(res_data.get('fh_items'))
+            or bool(input_data.get('is_fh'))
+            or 'fh' in calc_type
+        )
+        if is_fh_eligible:
+            fh_paths = find_job_fh_rtf_paths(first_job)
+            for key_suffix, field, is_ass in [
+                ('fh_note_mat', 'note_mat', False),
+                ('fh_note_plot', 'note_plot', False),
+                ('fh_assemblage', 'assemblage_note', True),
+            ]:
+                if fh_paths.get(field):
+                    prefix = f"job_{first_job.id}_{key_suffix}"
+                    specs.append({
+                        'rtf_path': fh_paths[field],
+                        'convert_dir': os.path.join(settings.MEDIA_ROOT, 'notes_fh'),
                         'prefix': prefix,
                         'is_assemblage': is_ass,
                         'key': prefix,

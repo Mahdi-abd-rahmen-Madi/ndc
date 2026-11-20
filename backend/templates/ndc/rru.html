@@ -31,14 +31,7 @@
     <h2>Description</h2>
     <p>
         Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
-        {% if rru_is_multi %}
-        Ajout d’un mât en tube {{ rru_mat_diam|default:"88" }} mm, d’épaisseur {{ rru_mat_epaisseur|default:"2.5" }} mm et de longueur {{ rru_mat_longueur|default:"1500" }} mm supportant des RRUs.
-        {% else %}
-        Ajout d’un mât en tube {{ rru_mat_diam|default:"88" }} mm, d’épaisseur {{ rru_mat_epaisseur|default:"2.5" }} mm et de longueur {{ rru_mat_longueur|default:"1500" }} mm supportant un RRU.
-        {% endif %}
-        {% if not rru_sans_plot and not is_sans_plot %}
-        Le mât sera fixé sur un plot métallique {{ rru_plot_section|default:"TCAR 150x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
-        {% endif %}
+        Ajout d’un mât en tube Ø88.9 mm, d’épaisseur 2.5 mm et de longueur 1500 mm recevra les RRUs. Le mât sera fixé sur un plot métallique TCAR 150 x 5 mm ancrés dans la dalle existante en respectant la norme du DTU.
     </p>
 
     <h2>Equipements considérés :</h2>

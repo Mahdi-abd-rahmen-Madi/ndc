@@ -30,6 +30,17 @@ def extract_rru_docx_context(job) -> dict:
     return extract_rru_ndc_context(res, input_data=inp)
 
 
+def extract_fh_docx_context(job) -> dict:
+    """
+    Extracts FH data, wind parameters, support geometry and reactions from job.result_data
+    using the canonical geodata extractor (single source of truth).
+    """
+    from geodata.ndc_generator import extract_fh_ndc_context
+    res = parse_json_dict(getattr(job, 'result_data', None))
+    inp = parse_json_dict(getattr(job, 'input_data', None))
+    return extract_fh_ndc_context(res, input_data=inp)
+
+
 _DOCX_EQUIPMENT_DEFAULTS = {
     "rrh": {
         "label": "RRH",
@@ -50,6 +61,16 @@ _DOCX_EQUIPMENT_DEFAULTS = {
         "vb0": 24.0,
         "qp_dan": 45.0,
         "template_rel": os.path.join("templates", "rru", "NDC RRU.docx"),
+    },
+    "fh": {
+        "label": "FH",
+        "depth_key": "diameter_mm",
+        "mast_section": "TRON 88x2.5",
+        "plot_section": "TCAR 150x5",
+        "terrain_type": "II",
+        "vb0": 24.0,
+        "qp_dan": 95.36,
+        "template_rel": os.path.join("templates", "fh", "NDC FH.docx"),
     },
 }
 
@@ -81,19 +102,24 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
                 row = table0.add_row()
             row.cells[0].text = clean_equipment_designation(str(item.get("name", label)))
             row.cells[1].text = str(item.get("qty", 1))
-            depth_val = item.get(depth_key, item.get("t_mm", item.get("d_mm", 0)))
-            row.cells[2].text = str(
-                item.get("dimensions_str")
-                or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {depth_val:g}"
-            )
-            row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
-            row.cells[4].text = "Projet"
+            if kind == "fh":
+                row.cells[2].text = str(item.get("dimensions_str") or f"Ø{item.get('diameter_mm', 600):g}")
+                row.cells[3].text = str(item.get("weight_unit_kg") or f"{float(item.get('weight_kg', 0)):g}")
+            else:
+                depth_val = item.get(depth_key, item.get("t_mm", item.get("d_mm", 0)))
+                row.cells[2].text = str(
+                    item.get("dimensions_str")
+                    or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {depth_val:g}"
+                )
+                row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
+                if len(row.cells) > 4:
+                    row.cells[4].text = "Projet"
 
     # 2. Populate Table 1 ("Géométrie des pièces")
     if len(doc.tables) > 1:
         table1 = doc.tables[1]
         mast_sec = structure.get("mast_section") or cfg["mast_section"]
-        mast_h = structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5
+        mast_h = structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else (1.7 if kind == "fh" else 1.5)
         plot_sec = structure.get("plot_section") or cfg["plot_section"]
         plot_h = structure.get("plot_h_m") if structure.get("plot_h_m") is not None else 0.5
         if len(table1.rows) > 1:
@@ -146,8 +172,16 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
             p.text = f"Iv(z) = 1/ln(z/z0) = {iv:.2f}"
         elif "qp =" in txt and "XX" in txt:
             p.text = f"qp = {qp:.2f} daN/m²"
-        elif "Mat" in txt and "Fw =" in txt and "XX" in txt:
+        elif "Mat" in txt and "Fw" in txt and ("XX" in txt or "daN/ml" in txt):
             p.text = f"Mât : Fw = 1 * {cf_mast:g} * {mast_d_m:g} * {qp:.2f} = {fw_mast:.2f} daN/ml"
+        elif "Antenne FH" in txt and "FwFH" in txt:
+            if len(items) == 1:
+                p.text = f"Antenne FH : FwFH = {items[0].get('fw_fh_formula', 'N/A')}"
+            else:
+                lines = [f"{it.get('name', 'Antenne FH')} : FwFH = {it.get('fw_fh_formula', 'N/A')}" for it in items]
+                totals = ctx.get("totals", {})
+                lines.append(f"TOTAL Antenne FH : FwFH = {totals.get('fw_fh_formula', 'N/A')}")
+                p.text = "\n".join(lines)
 
     # 5. Replace equipment aerodynamic force paragraphs
     front_marker = f"{label} : Fw,Frontale"
@@ -178,6 +212,10 @@ def _populate_rru_docx(doc, ctx):
     return _populate_equipment_docx(doc, ctx, kind="rru")
 
 
+def _populate_fh_docx(doc, ctx):
+    return _populate_equipment_docx(doc, ctx, kind="fh")
+
+
 def validate_calculation_artifacts(job, files=None) -> list:
     """
     Hardened validator ensuring all strictly required artifacts exist for a calculation job.
@@ -194,11 +232,12 @@ def validate_calculation_artifacts(job, files=None) -> list:
     input_data = job.input_data if isinstance(getattr(job, 'input_data', None), dict) else {}
     result_data = job.result_data if isinstance(getattr(job, 'result_data', None), dict) else {}
 
-    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru)
+    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru/fh)
     is_pure_rrh = (calc_type == 'rrh')
     is_pure_rru = (calc_type == 'rru')
+    is_pure_fh = (calc_type in ('fh', 'fh_sans_plot'))
 
-    if not is_pure_rrh and not is_pure_rru:
+    if not is_pure_rrh and not is_pure_rru and not is_pure_fh:
         # 3D view
         has_3d = bool(
             getattr(job, 'screenshot', None)
@@ -308,6 +347,74 @@ def validate_calculation_artifacts(job, files=None) -> list:
             if not has_rrh_ass:
                 missing.append("Note d'assemblage Robot RRH (page 21+)")
 
+    # 3. FH Verification (if FH is enabled or calculation_type is fh / antenna_with_fh)
+    has_fh = (
+        calc_type in ['fh', 'fh_sans_plot', 'antenna_with_fh', 'antenna_with_fh_sans_plot']
+        or bool(input_data.get('fh_equipment', {}).get('enabled'))
+        or bool(result_data.get('has_fh'))
+        or bool(input_data.get('is_fh'))
+    )
+    if has_fh:
+        from geodata.ndc_generator import find_job_fh_rtf_paths
+        fh_paths = find_job_fh_rtf_paths(job)
+
+        has_fh_3d = bool(
+            getattr(job, 'fh_screenshot', None)
+            or (is_pure_fh and getattr(job, 'screenshot', None))
+            or files.get('fh_screenshot')
+            or (is_pure_fh and files.get('screenshot'))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots_fh', f'job_{job.id}_fh_3d_view.jpg'))
+        )
+        if not has_fh_3d:
+            missing.append("Capture 3D modélisation FH (page 2)")
+
+        has_fh_verif = bool(
+            getattr(job, 'fh_verification_screenshot', None)
+            or (is_pure_fh and getattr(job, 'verification_screenshot', None))
+            or files.get('fh_verification_screenshot')
+            or (is_pure_fh and files.get('verification_screenshot'))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'verif_fh', f'job_{job.id}_fh_verification.jpg'))
+        )
+        if not has_fh_verif:
+            missing.append("Capture de vérification Robot FH (page 4)")
+
+        has_fh_mat = bool(
+            fh_paths.get('note_mat')
+            or getattr(job, 'note_de_calcul_fh', None)
+            or (is_pure_fh and getattr(job, 'note_de_calcul', None))
+            or (is_pure_fh and getattr(job, 'note_mat', None))
+            or files.get('note_de_calcul_fh')
+            or files.get('fh_note_de_calcul')
+            or files.get('fh_note_mat')
+            or (is_pure_fh and files.get('note_de_calcul'))
+            or (is_pure_fh and files.get('note_mat'))
+        )
+        if not has_fh_mat:
+            missing.append("Note de calcul RTF du mât FH")
+
+        has_fh_charges = bool(
+            getattr(job, 'fh_tableau_charges', None)
+            or files.get('fh_tableau_charges')
+            or files.get('fh_loads_table')
+            or (is_pure_fh and files.get('loads_table'))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'charges_fh', f'job_{job.id}_fh_tableau_charges.png'))
+        )
+        if not has_fh_charges:
+            missing.append("Tableau des charges FH (page 3)")
+
+        is_fh_sans_plot = resolve_sans_plot(input_data, result_data, calc_type=calc_type, kind="fh")
+        if not is_fh_sans_plot:
+            has_fh_ass = bool(
+                fh_paths.get('assemblage_note')
+                or getattr(job, 'fh_assemblage_note', None)
+                or (is_pure_fh and getattr(job, 'assemblage_note', None))
+                or files.get('fh_assemblage_note')
+                or (is_pure_fh and files.get('assemblage_note'))
+                or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'notes_fh', f'job_{job.id}_fh_assemblage_note.rtf'))
+            )
+            if not has_fh_ass:
+                missing.append("Note d'assemblage Robot FH")
+
     return missing
 
 
@@ -332,8 +439,8 @@ def assemble_ndc_document(calculation_id):
             job.save(update_fields=['status', 'error_message'])
         return
 
-    if job.calculation_type in ("rrh", "rru"):
-        _assemble_equipment_doc(job, kind=job.calculation_type)
+    if job.calculation_type in ("rrh", "rru", "fh", "fh_sans_plot"):
+        _assemble_equipment_doc(job, kind="fh" if "fh" in job.calculation_type else job.calculation_type)
     else:
         _assemble_antenna(job)
 
@@ -372,7 +479,12 @@ def _assemble_equipment_doc(job, kind: str = "rrh"):
         from docx import Document
         doc = Document(template_path)
 
-        ctx = extract_rru_docx_context(job) if kind == "rru" else extract_ndc_context(job)
+        if kind == "rru":
+            ctx = extract_rru_docx_context(job)
+        elif kind == "fh":
+            ctx = extract_fh_docx_context(job)
+        else:
+            ctx = extract_ndc_context(job)
         _populate_equipment_docx(doc, ctx, kind=kind)
 
         temp_docx = os.path.join(work_dir, f"{prefix}.docx")
@@ -405,6 +517,10 @@ def _assemble_rru(job):
 
 def _assemble_rrh(job):
     return _assemble_equipment_doc(job, kind="rrh")
+
+
+def _assemble_fh(job):
+    return _assemble_equipment_doc(job, kind="fh")
 
 
 def _assemble_antenna(job):

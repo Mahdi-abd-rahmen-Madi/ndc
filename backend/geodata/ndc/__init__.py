@@ -22,6 +22,7 @@ from .artifact_locator import (
     find_job_equipment_rtf_paths,
     find_job_rrh_rtf_paths,
     find_job_rru_rtf_paths,
+    find_job_fh_rtf_paths,
     collect_site_ndc_rtf_specs,
 )
 from .image_cropper import (
@@ -32,6 +33,7 @@ from .equipment_context import (
     clean_equipment_designation,
     extract_rrh_ndc_context,
     extract_rru_ndc_context,
+    extract_fh_ndc_context,
 )
 from .pdf_renderer import (
     generate_ndc_pdf,
@@ -58,12 +60,14 @@ __all__ = [
     'find_job_equipment_rtf_paths',
     'find_job_rrh_rtf_paths',
     'find_job_rru_rtf_paths',
+    'find_job_fh_rtf_paths',
     'collect_site_ndc_rtf_specs',
     '_crop_tableau_charges_image',
     'crop_verification_screenshot',
     'clean_equipment_designation',
     'extract_rrh_ndc_context',
     'extract_rru_ndc_context',
+    'extract_fh_ndc_context',
     'generate_ndc_pdf',
     'generate_ndc_pdf_task',
     'generate_auxiliary_pdfs',

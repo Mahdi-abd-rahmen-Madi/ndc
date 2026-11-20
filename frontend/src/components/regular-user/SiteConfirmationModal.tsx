@@ -130,7 +130,6 @@ export function SiteConfirmationModal({
   if (!isOpen) return null;
 
   const {
-    hasFhEquipment, fhQuantity, fhReference, fhItems,
     hasRruEquipment, rruItems, hasRrhEquipment, rrhItems,
     hasCoffret, coffretReference, hasBoitierJonction, boitierJonctionQuantity,
   } = extractSectorAerialState(activeSectors[0]);
@@ -238,7 +237,7 @@ export function SiteConfirmationModal({
                   Équipements Aériens
                 </h4>
               </div>
-              {(hasFhEquipment || hasRruEquipment || hasRrhEquipment || hasCoffret || hasBoitierJonction) && (
+              {(activeSectors.some(sc => sc.hasFhEquipment) || hasRruEquipment || hasRrhEquipment || hasCoffret || hasBoitierJonction) && (
                 <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full">
                   Ancrages définis
                 </span>
@@ -281,36 +280,33 @@ export function SiteConfirmationModal({
                   />
                 )}
 
-                {/* FH */}
-                {hasFhEquipment && (fhItems && fhItems.length > 0 ? (
-                  fhItems.map((item, idx) => {
+                {/* FH (par secteur) */}
+                {activeSectors.flatMap((sector, sIdx) => {
+                  if (!sector.hasFhEquipment) return [];
+                  const list = sector.fhItems && sector.fhItems.length > 0
+                    ? sector.fhItems
+                    : [{ id: 'fh', reference: sector.fhReference || '', quantity: sector.fhQuantity || 1 }];
+                  return list.map((item, idx) => {
                     const opt = config?.fh_references?.find(r => r.id === item.reference || r.reference === item.reference || r.name === item.reference);
                     return (
                       <MastEquipmentCard
-                        key={`fh-${idx}`}
+                        key={`fh-${sIdx}-${idx}`}
                         borderClass="border-l-amber-500"
-                        title="Faisceau Hertzien (FH)"
-                        badgeText={`par site • ${formatFoundationLabel(activeSectors[0]?.fhFoundationType)}`}
+                        title={`Faisceau Hertzien (FH)${activeSectors.length > 1 ? ` • Secteur ${sIdx + 1}` : ''}`}
+                        badgeText={`par secteur • ${formatFoundationLabel(sector.fhFoundationType)}`}
                         badgeClass="bg-amber-50 text-amber-700 border-amber-200"
                         quantityText={`${item.quantity} unité`}
                         detailLabel="Modèle"
                         detailValue={opt?.reference || opt?.name || item.reference || 'Sélectionné'}
                       />
                     );
-                  })
-                ) : (fhQuantity > 0 && (
-                  <MastEquipmentCard
-                    borderClass="border-l-amber-500"
-                    title="Faisceau Hertzien (FH)"
-                    badgeText={`par site • ${formatFoundationLabel(activeSectors[0]?.fhFoundationType)}`}
-                    badgeClass="bg-amber-50 text-amber-700 border-amber-200"
-                    quantityText={`${fhQuantity} unité`}
-                    detailLabel="Modèle"
-                    detailValue={config?.fh_references?.find(r => r.id === fhReference)?.reference || 'Sélectionné'}
-                  />
-                )))}
+                  });
+                })}
 
-                {/* RRU Items */}
+              </div>
+
+              {/* Équipements aériens partagés (identiques sur tous les secteurs) */}
+              <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {hasRruEquipment && rruItems.map((item, idx) => (
                   <MastEquipmentCard
                     key={`rru-${idx}`}
@@ -322,8 +318,6 @@ export function SiteConfirmationModal({
                     detailValue={resolveRru(item.reference) || item.reference || 'N/A'}
                   />
                 ))}
-
-                {/* RRH Items */}
                 {operator !== 'bouygues' && hasRrhEquipment && rrhItems.map((item, idx) => (
                   <MastEquipmentCard
                     key={`rrh-${idx}`}
@@ -335,8 +329,6 @@ export function SiteConfirmationModal({
                     detailValue={resolveRrh(item.reference) || item.reference || 'N/A'}
                   />
                 ))}
-
-                {/* Coffrets */}
                 {operator !== 'free' && hasCoffret && (
                   <MastEquipmentCard
                     borderClass="border-l-pink-500"
@@ -348,8 +340,6 @@ export function SiteConfirmationModal({
                     detailValue={config?.coffret_references?.find((r: any) => r.id === coffretReference)?.name || coffretReference || 'Sélectionné'}
                   />
                 )}
-
-                {/* Boîtier de jonction FO (Free) */}
                 {operator === 'free' && hasBoitierJonction && (
                   <MastEquipmentCard
                     borderClass="border-l-cyan-500"

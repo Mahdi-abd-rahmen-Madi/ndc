@@ -242,44 +242,6 @@ export default function UserInput({
               </select>
             </div>
           </div>
-
-          {/* Type d'ancrage */}
-          <div className="flex flex-col pt-3 border-t border-slate-100">
-            <label className="text-xs font-semibold text-slate-700 flex items-center justify-between mb-2 h-6">
-              <span className="flex items-center gap-1.5">
-                <Anchor className="w-3.5 h-3.5 text-violet-600" />
-                Type d'ancrage <span className="text-red-500 font-bold">*</span>
-              </span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md">
-              <button
-                type="button"
-                onClick={() => onChange({ foundationType: 'metallique' })}
-                className={`py-2 px-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                  currentFoundationType === 'metallique'
-                    ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
-                    : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
-                }`}
-              >
-                <span className="text-xs font-bold">Plot métallique</span>
-                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Disponible</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onChange({ foundationType: 'beton' })}
-                disabled
-                className={`py-2 px-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-not-allowed opacity-60 ${
-                  currentFoundationType === 'beton'
-                    ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
-                    : 'border-slate-200 bg-slate-50 text-slate-500'
-                }`}
-              >
-                <span className="text-xs font-bold">Plot Béton</span>
-                <span className="text-[9px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">Indispo.</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -470,6 +432,42 @@ export default function UserInput({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Type d'ancrage */}
+          <div className="pt-6 border-t border-slate-200 mt-2">
+            <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <Anchor className="w-4 h-4 text-violet-600" />
+              <span>Type d'ancrage <span className="text-red-500 font-bold">*</span></span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-md">
+              <button
+                type="button"
+                onClick={() => onChange({ foundationType: 'metallique' })}
+                className={`py-2 px-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                  currentFoundationType === 'metallique'
+                    ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
+                    : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                }`}
+              >
+                <span className="text-xs font-bold">Plot métallique</span>
+                <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Disponible</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onChange({ foundationType: 'beton' })}
+                disabled
+                className={`py-2 px-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-not-allowed opacity-60 ${
+                  currentFoundationType === 'beton'
+                    ? 'border-violet-600 bg-violet-50/70 text-violet-950 font-semibold shadow-2xs ring-1 ring-violet-500/20'
+                    : 'border-slate-200 bg-slate-50 text-slate-500'
+                }`}
+              >
+                <span className="text-xs font-bold">Plot Béton</span>
+                <span className="text-[9px] font-bold bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded">Indispo.</span>
+              </button>
             </div>
           </div>
         </div>

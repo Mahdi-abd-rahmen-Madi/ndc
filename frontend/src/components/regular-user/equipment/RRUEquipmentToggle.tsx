@@ -69,6 +69,7 @@ export function RRUEquipmentToggle({
       dropdownClassName="min-w-max"
       stackSelects={operator === 'orange'}
       unitLabel="/ secteur"
+      maxRows={6}
       nombreSecteurs={nombreSecteurs}
       disabled={disabled}
       disabledReason={disabledReason}
