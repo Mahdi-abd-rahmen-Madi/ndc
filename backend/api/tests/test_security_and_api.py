@@ -8,6 +8,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from api.models import CalculationJob, ClientSubscription
+from api.tasks import send_job_to_worker
 from utils.domain_constants import (
     OPERATORS_WITHOUT_TD,
     V_B0_TO_REGION,
@@ -151,3 +152,31 @@ class ApiAuthAndPermissionsTest(TestCase):
 
         sub.refresh_from_db()
         self.assertEqual(sub.used_quota, 1)
+
+        job.refresh_from_db()
+        self.assertEqual((job.result_data or {}).get("progress", {}).get("percent"), 100)
+        self.assertEqual((job.result_data or {}).get("progress", {}).get("stage"), "COMPLETED")
+
+    def test_callback_url_ignored_in_ndc_hash_and_forwarded_to_worker(self):
+        base_payload = {
+            "operateur": "orange",
+            "environment": {"region": 2, "terrain_type": "IIIa", "building_height_m": 20},
+            "structure": {"hauteur_mat_m": 4, "mat_principal": "TRON 139x6.3"},
+        }
+        with_cb = {**base_payload, "_callback_url": "https://api-ndc.heliosys.io"}
+        self.assertEqual(compute_ndc_hash("antenna", base_payload), compute_ndc_hash("antenna", with_cb))
+
+        job = CalculationJob.objects.create(
+            user=self.user,
+            status="PENDING",
+            input_data={"_callback_url": "https://api-ndc.heliosys.io", "operateur": "orange"},
+        )
+        with patch("api.tasks.requests.post") as mock_post:
+            mock_post.return_value.status_code = 202
+            ok = send_job_to_worker(job.id)
+            self.assertTrue(ok)
+            sent = mock_post.call_args.kwargs["json"]
+            self.assertEqual(sent["callback_url"], "https://api-ndc.heliosys.io")
+            self.assertEqual(sent["input_data"]["callback_url"], "https://api-ndc.heliosys.io")
+            self.assertEqual(sent["input_data"]["django_backend_url"], "https://api-ndc.heliosys.io")
+            self.assertNotIn("_callback_url", sent["input_data"])

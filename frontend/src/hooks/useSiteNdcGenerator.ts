@@ -7,7 +7,7 @@ import type {
 } from '../components/regular-user/types';
 import { getTerrainDetails } from '../utils/terrainDetails';
 import { buildSectorEquipmentPayload } from '../config/equipmentRegistry';
-import { apiClient, buildWebSocketUrl } from '../services/apiClient';
+import { apiClient, buildWebSocketUrl, resolveMediaUrl } from '../services/apiClient';
 
 /**
  * DEVELOPMENT FLAG:
@@ -85,6 +85,7 @@ export function useSiteNdcGenerator({
 }: UseSiteNdcGeneratorParams) {
   const [isGeneratingSiteNdc, setIsGeneratingSiteNdc] = useState(false);
   const [siteNdcPollingMsg, setSiteNdcPollingMsg] = useState('');
+  const [siteNdcProgressPercent, setSiteNdcProgressPercent] = useState<number | null>(null);
   const [siteNdcError, setSiteNdcError] = useState<string | null>(null);
   const [ndcPdfUrl, setNdcPdfUrl] = useState<string | null>(null);
 
@@ -134,7 +135,8 @@ export function useSiteNdcGenerator({
     try {
       // --- FAST TRACK (INSTANT NDC) ---
       if (!FORCE_WORKER_CALCULATION && isFullyStandard()) {
-        setSiteNdcPollingMsg('Génération du document Standard (Instantané)...');
+        setSiteNdcProgressPercent(10);
+        setSiteNdcPollingMsg('Génération du document Standard (Instantané)... (10%)');
 
         // Extract the correct catalogue PDF URLs from the terrain details
         const catalogueUrls = [];
@@ -240,10 +242,9 @@ export function useSiteNdcGenerator({
             { baseUrl: apiBaseUrl }
           );
           if (mergeData.ndc_pdf_url) {
-            const fullUrl = mergeData.ndc_pdf_url.startsWith('http')
-              ? mergeData.ndc_pdf_url
-              : `${window.location.origin}${mergeData.ndc_pdf_url}`;
+            const fullUrl = resolveMediaUrl(mergeData.ndc_pdf_url, apiBaseUrl);
 
+            setSiteNdcProgressPercent(100);
             setIsGeneratingSiteNdc(false);
             setNdcPdfUrl(fullUrl);
             return; // Done! Bypassed Robot!
@@ -256,8 +257,9 @@ export function useSiteNdcGenerator({
       }
 
       // --- ROBOT CALCULATION (CUSTOM TRACK) ---
-      setSiteNdcPollingMsg('Lancement des calculs Robot pour chaque secteur...');
-      const jobIds: string[] = [];
+      setSiteNdcProgressPercent(2);
+      setSiteNdcPollingMsg('Lancement des calculs Robot pour chaque secteur... (2%)');
+      const createdJobs: Array<{ id: string; status?: string; cached?: boolean }> = [];
 
       // Create a job for each unique group (using each group's own sector aerial equipment!)
       for (let i = 0; i < uniqueGroups.length; i++) {
@@ -338,28 +340,57 @@ export function useSiteNdcGenerator({
         };
 
         try {
-          const calcData = await apiClient.post<{ data: { id: string } }>(
+          const calcData = await apiClient.post<{ data: { id: string }; status?: string; cached?: boolean }>(
             '/api/calculations/',
             payload,
             { baseUrl: apiBaseUrl }
           );
-          jobIds.push(calcData.data.id);
+          createdJobs.push({
+            id: calcData.data.id,
+            status: calcData.status,
+            cached: calcData.cached,
+          });
         } catch (err) {
           console.error(`[NDC Job Creation Error - Groupe ${i + 1}]:`, err);
           throw new Error("Impossible d'initialiser le calcul sur le serveur. Veuillez réessayer.");
         }
       }
 
+      const jobIds = createdJobs.map((j) => j.id);
+
       // Track all jobs with live interactive progress (WebSocket + polling fallback)
-      const totalJobs = jobIds.length;
+      const totalJobs = createdJobs.length;
       for (let idx = 0; idx < totalJobs; idx++) {
-        const jobId = jobIds[idx];
+        const { id: jobId, status: initialStatus, cached: isCacheHit } = createdJobs[idx];
         const sectorPrefix = totalJobs > 1 ? `[Secteur ${idx + 1}/${totalJobs}] ` : '';
-        setSiteNdcPollingMsg(`${sectorPrefix}Démarrage du calcul Robot...`);
+
+        if (initialStatus === 'COMPLETED' || isCacheHit) {
+          const donePct = Math.round(((idx + 1) / totalJobs) * 90);
+          setSiteNdcProgressPercent(donePct);
+          setSiteNdcPollingMsg(`${sectorPrefix}Résultat chargé depuis le cache (${donePct}%)`);
+          continue;
+        }
+
+        const startPct = Math.max(5, Math.round((idx / totalJobs) * 90));
+        setSiteNdcProgressPercent(startPct);
+        setSiteNdcPollingMsg(`${sectorPrefix}Démarrage du calcul Robot... (${startPct}%)`);
 
         let isCompleted = false;
         let attempts = 0;
         const maxAttempts = 180; // 6 minutes maximum
+
+        const updateSectorProgress = (rawPercent: unknown, message?: string) => {
+          const hasNum = typeof rawPercent === 'number' && !Number.isNaN(rawPercent);
+          if (hasNum) {
+            const clamped = Math.max(0, Math.min(100, rawPercent as number));
+            const overall = Math.max(5, Math.min(92, Math.round(((idx + clamped / 100) / totalJobs) * 90)));
+            setSiteNdcProgressPercent(overall);
+          }
+          if (message) {
+            const pctStr = hasNum ? ` (${rawPercent}%)` : '';
+            setSiteNdcPollingMsg(`${sectorPrefix}${message}${pctStr}`);
+          }
+        };
 
         // Open WebSocket connection for real-time progress push
         let ws: WebSocket | null = null;
@@ -369,9 +400,8 @@ export function useSiteNdcGenerator({
           ws.onmessage = (event) => {
             try {
               const data = JSON.parse(event.data);
-              if (data.message) {
-                const pctStr = typeof data.percent === 'number' ? ` (${data.percent}%)` : '';
-                setSiteNdcPollingMsg(`${sectorPrefix}${data.message}${pctStr}`);
+              if (data.message || typeof data.percent === 'number') {
+                updateSectorProgress(data.percent, data.message);
               }
               if (data.status === 'COMPLETED' || data.is_completed) {
                 isCompleted = true;
@@ -390,16 +420,20 @@ export function useSiteNdcGenerator({
         try {
           while (!isCompleted && attempts < maxAttempts) {
             await new Promise(r => setTimeout(r, 2000));
+            if (isCompleted) break;
             try {
               const jobResult = await apiClient.get<any>(`/api/calculations/${jobId}/`, {
                 baseUrl: apiBaseUrl,
               });
               const prog = jobResult.result_data?.progress;
               if (prog && prog.message) {
-                const pctStr = typeof prog.percent === 'number' ? ` (${prog.percent}%)` : '';
-                setSiteNdcPollingMsg(`${sectorPrefix}${prog.message}${pctStr}`);
+                updateSectorProgress(prog.percent, prog.message);
               } else if (jobResult.status === 'RUNNING' || jobResult.status === 'PROCESSING') {
-                setSiteNdcPollingMsg(`${sectorPrefix}Calcul Robot en cours d'exécution...`);
+                const fallbackPct = Math.max(5, Math.min(90, Math.round(((idx + 0.1) / totalJobs) * 90)));
+                setSiteNdcProgressPercent((prev) => (prev !== null && prev > fallbackPct ? prev : fallbackPct));
+                setSiteNdcPollingMsg((prev) =>
+                  prev && prev.includes('%') ? prev : `${sectorPrefix}Calcul Robot en cours d'exécution... (${fallbackPct}%)`
+                );
               }
 
               if (jobResult.status === 'COMPLETED' || (jobResult.status === 'PENDING' && jobResult.result_data?.ndc_pdf_url)) {
@@ -431,7 +465,8 @@ export function useSiteNdcGenerator({
         }
       }
 
-      setSiteNdcPollingMsg('Fusion des documents PDF...');
+      setSiteNdcProgressPercent(95);
+      setSiteNdcPollingMsg('Fusion des documents PDF... (95%)');
 
       // Call the merge endpoint
       let mergeData: { ndc_pdf_url?: string };
@@ -456,9 +491,8 @@ export function useSiteNdcGenerator({
       }
 
       if (mergeData.ndc_pdf_url) {
-        const fullUrl = mergeData.ndc_pdf_url.startsWith('http')
-          ? mergeData.ndc_pdf_url
-          : `${window.location.origin}${mergeData.ndc_pdf_url}`;
+        const fullUrl = resolveMediaUrl(mergeData.ndc_pdf_url, apiBaseUrl);
+        setSiteNdcProgressPercent(100);
         setNdcPdfUrl(fullUrl);
       } else {
         throw new Error('URL de document manquant dans la réponse.');
@@ -477,6 +511,7 @@ export function useSiteNdcGenerator({
     } finally {
       setIsGeneratingSiteNdc(false);
       setSiteNdcPollingMsg('');
+      setSiteNdcProgressPercent(null);
     }
   }, [
     activeSectors,
@@ -511,12 +546,14 @@ export function useSiteNdcGenerator({
     setNdcPdfUrl(null);
     setSiteNdcError(null);
     setSiteNdcPollingMsg('');
+    setSiteNdcProgressPercent(null);
     setIsGeneratingSiteNdc(false);
   }, []);
 
   return {
     isGeneratingSiteNdc,
     siteNdcPollingMsg,
+    siteNdcProgressPercent,
     siteNdcError,
     setSiteNdcError,
     ndcPdfUrl,

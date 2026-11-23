@@ -9,7 +9,8 @@ VOLATILE_KEYS = {
     "user_id", "author", "created_at", "updated_at", "timestamp", "date",
     "inspect_mode", "inspect", "force_recalculate", "bypass_cache", "no_cache",
     "output_docx", "output_pdf", "generate_doc", "csrf_token", "auth", "token",
-    "session_id", "status", "priority", "webhook_url"
+    "session_id", "status", "priority", "webhook_url",
+    "_callback_url", "callback_url", "django_backend_url", "api_base_url"
 }
 
 def _has_active_antenna(input_data: Dict[str, Any]) -> bool:

@@ -216,6 +216,8 @@ CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bo
 # Security settings
 X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='SAMEORIGIN')
 SECURE_CONTENT_TYPE_NOSNIFF = True
+USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=True, cast=bool)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Media files configuration for local downloads
 MEDIA_URL = '/media/'
@@ -265,6 +267,9 @@ LOGGING = {
 ROBOT_WORKER_BASE_URL = config('ROBOT_WORKER_URL', default=config('WORKER_BASE_URL', default='http://100.97.172.27:8001'))
 ROBOT_WORKER_JOBS_URL = f"{ROBOT_WORKER_BASE_URL.rstrip('/')}/api/jobs"
 ROBOT_WORKER_STATUS_URL = f"{ROBOT_WORKER_BASE_URL.rstrip('/')}/api/status"
+
+# Public/reachable base URL of this Django backend for Windows Robot Worker callbacks
+BACKEND_PUBLIC_URL = config('BACKEND_PUBLIC_URL', default=config('BACKEND_CALLBACK_URL', default='')).strip().rstrip('/')
 
 # Backwards compatibility alias
 WORKER_BASE_URL = ROBOT_WORKER_BASE_URL

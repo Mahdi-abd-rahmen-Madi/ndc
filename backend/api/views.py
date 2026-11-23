@@ -544,6 +544,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     }, status=status.HTTP_200_OK)
 
         # 3. Create Pending Job
+        callback_url = (getattr(settings, 'BACKEND_PUBLIC_URL', '') or '').strip().rstrip('/')
+        if not callback_url:
+            host = (request.get_host() or '').split(':')[0].lower()
+            if host and host not in ('localhost', '127.0.0.1', '0.0.0.0', 'testserver'):
+                callback_url = f"{request.scheme}://{request.get_host()}".rstrip('/')
+        if callback_url:
+            input_data["_callback_url"] = callback_url
+
         job = CalculationJob.objects.create(
             user=user,
             client_id=client_id,
@@ -851,6 +859,20 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         job.status = job_status
         job.error_message = error_message
+        if not isinstance(job.result_data, dict):
+            job.result_data = {}
+        if job_status == 'COMPLETED':
+            job.result_data['progress'] = {
+                'stage': 'COMPLETED',
+                'percent': 100,
+                'message': 'Calcul terminé avec succès',
+            }
+        else:
+            job.result_data['progress'] = {
+                'stage': 'FAILED',
+                'percent': 0,
+                'message': error_message or 'Échec du calcul Robot',
+            }
 
         # Atomic & idempotent quota update: only charge when transitioning into COMPLETED
         with transaction.atomic():

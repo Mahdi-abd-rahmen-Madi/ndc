@@ -229,6 +229,7 @@ export default function RegularUserView({
   const {
     isGeneratingSiteNdc,
     siteNdcPollingMsg,
+    siteNdcProgressPercent,
     siteNdcError,
     setSiteNdcError,
     ndcPdfUrl,
@@ -788,6 +789,7 @@ export default function RegularUserView({
             canGenerate={canGenerate}
             isGeneratingSiteNdc={isGeneratingSiteNdc}
             siteNdcPollingMsg={siteNdcPollingMsg}
+            siteNdcProgressPercent={siteNdcProgressPercent}
             siteNdcError={siteNdcError}
             setSiteNdcError={setSiteNdcError}
             ndcPdfUrl={ndcPdfUrl}

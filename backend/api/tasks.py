@@ -38,10 +38,23 @@ def send_job_to_worker(job_id):
 
         url = getattr(settings, 'ROBOT_WORKER_JOBS_URL', f"{settings.WORKER_BASE_URL.rstrip('/')}/api/jobs")
 
+        raw_input_data = dict(job.input_data or {})
+        callback_url = (
+            raw_input_data.pop("_callback_url", None)
+            or getattr(settings, 'BACKEND_PUBLIC_URL', '')
+            or ''
+        ).strip().rstrip('/')
+
+        if callback_url:
+            raw_input_data["callback_url"] = callback_url
+            raw_input_data["django_backend_url"] = callback_url
+
         payload = {
             "id": job.id,
-            "input_data": dict(job.input_data or {})
+            "input_data": raw_input_data,
         }
+        if callback_url:
+            payload["callback_url"] = callback_url
 
         if os.environ.get("INSPECT_MODE", "false").lower() == "true":
             payload["input_data"]["inspect_mode"] = True

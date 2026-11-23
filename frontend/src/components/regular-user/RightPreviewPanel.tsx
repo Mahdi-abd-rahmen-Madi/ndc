@@ -46,6 +46,7 @@ export interface RightPreviewPanelProps {
   canGenerate: boolean;
   isGeneratingSiteNdc: boolean;
   siteNdcPollingMsg: string | null;
+  siteNdcProgressPercent?: number | null;
   siteNdcError: string | null;
   setSiteNdcError: (err: string | null) => void;
   ndcPdfUrl: string | null;
@@ -88,6 +89,7 @@ function RightPreviewPanel({
   canGenerate,
   isGeneratingSiteNdc,
   siteNdcPollingMsg,
+  siteNdcProgressPercent = null,
   siteNdcError,
   setSiteNdcError,
   ndcPdfUrl,
@@ -1015,20 +1017,35 @@ function RightPreviewPanel({
 
                   {isGeneratingSiteNdc && (
                     <div className="w-full mt-2 animate-fadeIn">
-                      <style>
-                        {`
-                          @keyframes indeterminateProgress {
-                            0% { transform: translateX(-100%); }
-                            100% { transform: translateX(400%); }
-                          }
-                        `}
-                      </style>
-                      <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
-                        <div
-                          className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
-                          style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
-                        ></div>
-                      </div>
+                      {typeof siteNdcProgressPercent === 'number' ? (
+                        <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ease-out ${
+                              isFullyStandard()
+                                ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
+                                : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
+                            }`}
+                            style={{ width: `${Math.max(2, Math.min(100, siteNdcProgressPercent))}%` }}
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <style>
+                            {`
+                              @keyframes indeterminateProgress {
+                                0% { transform: translateX(-100%); }
+                                100% { transform: translateX(400%); }
+                              }
+                            `}
+                          </style>
+                          <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
+                            <div
+                              className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
+                              style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
+                            ></div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
