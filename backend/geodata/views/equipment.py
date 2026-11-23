@@ -346,7 +346,7 @@ class AntennaEquipmentViewSet(viewsets.ModelViewSet):
             'standard_montages': config.standard_montages or cat_dict.get('standard_montages', []),
             'coffret_references': cat_dict.get('coffret_references') or getattr(config, 'coffret_references', []),
             'fh_references': getattr(config, 'fh_references', None) or cat_dict.get('fh_references', []),
-            'td_references': config.td_references or cat_dict.get('td_references', []),
+            'td_references': cat_dict.get('td_references') or getattr(config, 'td_references', []),
             'tgbt_references': cat_dict.get('tgbt_references') or getattr(config, 'tgbt_references', []),
             'rru_references': config.rru_references or cat_dict.get('rru_references', []),
             'rrh_references': config.rrh_references or cat_dict.get('rrh_references', []),

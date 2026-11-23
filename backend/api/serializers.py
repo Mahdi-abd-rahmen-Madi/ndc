@@ -140,6 +140,7 @@ class EquipmentItemSerializer(serializers.Serializer):
 
 class FHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
+    hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     sans_plot = serializers.BooleanField(required=False, default=False)
     diameter_mm = serializers.FloatField(required=False, allow_null=True)
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="Antenne FH")
@@ -184,11 +185,13 @@ class EquipmentPayloadSerializer(serializers.Serializer):
 
 class RRHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
+    hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
+    hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     sans_plot = serializers.BooleanField(required=False, default=False)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)

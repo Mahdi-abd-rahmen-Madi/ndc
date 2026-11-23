@@ -35,6 +35,7 @@ export interface MultiRowEquipmentToggleProps {
   disabledReason?: string;
   foundationType?: EquipmentFoundationType;
   onFoundationTypeChange?: (val: EquipmentFoundationType) => void;
+  children?: React.ReactNode;
 }
 
 export function MultiRowEquipmentToggle({
@@ -58,6 +59,7 @@ export function MultiRowEquipmentToggle({
   disabledReason,
   foundationType,
   onFoundationTypeChange,
+  children,
 }: MultiRowEquipmentToggleProps) {
   const uniqueVendors = useMemo(
     () => Array.from(new Set(options.map(o => o.vendor))),
@@ -247,6 +249,8 @@ export function MultiRowEquipmentToggle({
       {allowMultiple && maxRows !== undefined && items.length >= maxRows && (
         <p className="text-[11px] text-slate-500">Maximum {maxRows} références par secteur atteint.</p>
       )}
+
+      {children}
     </EquipmentToggleCard>
   );
 }

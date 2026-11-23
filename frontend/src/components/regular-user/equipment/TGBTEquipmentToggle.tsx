@@ -14,11 +14,15 @@ export interface TGBTItem {
   dimensions?: string;
 }
 
+export type TGBTEmplacement = 'integre_bcube' | 'integre_mat';
+
 export interface TGBTEquipmentToggleProps {
   hasTgbt: boolean;
   setHasTgbt: (val: boolean) => void;
   tgbtReference: string;
   setTgbtReference: (val: string) => void;
+  tgbtEmplacement?: TGBTEmplacement;
+  setTgbtEmplacement?: (val: TGBTEmplacement) => void;
   options?: TGBTItem[];
 }
 
@@ -27,6 +31,8 @@ export function TGBTEquipmentToggle({
   setHasTgbt,
   tgbtReference,
   setTgbtReference,
+  tgbtEmplacement = 'integre_bcube',
+  setTgbtEmplacement,
   options = [],
 }: TGBTEquipmentToggleProps) {
   const availableOptions = useMemo(
@@ -69,8 +75,37 @@ export function TGBTEquipmentToggle({
       fieldLabel="Modèle TGBT"
       placeholder="Sélectionner un TGBT"
       icon={Zap}
-      specs={specs}
-    />
+    >
+      <div className="flex flex-col gap-1.5 pt-1">
+        <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+          Emplacement du TGBT
+        </label>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer font-medium whitespace-nowrap">
+            <input
+              type="radio"
+              name="tgbtEmplacement"
+              value="integre_bcube"
+              checked={tgbtEmplacement === 'integre_bcube'}
+              onChange={() => setTgbtEmplacement?.('integre_bcube')}
+              className="text-violet-600 focus:ring-violet-500"
+            />
+            intégré au bcube
+          </label>
+          <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer font-medium whitespace-nowrap">
+            <input
+              type="radio"
+              name="tgbtEmplacement"
+              value="integre_mat"
+              checked={tgbtEmplacement === 'integre_mat'}
+              onChange={() => setTgbtEmplacement?.('integre_mat')}
+              className="text-violet-600 focus:ring-violet-500"
+            />
+            intégré au mat
+          </label>
+        </div>
+      </div>
+    </SelectEquipmentToggle>
   );
 }
 

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Activity } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
+import { DEFAULT_TD_OPTIONS } from '../../../config/catalogueDefaults';
 
 export interface TDEquipmentToggleProps {
   hasTdEquipment: boolean;
@@ -12,7 +13,7 @@ export interface TDEquipmentToggleProps {
   setTdReference: (val: string) => void;
   tgbtReference?: string;
   setTgbtReference?: (val: string) => void;
-  tdOptions: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string }[];
+  tdOptions?: { id: string; vendor?: string; name: string; reference?: string; weight?: number; dimensions?: string; phase?: string }[];
   operator?: string;
 }
 
@@ -23,27 +24,32 @@ export function TDEquipmentToggle({
   setTdType,
   tdReference,
   setTdReference,
-  tdOptions,
+  tdOptions = [],
   operator = 'free'
 }: TDEquipmentToggleProps) {
+  const availableOptions = useMemo(() => {
+    return tdOptions && tdOptions.length > 0 ? tdOptions : DEFAULT_TD_OPTIONS;
+  }, [tdOptions]);
+
   const isMatchingType = (opt: any, type: 'tetraphase' | 'monophase') => {
     if (opt.phase) return opt.phase === type;
     if (type === 'tetraphase') return opt.reference === '68237' || opt.id === 'td_tri_free' || opt.id === 'td_68237';
     return opt.reference !== '68237' && opt.id !== 'td_tri_free' && opt.id !== 'td_68237';
   };
 
+  const filteredTdOptions = useMemo(() => {
+    return availableOptions.filter(opt => isMatchingType(opt, tdType));
+  }, [availableOptions, tdType]);
+
   React.useEffect(() => {
     if (hasTdEquipment) {
-      const validOptions = tdOptions.filter(o => isMatchingType(o, tdType));
-      if (!validOptions.some(o => o.id === tdReference)) {
-        if (validOptions.length > 0) {
-          setTdReference(validOptions[0].id);
+      if (!filteredTdOptions.some(o => o.id === tdReference)) {
+        if (filteredTdOptions.length > 0) {
+          setTdReference(filteredTdOptions[0].id);
         }
       }
     }
-  }, [hasTdEquipment, tdType, tdOptions, tdReference, setTdReference]);
-
-  const filteredTdOptions = tdOptions.filter(opt => isMatchingType(opt, tdType));
+  }, [hasTdEquipment, tdType, filteredTdOptions, tdReference, setTdReference]);
 
   return (
     <EquipmentToggleCard
@@ -84,7 +90,7 @@ export function TDEquipmentToggle({
             className="focus:ring-2 focus:ring-violet-500"
             options={filteredTdOptions.map(opt => ({
               value: opt.id,
-              label: opt.vendor ? `${opt.vendor} - ${opt.name}` : opt.name
+              label: (opt.vendor || 'FREE') ? `${opt.vendor || 'FREE'} - ${opt.name}` : opt.name
             }))}
             placeholder="Sélectionner un équipement"
           />

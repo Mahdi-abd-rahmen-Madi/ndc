@@ -65,7 +65,16 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
   }
   activeSectors.forEach((sector, idx) => {
     const secLabel = nombreSecteurs > 1 ? ` (Secteur ${idx + 1})` : '';
+    const antH = sector.selectedHeight;
+    if (antH !== undefined && antH !== null && (antH < 0.5 || antH > 6.0 || isNaN(antH))) {
+      missingStep3Equipments.push(`Hauteur du mât antenne (0.5 m à 6.0 m)${secLabel}`);
+    }
+
     if (sector.hasFhEquipment) {
+      const fhH = sector.fhHauteurMatM;
+      if (fhH !== undefined && fhH !== null && (fhH < 0.5 || fhH > 6.0 || isNaN(fhH))) {
+        missingStep3Equipments.push(`Hauteur du mât FH (0.5 m à 6.0 m)${secLabel}`);
+      }
       const fhList = sector.fhItems ?? [];
       if (fhList.length > 0) {
         if (fhList.some(i => !i.reference || !i.vendor)) {
@@ -77,6 +86,10 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
     }
 
     if (operator !== 'bouygues' && sector.hasRrhEquipment) {
+      const rrhH = sector.rrhHauteurMatM;
+      if (rrhH !== undefined && rrhH !== null && (rrhH < 0.5 || rrhH > 6.0 || isNaN(rrhH))) {
+        missingStep3Equipments.push(`Hauteur du mât RRH (0.5 m à 6.0 m)${secLabel}`);
+      }
       const rrhList = sector.rrhItems ?? [];
       if (rrhList.length === 0 || rrhList.some(i => !i.reference || !i.vendor)) {
         missingStep3Equipments.push(`Référence RRH${secLabel}`);
@@ -84,6 +97,10 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
     }
 
     if (sector.hasRruEquipment) {
+      const rruH = sector.rruHauteurMatM;
+      if (rruH !== undefined && rruH !== null && (rruH < 0.5 || rruH > 6.0 || isNaN(rruH))) {
+        missingStep3Equipments.push(`Hauteur du mât ${operator === 'free' ? 'RF NSN' : 'RRU'} (0.5 m à 6.0 m)${secLabel}`);
+      }
       const rruList = sector.rruItems ?? [];
       if (rruList.length === 0 || rruList.some(i => !i.reference || !i.vendor)) {
         missingStep3Equipments.push(`Référence ${operator === 'free' ? 'RF NSN' : 'RRU'}${secLabel}`);

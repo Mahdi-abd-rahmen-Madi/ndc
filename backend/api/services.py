@@ -119,7 +119,11 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     if len(doc.tables) > 1:
         table1 = doc.tables[1]
         mast_sec = structure.get("mast_section") or cfg["mast_section"]
-        mast_h = structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else (1.7 if kind == "fh" else 1.5)
+        mast_h = (
+            ctx.get("hauteur_mat_m")
+            if ctx.get("hauteur_mat_m") is not None
+            else (structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else (1.7 if kind == "fh" else 1.5))
+        )
         plot_sec = structure.get("plot_section") or cfg["plot_section"]
         plot_h = structure.get("plot_h_m") if structure.get("plot_h_m") is not None else 0.5
         if len(table1.rows) > 1:

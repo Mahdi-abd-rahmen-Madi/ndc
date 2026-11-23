@@ -29,6 +29,7 @@ export interface SelectEquipmentToggleProps {
   specs?: { label: string; value: string }[];
   disabled?: boolean;
   disabledReason?: string;
+  children?: React.ReactNode;
 }
 
 export function SelectEquipmentToggle({
@@ -50,6 +51,7 @@ export function SelectEquipmentToggle({
   specs,
   disabled = false,
   disabledReason,
+  children,
 }: SelectEquipmentToggleProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -114,6 +116,8 @@ export function SelectEquipmentToggle({
             {qtyBlock && <div>{qtyBlock}</div>}
           </>
         )}
+
+        {children}
 
         {specs && specs.length > 0 && (
           <EquipmentSpecsGrid columns={2} items={specs} />

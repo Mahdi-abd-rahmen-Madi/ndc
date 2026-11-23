@@ -1,7 +1,17 @@
 import React, { useMemo, useCallback } from 'react';
+import { AlignJustify } from 'lucide-react';
 import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
+import { CustomSelect } from '../../ui/CustomSelect';
+import { MastHeightInput } from './shared/MastHeightInput';
 import { DEFAULT_FH_REFERENCES, FHCatalogItem } from '../../../config/catalogueDefaults';
+
+export const FH_ECHELLE_OPTIONS = [
+  { value: "Pas d'échelle", label: "Pas d'échelle" },
+  { value: 'Echelle Söll', label: 'Echelle Söll' },
+  { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
+  { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' },
+];
 
 export interface FHEquipmentOption {
   id: string;
@@ -31,6 +41,10 @@ export interface FHEquipmentToggleProps {
   disabledReason?: string;
   foundationType?: 'metallique' | 'beton' | 'dallettes';
   setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
+  fhEchelle?: string;
+  setFhEchelle?: (val: string) => void;
+  hauteurMatM?: number;
+  setHauteurMatM?: (val: number) => void;
 }
 
 export function FHEquipmentToggle({
@@ -51,6 +65,10 @@ export function FHEquipmentToggle({
   disabledReason,
   foundationType,
   setFoundationType,
+  fhEchelle = "Pas d'échelle",
+  setFhEchelle,
+  hauteurMatM,
+  setHauteurMatM,
 }: FHEquipmentToggleProps) {
   const allFhOptions: (FHEquipmentOption | FHCatalogItem)[] = useMemo(() => {
     return fhOptions && fhOptions.length > 0 ? fhOptions : DEFAULT_FH_REFERENCES;
@@ -124,7 +142,27 @@ export function FHEquipmentToggle({
       disabledReason={disabledReason}
       foundationType={foundationType}
       onFoundationTypeChange={setFoundationType}
-    />
+    >
+      <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-200/70">
+        <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+          <AlignJustify className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+          <span>Présence échelle</span>
+        </label>
+        <CustomSelect
+          value={fhEchelle || "Pas d'échelle"}
+          onChange={(val) => setFhEchelle?.(val)}
+          options={FH_ECHELLE_OPTIONS}
+          placeholder="Sélectionner une échelle"
+          className="w-full focus:ring-2 focus:ring-amber-500"
+        />
+      </div>
+      <MastHeightInput
+        value={hauteurMatM}
+        onChange={setHauteurMatM}
+        defaultValue={1.70}
+        disabled={disabled}
+      />
+    </MultiRowEquipmentToggle>
   );
 }
 

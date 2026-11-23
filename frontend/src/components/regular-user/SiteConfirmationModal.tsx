@@ -135,7 +135,7 @@ export function SiteConfirmationModal({
   } = extractSectorAerialState(activeSectors[0]);
 
   const {
-    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
+    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference, tgbtEmplacement,
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
@@ -490,7 +490,9 @@ export function SiteConfirmationModal({
                     <span className="text-xs font-bold text-slate-900 block">
                       {tgbtReference || 'TGBT ACTIA'}
                     </span>
-                    <span className="text-[10px] text-slate-500 block mt-0.5">500x400x230mm • 15kg</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      500x400x230mm • 15kg • {tgbtEmplacement === 'integre_mat' ? 'intégré au mat' : 'intégré au bcube'}
+                    </span>
                   </ZoneTechniqueCard>
                 )}
               </div>

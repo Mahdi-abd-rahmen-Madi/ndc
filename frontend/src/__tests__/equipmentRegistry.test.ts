@@ -119,6 +119,7 @@ describe('equipmentRegistry', () => {
 
     assert.equal(payload.td_equipment.enabled, false);
     assert.equal(payload.rru_equipment.enabled, true);
+    assert.equal(payload.rru_equipment.hauteur_mat_m, 1.50);
     assert.equal(payload.rru_equipment.items.length, 1);
     assert.equal(payload.rru_equipment.ancrage, 'dallettes');
     assert.equal(payload.coffrets_fibre.enabled, true);
@@ -126,7 +127,7 @@ describe('equipmentRegistry', () => {
     assert.equal(payload.coffrets_fibre.ancrage, 'beton');
   });
 
-  it('builds FH payload with catalogue reference and enforces strict segregation from RRU/RRH', () => {
+  it('builds FH payload with catalogue reference and allows coexistence with RRU while segregating RRH', () => {
     const sector = {
       ...defaultSectorData(1),
       hasFhEquipment: true,
@@ -134,8 +135,8 @@ describe('equipmentRegistry', () => {
         { id: '1', reference: 'fh_huawei_30', quantity: 2 },
       ],
       fhFoundationType: 'dallettes' as const,
-      hasRruEquipment: true, // Should be segregated out
-      hasRrhEquipment: true, // Should be segregated out
+      hasRruEquipment: true, // Coexists with FH
+      hasRrhEquipment: true, // Segregated because RRU is present
     };
 
     const payload = buildSectorEquipmentPayload({
@@ -151,6 +152,7 @@ describe('equipmentRegistry', () => {
 
     assert.equal(payload.fh_equipment.enabled, true);
     assert.equal(payload.fh_equipment.sans_plot, false);
+    assert.equal(payload.fh_equipment.hauteur_mat_m, 1.70);
     // When Huawei 30cm Ø 300 mm is selected, diameter must be 300 and weight 6
     assert.equal(payload.fh_equipment.diameter_mm, 300);
     assert.equal(payload.fh_equipment.weight_kg, 6);
@@ -172,9 +174,9 @@ describe('equipmentRegistry', () => {
       hauteur_plot_m: 0.50,
     });
 
-    // Strict segregation
+    // FH and RRU coexist, while RRH and RRU are mutually exclusive
+    assert.equal(payload.rru_equipment.enabled, true);
     assert.equal(payload.rrh_equipment.enabled, false);
-    assert.equal(payload.rru_equipment.enabled, false);
   });
 
   it('builds multi-dish FH payload with matching catalogue references', () => {
@@ -206,5 +208,68 @@ describe('equipmentRegistry', () => {
     assert.equal(payload.fh_equipment.items[1].reference, 'BFZ 622 34/3S03H Ø 1200 mm');
     assert.equal(payload.fh_equipment.items[1].diameter_mm, 1200);
     assert.equal(payload.fh_equipment.items[1].weight_kg, 32);
+  });
+
+  it('enforces and customizes mast heights for RRH, RRU, and FH', () => {
+    // 1. Custom RRU mast height 2.20 m
+    const rruSector = {
+      ...defaultSectorData(1),
+      hasRruEquipment: true,
+      rruHauteurMatM: 2.20,
+      rruItems: [{ id: '1', reference: 'RRU3281', quantity: 1 }],
+    };
+    const rruPayload = buildSectorEquipmentPayload({
+      sector: rruSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(rruPayload.rru_equipment.enabled, true);
+    assert.equal(rruPayload.rru_equipment.hauteur_mat_m, 2.20);
+
+    // 2. Custom RRH mast height 1.80 m
+    const rrhSector = {
+      ...defaultSectorData(1),
+      hasRrhEquipment: true,
+      rrhHauteurMatM: 1.80,
+      rrhItems: [{ id: '1', reference: 'NOKIA AHHB 2600', quantity: 1 }],
+    };
+    const rrhPayload = buildSectorEquipmentPayload({
+      sector: rrhSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(rrhPayload.rrh_equipment.enabled, true);
+    assert.equal(rrhPayload.rrh_equipment.hauteur_mat_m, 1.80);
+
+    // 3. Custom FH mast height 2.50 m
+    const fhSector = {
+      ...defaultSectorData(1),
+      hasFhEquipment: true,
+      fhHauteurMatM: 2.50,
+      fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
+    };
+    const fhPayload = buildSectorEquipmentPayload({
+      sector: fhSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(fhPayload.fh_equipment.enabled, true);
+    assert.equal(fhPayload.fh_equipment.hauteur_mat_m, 2.50);
+    assert.equal(fhPayload.structure_fh?.hauteur_mat_m, 2.50);
   });
 });

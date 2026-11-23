@@ -34,7 +34,7 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         or result_data.get("wind_params")
         or {}
     )
-    structure = result_data.get("structure_params") or rrh_sub.get("structure_params") or {}
+    structure = rrh_sub.get("structure_params") or result_data.get("structure_params") or {}
     extremes = result_data.get("extremes") or rrh_sub.get("extremes") or {}
 
     try:
@@ -228,11 +228,14 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         or "sans_plot" in str(result_data.get("calculation_type") or "").lower()
     )
 
+    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
+
     return {
         "items": items,
         "totals": totals,
         "wind": wind,
         "structure": structure,
+        "hauteur_mat_m": h_mat,
         "extremes": extremes,
         "is_multi": is_multi,
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
@@ -536,11 +539,14 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
 
     is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
 
+    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
+
     return {
         "items": items,
         "totals": totals,
         "wind": wind,
         "structure": structure,
+        "hauteur_mat_m": h_mat,
         "extremes": extremes,
         "operateur": operateur,
         "is_sans_plot": is_sans_plot,

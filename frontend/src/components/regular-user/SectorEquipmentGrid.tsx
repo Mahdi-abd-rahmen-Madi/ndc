@@ -30,9 +30,8 @@ export function SectorEquipmentGrid({
     updateSector(sectorIndex, updates);
   };
 
-  const isOrange = operator === 'orange';
-  const isRrhDisabled = isOrange && !!sector.hasRruEquipment;
-  const isRruDisabled = isOrange && !!sector.hasRrhEquipment;
+  const isRrhDisabled = !!sector.hasRruEquipment;
+  const isRruDisabled = !!sector.hasRrhEquipment;
   
   return (
     <div className={onlyFh ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
@@ -40,11 +39,7 @@ export function SectorEquipmentGrid({
       <FHEquipmentToggle
         hasFhEquipment={!!sector.hasFhEquipment}
         setHasFhEquipment={(val) => {
-          if (val) {
-            syncUpdates({ hasFhEquipment: true, hasRrhEquipment: false, hasRruEquipment: false });
-          } else {
-            syncUpdates({ hasFhEquipment: false });
-          }
+          syncUpdates({ hasFhEquipment: val });
         }}
         fhItems={sector.fhItems || []}
         setFhItems={(val) => {
@@ -63,6 +58,10 @@ export function SectorEquipmentGrid({
         nombreSecteurs={nombreSecteurs}
         foundationType={sector.fhFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ fhFoundationType: val, equipmentFoundationType: val })}
+        fhEchelle={sector.fhEchelle}
+        setFhEchelle={(val) => syncUpdates({ fhEchelle: val })}
+        hauteurMatM={sector.fhHauteurMatM ?? 1.70}
+        setHauteurMatM={(val) => syncUpdates({ fhHauteurMatM: val })}
       />
 
       {!onlyFh && <>
@@ -72,7 +71,7 @@ export function SectorEquipmentGrid({
           hasRrhEquipment={!!sector.hasRrhEquipment}
           setHasRrhEquipment={(val) => {
             if (val) {
-              syncUpdates({ hasRrhEquipment: true, hasRruEquipment: false, hasFhEquipment: false });
+              syncUpdates({ hasRrhEquipment: true, hasRruEquipment: false });
             } else {
               syncUpdates({ hasRrhEquipment: false });
             }
@@ -89,6 +88,8 @@ export function SectorEquipmentGrid({
           disabledReason={isRrhDisabled ? 'Non cumulable avec RRU' : undefined}
           foundationType={sector.rrhFoundationType || sector.equipmentFoundationType || 'dallettes'}
           setFoundationType={(val) => syncUpdates({ rrhFoundationType: val, equipmentFoundationType: val })}
+          hauteurMatM={sector.rrhHauteurMatM ?? 1.50}
+          setHauteurMatM={(val) => syncUpdates({ rrhHauteurMatM: val })}
         />
       )}
 
@@ -97,7 +98,7 @@ export function SectorEquipmentGrid({
         hasRruEquipment={!!sector.hasRruEquipment}
         setHasRruEquipment={(val) => {
           if (val) {
-            syncUpdates({ hasRruEquipment: true, hasRrhEquipment: false, hasFhEquipment: false });
+            syncUpdates({ hasRruEquipment: true, hasRrhEquipment: false });
           } else {
             syncUpdates({ hasRruEquipment: false });
           }
@@ -115,6 +116,8 @@ export function SectorEquipmentGrid({
         disabledReason={isRruDisabled ? 'Non cumulable avec RRH' : undefined}
         foundationType={sector.rruFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ rruFoundationType: val, equipmentFoundationType: val })}
+        hauteurMatM={sector.rruHauteurMatM ?? 1.50}
+        setHauteurMatM={(val) => syncUpdates({ rruHauteurMatM: val })}
       />
 
       {/* 4. Boîtier de jonction FO (Free) ou Coffrets fibre (hors Free) */}

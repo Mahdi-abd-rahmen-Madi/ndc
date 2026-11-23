@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { EquipmentItem } from '../types';
 import { RFM_MODELS } from '../../../config/catalogueDefaults';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
+import { MastHeightInput } from './shared/MastHeightInput';
 
 export interface RRUEquipmentToggleProps {
   hasRruEquipment: boolean;
@@ -16,6 +17,8 @@ export interface RRUEquipmentToggleProps {
   disabledReason?: string;
   foundationType?: 'metallique' | 'beton' | 'dallettes';
   setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
+  hauteurMatM?: number;
+  setHauteurMatM?: (val: number) => void;
 }
 
 export function RRUEquipmentToggle({
@@ -31,6 +34,8 @@ export function RRUEquipmentToggle({
   disabledReason,
   foundationType,
   setFoundationType,
+  hauteurMatM,
+  setHauteurMatM,
 }: RRUEquipmentToggleProps) {
   const options = useMemo(() => {
     if (isRfmMode) {
@@ -75,7 +80,14 @@ export function RRUEquipmentToggle({
       disabledReason={disabledReason}
       foundationType={foundationType}
       onFoundationTypeChange={setFoundationType}
-    />
+    >
+      <MastHeightInput
+        value={hauteurMatM}
+        onChange={setHauteurMatM}
+        defaultValue={1.50}
+        disabled={disabled}
+      />
+    </MultiRowEquipmentToggle>
   );
 }
 

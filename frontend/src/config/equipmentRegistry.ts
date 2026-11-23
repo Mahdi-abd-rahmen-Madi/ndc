@@ -95,12 +95,16 @@ export function extractSectorAerialState(sector?: SectorData) {
     fhWeight: sector?.fhWeight,
     fhItems: sector?.fhItems ?? [],
     fhFoundationType: sector?.fhFoundationType || fallbackFoundation,
+    fhHauteurMatM: sector?.fhHauteurMatM ?? 1.70,
+    fhEchelle: sector?.fhEchelle || "Pas d'échelle",
     hasRrhEquipment: !!sector?.hasRrhEquipment,
     rrhItems: sector?.rrhItems ?? [],
     rrhFoundationType: sector?.rrhFoundationType || fallbackFoundation,
+    rrhHauteurMatM: sector?.rrhHauteurMatM ?? 1.50,
     hasRruEquipment: !!sector?.hasRruEquipment,
     rruItems: sector?.rruItems ?? [],
     rruFoundationType: sector?.rruFoundationType || fallbackFoundation,
+    rruHauteurMatM: sector?.rruHauteurMatM ?? 1.50,
     hasCoffret: !!sector?.hasCoffret,
     coffretReference: sector?.coffretReference ?? '',
     coffretFoundationType: sector?.coffretFoundationType || fallbackFoundation,
@@ -264,33 +268,37 @@ export function buildSectorEquipmentPayload({
     fh_equipment: {
       enabled: aerial.hasFhEquipment,
       sans_plot: false,
+      hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
       diameter_mm: aerial.hasFhEquipment && primaryFh ? primaryFh.diameter_mm : null,
       reference: aerial.hasFhEquipment && primaryFh ? primaryFh.reference : null,
       quantity: aerial.hasFhEquipment && primaryFh ? primaryFh.quantity : null,
       weight_kg: aerial.hasFhEquipment && primaryFh ? primaryFh.weight_kg : null,
       ancrage: aerial.hasFhEquipment ? aerial.fhFoundationType : null,
+      echelle: aerial.hasFhEquipment ? aerial.fhEchelle : null,
       items: aerial.hasFhEquipment ? finalFhItems : [],
     },
     structure_fh: aerial.hasFhEquipment
       ? {
           mast_section: 'TRON 88x2.5',
           plot_section: 'TCAR 150x5',
-          hauteur_mat_m: 1.70,
+          hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
           hauteur_plot_m: 0.50,
         }
       : null,
     rrh_equipment: {
-      enabled: !aerial.hasFhEquipment && allowRrh && aerial.hasRrhEquipment,
+      enabled: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment,
       ancrage: allowRrh && aerial.hasRrhEquipment ? aerial.rrhFoundationType : null,
-      items: !aerial.hasFhEquipment && allowRrh && aerial.hasRrhEquipment
+      hauteur_mat_m: Number(aerial.rrhHauteurMatM ?? 1.50),
+      items: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment
         ? aerial.rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity }))
         : [],
     },
     rru_equipment: {
-      enabled: !aerial.hasFhEquipment && aerial.hasRruEquipment,
+      enabled: aerial.hasRruEquipment,
       sans_plot: false,
       ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
-      items: !aerial.hasFhEquipment && aerial.hasRruEquipment
+      hauteur_mat_m: Number(aerial.rruHauteurMatM ?? 1.50),
+      items: aerial.hasRruEquipment
         ? aerial.rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity }))
         : [],
     },
@@ -303,6 +311,7 @@ export function buildSectorEquipmentPayload({
     tgbt_equipment: {
       enabled: allowTgbt && zt.hasTgbt,
       reference: allowTgbt && zt.hasTgbt ? (zt.tgbtReference || STATIC_EQUIPMENT_SPECS.tgbt.defaultRef) : null,
+      emplacement: allowTgbt && zt.hasTgbt ? (zt.tgbtEmplacement || 'integre_bcube') : null,
     },
     gps: {
       enabled: zt.hasGps,

@@ -29,6 +29,7 @@ from .serializers import (
 from .aps_service import get_aps_token
 from .tasks import enqueue_task
 from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
+from utils.validators import validate_calculation_mast_heights
 from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator, resolve_sans_plot
 from utils.path_security import safe_media_path, safe_resolve_under
 from django.core.files.storage import FileSystemStorage
@@ -253,6 +254,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             )
         
         input_data = dict(payload_serializer.validated_data)
+        try:
+            validate_calculation_mast_heights(input_data)
+        except Exception as e:
+            err_detail = getattr(e, 'detail', None) or (e.message_dict if hasattr(e, 'message_dict') else str(e))
+            return Response(
+                {"error": "Validation de la hauteur du mât échouée", "details": err_detail},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         force_recalculate = bool(input_data.get("force_recalculate") or request.data.get("force_recalculate"))
 
         # Quota check if authenticated user has a subscription
@@ -287,18 +296,19 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 or input_data.get("is_fh")
                 or (isinstance(input_data.get("fh_equipment"), dict) and input_data["fh_equipment"].get("enabled"))):
             is_sp = resolve_sans_plot(input_data, kind="fh")
+            fh_h = (input_data.get("fh_equipment") or {}).get("hauteur_mat_m") or (input_data.get("structure_fh") or {}).get("hauteur_mat_m") or 1.70
             if not input_data.get("structure_fh") and not input_data.get("is_fh"):
                 input_data["structure_fh"] = {
                     "mast_section": "TRON 88x2.5",
                     "plot_section": None if is_sp else "TCAR 150x5",
-                    "hauteur_mat_m": 1.70,
+                    "hauteur_mat_m": fh_h,
                     "hauteur_plot_m": 0.0 if is_sp else 0.50,
                 }
             if input_data.get("is_fh") and not input_data.get("structure"):
                 input_data["structure"] = {
                     "mast_section": "TRON 88x2.5",
                     "plot_section": None if is_sp else "TCAR 150x5",
-                    "hauteur_mat_m": 1.70,
+                    "hauteur_mat_m": fh_h,
                     "hauteur_plot_m": 0.0 if is_sp else 0.50,
                 }
 

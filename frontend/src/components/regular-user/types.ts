@@ -240,12 +240,16 @@ export interface SectorData {
   fhWeight?: number;
   fhItems?: EquipmentItem[];
   fhFoundationType?: 'metallique' | 'beton' | 'dallettes';
+  fhHauteurMatM?: number;
+  fhEchelle?: string;
   hasRrhEquipment?: boolean;
   rrhItems?: EquipmentItem[];
   rrhFoundationType?: 'metallique' | 'beton' | 'dallettes';
+  rrhHauteurMatM?: number;
   hasRruEquipment?: boolean;
   rruItems?: EquipmentItem[];
   rruFoundationType?: 'metallique' | 'beton' | 'dallettes';
+  rruHauteurMatM?: number;
   hasCoffret?: boolean;
   coffretReference?: string;
   coffretFoundationType?: 'metallique' | 'beton' | 'dallettes';
@@ -265,6 +269,7 @@ export interface ZoneTechniqueData {
   tdReference: string;
   hasTgbt: boolean;
   tgbtReference: string;
+  tgbtEmplacement?: 'integre_bcube' | 'integre_mat';
 
   hasGps: boolean;
   gpsReference: string;
@@ -314,6 +319,7 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
   tdReference: '',
   hasTgbt: false,
   tgbtReference: '',
+  tgbtEmplacement: 'integre_bcube',
 
   hasGps: false,
   gpsReference: '',
@@ -411,12 +417,16 @@ export const defaultSectorData = (id: number): SectorData => ({
   fhQuantity: 1,
   fhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   fhFoundationType: 'dallettes',
+  fhHauteurMatM: 1.70,
+  fhEchelle: "Pas d'échelle",
   hasRrhEquipment: false,
   rrhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   rrhFoundationType: 'dallettes',
+  rrhHauteurMatM: 1.50,
   hasRruEquipment: false,
   rruItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   rruFoundationType: 'dallettes',
+  rruHauteurMatM: 1.50,
   hasCoffret: false,
   coffretReference: '',
   coffretFoundationType: 'dallettes',

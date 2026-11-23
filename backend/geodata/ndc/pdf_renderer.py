@@ -15,6 +15,7 @@ from utils.domain_constants import (
     resolve_sans_plot,
 )
 from utils.path_security import safe_media_path
+from utils.validators import get_support_mast_height_m
 
 from .artifact_locator import (
     _first_existing_file,
@@ -599,10 +600,9 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             or (structure_data.get('mast_section') if is_standalone_fh else None)
             or 'TRON 88x2.5'
         )
-        fh_mat_longueur_m = (
-            struct_p.get('hauteur_mat_m')
-            if struct_p.get('hauteur_mat_m') is not None
-            else (structure_data.get('hauteur_mat_m') if is_standalone_fh and structure_data.get('hauteur_mat_m') is not None else 1.70)
+        fh_mat_longueur_m = get_support_mast_height_m(
+            res_data, 'fh',
+            fallback_h=struct_p.get('hauteur_mat_m') or (structure_data.get('hauteur_mat_m') if is_standalone_fh else (input_data.get('fh_equipment') or {}).get('hauteur_mat_m', 1.70))
         )
 
         if is_fh_sans_plot:
@@ -635,7 +635,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
                 pass
 
         try:
-            fh_mat_longueur = int(float(fh_mat_longueur_m) * 1000)
+            fh_mat_longueur = int(round(float(fh_mat_longueur_m) * 1000))
         except (ValueError, TypeError):
             fh_mat_longueur = 1700
 
@@ -798,18 +798,21 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         extremes = rrh_ctx.get('extremes') or worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
         struct_p = rrh_ctx.get('structure') or worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
 
-        rrh_mat_section = struct_p.get('mast_section') or context.get('mat_section')
+        rrh_mat_section = struct_p.get('mast_section') or 'TRON 88x3.2'
         rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
         rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
-        rrh_mat_longueur_m = struct_p.get('hauteur_mat_m') or context.get('mat_longueur_m')
+        rrh_mat_longueur_m = get_support_mast_height_m(
+            res_data, 'rrh',
+            fallback_h=struct_p.get('hauteur_mat_m') or (input_data.get('rrh_equipment') or {}).get('hauteur_mat_m', 1.50)
+        )
 
         rrh_wind = _resolve_support_wind_params(wind_p, context, env, vb, rrh_plot_longueur_m, rrh_mat_longueur_m)
         rrh_qp_z = rrh_wind['qp_z']
 
         try:
-            rrh_mat_longueur = int(float(rrh_mat_longueur_m) * 1000) if rrh_mat_longueur_m else context.get('mat_longueur')
+            rrh_mat_longueur = int(round(float(rrh_mat_longueur_m) * 1000))
         except (ValueError, TypeError):
-            rrh_mat_longueur = context.get('mat_longueur')
+            rrh_mat_longueur = 1500
 
         m_diam, m_ep = parse_dimensions(rrh_mat_section)
         try:
@@ -996,10 +999,9 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             or (structure_data.get('mast_section') if is_standalone_rru else None)
             or 'TRON 88x2.5'
         )
-        rru_mat_longueur_m = (
-            struct_p.get('hauteur_mat_m')
-            if struct_p.get('hauteur_mat_m') is not None
-            else (structure_data.get('hauteur_mat_m') if is_standalone_rru and structure_data.get('hauteur_mat_m') is not None else 1.5)
+        rru_mat_longueur_m = get_support_mast_height_m(
+            res_data, 'rru',
+            fallback_h=struct_p.get('hauteur_mat_m') or (structure_data.get('hauteur_mat_m') if is_standalone_rru else (input_data.get('rru_equipment') or {}).get('hauteur_mat_m', 1.50))
         )
         if rru_sans_plot:
             rru_plot_section = 'Sans plot'
@@ -1033,7 +1035,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
                 pass
 
         try:
-            rru_mat_longueur = int(float(rru_mat_longueur_m) * 1000)
+            rru_mat_longueur = int(round(float(rru_mat_longueur_m) * 1000))
         except (ValueError, TypeError):
             rru_mat_longueur = 1500
 

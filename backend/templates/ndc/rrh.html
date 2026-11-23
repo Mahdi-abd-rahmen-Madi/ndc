@@ -32,9 +32,9 @@
     <p>
         Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
         {% if rrh_is_multi %}
-        Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:mat_longueur|default:"1500" }} mm supportant des RRHs.
+        Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:"1500" }} mm supportant des RRHs.
         {% else %}
-        Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:mat_longueur|default:"1500" }} mm supportant un RRH.
+        Ajout d’un mât en tube {{ rrh_mat_diam|default:mat_diam|default:"88" }} mm, d’épaisseur {{ rrh_mat_epaisseur|default:mat_epaisseur|default:"3.2" }} mm et de longueur {{ rrh_mat_longueur|default:"1500" }} mm supportant un RRH.
         {% endif %}
         {% if not is_sans_plot and not rrh_sans_plot %}
         Le mât sera fixé sur un plot métallique {{ rrh_plot_section|default:plot_section|default:"TCAR 200x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
@@ -143,8 +143,8 @@
     </thead>
     <tbody>
         <tr>
-            <td>{{ rrh_mat_section|default:mat_section|default:"TRON 88x3.2" }}</td>
-            <td class="text-center">{{ rrh_mat_longueur_m|default:mat_longueur_m|default:"1.5" }}</td>
+            <td>{{ rrh_mat_section|default:"TRON 88x3.2" }}</td>
+            <td class="text-center">{{ rrh_mat_longueur_m|default:"1.50" }}</td>
             <td class="text-center">Mat principal</td>
         </tr>
         {% if not is_sans_plot and not rrh_sans_plot %}

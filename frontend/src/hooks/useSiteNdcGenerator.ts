@@ -404,13 +404,15 @@ export function useSiteNdcGenerator({
 
               if (jobResult.status === 'COMPLETED' || (jobResult.status === 'PENDING' && jobResult.result_data?.ndc_pdf_url)) {
                 isCompleted = true;
-              } else if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR') {
-                const errMsg = jobResult.error_message || "Calcul échoué sur le serveur Robot pour l'un des secteurs.";
+              } else if (jobResult.status === 'FAILED' || jobResult.status === 'ERROR' || jobResult.status === 'REJECTED') {
+                const errMsg = jobResult.error_message || (jobResult.status === 'REJECTED'
+                  ? "Calcul rejeté : paramètres de mât ou données invalides."
+                  : "Le calcul Robot a échoué. Veuillez réessayer.");
                 console.error(`[Robot Worker Calculation Failure - Job ${jobId}]:`, errMsg, jobResult);
-                throw new Error("Le calcul Robot a échoué. Veuillez réessayer.");
+                throw new Error(errMsg);
               }
             } catch (pollErr: any) {
-              if (pollErr?.message === 'Le calcul Robot a échoué. Veuillez réessayer.') {
+              if (pollErr?.message && pollErr.message !== "Le délai d'attente du calcul Robot a été dépassé. Veuillez réessayer.") {
                 throw pollErr;
               }
               // Transient network glitch during poll; continue retrying

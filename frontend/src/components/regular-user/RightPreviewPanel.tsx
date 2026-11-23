@@ -123,7 +123,7 @@ function RightPreviewPanel({
   const selectedFhOpt = config?.fh_references?.find(r => r.id === fhReference);
 
   const {
-    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference,
+    hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference, tgbtEmplacement,
     hasGps, gpsReference, gpsMarque,
     hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
     hasAtelierEnergie, bcubeReference,
@@ -805,6 +805,9 @@ function RightPreviewPanel({
                   operator={operator}
                   equipmentToggles={buildEquipmentTogglesMap(group.sector, zoneTechnique, operator)}
                   equipmentValues={{
+                    fhHauteurMatM: group.sector.fhHauteurMatM ?? 1.70,
+                    rrhHauteurMatM: group.sector.rrhHauteurMatM ?? 1.50,
+                    rruHauteurMatM: group.sector.rruHauteurMatM ?? 1.50,
                     fh: {
                       diamètre: `${fhDiameter} mm`,
                       référence: selectedFhOpt?.reference || 'N/A',
@@ -842,7 +845,8 @@ function RightPreviewPanel({
                       return {
                         modèle: tgbtItem?.name || tgbtReference || 'TGBT ACTIA',
                         dimensions: tgbtItem?.dimensions || '500x400x230mm',
-                        poids: tgbtItem?.weight ? `${tgbtItem.weight} kg` : '15 kg'
+                        poids: tgbtItem?.weight ? `${tgbtItem.weight} kg` : '15 kg',
+                        emplacement: tgbtEmplacement === 'integre_mat' ? 'intégré au mat' : 'intégré au bcube'
                       };
                     })() : null,
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },

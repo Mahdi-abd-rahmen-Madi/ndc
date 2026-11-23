@@ -25,14 +25,14 @@ interface UseSectorManagerOptions {
 
 // FH is configured per sector, even when sectors share identical antennas.
 const FH_KEYS: (keyof SectorData)[] = [
-  'hasFhEquipment', 'fhItems', 'fhReference', 'fhDiameter', 'fhQuantity', 'fhWeight', 'fhFoundationType',
+  'hasFhEquipment', 'fhItems', 'fhReference', 'fhDiameter', 'fhQuantity', 'fhWeight', 'fhFoundationType', 'fhEchelle',
 ];
 
 function getFhSignature(s: SectorData): string {
   if (!s.hasFhEquipment) return 'nofh';
   const items = (s.fhItems && s.fhItems.length > 0 ? s.fhItems : [{ reference: s.fhReference, quantity: s.fhQuantity }])
     .map(i => `${i.reference}x${i.quantity ?? 1}`).join(',');
-  return `fh:${items}:${s.fhFoundationType ?? ''}`;
+  return `fh:${items}:${s.fhFoundationType ?? ''}:${s.fhEchelle ?? ''}`;
 }
 
 export function useSectorManager({
@@ -89,12 +89,10 @@ export function useSectorManager({
   const updateSector = useCallback((index: number, updates: Partial<SectorData>) => {
     setSectors(prev => {
       let finalUpdates = { ...updates };
-      if (operator === 'orange') {
-        if (finalUpdates.hasRrhEquipment) {
-          finalUpdates.hasRruEquipment = false;
-        } else if (finalUpdates.hasRruEquipment) {
-          finalUpdates.hasRrhEquipment = false;
-        }
+      if (finalUpdates.hasRrhEquipment) {
+        finalUpdates.hasRruEquipment = false;
+      } else if (finalUpdates.hasRruEquipment) {
+        finalUpdates.hasRrhEquipment = false;
       }
       const next = [...prev];
       next[index] = { ...next[index], ...finalUpdates };
@@ -102,16 +100,12 @@ export function useSectorManager({
       if (index === 0 && similarityMode === 'all_similar') {
         const shared: Partial<SectorData> = { ...finalUpdates };
         FH_KEYS.forEach(k => { delete shared[k]; });
-        // RRH/RRU and FH are mutually exclusive on a sector
-        if (shared.hasRrhEquipment || shared.hasRruEquipment) {
-          shared.hasFhEquipment = false;
-        }
         next[1] = { ...next[1], ...shared };
         next[2] = { ...next[2], ...shared };
       }
       return next;
     });
-  }, [operator, similarityMode]);
+  }, [similarityMode]);
 
   // Sync data when similarity mode changes
   useEffect(() => {

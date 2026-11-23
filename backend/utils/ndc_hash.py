@@ -95,29 +95,40 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
         "environment": _normalize(merged_env),
     }
 
+    has_antenna = bool(data.get("antenna_4g") or data.get("antenna_5g"))
     if normalized_type in ("rrh", "rru") or equipment:
         canonical["equipment"] = _normalize(equipment)
-    if normalized_type == "antenna" or antenna_4g or antenna_5g:
+    if normalized_type == "antenna" or antenna_4g or antenna_5g or has_antenna:
         canonical["antenna_4g"] = _normalize(antenna_4g)
         canonical["antenna_5g"] = _normalize(antenna_5g)
 
-    rru_eq = data.get("rru_equipment")
-    if isinstance(rru_eq, dict) and rru_eq.get("enabled"):
-        rru_eq_copy = dict(rru_eq)
-        if rru_eq_copy.get("sans_plot") is None:
-            rru_eq_copy["sans_plot"] = False
-        canonical["rru_equipment"] = _normalize(rru_eq_copy)
+    # 1. Base Antenna mast height in structure
+    if has_antenna and "hauteur_mat_m" in structure and structure["hauteur_mat_m"] is not None:
+        try:
+            canonical["structure"]["hauteur_mat_m"] = round(float(structure["hauteur_mat_m"]), 3)
+        except (ValueError, TypeError):
+            pass
 
-    rrh_eq = data.get("rrh_equipment")
-    if isinstance(rrh_eq, dict) and rrh_eq.get("enabled"):
-        canonical["rrh_equipment"] = _normalize(rrh_eq)
-
-    fh_eq = data.get("fh_equipment")
-    if isinstance(fh_eq, dict) and fh_eq.get("enabled"):
-        fh_eq_copy = dict(fh_eq)
-        if fh_eq_copy.get("sans_plot") is None:
-            fh_eq_copy["sans_plot"] = False
-        canonical["fh_equipment"] = _normalize(fh_eq_copy)
+    # 2. Per-equipment mast heights for every enabled equipment
+    for eq_key in ("rrh_equipment", "rru_equipment", "fh_equipment"):
+        eq_blk = data.get(eq_key)
+        if isinstance(eq_blk, dict) and eq_blk.get("enabled"):
+            eq_copy = dict(eq_blk)
+            kind = eq_key.replace("_equipment", "")
+            raw_h = eq_copy.get("hauteur_mat_m")
+            if raw_h is None:
+                sub_struct = data.get(f"structure_{kind}") or {}
+                raw_h = sub_struct.get("hauteur_mat_m")
+            if raw_h is None and not has_antenna:
+                raw_h = structure.get("hauteur_mat_m")
+            if raw_h is not None:
+                try:
+                    eq_copy["hauteur_mat_m"] = round(float(raw_h), 3)
+                except (ValueError, TypeError):
+                    pass
+            if eq_copy.get("sans_plot") is None:
+                eq_copy["sans_plot"] = False
+            canonical[eq_key] = _normalize(eq_copy)
 
     if "structure_fh" in data and isinstance(data["structure_fh"], dict):
         canonical["structure_fh"] = _normalize(data["structure_fh"])

@@ -1,5 +1,5 @@
 import type { CatalogueConfig, SelectedBaieItem } from './types';
-import { DEFAULT_ORANGE_BAIES, RFM_MODELS } from '../../config/catalogueDefaults';
+import { DEFAULT_ORANGE_BAIES, DEFAULT_TD_OPTIONS, RFM_MODELS } from '../../config/catalogueDefaults';
 
 export function createResolvers(config: CatalogueConfig | null, operator: string) {
   const resolveRru = (id: string) => {
@@ -17,8 +17,11 @@ export function createResolvers(config: CatalogueConfig | null, operator: string
   };
 
   const resolveTd = (id: string) => {
-    const opt = config?.td_references?.find(r => r.id === id);
-    return opt ? `${opt.vendor} ${opt.name} (${opt.reference})` : id;
+    const options = config?.td_references && config.td_references.length > 0
+      ? config.td_references
+      : DEFAULT_TD_OPTIONS;
+    const opt = options.find(r => r.id === id);
+    return opt ? `${opt.vendor || 'FREE'} ${opt.name} (${opt.reference})` : id;
   };
 
   const resolveBaieItems = (items: SelectedBaieItem[]) => {

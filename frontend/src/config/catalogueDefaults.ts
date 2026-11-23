@@ -9,6 +9,7 @@ export interface SimpleCatalogItem {
   operator?: string;
   weight?: number;
   dimensions?: string;
+  phase?: 'monophase' | 'tetraphase' | string;
 }
 
 export const RFM_MODELS = [
@@ -40,6 +41,15 @@ export const DEFAULT_TGBT_OPTIONS: SimpleCatalogItem[] = [
 
 export const DEFAULT_BOITIER_LOVAGE_OPTIONS: SimpleCatalogItem[] = [
   { id: 'BLM-515709', name: 'Boîte de dérivation OPTIBOX IP55', reference: 'BLM-515709', operator: 'free' },
+];
+
+export const DEFAULT_TD_OPTIONS: SimpleCatalogItem[] = [
+  { id: 'td_68236', name: '68236', vendor: 'FREE', operator: 'free', weight: 60.0, reference: '68236', phase: 'monophase', dimensions: '1055x850x350mm' },
+  { id: 'td_68237', name: '68237', vendor: 'FREE', operator: 'free', weight: 60.0, reference: '68237', phase: 'tetraphase', dimensions: '1055x850x350mm' },
+  { id: 'td_5g', name: 'TD 5G', vendor: 'FREE', operator: 'free', weight: 60.0, reference: 'TD 5G', phase: 'monophase', dimensions: '1055x850x350mm' },
+  { id: 'td_3g_4g', name: 'TD 3G/4G', vendor: 'FREE', operator: 'free', weight: 50.0, reference: 'TD 3G/4G', phase: 'monophase', dimensions: '536x300x747mm' },
+  { id: 'mini_td_700', name: 'Mini TD radio 700', vendor: 'FREE', operator: 'free', weight: 8.0, reference: 'Mini TD radio 700', phase: 'monophase', dimensions: '430x330x200mm' },
+  { id: 'mini_td_5g', name: 'Mini TD 5G', vendor: 'FREE', operator: 'free', weight: 15.0, reference: 'Mini TD 5G', phase: 'monophase', dimensions: '530x430x200mm' },
 ];
 
 export interface FHCatalogItem {

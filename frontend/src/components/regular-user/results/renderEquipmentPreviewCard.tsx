@@ -42,6 +42,8 @@ export function renderEquipmentPreviewCard({
         const extraSpecs: Record<string, any> = {};
         if (diameter) extraSpecs['Diamètre'] = `Ø${diameter} mm`;
         if (weight) extraSpecs['Poids'] = `${weight} kg`;
+        const mastHeight = item.hauteur_mat_m || equipmentValues.fhHauteurMatM || equipmentValues.hauteur_mat_m;
+        if (mastHeight) extraSpecs['Hauteur mât'] = `${mastHeight} m`;
 
         return (
           <EquipmentPreviewCard
@@ -74,6 +76,8 @@ export function renderEquipmentPreviewCard({
     const extraSpecs: Record<string, any> = {};
     if (diameter) extraSpecs['Diamètre'] = `Ø${diameter} mm`;
     if (weight) extraSpecs['Poids'] = `${weight} kg`;
+    const singleFhMastHeight = equipmentValues.fhHauteurMatM || equipmentValues.hauteur_mat_m;
+    if (singleFhMastHeight) extraSpecs['Hauteur mât'] = `${singleFhMastHeight} m`;
 
     return (
       <EquipmentPreviewCard
@@ -103,6 +107,9 @@ export function renderEquipmentPreviewCard({
         const typeName = 'RRH';
         const vendor = item.vendor;
         const model = stripVendorPrefix(item.reference, vendor);
+        const extraSpecs: Record<string, any> = {};
+        const mastHeight = item.hauteur_mat_m || equipmentValues.rrhHauteurMatM || equipmentValues.hauteur_mat_m;
+        if (mastHeight) extraSpecs['Hauteur mât'] = `${mastHeight} m`;
 
         return (
           <EquipmentPreviewCard
@@ -124,6 +131,7 @@ export function renderEquipmentPreviewCard({
             }}
             marque={vendor}
             modele={model || 'N/A'}
+            extraSpecs={Object.keys(extraSpecs).length > 0 ? extraSpecs : undefined}
           />
         );
       });
@@ -138,6 +146,9 @@ export function renderEquipmentPreviewCard({
       const typeName = operator === 'free' ? 'RF NSN' : 'RRU';
       const vendor = item.vendor;
       const model = stripVendorPrefix(item.reference, vendor);
+      const extraSpecs: Record<string, any> = {};
+      const mastHeight = item.hauteur_mat_m || equipmentValues.rruHauteurMatM || equipmentValues.hauteur_mat_m;
+      if (mastHeight) extraSpecs['Hauteur mât'] = `${mastHeight} m`;
 
       return (
         <EquipmentPreviewCard
@@ -159,6 +170,7 @@ export function renderEquipmentPreviewCard({
           }}
           marque={vendor}
           modele={model || 'N/A'}
+          extraSpecs={Object.keys(extraSpecs).length > 0 ? extraSpecs : undefined}
         />
       );
     });
@@ -539,7 +551,8 @@ export function renderEquipmentPreviewCard({
         modele={tgbtVal.modèle || 'TGBT ACTIA'}
         extraSpecs={{
           Dimensions: tgbtVal.dimensions || '500x400x230mm',
-          Poids: tgbtVal.poids || '15 kg'
+          Poids: tgbtVal.poids || '15 kg',
+          ...(tgbtVal.emplacement ? { Emplacement: tgbtVal.emplacement } : {})
         }}
       />
     );
