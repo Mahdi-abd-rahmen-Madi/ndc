@@ -112,7 +112,7 @@ class CalculationJob(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='calculation_jobs', verbose_name=_("User"))
     client_id = models.CharField(max_length=128, default="default_client", blank=True, verbose_name=_("Client ID"))
-    calculation_type = models.CharField(max_length=32, choices=CALC_TYPES, default="antenna", verbose_name=_("Calculation Type"))
+    calculation_type = models.CharField(max_length=128, blank=True, default="antenna", verbose_name=_("Calculation Type"))
 
     # Deterministic physical hash for instant deduplication & caching
     ndc_hash = models.CharField(max_length=64, db_index=True, null=True, blank=True, verbose_name=_("NDC Hash"))

@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
-import { MastHeightInput } from './shared/MastHeightInput';
 
 export interface RRHEquipmentToggleProps {
   hasRrhEquipment: boolean;
@@ -59,14 +58,10 @@ export function RRHEquipmentToggle({
       disabledReason={disabledReason}
       foundationType={foundationType}
       onFoundationTypeChange={setFoundationType}
-    >
-      <MastHeightInput
-        value={hauteurMatM}
-        onChange={setHauteurMatM}
-        defaultValue={1.50}
-        disabled={disabled}
-      />
-    </MultiRowEquipmentToggle>
+      hauteurMatM={hauteurMatM}
+      onHauteurMatMChange={setHauteurMatM}
+      defaultHauteurMatM={1.50}
+    />
   );
 }
 

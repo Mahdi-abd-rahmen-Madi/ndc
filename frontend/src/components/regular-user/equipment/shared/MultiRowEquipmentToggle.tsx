@@ -5,6 +5,7 @@ import { CustomSelect } from '../../../ui/CustomSelect';
 import { QuantityInput } from '../../../ui/QuantityInput';
 import type { EquipmentItem } from '../../types';
 import { EquipmentAncrageSelector, EquipmentFoundationType } from './EquipmentAncrageSelector';
+import { MastHeightInput } from './MastHeightInput';
 
 export interface MultiRowOption {
   id: string;
@@ -35,6 +36,9 @@ export interface MultiRowEquipmentToggleProps {
   disabledReason?: string;
   foundationType?: EquipmentFoundationType;
   onFoundationTypeChange?: (val: EquipmentFoundationType) => void;
+  hauteurMatM?: number;
+  onHauteurMatMChange?: (val: number) => void;
+  defaultHauteurMatM?: number;
   children?: React.ReactNode;
 }
 
@@ -59,6 +63,9 @@ export function MultiRowEquipmentToggle({
   disabledReason,
   foundationType,
   onFoundationTypeChange,
+  hauteurMatM,
+  onHauteurMatMChange,
+  defaultHauteurMatM,
   children,
 }: MultiRowEquipmentToggleProps) {
   const uniqueVendors = useMemo(
@@ -153,6 +160,15 @@ export function MultiRowEquipmentToggle({
       scopeBadgeText={scopeBadgeText}
       isIncomplete={isIncomplete}
     >
+      {onHauteurMatMChange && (
+        <MastHeightInput
+          value={hauteurMatM}
+          onChange={onHauteurMatMChange}
+          defaultValue={defaultHauteurMatM}
+          disabled={disabled}
+        />
+      )}
+
       {onFoundationTypeChange && (
         <EquipmentAncrageSelector
           value={foundationType}

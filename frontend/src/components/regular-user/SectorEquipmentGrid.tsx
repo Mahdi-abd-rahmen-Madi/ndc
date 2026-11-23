@@ -85,7 +85,7 @@ export function SectorEquipmentGrid({
           operator={operator}
           nombreSecteurs={nombreSecteurs}
           disabled={isRrhDisabled}
-          disabledReason={isRrhDisabled ? 'Non cumulable avec RRU' : undefined}
+          disabledReason={isRrhDisabled ? 'RRH et RRU ne peuvent pas coexister sur le même site' : undefined}
           foundationType={sector.rrhFoundationType || sector.equipmentFoundationType || 'dallettes'}
           setFoundationType={(val) => syncUpdates({ rrhFoundationType: val, equipmentFoundationType: val })}
           hauteurMatM={sector.rrhHauteurMatM ?? 1.50}
@@ -113,7 +113,7 @@ export function SectorEquipmentGrid({
         operator={operator}
         nombreSecteurs={nombreSecteurs}
         disabled={isRruDisabled}
-        disabledReason={isRruDisabled ? 'Non cumulable avec RRH' : undefined}
+        disabledReason={isRruDisabled ? 'RRH et RRU ne peuvent pas coexister sur le même site' : undefined}
         foundationType={sector.rruFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ rruFoundationType: val, equipmentFoundationType: val })}
         hauteurMatM={sector.rruHauteurMatM ?? 1.50}

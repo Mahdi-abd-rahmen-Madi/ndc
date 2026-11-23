@@ -243,10 +243,12 @@ export interface SectorData {
   fhHauteurMatM?: number;
   fhEchelle?: string;
   hasRrhEquipment?: boolean;
+  rrhSansPlot?: boolean;
   rrhItems?: EquipmentItem[];
   rrhFoundationType?: 'metallique' | 'beton' | 'dallettes';
   rrhHauteurMatM?: number;
   hasRruEquipment?: boolean;
+  rruSansPlot?: boolean;
   rruItems?: EquipmentItem[];
   rruFoundationType?: 'metallique' | 'beton' | 'dallettes';
   rruHauteurMatM?: number;

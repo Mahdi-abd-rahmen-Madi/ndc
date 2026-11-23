@@ -12,17 +12,49 @@ VOLATILE_KEYS = {
     "session_id", "status", "priority", "webhook_url"
 }
 
+def _has_active_antenna(input_data: Dict[str, Any]) -> bool:
+    for key in ("antenna_4g", "antenna_5g"):
+        ant = input_data.get(key)
+        if isinstance(ant, dict) and any(
+            ant.get(f) for f in ("model", "hauteur_mm", "largeur_mm", "epaisseur_mm", "poids_kg", "height_mm", "width_mm")
+        ):
+            return True
+    return False
+
+
 def detect_calculation_type(input_data: Dict[str, Any]) -> str:
     if not input_data:
         return "antenna"
     if input_data.get("calculation_type"):
         return str(input_data["calculation_type"]).lower().strip()
-    if input_data.get("is_fh") is True:
-        return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
-    if input_data.get("is_rru") is True:
-        return "rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru"
-    if input_data.get("is_rrh") is True:
-        return "rrh_sans_plot" if resolve_sans_plot(input_data, kind="rrh") else "rrh"
+
+    has_antenna = _has_active_antenna(input_data)
+
+    # Check active equipment stages in canonical worker execution order:
+    # 1. RRH or RRU
+    # 2. FH
+    # 3. Any future registered <kind>_equipment blocks
+    rrh_eq = input_data.get("rrh_equipment")
+    rru_eq = input_data.get("rru_equipment")
+    fh_eq = input_data.get("fh_equipment")
+
+    rrh_active = (isinstance(rrh_eq, dict) and bool(rrh_eq.get("enabled"))) or input_data.get("is_rrh") is True
+    rru_active = (isinstance(rru_eq, dict) and bool(rru_eq.get("enabled"))) or input_data.get("is_rru") is True
+    fh_active = (isinstance(fh_eq, dict) and bool(fh_eq.get("enabled"))) or input_data.get("is_fh") is True
+
+    active_segments = []
+    if rrh_active:
+        active_segments.append("rrh_sans_plot" if resolve_sans_plot(input_data, kind="rrh") else "rrh")
+    elif rru_active:
+        active_segments.append("rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru")
+
+    if fh_active:
+        active_segments.append("fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh")
+
+    if active_segments:
+        joined = "_and_".join(active_segments)
+        return f"antenna_with_{joined}" if has_antenna else joined
+
     type_str = f"{input_data.get('type_support', '')} {input_data.get('type', '')}".lower()
     if "fh" in type_str or "faisceau" in type_str:
         return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
@@ -30,17 +62,6 @@ def detect_calculation_type(input_data: Dict[str, Any]) -> str:
         return "rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru"
     if "rrh" in type_str:
         return "rrh_sans_plot" if resolve_sans_plot(input_data, kind="rrh") else "rrh"
-
-    has_antenna = bool(input_data.get("antenna_4g") or input_data.get("antenna_5g"))
-    fh_eq = input_data.get("fh_equipment")
-    if isinstance(fh_eq, dict) and fh_eq.get("enabled"):
-        if not has_antenna:
-            return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
-        return "antenna_with_fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "antenna_with_fh"
-
-    rru_eq = input_data.get("rru_equipment")
-    if isinstance(rru_eq, dict) and rru_eq.get("enabled") and not has_antenna:
-        return "rru_sans_plot" if resolve_sans_plot(input_data, kind="rru") else "rru"
 
     eq = input_data.get("equipment")
     if eq and isinstance(eq, dict):
@@ -109,12 +130,18 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
         except (ValueError, TypeError):
             pass
 
-    # 2. Per-equipment mast heights for every enabled equipment
-    for eq_key in ("rrh_equipment", "rru_equipment", "fh_equipment"):
+    # 2. Per-equipment mast heights & plot settings for every enabled equipment (RRH, RRU, FH, and future <kind>_equipment)
+    active_equipments = []
+    equipment_keys = list(dict.fromkeys(
+        ["rrh_equipment", "rru_equipment", "fh_equipment"]
+        + [k for k in sorted(data.keys()) if str(k).endswith("_equipment") and str(k) not in ("td_equipment", "tgbt_equipment")]
+    ))
+    for eq_key in equipment_keys:
         eq_blk = data.get(eq_key)
         if isinstance(eq_blk, dict) and eq_blk.get("enabled"):
             eq_copy = dict(eq_blk)
             kind = eq_key.replace("_equipment", "")
+            active_equipments.append(kind)
             raw_h = eq_copy.get("hauteur_mat_m")
             if raw_h is None:
                 sub_struct = data.get(f"structure_{kind}") or {}
@@ -126,18 +153,27 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
                     eq_copy["hauteur_mat_m"] = round(float(raw_h), 3)
                 except (ValueError, TypeError):
                     pass
-            if eq_copy.get("sans_plot") is None:
-                eq_copy["sans_plot"] = False
+            is_kind_sp = resolve_sans_plot(data, calc_type=normalized_type, kind=kind)
+            eq_copy["sans_plot"] = is_kind_sp
+            eq_copy["with_plot"] = not is_kind_sp
             canonical[eq_key] = _normalize(eq_copy)
+            sub_struct_key = f"structure_{kind}"
+            if sub_struct_key in data and isinstance(data[sub_struct_key], dict):
+                canonical[sub_struct_key] = _normalize(data[sub_struct_key])
 
     if "structure_fh" in data and isinstance(data["structure_fh"], dict):
         canonical["structure_fh"] = _normalize(data["structure_fh"])
 
-    is_rru = normalized_type in ("rru", "rru_sans_plot", "antenna_with_rru", "antenna_with_rru_sans_plot") or data.get("is_rru") is True
-    is_fh = normalized_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot") or data.get("is_fh") is True
-    target_kind = "fh" if is_fh else ("rru" if is_rru else normalized_type)
-    if resolve_sans_plot(data, calc_type=normalized_type, kind=target_kind):
-        canonical["sans_plot"] = True
+    if len(active_equipments) == 1:
+        single_kind = active_equipments[0]
+        if resolve_sans_plot(data, calc_type=normalized_type, kind=single_kind):
+            canonical["sans_plot"] = True
+    elif not active_equipments:
+        is_rru = normalized_type in ("rru", "rru_sans_plot", "antenna_with_rru", "antenna_with_rru_sans_plot") or data.get("is_rru") is True
+        is_fh = normalized_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot") or data.get("is_fh") is True
+        target_kind = "fh" if is_fh else ("rru" if is_rru else normalized_type)
+        if resolve_sans_plot(data, calc_type=normalized_type, kind=target_kind):
+            canonical["sans_plot"] = True
 
     op = normalize_operator(data.get("operateur") or data.get("operator"), fallback_site=data.get("site"))
     if op:

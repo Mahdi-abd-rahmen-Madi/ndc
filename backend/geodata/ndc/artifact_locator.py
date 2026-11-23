@@ -122,16 +122,28 @@ def find_job_equipment_rtf_paths(job, kind: str = 'rrh'):
     mat_cands = []
     if is_fh:
         mat_cands.append(_job_field_path('fh_note_mat'))
+        mat_cands.append(_job_field_path('note_de_calcul_fh'))
     elif not is_rru:
         mat_cands.append(_job_field_path('note_mat'))
+        mat_cands.append(_job_field_path('note_de_calcul_rrh'))
     mat_cands.extend([
         eq_files.get('note_mat'),
         eq_files.get(f'{kind}_note_mat'),
+        eq_files.get('note_de_calcul'),
+        eq_files.get(f'note_de_calcul_{kind}'),
+        eq_files.get(f'{kind}_note_de_calcul'),
         res_data.get(f'{kind}_note_mat_path'),
+        res_data.get(f'{kind}_note_de_calcul_path'),
+        res_data.get(f'note_de_calcul_{kind}_path'),
         sub.get('note_mat_path'),
+        sub.get('note_de_calcul_path'),
         os.path.join(primary_media_dir, f'job_{job.id}_{kind}_note_mat.rtf'),
+        os.path.join(primary_media_dir, f'job_{job.id}_{kind}_note_de_calcul.rtf'),
+        os.path.join(primary_media_dir, f'job_{job.id}_note_de_calcul_{kind}.rtf'),
         f"{ws_dir}/job_{job.id}_{kind}_note_mat.rtf",
+        f"{ws_dir}/job_{job.id}_{kind}_note_de_calcul.rtf",
         os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_{kind}_note_mat.rtf'),
+        os.path.join(settings.MEDIA_ROOT, 'notes_de_calcul', f'job_{job.id}_{kind}_note_de_calcul.rtf'),
     ])
     if not is_fh:
         mat_cands.append(os.path.join(settings.MEDIA_ROOT, 'notes_rrh', f'job_{job.id}_{kind}_note_mat.rtf'))
@@ -253,7 +265,8 @@ def collect_site_ndc_rtf_specs(jobs):
     if first_job:
         input_data = first_job.input_data if isinstance(getattr(first_job, 'input_data', None), dict) else {}
         res_data = first_job.result_data if isinstance(getattr(first_job, 'result_data', None), dict) else {}
-        calc_type = getattr(first_job, 'calculation_type', '')
+        calc_type = str(getattr(first_job, 'calculation_type', '') or '').lower()
+        active_eqs = res_data.get('active_equipments') if isinstance(res_data.get('active_equipments'), list) else []
 
         rrh_data = input_data.get('rrh_equipment', {})
         rrh_enabled = isinstance(rrh_data, dict) and rrh_data.get('enabled', False)
@@ -265,7 +278,8 @@ def collect_site_ndc_rtf_specs(jobs):
             and (
                 rrh_enabled
                 or res_data.get('has_rrh') is True
-                or calc_type == 'rrh'
+                or 'rrh' in active_eqs
+                or 'rrh' in calc_type.split('_')
             )
         )
         if is_rrh_eligible:
@@ -286,11 +300,15 @@ def collect_site_ndc_rtf_specs(jobs):
                     })
 
         is_rru_eligible = (
-            rru_enabled
-            or res_data.get('has_rru') is True
-            or bool(res_data.get('rru_items'))
-            or bool(input_data.get('is_rru'))
-            or calc_type == 'rru'
+            res_data.get('has_rru') is not False
+            and (
+                rru_enabled
+                or res_data.get('has_rru') is True
+                or 'rru' in active_eqs
+                or bool(res_data.get('rru_items'))
+                or bool(input_data.get('is_rru'))
+                or 'rru' in calc_type.split('_')
+            )
         )
         if is_rru_eligible:
             rru_paths = find_job_rru_rtf_paths(first_job)
@@ -312,11 +330,15 @@ def collect_site_ndc_rtf_specs(jobs):
         fh_data = input_data.get('fh_equipment', {})
         fh_enabled = isinstance(fh_data, dict) and fh_data.get('enabled', False)
         is_fh_eligible = (
-            fh_enabled
-            or res_data.get('has_fh') is True
-            or bool(res_data.get('fh_items'))
-            or bool(input_data.get('is_fh'))
-            or 'fh' in calc_type
+            res_data.get('has_fh') is not False
+            and (
+                fh_enabled
+                or res_data.get('has_fh') is True
+                or 'fh' in active_eqs
+                or bool(res_data.get('fh_items'))
+                or bool(input_data.get('is_fh'))
+                or 'fh' in calc_type.split('_')
+            )
         )
         if is_fh_eligible:
             fh_paths = find_job_fh_rtf_paths(first_job)

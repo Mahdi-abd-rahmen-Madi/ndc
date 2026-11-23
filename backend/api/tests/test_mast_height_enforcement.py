@@ -92,6 +92,62 @@ class TestMastHeightEnforcement(unittest.TestCase):
         }
         self.assertEqual(get_support_mast_height_m(standalone_res, "rru"), 2.20)
 
+    def test_multi_equipment_detection_and_hashing(self):
+        from utils.ndc_hash import detect_calculation_type
+        from api.serializers import CalculationPayloadSerializer
+
+        # 1. Base Antenna + RRH (avec plot) + FH (avec plot) -> antenna_with_rrh_and_fh
+        payload_rrh_fh = {
+            "environment": {"region": 2, "terrain_type": "IV", "building_height_m": 10.0},
+            "structure": {"hauteur_mat_m": 3.0, "mast_section": "TRON 139x6.3"},
+            "antenna_4g": {"model": "A1"},
+            "rrh_equipment": {
+                "enabled": True,
+                "with_plot": True,
+                "hauteur_mat_m": 1.50,
+                "items": [{"reference": "NOKIA AHHB 2600", "quantity": 1}],
+            },
+            "rru_equipment": {"enabled": False, "items": []},
+            "fh_equipment": {
+                "enabled": True,
+                "sans_plot": False,
+                "hauteur_mat_m": 4.00,
+                "items": [{"reference": "BFZ 622", "diameter_mm": 600, "weight_kg": 7.6, "quantity": 1}],
+            },
+        }
+        ct1 = detect_calculation_type(payload_rrh_fh)
+        self.assertEqual(ct1, "antenna_with_rrh_and_fh")
+
+        # 2. Base Antenna + RRH (sans plot) + FH (avec plot) -> antenna_with_rrh_sans_plot_and_fh
+        payload_rrh_sp_fh = {
+            **payload_rrh_fh,
+            "rrh_equipment": {
+                **payload_rrh_fh["rrh_equipment"],
+                "with_plot": False,
+                "sans_plot": True,
+            },
+        }
+        ct2 = detect_calculation_type(payload_rrh_sp_fh)
+        self.assertEqual(ct2, "antenna_with_rrh_sans_plot_and_fh")
+
+        # 3. Hash differentiates per-equipment plot mode and mast heights across all active blocks
+        h1 = compute_ndc_hash(ct1, payload_rrh_fh)
+        h2 = compute_ndc_hash(ct2, payload_rrh_sp_fh)
+        self.assertNotEqual(h1, h2)
+
+        # 4. Forbidden RRH + RRU coexistence rejected by serializer
+        forbidden_payload = {
+            **payload_rrh_fh,
+            "rru_equipment": {
+                "enabled": True,
+                "hauteur_mat_m": 1.50,
+                "items": [{"reference": "RRU3281", "quantity": 1}],
+            },
+        }
+        ser = CalculationPayloadSerializer(data=forbidden_payload)
+        self.assertFalse(ser.is_valid())
+        self.assertIn("mutuellement exclusifs", str(ser.errors))
+
 
 if __name__ == "__main__":
     unittest.main()

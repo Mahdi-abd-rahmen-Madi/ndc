@@ -89,6 +89,7 @@ export function extractSectorAerialState(sector?: SectorData) {
   const fallbackFoundation = sector?.equipmentFoundationType || 'dallettes';
   return {
     hasFhEquipment: !!sector?.hasFhEquipment,
+    fhSansPlot: !!sector?.fhSansPlot,
     fhDiameter: sector?.fhDiameter ?? 300,
     fhReference: sector?.fhReference ?? '',
     fhQuantity: sector?.fhQuantity ?? 1,
@@ -98,10 +99,12 @@ export function extractSectorAerialState(sector?: SectorData) {
     fhHauteurMatM: sector?.fhHauteurMatM ?? 1.70,
     fhEchelle: sector?.fhEchelle || "Pas d'échelle",
     hasRrhEquipment: !!sector?.hasRrhEquipment,
+    rrhSansPlot: !!sector?.rrhSansPlot,
     rrhItems: sector?.rrhItems ?? [],
     rrhFoundationType: sector?.rrhFoundationType || fallbackFoundation,
     rrhHauteurMatM: sector?.rrhHauteurMatM ?? 1.50,
     hasRruEquipment: !!sector?.hasRruEquipment,
+    rruSansPlot: !!sector?.rruSansPlot,
     rruItems: sector?.rruItems ?? [],
     rruFoundationType: sector?.rruFoundationType || fallbackFoundation,
     rruHauteurMatM: sector?.rruHauteurMatM ?? 1.50,
@@ -267,7 +270,8 @@ export function buildSectorEquipmentPayload({
   return {
     fh_equipment: {
       enabled: aerial.hasFhEquipment,
-      sans_plot: false,
+      sans_plot: aerial.fhSansPlot,
+      with_plot: !aerial.fhSansPlot,
       hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
       diameter_mm: aerial.hasFhEquipment && primaryFh ? primaryFh.diameter_mm : null,
       reference: aerial.hasFhEquipment && primaryFh ? primaryFh.reference : null,
@@ -280,13 +284,15 @@ export function buildSectorEquipmentPayload({
     structure_fh: aerial.hasFhEquipment
       ? {
           mast_section: 'TRON 88x2.5',
-          plot_section: 'TCAR 150x5',
+          plot_section: aerial.fhSansPlot ? null : 'TCAR 150x5',
           hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
-          hauteur_plot_m: 0.50,
+          hauteur_plot_m: aerial.fhSansPlot ? 0.0 : 0.50,
         }
       : null,
     rrh_equipment: {
       enabled: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment,
+      sans_plot: aerial.rrhSansPlot,
+      with_plot: !aerial.rrhSansPlot,
       ancrage: allowRrh && aerial.hasRrhEquipment ? aerial.rrhFoundationType : null,
       hauteur_mat_m: Number(aerial.rrhHauteurMatM ?? 1.50),
       items: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment
@@ -295,7 +301,8 @@ export function buildSectorEquipmentPayload({
     },
     rru_equipment: {
       enabled: aerial.hasRruEquipment,
-      sans_plot: false,
+      sans_plot: aerial.rruSansPlot,
+      with_plot: !aerial.rruSansPlot,
       ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
       hauteur_mat_m: Number(aerial.rruHauteurMatM ?? 1.50),
       items: aerial.hasRruEquipment

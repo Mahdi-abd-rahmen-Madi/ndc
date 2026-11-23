@@ -142,11 +142,13 @@ class FHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     sans_plot = serializers.BooleanField(required=False, default=False)
+    with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     diameter_mm = serializers.FloatField(required=False, allow_null=True)
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="Antenne FH")
     quantity = serializers.IntegerField(required=False, allow_null=True, default=1)
     weight_kg = serializers.FloatField(required=False, allow_null=True)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
+    echelle = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     items = serializers.ListField(child=serializers.DictField(), required=False, default=list)
 
     def validate(self, data):
@@ -186,6 +188,8 @@ class EquipmentPayloadSerializer(serializers.Serializer):
 class RRHEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
+    sans_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
+    with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
@@ -193,6 +197,7 @@ class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     sans_plot = serializers.BooleanField(required=False, default=False)
+    with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
@@ -223,3 +228,13 @@ class CalculationPayloadSerializer(serializers.Serializer):
     rrh_equipment = RRHEquipmentSerializer(required=False, allow_null=True)
     rru_equipment = RRUEquipmentSerializer(required=False, allow_null=True)
     catalogue_match = CatalogueMatchSerializer(required=False, allow_null=True)
+
+    def validate(self, data):
+        rrh_enabled = bool((data.get("rrh_equipment") or {}).get("enabled")) or bool(data.get("is_rrh"))
+        rru_enabled = bool((data.get("rru_equipment") or {}).get("enabled")) or bool(data.get("is_rru"))
+        if rrh_enabled and rru_enabled:
+            raise serializers.ValidationError(
+                "Les équipements RRH et RRU sont mutuellement exclusifs et ne peuvent "
+                "pas être activés simultanément sur un même site."
+            )
+        return data

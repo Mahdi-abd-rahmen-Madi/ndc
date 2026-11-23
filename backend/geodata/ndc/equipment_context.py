@@ -217,16 +217,9 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         cleaned_items.append(it_copy)
     items = cleaned_items
 
+    from utils.domain_constants import resolve_sans_plot
     is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
-    is_sans_plot = bool(
-        result_data.get("rrh_sans_plot")
-        or result_data.get("sans_plot")
-        or rrh_sub.get("sans_plot")
-        or structure.get("sans_plot")
-        or input_data.get("rrh_sans_plot")
-        or input_data.get("sans_plot")
-        or "sans_plot" in str(result_data.get("calculation_type") or "").lower()
-    )
+    is_sans_plot = resolve_sans_plot(input_data, result_data, kind="rrh")
 
     h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
 
@@ -285,24 +278,8 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         or input_data.get("site", {}).get("operator")
         or "bouygues"
     )
-    raw_sans_plot = (
-        result_data.get("rru_sans_plot")
-        if result_data.get("rru_sans_plot") is not None
-        else (
-            rru_sub.get("sans_plot")
-            if rru_sub.get("sans_plot") is not None
-            else (
-                structure.get("sans_plot")
-                if structure.get("sans_plot") is not None
-                else (
-                    input_data.get("sans_plot")
-                    if input_data.get("sans_plot") is not None
-                    else (input_data.get("rru_equipment") or {}).get("sans_plot")
-                )
-            )
-        )
-    )
-    is_sans_plot = False if raw_sans_plot is None else bool(raw_sans_plot)
+    from utils.domain_constants import resolve_sans_plot
+    is_sans_plot = resolve_sans_plot(input_data, result_data, kind="rru")
 
     try:
         qp = float(wind.get("qp_dan") or qp_val or 0.0)

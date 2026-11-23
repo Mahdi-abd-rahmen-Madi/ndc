@@ -280,17 +280,18 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # 1. Detect type and compute unique deterministic NDC hash
         calc_type = detect_calculation_type(input_data)
 
-        # Default new FH queries to sans_plot=False (with plot) if not explicitly specified
-        if calc_type in ("fh", "fh_sans_plot") or input_data.get("is_fh"):
-            if input_data.get("sans_plot") is None:
-                input_data["sans_plot"] = False
-            fh_eq = input_data.get("fh_equipment")
-            if isinstance(fh_eq, dict) and fh_eq.get("sans_plot") is None:
-                fh_eq["sans_plot"] = False
-        elif isinstance(input_data.get("fh_equipment"), dict):
-            fh_eq = input_data["fh_equipment"]
-            if fh_eq.get("enabled") and fh_eq.get("sans_plot") is None:
-                fh_eq["sans_plot"] = False
+        # Normalize per-equipment sans_plot / with_plot defaults independently
+        for eq_key in ("rrh_equipment", "rru_equipment", "fh_equipment"):
+            eq_blk = input_data.get(eq_key)
+            if isinstance(eq_blk, dict):
+                if eq_blk.get("enabled"):
+                    kind = eq_key.replace("_equipment", "")
+                    is_sp = resolve_sans_plot(input_data, calc_type=calc_type, kind=kind)
+                    eq_blk["sans_plot"] = is_sp
+                    eq_blk["with_plot"] = not is_sp
+                else:
+                    eq_blk["enabled"] = False
+                    eq_blk["items"] = []
 
         if (calc_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot")
                 or input_data.get("is_fh")
@@ -312,18 +313,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     "hauteur_plot_m": 0.0 if is_sp else 0.50,
                 }
 
-        # Default new RRU queries to sans_plot=False (with plot) if not explicitly specified
-        if calc_type == "rru" or input_data.get("is_rru"):
-            if input_data.get("sans_plot") is None:
-                input_data["sans_plot"] = False
-            rru_eq = input_data.get("rru_equipment")
-            if isinstance(rru_eq, dict) and rru_eq.get("sans_plot") is None:
-                rru_eq["sans_plot"] = False
-        elif isinstance(input_data.get("rru_equipment"), dict):
-            rru_eq = input_data["rru_equipment"]
-            if rru_eq.get("enabled") and rru_eq.get("sans_plot") is None:
-                rru_eq["sans_plot"] = False
-        elif input_data.get("sans_plot") is None:
+        if input_data.get("sans_plot") is None:
             input_data["sans_plot"] = False
 
         ndc_hash = compute_ndc_hash(calc_type, input_data)
@@ -618,16 +608,55 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         job.result_data = result_data
         job.error_message = error_message
 
-        # Save uploaded artifact files from worker (Base Antenna & Dedicated RRH)
+        # Save uploaded artifact files from worker across ALL active stages independently
         files = request.FILES
-        
-        is_pure_fh = (job.calculation_type in ("fh", "fh_sans_plot"))
-        is_fh_job = bool(
-            result_data.get("has_fh")
-            or result_data.get("is_fh")
-            or "fh" in str(result_data.get("calculation_type", "")).lower()
-            or "fh" in str(job.calculation_type).lower()
+        inp = job.input_data if isinstance(job.input_data, dict) else {}
+        calc_type_low = str(job.calculation_type or "").lower()
+        active_eqs = result_data.get("active_equipments") if isinstance(result_data.get("active_equipments"), list) else []
+
+        has_base_antenna = (
+            calc_type_low == "antenna"
+            or calc_type_low.startswith("antenna_with_")
+            or bool(inp.get("antenna_4g") or inp.get("antenna_5g"))
+        ) and calc_type_low not in ("rrh", "rrh_sans_plot", "rru", "rru_sans_plot", "fh", "fh_sans_plot")
+
+        has_rrh = (
+            bool(result_data.get("has_rrh"))
+            or "rrh" in active_eqs
+            or bool((inp.get("rrh_equipment") or {}).get("enabled"))
+            or bool(inp.get("is_rrh"))
+            or "rrh" in calc_type_low
         )
+        has_rru = (
+            bool(result_data.get("has_rru"))
+            or "rru" in active_eqs
+            or bool((inp.get("rru_equipment") or {}).get("enabled"))
+            or bool(inp.get("is_rru"))
+            or "rru" in calc_type_low
+        )
+        has_fh = (
+            bool(result_data.get("has_fh"))
+            or bool(result_data.get("is_fh"))
+            or "fh" in active_eqs
+            or bool((inp.get("fh_equipment") or {}).get("enabled"))
+            or bool(inp.get("is_fh"))
+            or "fh" in calc_type_low
+        )
+        is_pure_fh = (calc_type_low in ("fh", "fh_sans_plot")) and not has_base_antenna and not has_rrh and not has_rru
+
+        def _save_stage_uploaded_file(file_obj, subdir, filename):
+            target_dir = os.path.join(settings.MEDIA_ROOT, subdir)
+            os.makedirs(target_dir, exist_ok=True)
+            target_path = os.path.join(target_dir, filename)
+            with open(target_path, 'wb+') as dest:
+                for chunk in file_obj.chunks():
+                    dest.write(chunk)
+            if hasattr(file_obj, 'seek'):
+                try:
+                    file_obj.seek(0)
+                except Exception:
+                    pass
+            return target_path
 
         # 1. Base Antenna Files (accepting standard and worker aliases)
         if not is_pure_fh:
@@ -649,6 +678,8 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 job.note_de_calcul = files['antenna_note_de_calcul']
             elif 'antenna_note_mat' in files:
                 job.note_de_calcul = files['antenna_note_mat']
+            elif 'note_mat' in files and has_base_antenna and not has_rrh:
+                job.note_de_calcul = files['note_mat']
 
             if 'assemblage_note' in files:
                 job.assemblage_note = files['assemblage_note']
@@ -660,98 +691,141 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             elif 'antenna_reactions_file' in files:
                 job.reactions_file = files['antenna_reactions_file']
 
-        is_rru_job = bool(result_data.get("has_rru")) and not bool(result_data.get("has_rrh"))
+        # 2. RRH Support Files (Independent block: saved even when FH is also active on the same job!)
+        if has_rrh or any(k in files for k in (
+            'note_de_calcul_rrh', 'rrh_note_de_calcul', 'rrh_note_mat', 'rrh_note_plot',
+            'rrh_assemblage_note', 'rrh_verification_screenshot', 'rrh_tableau_charges',
+            'rrh_loads_table', 'rrh_reactions_file', 'rrh_screenshot',
+        )):
+            rrh_files_saved = {}
+            rrh_ndc = files.get("note_de_calcul_rrh") or files.get("rrh_note_de_calcul") or files.get("rrh_note_mat")
+            if rrh_ndc:
+                job.note_de_calcul_rrh = rrh_ndc
+                ext = os.path.splitext(rrh_ndc.name)[1] or ".rtf"
+                rrh_files_saved["note_de_calcul"] = _save_stage_uploaded_file(rrh_ndc, "notes_rrh", f"job_{job.id}_rrh_note_de_calcul{ext}")
 
-        # 2. RRU Support Files (Strictly separated from RRH)
-        def _save_rru_uploaded_file(file_obj, subdir, filename):
-            target_dir = os.path.join(settings.MEDIA_ROOT, subdir)
-            os.makedirs(target_dir, exist_ok=True)
-            target_path = os.path.join(target_dir, filename)
-            with open(target_path, 'wb+') as dest:
-                for chunk in file_obj.chunks():
-                    dest.write(chunk)
-            return target_path
+            note_mat = files.get("rrh_note_mat") or rrh_ndc or (files.get("note_mat") if not is_pure_fh and not has_rru else None)
+            if note_mat and "_rru_" not in (getattr(note_mat, "name", "") or "").lower():
+                job.note_mat = note_mat
+                rrh_files_saved["note_mat"] = _save_stage_uploaded_file(note_mat, "notes_rrh", f"job_{job.id}_rrh_note_mat.rtf")
 
-        rru_files_saved = {}
-        rru_ndc = files.get("note_de_calcul_rru") or files.get("rru_note_de_calcul")
-        if rru_ndc:
-            ext = os.path.splitext(rru_ndc.name)[1] or ".rtf"
-            rru_files_saved["note_de_calcul"] = _save_rru_uploaded_file(rru_ndc, "notes_rru", f"job_{job.id}_rru_note_de_calcul{ext}")
+            note_plot = files.get("rrh_note_plot") or (files.get("note_plot") if not is_pure_fh and not has_rru else None)
+            if note_plot and "_rru_" not in (getattr(note_plot, "name", "") or "").lower():
+                job.note_plot = note_plot
+                rrh_files_saved["note_plot"] = _save_stage_uploaded_file(note_plot, "notes_rrh", f"job_{job.id}_rrh_note_plot.rtf")
 
-        if 'rru_note_mat' in files:
-            rru_files_saved["note_mat"] = _save_rru_uploaded_file(files['rru_note_mat'], "notes_rru", f"job_{job.id}_rru_note_mat.rtf")
-        if 'rru_note_plot' in files:
-            rru_files_saved["note_plot"] = _save_rru_uploaded_file(files['rru_note_plot'], "notes_rru", f"job_{job.id}_rru_note_plot.rtf")
-        if 'rru_assemblage_note' in files:
-            rru_files_saved["assemblage_note"] = _save_rru_uploaded_file(files['rru_assemblage_note'], "notes_rru", f"job_{job.id}_rru_assemblage_note.rtf")
-        if 'rru_verification_screenshot' in files:
-            rru_files_saved["rru_verification_screenshot"] = _save_rru_uploaded_file(files['rru_verification_screenshot'], "verif_rru", f"job_{job.id}_rru_verification.jpg")
-        if 'rru_tableau_charges' in files:
-            rru_files_saved["rru_tableau_charges"] = _save_rru_uploaded_file(files['rru_tableau_charges'], "charges_rru", f"job_{job.id}_rru_tableau_charges.png")
-        if 'rru_reactions_file' in files:
-            rru_files_saved["rru_reactions_file"] = _save_rru_uploaded_file(files['rru_reactions_file'], "reactions_rru", f"job_{job.id}_rru_reactions.txt")
-        if 'rru_screenshot' in files:
-            rru_files_saved["rru_screenshot"] = _save_rru_uploaded_file(files['rru_screenshot'], "screenshots_rru", f"job_{job.id}_rru_3d_view.jpg")
+            rrh_ass = files.get("rrh_assemblage_note") or files.get("note_assemblage_rrh")
+            if rrh_ass:
+                job.rrh_assemblage_note = rrh_ass
+                rrh_files_saved["assemblage_note"] = _save_stage_uploaded_file(rrh_ass, "notes_rrh", f"job_{job.id}_rrh_assemblage_note.rtf")
 
-        if rru_files_saved:
-            if not isinstance(job.result_data, dict):
-                job.result_data = {}
-            existing_rru_files = job.result_data.get("rru_files") if isinstance(job.result_data.get("rru_files"), dict) else {}
-            existing_rru_files.update(rru_files_saved)
-            job.result_data["rru_files"] = existing_rru_files
+            if 'rrh_verification_screenshot' in files:
+                job.rrh_verification_screenshot = files['rrh_verification_screenshot']
+                rrh_files_saved["rrh_verification_screenshot"] = _save_stage_uploaded_file(files['rrh_verification_screenshot'], "verif_rrh", f"job_{job.id}_rrh_verification.jpg")
 
-        # 3. FH Support Files (Preserves Antenna files in composite jobs)
-        def _save_fh_uploaded_file(file_obj, subdir, filename):
-            target_dir = os.path.join(settings.MEDIA_ROOT, subdir)
-            os.makedirs(target_dir, exist_ok=True)
-            target_path = os.path.join(target_dir, filename)
-            with open(target_path, 'wb+') as dest:
-                for chunk in file_obj.chunks():
-                    dest.write(chunk)
-            return target_path
+            charges_img = files.get("rrh_tableau_charges") or files.get("rrh_loads_table") or (files.get("loads_table") if not is_pure_fh and not has_rru else None)
+            if charges_img:
+                job.rrh_tableau_charges = charges_img
+                rrh_files_saved["rrh_tableau_charges"] = _save_stage_uploaded_file(charges_img, "charges_rrh", f"job_{job.id}_rrh_tableau_charges.png")
 
-        if is_fh_job:
+            if 'rrh_reactions_file' in files:
+                job.rrh_reactions_file = files['rrh_reactions_file']
+                rrh_files_saved["rrh_reactions_file"] = _save_stage_uploaded_file(files['rrh_reactions_file'], "reactions_rrh", f"job_{job.id}_rrh_reactions.txt")
+
+            if 'rrh_screenshot' in files:
+                job.rrh_screenshot = files['rrh_screenshot']
+                rrh_files_saved["rrh_screenshot"] = _save_stage_uploaded_file(files['rrh_screenshot'], "screenshots_rrh", f"job_{job.id}_rrh_3d_view.jpg")
+
+            if rrh_files_saved:
+                if not isinstance(job.result_data, dict):
+                    job.result_data = {}
+                existing_rrh_files = job.result_data.get("rrh_files") if isinstance(job.result_data.get("rrh_files"), dict) else {}
+                existing_rrh_files.update(rrh_files_saved)
+                job.result_data["rrh_files"] = existing_rrh_files
+
+        # 3. RRU Support Files (Independent block: saved even when FH is also active on the same job!)
+        if has_rru or any(k in files for k in (
+            'note_de_calcul_rru', 'rru_note_de_calcul', 'rru_note_mat', 'rru_note_plot',
+            'rru_assemblage_note', 'rru_verification_screenshot', 'rru_tableau_charges',
+            'rru_loads_table', 'rru_reactions_file', 'rru_screenshot',
+        )):
+            rru_files_saved = {}
+            rru_ndc = files.get("note_de_calcul_rru") or files.get("rru_note_de_calcul")
+            if rru_ndc:
+                ext = os.path.splitext(rru_ndc.name)[1] or ".rtf"
+                rru_files_saved["note_de_calcul"] = _save_stage_uploaded_file(rru_ndc, "notes_rru", f"job_{job.id}_rru_note_de_calcul{ext}")
+
+            rru_mat = files.get("rru_note_mat") or rru_ndc
+            if rru_mat:
+                rru_files_saved["note_mat"] = _save_stage_uploaded_file(rru_mat, "notes_rru", f"job_{job.id}_rru_note_mat.rtf")
+            if 'rru_note_plot' in files:
+                rru_files_saved["note_plot"] = _save_stage_uploaded_file(files['rru_note_plot'], "notes_rru", f"job_{job.id}_rru_note_plot.rtf")
+            if 'rru_assemblage_note' in files:
+                rru_files_saved["assemblage_note"] = _save_stage_uploaded_file(files['rru_assemblage_note'], "notes_rru", f"job_{job.id}_rru_assemblage_note.rtf")
+            if 'rru_verification_screenshot' in files:
+                rru_files_saved["rru_verification_screenshot"] = _save_stage_uploaded_file(files['rru_verification_screenshot'], "verif_rru", f"job_{job.id}_rru_verification.jpg")
+            rru_charges = files.get("rru_tableau_charges") or files.get("rru_loads_table")
+            if rru_charges:
+                rru_files_saved["rru_tableau_charges"] = _save_stage_uploaded_file(rru_charges, "charges_rru", f"job_{job.id}_rru_tableau_charges.png")
+            if 'rru_reactions_file' in files:
+                rru_files_saved["rru_reactions_file"] = _save_stage_uploaded_file(files['rru_reactions_file'], "reactions_rru", f"job_{job.id}_rru_reactions.txt")
+            if 'rru_screenshot' in files:
+                rru_files_saved["rru_screenshot"] = _save_stage_uploaded_file(files['rru_screenshot'], "screenshots_rru", f"job_{job.id}_rru_3d_view.jpg")
+
+            if rru_files_saved:
+                if not isinstance(job.result_data, dict):
+                    job.result_data = {}
+                existing_rru_files = job.result_data.get("rru_files") if isinstance(job.result_data.get("rru_files"), dict) else {}
+                existing_rru_files.update(rru_files_saved)
+                job.result_data["rru_files"] = existing_rru_files
+
+        # 4. FH Support Files (Independent block: saved alongside Base Antenna and RRH/RRU)
+        if has_fh or any(k in files for k in (
+            'note_de_calcul_fh', 'fh_note_de_calcul', 'fh_note_mat', 'fh_note_plot',
+            'fh_assemblage_note', 'fh_verification_screenshot', 'fh_tableau_charges',
+            'fh_loads_table', 'fh_reactions_file', 'fh_screenshot',
+        )):
             fh_files_saved = {}
             fh_ndc = files.get("note_de_calcul_fh") or files.get("fh_note_de_calcul") or (files.get("note_de_calcul") if is_pure_fh else None)
             if fh_ndc:
                 job.note_de_calcul_fh = fh_ndc
                 ext = os.path.splitext(fh_ndc.name)[1] or ".rtf"
-                fh_files_saved["note_de_calcul"] = _save_fh_uploaded_file(fh_ndc, "notes_fh", f"job_{job.id}_fh_note_de_calcul{ext}")
+                fh_files_saved["note_de_calcul"] = _save_stage_uploaded_file(fh_ndc, "notes_fh", f"job_{job.id}_fh_note_de_calcul{ext}")
 
-            fh_mat = files.get("fh_note_mat") or (files.get("note_mat") if is_pure_fh and not is_rru_job else None)
+            fh_mat = files.get("fh_note_mat") or fh_ndc or (files.get("note_mat") if is_pure_fh else None)
             if fh_mat:
                 job.fh_note_mat = fh_mat
-                fh_files_saved["note_mat"] = _save_fh_uploaded_file(fh_mat, "notes_fh", f"job_{job.id}_fh_note_mat.rtf")
+                fh_files_saved["note_mat"] = _save_stage_uploaded_file(fh_mat, "notes_fh", f"job_{job.id}_fh_note_mat.rtf")
 
-            fh_plot = files.get("fh_note_plot") or (files.get("note_plot") if is_pure_fh and not is_rru_job else None)
+            fh_plot = files.get("fh_note_plot") or (files.get("note_plot") if is_pure_fh else None)
             if fh_plot:
                 job.fh_note_plot = fh_plot
-                fh_files_saved["note_plot"] = _save_fh_uploaded_file(fh_plot, "notes_fh", f"job_{job.id}_fh_note_plot.rtf")
+                fh_files_saved["note_plot"] = _save_stage_uploaded_file(fh_plot, "notes_fh", f"job_{job.id}_fh_note_plot.rtf")
 
-            fh_ass = files.get("fh_assemblage_note") or (files.get("assemblage_note") if is_pure_fh and not is_rru_job else None)
+            fh_ass = files.get("fh_assemblage_note") or (files.get("assemblage_note") if is_pure_fh else None)
             if fh_ass:
                 job.fh_assemblage_note = fh_ass
-                fh_files_saved["assemblage_note"] = _save_fh_uploaded_file(fh_ass, "notes_fh", f"job_{job.id}_fh_assemblage_note.rtf")
+                fh_files_saved["assemblage_note"] = _save_stage_uploaded_file(fh_ass, "notes_fh", f"job_{job.id}_fh_assemblage_note.rtf")
 
             fh_verif = files.get("fh_verification_screenshot") or (files.get("verification_screenshot") if is_pure_fh else None)
             if fh_verif:
                 job.fh_verification_screenshot = fh_verif
-                fh_files_saved["fh_verification_screenshot"] = _save_fh_uploaded_file(fh_verif, "verif_fh", f"job_{job.id}_fh_verification.jpg")
+                fh_files_saved["fh_verification_screenshot"] = _save_stage_uploaded_file(fh_verif, "verif_fh", f"job_{job.id}_fh_verification.jpg")
 
             fh_charges = files.get("fh_tableau_charges") or files.get("fh_loads_table") or (files.get("loads_table") if is_pure_fh else None)
             if fh_charges:
                 job.fh_tableau_charges = fh_charges
-                fh_files_saved["fh_tableau_charges"] = _save_fh_uploaded_file(fh_charges, "charges_fh", f"job_{job.id}_fh_tableau_charges.png")
+                fh_files_saved["fh_tableau_charges"] = _save_stage_uploaded_file(fh_charges, "charges_fh", f"job_{job.id}_fh_tableau_charges.png")
 
             fh_reactions = files.get("fh_reactions_file") or (files.get("reactions_file") if is_pure_fh else None)
             if fh_reactions:
                 job.fh_reactions_file = fh_reactions
-                fh_files_saved["fh_reactions_file"] = _save_fh_uploaded_file(fh_reactions, "reactions_fh", f"job_{job.id}_fh_reactions.txt")
+                fh_files_saved["fh_reactions_file"] = _save_stage_uploaded_file(fh_reactions, "reactions_fh", f"job_{job.id}_fh_reactions.txt")
 
             fh_screenshot = files.get("fh_screenshot") or (files.get("screenshot") if is_pure_fh else None)
             if fh_screenshot:
                 job.fh_screenshot = fh_screenshot
-                fh_files_saved["fh_screenshot"] = _save_fh_uploaded_file(fh_screenshot, "screenshots_fh", f"job_{job.id}_fh_3d_view.jpg")
+                fh_files_saved["fh_screenshot"] = _save_stage_uploaded_file(fh_screenshot, "screenshots_fh", f"job_{job.id}_fh_3d_view.jpg")
 
             if fh_files_saved:
                 if not isinstance(job.result_data, dict):
@@ -759,36 +833,6 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 existing_fh_files = job.result_data.get("fh_files") if isinstance(job.result_data.get("fh_files"), dict) else {}
                 existing_fh_files.update(fh_files_saved)
                 job.result_data["fh_files"] = existing_fh_files
-
-        # 4. RRH Support Files (Accepts both primary and alias keys, guarded against RRU/FH jobs)
-        if not is_rru_job and not is_pure_fh and not result_data.get("has_fh"):
-            rrh_ndc = files.get("note_de_calcul_rrh") or files.get("rrh_note_de_calcul")
-            if rrh_ndc:
-                job.note_de_calcul_rrh = rrh_ndc
-
-            note_mat = files.get("rrh_note_mat") or files.get("note_mat")
-            if note_mat and "_rru_" not in (getattr(note_mat, "name", "") or "").lower():
-                job.note_mat = note_mat
-
-            note_plot = files.get("rrh_note_plot") or files.get("note_plot")
-            if note_plot and "_rru_" not in (getattr(note_plot, "name", "") or "").lower():
-                job.note_plot = note_plot
-
-            if 'rrh_assemblage_note' in files:
-                job.rrh_assemblage_note = files['rrh_assemblage_note']
-
-            if 'rrh_verification_screenshot' in files:
-                job.rrh_verification_screenshot = files['rrh_verification_screenshot']
-
-            charges_img = files.get("rrh_tableau_charges") or files.get("loads_table")
-            if charges_img:
-                job.rrh_tableau_charges = charges_img
-
-            if 'rrh_reactions_file' in files:
-                job.rrh_reactions_file = files['rrh_reactions_file']
-
-            if 'rrh_screenshot' in files:
-                job.rrh_screenshot = files['rrh_screenshot']
 
         # 5. Strict Quality & Completeness Validation
         from .services import validate_calculation_artifacts

@@ -232,16 +232,33 @@ def validate_calculation_artifacts(job, files=None) -> list:
     files = files or {}
     missing = []
 
-    calc_type = getattr(job, 'calculation_type', 'antenna') or 'antenna'
+    calc_type = str(getattr(job, 'calculation_type', 'antenna') or 'antenna').lower().strip()
     input_data = job.input_data if isinstance(getattr(job, 'input_data', None), dict) else {}
     result_data = job.result_data if isinstance(getattr(job, 'result_data', None), dict) else {}
+    active_eqs = result_data.get('active_equipments') if isinstance(result_data.get('active_equipments'), list) else []
 
-    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru/fh)
-    is_pure_rrh = (calc_type == 'rrh')
-    is_pure_rru = (calc_type == 'rru')
-    is_pure_fh = (calc_type in ('fh', 'fh_sans_plot'))
+    def _has_active_antenna_input(inp_dict: dict) -> bool:
+        for key in ('antenna_4g', 'antenna_5g'):
+            ant = inp_dict.get(key)
+            if isinstance(ant, dict) and any(
+                ant.get(f) for f in ('model', 'hauteur_mm', 'largeur_mm', 'epaisseur_mm', 'poids_kg', 'height_mm', 'width_mm')
+            ):
+                return True
+        return False
 
-    if not is_pure_rrh and not is_pure_rru and not is_pure_fh:
+    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru/fh/multi-equipment)
+    is_standalone_equipment = (
+        not calc_type.startswith('antenna')
+        and not _has_active_antenna_input(input_data)
+        and (
+            calc_type in ('rrh', 'rrh_sans_plot', 'rru', 'rru_sans_plot', 'fh', 'fh_sans_plot')
+            or '_and_' in calc_type
+            or bool(input_data.get('is_rrh') or input_data.get('is_rru') or input_data.get('is_fh'))
+        )
+    )
+    is_pure_fh = calc_type in ('fh', 'fh_sans_plot') and not _has_active_antenna_input(input_data)
+
+    if not is_standalone_equipment:
         # 3D view
         has_3d = bool(
             getattr(job, 'screenshot', None)
@@ -289,19 +306,23 @@ def validate_calculation_artifacts(job, files=None) -> list:
         if not has_assemblage:
             missing.append("Note de calcul d'assemblage Robot (page 9+)")
 
-    # 2. RRH Verification (if RRH is enabled or calculation_type is rrh / antenna_with_rrh)
+    # 2. RRH Verification (Independent check whenever RRH is enabled or active)
     has_rrh = (
-        calc_type in ['rrh', 'antenna_with_rrh', 'antenna_with_rrh_sans_plot']
-        or bool(input_data.get('rrh_equipment', {}).get('enabled'))
+        'rrh' in calc_type.split('_')
+        or 'rrh' in active_eqs
+        or bool((input_data.get('rrh_equipment') or {}).get('enabled'))
         or bool(result_data.get('has_rrh'))
+        or bool(input_data.get('is_rrh'))
     )
     if has_rrh:
         from geodata.ndc_generator import find_job_rrh_rtf_paths
         rrh_paths = find_job_rrh_rtf_paths(job)
+        rrh_files = result_data.get('rrh_files') if isinstance(result_data.get('rrh_files'), dict) else {}
 
         has_rrh_3d = bool(
             getattr(job, 'rrh_screenshot', None)
             or files.get('rrh_screenshot')
+            or (rrh_files.get('rrh_screenshot') and os.path.exists(rrh_files['rrh_screenshot']))
             or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots_rrh', f'job_{job.id}_rrh_3d_view.jpg'))
         )
         if not has_rrh_3d:
@@ -310,6 +331,7 @@ def validate_calculation_artifacts(job, files=None) -> list:
         has_rrh_verif = bool(
             getattr(job, 'rrh_verification_screenshot', None)
             or files.get('rrh_verification_screenshot')
+            or (rrh_files.get('rrh_verification_screenshot') and os.path.exists(rrh_files['rrh_verification_screenshot']))
             or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'verif_rrh', f'job_{job.id}_rrh_verification.jpg'))
         )
         if not has_rrh_verif:
@@ -329,16 +351,15 @@ def validate_calculation_artifacts(job, files=None) -> list:
         has_rrh_charges = bool(
             getattr(job, 'rrh_tableau_charges', None)
             or files.get('rrh_tableau_charges')
+            or files.get('rrh_loads_table')
             or files.get('loads_table')
+            or (rrh_files.get('rrh_tableau_charges') and os.path.exists(rrh_files['rrh_tableau_charges']))
             or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'charges_rrh', f'job_{job.id}_rrh_tableau_charges.png'))
         )
         if not has_rrh_charges:
             missing.append("Tableau des charges RRH (page 15)")
 
-        # Determine if RRH is sans_plot (canonical helper shared across hash/views/ndc)
         is_rrh_sans_plot = resolve_sans_plot(input_data, result_data, calc_type=calc_type, kind="rrh")
-
-        # Only require rrh_assemblage_note (page 21+) when WITH plot:
         if not is_rrh_sans_plot:
             has_rrh_ass = bool(
                 rrh_paths.get('assemblage_note')
@@ -351,22 +372,83 @@ def validate_calculation_artifacts(job, files=None) -> list:
             if not has_rrh_ass:
                 missing.append("Note d'assemblage Robot RRH (page 21+)")
 
-    # 3. FH Verification (if FH is enabled or calculation_type is fh / antenna_with_fh)
+    # 3. RRU Verification (Independent check whenever RRU is enabled or active)
+    has_rru = (
+        'rru' in calc_type.split('_')
+        or 'rru' in active_eqs
+        or bool((input_data.get('rru_equipment') or {}).get('enabled'))
+        or bool(result_data.get('has_rru'))
+        or bool(input_data.get('is_rru'))
+    )
+    if has_rru:
+        from geodata.ndc_generator import find_job_rru_rtf_paths
+        rru_paths = find_job_rru_rtf_paths(job)
+        rru_files = result_data.get('rru_files') if isinstance(result_data.get('rru_files'), dict) else {}
+
+        has_rru_3d = bool(
+            files.get('rru_screenshot')
+            or (rru_files.get('rru_screenshot') and os.path.exists(rru_files['rru_screenshot']))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots_rru', f'job_{job.id}_rru_3d_view.jpg'))
+        )
+        if not has_rru_3d:
+            missing.append("Capture 3D modélisation RRU")
+
+        has_rru_verif = bool(
+            files.get('rru_verification_screenshot')
+            or (rru_files.get('rru_verification_screenshot') and os.path.exists(rru_files['rru_verification_screenshot']))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'verif_rru', f'job_{job.id}_rru_verification.jpg'))
+        )
+        if not has_rru_verif:
+            missing.append("Capture de vérification Robot RRU")
+
+        has_rru_mat = bool(
+            rru_paths.get('note_mat')
+            or rru_paths.get('note_de_calcul')
+            or files.get('note_de_calcul_rru')
+            or files.get('rru_note_de_calcul')
+            or files.get('rru_note_mat')
+        )
+        if not has_rru_mat:
+            missing.append("Note de calcul RTF du mât RRU")
+
+        has_rru_charges = bool(
+            files.get('rru_tableau_charges')
+            or files.get('rru_loads_table')
+            or (rru_files.get('rru_tableau_charges') and os.path.exists(rru_files['rru_tableau_charges']))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'charges_rru', f'job_{job.id}_rru_tableau_charges.png'))
+        )
+        if not has_rru_charges:
+            missing.append("Tableau des charges RRU")
+
+        is_rru_sans_plot = resolve_sans_plot(input_data, result_data, calc_type=calc_type, kind="rru")
+        if not is_rru_sans_plot:
+            has_rru_ass = bool(
+                rru_paths.get('assemblage_note')
+                or files.get('rru_assemblage_note')
+                or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'notes_rru', f'job_{job.id}_rru_assemblage_note.rtf'))
+            )
+            if not has_rru_ass:
+                missing.append("Note d'assemblage Robot RRU")
+
+    # 4. FH Verification (Independent check whenever FH is enabled or active)
     has_fh = (
-        calc_type in ['fh', 'fh_sans_plot', 'antenna_with_fh', 'antenna_with_fh_sans_plot']
-        or bool(input_data.get('fh_equipment', {}).get('enabled'))
+        'fh' in calc_type.split('_')
+        or 'fh' in active_eqs
+        or bool((input_data.get('fh_equipment') or {}).get('enabled'))
         or bool(result_data.get('has_fh'))
         or bool(input_data.get('is_fh'))
     )
     if has_fh:
         from geodata.ndc_generator import find_job_fh_rtf_paths
         fh_paths = find_job_fh_rtf_paths(job)
+        fh_files = result_data.get('fh_files') if isinstance(result_data.get('fh_files'), dict) else {}
 
         has_fh_3d = bool(
             getattr(job, 'fh_screenshot', None)
             or (is_pure_fh and getattr(job, 'screenshot', None))
             or files.get('fh_screenshot')
             or (is_pure_fh and files.get('screenshot'))
+            or (fh_files.get('fh_screenshot') and os.path.exists(fh_files['fh_screenshot']))
             or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots_fh', f'job_{job.id}_fh_3d_view.jpg'))
         )
         if not has_fh_3d:
@@ -377,6 +459,7 @@ def validate_calculation_artifacts(job, files=None) -> list:
             or (is_pure_fh and getattr(job, 'verification_screenshot', None))
             or files.get('fh_verification_screenshot')
             or (is_pure_fh and files.get('verification_screenshot'))
+            or (fh_files.get('fh_verification_screenshot') and os.path.exists(fh_files['fh_verification_screenshot']))
             or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'verif_fh', f'job_{job.id}_fh_verification.jpg'))
         )
         if not has_fh_verif:
@@ -384,6 +467,7 @@ def validate_calculation_artifacts(job, files=None) -> list:
 
         has_fh_mat = bool(
             fh_paths.get('note_mat')
+            or fh_paths.get('note_de_calcul')
             or getattr(job, 'note_de_calcul_fh', None)
             or (is_pure_fh and getattr(job, 'note_de_calcul', None))
             or (is_pure_fh and getattr(job, 'note_mat', None))
@@ -401,6 +485,7 @@ def validate_calculation_artifacts(job, files=None) -> list:
             or files.get('fh_tableau_charges')
             or files.get('fh_loads_table')
             or (is_pure_fh and files.get('loads_table'))
+            or (fh_files.get('fh_tableau_charges') and os.path.exists(fh_files['fh_tableau_charges']))
             or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'charges_fh', f'job_{job.id}_fh_tableau_charges.png'))
         )
         if not has_fh_charges:
@@ -443,16 +528,24 @@ def assemble_ndc_document(calculation_id):
             job.save(update_fields=['status', 'error_message'])
         return
 
-    if job.calculation_type in ("rrh", "rru", "fh", "fh_sans_plot"):
-        _assemble_equipment_doc(job, kind="fh" if "fh" in job.calculation_type else job.calculation_type)
+    calc_type_low = str(job.calculation_type or "").lower().strip()
+    inp_d = job.input_data if isinstance(getattr(job, 'input_data', None), dict) else {}
+    has_ant = calc_type_low.startswith("antenna") or any(
+        isinstance(inp_d.get(k), dict) and any(inp_d[k].get(f) for f in ("model", "hauteur_mm", "largeur_mm", "poids_kg"))
+        for k in ("antenna_4g", "antenna_5g")
+    )
+    if not has_ant and any(k in calc_type_low for k in ("rrh", "rru", "fh")):
+        primary_kind = "rrh" if "rrh" in calc_type_low else ("rru" if "rru" in calc_type_low else "fh")
+        _assemble_equipment_doc(job, kind=primary_kind)
     else:
         _assemble_antenna(job)
 
 
 def _assemble_equipment_doc(job, kind: str = "rrh"):
     """
-    Unified Note de Calcul document assembler for RRH and RRU jobs.
-    1) Attempts native WeasyPrint compilation via geodata.ndc_generator.generate_auxiliary_pdfs.
+    Unified Note de Calcul document assembler for standalone (single or multi-equipment) jobs.
+    1) Attempts native WeasyPrint compilation via geodata.ndc_generator.generate_auxiliary_pdfs
+       (merges all generated auxiliary sections when multiple equipments are active).
     2) Populates the DOCX template and saves it cleanly without leaving duplicate temp files.
     3) Falls back to isolated LibreOffice DOCX->PDF conversion if WeasyPrint failed.
     """
@@ -463,13 +556,33 @@ def _assemble_equipment_doc(job, kind: str = "rrh"):
     weasyprint_success = False
     try:
         from geodata.ndc_generator import generate_auxiliary_pdfs
-        generated = generate_auxiliary_pdfs(job)
-        if generated and os.path.exists(generated[0]):
+        generated = [p for p in generate_auxiliary_pdfs(job) if p and os.path.exists(p)]
+        if len(generated) == 1:
             with open(generated[0], "rb") as f:
                 job.compiled_pdf.save(f"{prefix}.pdf", File(f), save=False)
             job.save()
             weasyprint_success = True
             print(f"assemble_ndc_document: Successfully compiled {label} NDC via WeasyPrint for Job {job.id}.")
+        elif len(generated) > 1:
+            from pypdf import PdfWriter
+            merger = PdfWriter()
+            merged_tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+            merged_tmp.close()
+            try:
+                for p in generated:
+                    merger.append(p)
+                merger.write(merged_tmp.name)
+                merger.close()
+                with open(merged_tmp.name, "rb") as f:
+                    job.compiled_pdf.save(f"{prefix}.pdf", File(f), save=False)
+                job.save()
+                weasyprint_success = True
+                print(f"assemble_ndc_document: Successfully compiled multi-equipment NDC via WeasyPrint for Job {job.id}.")
+            finally:
+                try:
+                    os.remove(merged_tmp.name)
+                except OSError:
+                    pass
     except Exception as html_err:
         print(f"WeasyPrint {label} compilation note: {html_err}")
 

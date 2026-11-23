@@ -19,7 +19,7 @@ export function MastHeightInput({
   const isInvalid = currentVal < 0.5 || currentVal > 6.0 || isNaN(currentVal);
 
   return (
-    <div className={`flex flex-col gap-1 pt-2 border-t border-slate-200/80 ${className}`}>
+    <div className={`flex flex-col gap-1 ${className}`}>
       <div className="flex items-center justify-between">
         <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1">
           Hauteur du mât (m)

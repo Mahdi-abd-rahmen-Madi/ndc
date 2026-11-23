@@ -70,11 +70,10 @@ def resolve_sans_plot(
     and `ndc_generator`.
 
     Rules:
-    - Explicit True on top-level, nested structure, equipment sub-dict, or result_data wins.
-    - Explicit False on top-level, nested structure, equipment sub-dict, or result_data wins.
+    - Explicit True on per-equipment flags, nested structure, equipment sub-dict (`sans_plot` or inverted `with_plot`), or result_data wins.
+    - Explicit False on per-equipment flags, nested structure, equipment sub-dict, or result_data wins.
     - Defaults to False (with plot) unless explicitly set to True (sans plot).
-    - For RRH, checks `rrh_sans_plot`, `rrh_equipment.sans_plot`, `rrh.sans_plot`,
-      top-level `sans_plot`, and `"sans_plot"` in `calculation_type`.
+    - In multi-equipment payloads, checks per-equipment `<kind>_sans_plot` / `<kind>_with_plot` before falling back to top-level `sans_plot`.
     """
     inp = parse_json_dict(input_data)
     res = parse_json_dict(result_data)
@@ -87,33 +86,52 @@ def resolve_sans_plot(
     ).lower().strip()
     eq_kind = (kind or ct).lower().strip()
 
-    if eq_kind in ("fh", "fh_sans_plot") or inp.get("is_fh") is True or "fh" in ct:
+    def _invert_bool(val):
+        if val is True:
+            return False
+        if val is False:
+            return True
+        return None
+
+    if eq_kind in ("fh", "fh_sans_plot") or (not kind and (inp.get("is_fh") is True or ct in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot"))):
         fh_eq = inp.get("fh_equipment") if isinstance(inp.get("fh_equipment"), dict) else {}
         fh_sub = res.get("fh") if isinstance(res.get("fh"), dict) else {}
         struct_fh = inp.get("structure_fh") if isinstance(inp.get("structure_fh"), dict) else {}
         for explicit in (
             res.get("fh_sans_plot"),
+            _invert_bool(res.get("fh_with_plot")),
             fh_sub.get("sans_plot"),
+            _invert_bool(fh_sub.get("with_plot")),
             fh_eq.get("sans_plot"),
+            _invert_bool(fh_eq.get("with_plot")),
             inp.get("fh_sans_plot"),
-            inp.get("sans_plot"),
+            _invert_bool(inp.get("fh_with_plot")),
             struct_fh.get("sans_plot"),
+            _invert_bool(struct_fh.get("with_plot")),
+            inp.get("sans_plot"),
             struct.get("sans_plot"),
         ):
             if explicit is True:
                 return True
             if explicit is False:
                 return False
-        return "sans_plot" in ct
+        return "fh_sans_plot" in ct or (ct in ("fh_sans_plot", "antenna_with_fh_sans_plot"))
 
-    if eq_kind == "rru" or inp.get("is_rru") is True:
+    if eq_kind in ("rru", "rru_sans_plot") or (not kind and (inp.get("is_rru") is True or ct in ("rru", "rru_sans_plot", "antenna_with_rru", "antenna_with_rru_sans_plot"))):
         rru_eq = inp.get("rru_equipment") if isinstance(inp.get("rru_equipment"), dict) else {}
         rru_sub = res.get("rru") if isinstance(res.get("rru"), dict) else {}
+        struct_rru = inp.get("structure_rru") if isinstance(inp.get("structure_rru"), dict) else {}
         for explicit in (
             res.get("rru_sans_plot"),
+            _invert_bool(res.get("rru_with_plot")),
             rru_sub.get("sans_plot"),
+            _invert_bool(rru_sub.get("with_plot")),
             rru_eq.get("sans_plot"),
+            _invert_bool(rru_eq.get("with_plot")),
             inp.get("rru_sans_plot"),
+            _invert_bool(inp.get("rru_with_plot")),
+            struct_rru.get("sans_plot"),
+            _invert_bool(struct_rru.get("with_plot")),
             inp.get("sans_plot"),
             struct.get("sans_plot"),
         ):
@@ -121,18 +139,29 @@ def resolve_sans_plot(
                 return True
             if explicit is False:
                 return False
-        return False
+        return "rru_sans_plot" in ct
 
     rrh_eq = inp.get("rrh_equipment") if isinstance(inp.get("rrh_equipment"), dict) else {}
     rrh_sub = res.get("rrh") if isinstance(res.get("rrh"), dict) else {}
-    return bool(
-        res.get("rrh_sans_plot")
-        or res.get("sans_plot")
-        or rrh_sub.get("sans_plot")
-        or inp.get("rrh_sans_plot")
-        or inp.get("sans_plot")
-        or struct.get("sans_plot")
-        or rrh_eq.get("sans_plot")
-        or "sans_plot" in ct
-    )
+    struct_rrh = inp.get("structure_rrh") if isinstance(inp.get("structure_rrh"), dict) else {}
+    for explicit in (
+        res.get("rrh_sans_plot"),
+        _invert_bool(res.get("rrh_with_plot")),
+        rrh_sub.get("sans_plot"),
+        _invert_bool(rrh_sub.get("with_plot")),
+        rrh_eq.get("sans_plot"),
+        _invert_bool(rrh_eq.get("with_plot")),
+        inp.get("rrh_sans_plot"),
+        _invert_bool(inp.get("rrh_with_plot")),
+        struct_rrh.get("sans_plot"),
+        _invert_bool(struct_rrh.get("with_plot")),
+        res.get("sans_plot"),
+        inp.get("sans_plot"),
+        struct.get("sans_plot"),
+    ):
+        if explicit is True:
+            return True
+        if explicit is False:
+            return False
+    return "rrh_sans_plot" in ct or (eq_kind not in ("rrh", "rru", "fh") and "sans_plot" in ct)
 

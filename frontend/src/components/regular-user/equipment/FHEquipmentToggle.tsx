@@ -3,7 +3,6 @@ import { AlignJustify } from 'lucide-react';
 import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
 import { CustomSelect } from '../../ui/CustomSelect';
-import { MastHeightInput } from './shared/MastHeightInput';
 import { DEFAULT_FH_REFERENCES, FHCatalogItem } from '../../../config/catalogueDefaults';
 
 export const FH_ECHELLE_OPTIONS = [
@@ -142,6 +141,9 @@ export function FHEquipmentToggle({
       disabledReason={disabledReason}
       foundationType={foundationType}
       onFoundationTypeChange={setFoundationType}
+      hauteurMatM={hauteurMatM}
+      onHauteurMatMChange={setHauteurMatM}
+      defaultHauteurMatM={1.70}
     >
       <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-200/70">
         <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
@@ -156,12 +158,6 @@ export function FHEquipmentToggle({
           className="w-full focus:ring-2 focus:ring-amber-500"
         />
       </div>
-      <MastHeightInput
-        value={hauteurMatM}
-        onChange={setHauteurMatM}
-        defaultValue={1.70}
-        disabled={disabled}
-      />
     </MultiRowEquipmentToggle>
   );
 }

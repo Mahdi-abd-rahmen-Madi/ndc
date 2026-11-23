@@ -176,7 +176,10 @@ describe('equipmentRegistry', () => {
 
     // FH and RRU coexist, while RRH and RRU are mutually exclusive
     assert.equal(payload.rru_equipment.enabled, true);
+    assert.equal(payload.rru_equipment.sans_plot, false);
+    assert.equal(payload.rru_equipment.with_plot, true);
     assert.equal(payload.rrh_equipment.enabled, false);
+    assert.deepEqual(payload.rrh_equipment.items, []);
   });
 
   it('builds multi-dish FH payload with matching catalogue references', () => {

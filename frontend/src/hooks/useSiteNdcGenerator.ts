@@ -421,7 +421,7 @@ export function useSiteNdcGenerator({
           }
         } finally {
           if (ws) {
-            try { ws.close(); } catch (_) {}
+            try { ws.close(); } catch (_) { }
           }
         }
 

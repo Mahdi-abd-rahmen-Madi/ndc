@@ -63,7 +63,8 @@ export function useSectorManager({
     setSectors(prev => prev.map(s => {
       let hasRrh = operator === 'bouygues' ? false : s.hasRrhEquipment;
       let hasRru = s.hasRruEquipment;
-      if (operator === 'orange' && hasRrh && hasRru) {
+      // Enforce site-wide RRH vs RRU mutual exclusion for every operator
+      if (hasRrh && hasRru) {
         hasRrh = false;
       }
       return {
