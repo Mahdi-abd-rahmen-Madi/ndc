@@ -1,0 +1,86 @@
+================================================================================
+ROBOT WORKER: QUICK PROGRESS & PRODUCTION URL INSTRUCTIONS
+================================================================================
+
+1. PRODUCTION vs DEV URL HANDLING
+--------------------------------------------------------------------------------
+The backend now passes the target backend URL in the job payload.
+In your FastAPI job handler (@app.post("/api/jobs")):
+
+    payload = await request.json()
+    job_id = payload.get("id")
+    input_data = payload.get("input_data", {})
+
+    # Extract backend URL dynamically (fallback to prod if not provided):
+    backend_url = (
+        payload.get("callback_url")
+        or input_data.get("callback_url")
+        or input_data.get("django_backend_url")
+        or os.environ.get("DJANGO_BACKEND_URL", "https://api-ndc.heliosys.io")
+    ).rstrip("/")
+
+Note:
+- Production uses: https://api-ndc.heliosys.io
+- Local dev uses:   http://100.97.172.27:8001
+
+
+2. PROGRESS HELPER FUNCTION
+--------------------------------------------------------------------------------
+Add this helper function to send progress updates during calculation:
+
+    import requests
+
+    def report_progress(backend_url: str, job_id: int, stage: str, percent: int, message: str):
+        """
+        Sends live calculation progress to the frontend.
+        """
+        url = f"{backend_url.rstrip('/')}/api/calculations/{job_id}/progress/"
+        try:
+            requests.post(
+                url,
+                json={
+                    "stage": stage,
+                    "percent": max(0, min(99, int(percent))),
+                    "message": message
+                },
+                timeout=2.0
+            )
+        except Exception as err:
+            print(f"[Progress Warning] Job {job_id}: {err}")
+
+* Note: Make sure the URL ends with a trailing slash ('/').
+
+
+3. WHERE TO CALL IT IN YOUR CALCULATION LOOP
+--------------------------------------------------------------------------------
+Call `report_progress` at key stages so the UI updates beyond 9%:
+
+    # 1. Main Mast
+    report_progress(backend_url, job_id, "MAST", 25, "Modélisation du mât principal et plot...")
+    # ... solve main mast ...
+
+    # 2. Main Mast Results
+    report_progress(backend_url, job_id, "MAST_DONE", 45, "Calcul des réactions du mât principal...")
+    # ... extract main mast screenshot & RTF ...
+
+    # 3. Equipments (RRH / FH / RRU)
+    if input_data.get("rrh_equipment", {}).get("enabled") or input_data.get("is_rrh"):
+        report_progress(backend_url, job_id, "RRH", 65, "Modélisation et calcul du support RRH...")
+        # ... solve RRH ...
+
+    if input_data.get("fh_equipment", {}).get("enabled") or input_data.get("is_fh"):
+        report_progress(backend_url, job_id, "FH", 80, "Modélisation et calcul du support FH...")
+        # ... solve FH ...
+
+    if input_data.get("rru_equipment", {}).get("enabled") or input_data.get("is_rru"):
+        report_progress(backend_url, job_id, "RRU", 80, "Modélisation et calcul du support RRU...")
+        # ... solve RRU ...
+
+    # 4. Final upload
+    report_progress(backend_url, job_id, "UPLOADING", 95, "Envoi des résultats au serveur...")
+
+    # 5. Complete
+    # Send files & results to:
+    # POST f"{backend_url}/api/calculations/{job_id}/complete/"
+    # (Django automatically sets status to COMPLETED and progress to 100%)
+================================================================================

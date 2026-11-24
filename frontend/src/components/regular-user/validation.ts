@@ -126,7 +126,7 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
     missingStep4Equipments.push('Modèle B-cube énergie');
   }
   if (operator === 'bouygues' && zoneTechnique.hasBcubeRadio && !zoneTechnique.bcubeRadioReference) {
-    missingStep4Equipments.push('Modèle BCube RADIO');
+    missingStep4Equipments.push('CARTES RADIO BYTEL');
   }
   if (operator === 'bouygues' && zoneTechnique.hasTgbt && !zoneTechnique.tgbtReference) {
     missingStep4Equipments.push('Modèle TGBT');

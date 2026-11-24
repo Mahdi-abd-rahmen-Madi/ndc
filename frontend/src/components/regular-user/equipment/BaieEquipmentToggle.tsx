@@ -37,8 +37,8 @@ export function BaieEquipmentToggle({
   const [selectedVendors, setSelectedVendors] = useState<Record<string, string>>({});
 
   const categories = [
-    { id: 'radio', label: '1. Radio', shortName: 'Radio', icon: Radio, count: options.filter(o => o.category === 'radio' || o.category === 'radio_trans').length },
-    { id: 'energie', label: '2. Énergie', shortName: 'Énergie', icon: Zap, count: options.filter(o => o.category === 'energie' || o.category === 'distribution' || o.category === 'raccordement').length }
+    { id: 'radio', label: '1. Radio', shortName: 'Radio', icon: Radio },
+    { id: 'energie', label: '2. Énergie', shortName: 'Énergie', icon: Zap }
   ];
 
   const syncLegacyFlags = (items: SelectedBaieItem[]) => {
@@ -144,7 +144,6 @@ export function BaieEquipmentToggle({
       onToggle={setHasBaie}
       icon={Server}
       color="orange"
-      description="Sélectionnez 1 référence par catégorie en zone technique outdoor (Radio, Énergie)."
       headerRightContent={
         hasBaie ? (
           <span className="text-[11px] font-bold text-orange-700 bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200">
@@ -179,10 +178,6 @@ export function BaieEquipmentToggle({
                     {cat.label}
                   </span>
                 </div>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-medium ${isActive ? 'bg-orange-200/80 text-orange-900' : 'bg-slate-200/70 text-slate-600'
-                  }`}>
-                  {cat.count}
-                </span>
               </div>
 
               <div className="mt-1 flex items-center justify-between text-[11px]">

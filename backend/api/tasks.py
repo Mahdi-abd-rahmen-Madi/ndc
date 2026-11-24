@@ -4,6 +4,7 @@ import requests
 from django.conf import settings
 from django.db import close_old_connections
 from .models import CalculationJob
+from .worker_status import set_worker_status
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ def send_job_to_worker(job_id):
                 return False
         except requests.exceptions.RequestException as e:
             logger.error("Failed to connect to Windows worker for Job %s: %s", job_id, e)
+            set_worker_status("OFFLINE", queue_size=0, source="dispatch_error")
             job.status = 'FAILED'
             job.error_message = f"Windows worker offline or unreachable: {str(e)}"
             job.save(update_fields=['status', 'error_message'])

@@ -28,6 +28,7 @@ from .serializers import (
 )
 from .aps_service import get_aps_token
 from .tasks import enqueue_task
+from .worker_status import get_or_probe_worker_status, set_worker_status
 from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
 from utils.validators import validate_calculation_mast_heights
 from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator, resolve_sans_plot
@@ -1308,6 +1309,41 @@ class WorkerControlView(APIView):
             
         cache.set('worker_last_seen', time.time(), timeout=3600)
         return Response({'status': 'ok'})
+
+
+class WorkerStatusView(APIView):
+    """
+    Event-driven live status endpoint for the Robot Worker.
+    - POST: Called by the Windows worker on state/queue transitions (IDLE / BUSY / OFFLINE).
+    - GET: Called by authenticated frontend clients (reads cache; probes once if empty or ?refresh=1).
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsRobotWorkerOrAdminPermission()]
+        return [permissions.IsAuthenticated()]
+
+    def get(self, request):
+        force_probe = str(request.query_params.get('refresh', '')).lower() in ('1', 'true', 'yes')
+        payload = get_or_probe_worker_status(force_probe=force_probe)
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        raw_status = request.data.get('status')
+        if not raw_status:
+            return Response(
+                {'detail': 'Missing required field: status'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        payload = set_worker_status(
+            raw_status,
+            queue_size=request.data.get('queue_size', 0),
+            current_job_type=request.data.get('current_job_type'),
+            source='worker',
+            current_job_id=request.data.get('current_job_id'),
+        )
+        return Response(payload, status=status.HTTP_200_OK)
 
 from django.http import FileResponse, Http404, HttpResponseForbidden
 import mimetypes

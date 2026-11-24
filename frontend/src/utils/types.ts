@@ -215,6 +215,8 @@ export interface TerrainMapProps {
   clcPolygons?: any;
   transitionZones?: any;
   analysisRadius?: number;
+  showTransitionZones?: boolean;
+  showCoastline?: boolean;
 }
 
 export interface CLCLegendProps {

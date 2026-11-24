@@ -118,15 +118,18 @@ export function MultiRowEquipmentToggle({
   }, [options, uniqueVendors]);
 
   const addRow = () => {
-    onItemsChange(prev => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        reference: '',
-        quantity: 1,
-        vendor: uniqueVendors.length === 1 ? uniqueVendors[0] : undefined,
-      },
-    ]);
+    onItemsChange(prev => {
+      if (maxRows !== undefined && prev.length >= maxRows) return prev;
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          reference: '',
+          quantity: 1,
+          vendor: uniqueVendors.length === 1 ? uniqueVendors[0] : undefined,
+        },
+      ];
+    });
   };
 
   const removeRow = (id: string) => {
@@ -260,11 +263,8 @@ export function MultiRowEquipmentToggle({
         className="flex items-center gap-2 self-start px-3 py-1.5 mt-1 bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 text-xs font-semibold rounded-lg border border-slate-200 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
-        Ajouter{maxRows !== undefined ? ` (${items.length}/${maxRows})` : ''}
+        Ajouter
       </button>}
-      {allowMultiple && maxRows !== undefined && items.length >= maxRows && (
-        <p className="text-[11px] text-slate-500">Maximum {maxRows} références par secteur atteint.</p>
-      )}
 
       {children}
     </EquipmentToggleCard>

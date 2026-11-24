@@ -1,0 +1,80 @@
+================================================================================
+ROBOT WORKER: FIX `inspect_mode` BLOCKING QUEUED JOBS & WORKER STATUS
+================================================================================
+
+PROBLEM
+--------------------------------------------------------------------------------
+When `inspect_mode=True` keeps Robot Structural Analysis open after sending
+`POST /api/calculations/{job_id}/complete/`, the worker thread stays blocked on
+that finished job:
+  - `current_job_id` stays stuck on the completed job
+  - `status` stays `BUSY` forever
+  - Queued jobs (`queue_size >= 1`) never start and stay stuck in queue
+
+
+1. NEVER KEEP `inspect_mode` ENABLED BY DEFAULT IN SHARED ENVIRONMENTS
+--------------------------------------------------------------------------------
+Only run inspection when explicitly requested on that job:
+
+    inspect_mode = bool(input_data.get("inspect_mode", False))
+
+Do NOT force `INSPECT_MODE=True` globally on the shared Windows worker serving
+production and dev users.
+
+
+2. DO NOT BLOCK THE QUEUE WHEN `inspect_mode` IS TRUE
+--------------------------------------------------------------------------------
+If `inspect_mode` is enabled, skip or abort the inspection wait whenever another
+job is waiting in `job_queue`:
+
+    # Only pause to inspect if explicitly requested AND nothing else is queued
+    if inspect_mode:
+        if not job_queue.empty():
+            print(f"[Inspect] Skipping pause for Job {job_id}: next job already queued.")
+        else:
+            print(f"[Inspect] Pausing after Job {job_id}. Will auto-resume if a new job arrives...")
+            # Poll queue instead of blocking forever on input() / infinite loop
+            deadline = time.monotonic() + 120  # max 2 min safety cap (adjust as needed)
+            while job_queue.empty() and time.monotonic() < deadline:
+                # Also break early if user manually closed Robot / pressed Enter
+                time.sleep(1.0)
+
+* Better alternative if you want to keep a model open for inspection without
+  blocking the queue: save the `.rtd` file to a debug folder when
+  `inspect_mode=True`, then close Robot immediately so the worker moves on to
+  the next job right away.
+
+
+3. ALWAYS RESET WORKER STATE & CLOSE ROBOT CLEANLY IN `finally:`
+--------------------------------------------------------------------------------
+Make sure every job ends inside a `finally:` block so `current_job_id` never
+remains stuck and modal Robot dialogs never freeze cleanup:
+
+    try:
+        # 1. Run Robot calculation & upload /complete/
+        ...
+    finally:
+        # 2. Prevent "Save changes?" dialogs from hanging Robot close
+        try:
+            robapp.Interactive = 0
+            robapp.Project.Close()
+        except Exception as err:
+            print(f"[Cleanup Warning] Robot close failed: {err}")
+
+        # 3. Clear job tracking and mark queue task done
+        current_job_id = None
+        current_job_type = None
+        job_queue.task_done()
+
+        # 4. Push exact transition to Django backends
+        if job_queue.empty():
+            notify_worker_status("IDLE", queue_size=0, current_job_type=None)
+        else:
+            notify_worker_status("BUSY", queue_size=job_queue.qsize(), current_job_type=None)
+
+
+4. HTTP TIMEOUT ON `/complete/`
+--------------------------------------------------------------------------------
+Always pass a timeout on `requests.post(f"{backend_url}/api/calculations/{job_id}/complete/", ..., timeout=30)`
+so a network hiccup cannot stall the worker loop indefinitely.
+================================================================================

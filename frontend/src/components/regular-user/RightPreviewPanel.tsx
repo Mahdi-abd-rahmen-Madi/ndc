@@ -5,6 +5,8 @@ import {
   Camera, Layers, ShieldCheck, Ruler, UserCheck, Hash, Check
 } from 'lucide-react';
 import ResultsPanel from './ResultsPanel';
+import WorkerStatusBanner from './WorkerStatusBanner';
+import { useWorkerStatus } from '../../hooks/useWorkerStatus';
 import {
   buildEquipmentTogglesMap,
   extractSectorAerialState,
@@ -103,7 +105,32 @@ function RightPreviewPanel({
   resolveTd,
   resolveBaieItems,
 }: RightPreviewPanelProps) {
+  const {
+    status: workerStatus,
+    isLoading: isWorkerStatusLoading,
+    isRefreshing: isWorkerStatusRefreshing,
+    refresh: refreshWorkerStatus,
+  } = useWorkerStatus({
+    enabled: !showMap && isConfirmed && !ndcPdfUrl,
+  });
+
   if (showMap) return null;
+
+  const hasRealWorkerProgress =
+    (typeof siteNdcProgressPercent === 'number' && siteNdcProgressPercent > 9) ||
+    Boolean(
+      siteNdcPollingMsg &&
+      !siteNdcPollingMsg.includes('Démarrage du calcul Robot') &&
+      !siteNdcPollingMsg.includes("Calcul Robot en cours d'exécution") &&
+      !siteNdcPollingMsg.includes('Initialisation') &&
+      !siteNdcPollingMsg.includes('Préparation')
+    );
+
+  const isWaitingInQueue =
+    isGeneratingSiteNdc &&
+    !isFullyStandard() &&
+    workerStatus?.state === 'busy' &&
+    !hasRealWorkerProgress;
 
   const {
     siteName,
@@ -237,11 +264,10 @@ function RightPreviewPanel({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     {/* Nom du site */}
-                    <div className={`p-3 rounded-xl border transition-all ${
-                      siteName
-                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                    }`}>
+                    <div className={`p-3 rounded-xl border transition-all ${siteName
+                      ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                      : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Nom du site</span>
                         {!siteName && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">Requis</span>}
@@ -252,11 +278,10 @@ function RightPreviewPanel({
                     </div>
 
                     {/* Client */}
-                    <div className={`p-3 rounded-xl border transition-all ${
-                      clientName
-                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                    }`}>
+                    <div className={`p-3 rounded-xl border transition-all ${clientName
+                      ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                      : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Client</span>
                         {!clientName && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded">Requis</span>}
@@ -291,11 +316,10 @@ function RightPreviewPanel({
                     </div>
 
                     {/* Hauteur Bâtiment */}
-                    <div className={`p-3 rounded-xl border transition-all ${
-                      buildingHeight !== ''
-                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                    }`}>
+                    <div className={`p-3 rounded-xl border transition-all ${buildingHeight !== ''
+                      ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                      : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Hauteur Bât.</span>
                         {buildingHeight === '' && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
@@ -306,11 +330,10 @@ function RightPreviewPanel({
                     </div>
 
                     {/* Épaisseur Dalle */}
-                    <div className={`p-3 rounded-xl border transition-all ${
-                      dalleThickness !== ''
-                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                    }`}>
+                    <div className={`p-3 rounded-xl border transition-all ${dalleThickness !== ''
+                      ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                      : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Épaisseur Dalle</span>
                         {dalleThickness === '' && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
@@ -322,11 +345,10 @@ function RightPreviewPanel({
 
                     {/* Étanchéité (si non encastré) */}
                     {foundationType !== 'encastre' ? (
-                      <div className={`p-3 rounded-xl border transition-all ${
-                        etancheite !== ''
-                          ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                          : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                      }`}>
+                      <div className={`p-3 rounded-xl border transition-all ${etancheite !== ''
+                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                        }`}>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Étanchéité</span>
                           {etancheite === '' && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
@@ -338,11 +360,10 @@ function RightPreviewPanel({
                     ) : null}
 
                     {/* Photo du site */}
-                    <div className={`p-3 rounded-xl border transition-all ${
-                      siteImageUrl
-                        ? 'bg-emerald-50/40 border-emerald-200/80 text-emerald-950'
-                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                    } ${foundationType === 'encastre' ? 'col-span-2' : ''}`}>
+                    <div className={`p-3 rounded-xl border transition-all ${siteImageUrl
+                      ? 'bg-emerald-50/40 border-emerald-200/80 text-emerald-950'
+                      : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      } ${foundationType === 'encastre' ? 'col-span-2' : ''}`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Photo Site</span>
                         {!siteImageUrl && <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded">Requis</span>}
@@ -437,11 +458,10 @@ function RightPreviewPanel({
                     Équipement d'accès obligatoire (au sol)
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className={`p-3.5 rounded-xl border transition-all ${
-                      project.selectedEchelle && project.selectedEchelle.trim()
-                        ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                        : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                    }`}>
+                    <div className={`p-3.5 rounded-xl border transition-all ${project.selectedEchelle && project.selectedEchelle.trim()
+                      ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                      : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Échelle & Palier (Par site)</span>
                         {project.selectedEchelle && project.selectedEchelle.trim() ? (
@@ -485,11 +505,10 @@ function RightPreviewPanel({
 
                     return (
                       <div
-                        className={`p-4 rounded-xl border transition-all ${
-                          isComplete
-                            ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
-                            : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
-                        }`}
+                        className={`p-4 rounded-xl border transition-all ${isComplete
+                          ? 'bg-violet-50/40 border-violet-200/80 text-violet-950'
+                          : 'bg-slate-50/70 border-slate-200/70 text-slate-500'
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-2.5">
                           <div className="flex items-center gap-2">
@@ -607,19 +626,19 @@ function RightPreviewPanel({
                       : null,
                     (operator === 'free' ? sec?.hasBoitierJonction : sec?.hasCoffret)
                       ? {
-                          label: operator === 'free' ? 'Boîtier jonction FO' : 'Coffret fibre',
-                          ancrage: formatFoundationLabel(operator === 'free' ? (sec.boitierJonctionFoundationType || sec.equipmentFoundationType) : (sec.coffretFoundationType || sec.equipmentFoundationType)),
-                          detail: operator === 'free' ? `${sec.boitierJonctionQuantity ?? 1}×` : (sec.coffretReference || ''),
-                        }
+                        label: operator === 'free' ? 'Boîtier jonction FO' : 'Coffret fibre',
+                        ancrage: formatFoundationLabel(operator === 'free' ? (sec.boitierJonctionFoundationType || sec.equipmentFoundationType) : (sec.coffretFoundationType || sec.equipmentFoundationType)),
+                        detail: operator === 'free' ? `${sec.boitierJonctionQuantity ?? 1}×` : (sec.coffretReference || ''),
+                      }
                       : null,
                   ].filter(Boolean) as Eq[];
                   const fh: Eq[] = secs.flatMap((s2, i) => s2?.hasFhEquipment
                     ? [{
-                        label: 'FH',
-                        ancrage: formatFoundationLabel(s2.fhFoundationType || s2.equipmentFoundationType),
-                        detail: refList(s2.fhItems),
-                        scope: secs.length > 1 ? `Secteur ${i + 1}` : undefined,
-                      }]
+                      label: 'FH',
+                      ancrage: formatFoundationLabel(s2.fhFoundationType || s2.equipmentFoundationType),
+                      detail: refList(s2.fhItems),
+                      scope: secs.length > 1 ? `Secteur ${i + 1}` : undefined,
+                    }]
                     : []);
                   const all = [...fh, ...shared];
                   if (all.length === 0) return null;
@@ -848,7 +867,7 @@ function RightPreviewPanel({
                         modèle: tgbtItem?.name || tgbtReference || 'TGBT ACTIA',
                         dimensions: tgbtItem?.dimensions || '500x400x230mm',
                         poids: tgbtItem?.weight ? `${tgbtItem.weight} kg` : '15 kg',
-                        emplacement: tgbtEmplacement === 'integre_mat' ? 'intégré au mat' : 'intégré au bcube'
+                        emplacement: tgbtEmplacement === 'integre_mat' ? 'Intégré au mât' : 'Intégré au BCube'
                       };
                     })() : null,
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
@@ -968,15 +987,32 @@ function RightPreviewPanel({
                 )
               ) : (
                 <div className="flex flex-col gap-3 animate-fadeIn">
+                  {(!isGeneratingSiteNdc || isWaitingInQueue) && (
+                    <WorkerStatusBanner
+                      status={workerStatus}
+                      isLoading={isWorkerStatusLoading}
+                      isRefreshing={isWorkerStatusRefreshing}
+                      onRefresh={refreshWorkerStatus}
+                      isStandardSite={isFullyStandard()}
+                      isWaitingInQueue={isWaitingInQueue}
+                    />
+                  )}
                   {isGeneratingSiteNdc ? (
                     <button
                       disabled
-                      className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base opacity-80 scale-[0.98] ${
-                        isFullyStandard() ? 'bg-emerald-600' : 'bg-violet-600'
-                      }`}
+                      className={`w-full py-3.5 text-white rounded-xl font-bold flex items-center justify-center gap-2.5 shadow-md transition-all text-base opacity-85 scale-[0.98] ${isWaitingInQueue
+                        ? 'bg-amber-500'
+                        : isFullyStandard()
+                          ? 'bg-emerald-600'
+                          : 'bg-violet-600'
+                        }`}
                     >
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>{siteNdcPollingMsg || 'Calcul en cours...'}</span>
+                      <span>
+                        {isWaitingInQueue
+                          ? "En file d'attente — un calcul est en cours..."
+                          : siteNdcPollingMsg || 'Calcul en cours...'}
+                      </span>
                     </button>
                   ) : siteNdcError ? (
                     <div className="flex flex-col gap-3 animate-fadeIn">
@@ -1017,14 +1053,13 @@ function RightPreviewPanel({
 
                   {isGeneratingSiteNdc && (
                     <div className="w-full mt-2 animate-fadeIn">
-                      {typeof siteNdcProgressPercent === 'number' ? (
+                      {!isWaitingInQueue && typeof siteNdcProgressPercent === 'number' ? (
                         <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden shadow-inner">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ease-out ${
-                              isFullyStandard()
-                                ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
-                                : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
-                            }`}
+                            className={`h-full rounded-full transition-all duration-300 ease-out ${isFullyStandard()
+                              ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
+                              : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
+                              }`}
                             style={{ width: `${Math.max(2, Math.min(100, siteNdcProgressPercent))}%` }}
                           />
                         </div>
@@ -1040,7 +1075,12 @@ function RightPreviewPanel({
                           </style>
                           <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden relative shadow-inner">
                             <div
-                              className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isFullyStandard() ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'}`}
+                              className={`absolute top-0 bottom-0 left-0 w-1/4 rounded-full ${isWaitingInQueue
+                                ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500'
+                                : isFullyStandard()
+                                  ? 'bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600'
+                                  : 'bg-gradient-to-r from-violet-600 via-indigo-500 to-violet-600'
+                                }`}
                               style={{ animation: 'indeterminateProgress 1.5s ease-in-out infinite' }}
                             ></div>
                           </div>

@@ -491,7 +491,7 @@ export function SiteConfirmationModal({
                       {tgbtReference || 'TGBT ACTIA'}
                     </span>
                     <span className="text-[10px] text-slate-500 block mt-0.5">
-                      500x400x230mm • 15kg • {tgbtEmplacement === 'integre_mat' ? 'intégré au mat' : 'intégré au bcube'}
+                      500x400x230mm • 15kg • {tgbtEmplacement === 'integre_mat' ? 'Intégré au mât' : 'Intégré au BCube'}
                     </span>
                   </ZoneTechniqueCard>
                 )}

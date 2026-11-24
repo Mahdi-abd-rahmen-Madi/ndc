@@ -22,12 +22,11 @@ export function MastHeightInput({
     <div className={`flex flex-col gap-1 ${className}`}>
       <div className="flex items-center justify-between">
         <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1">
-          Hauteur du mât (m)
+          <span>
+            Hauteur du mât <span className="normal-case">(m)</span>
+          </span>
           <span className="text-rose-500 font-bold">*</span>
         </label>
-        <span className="text-[10px] text-slate-400">
-          0.50 m à 6.00 m
-        </span>
       </div>
       <div className="relative">
         <input

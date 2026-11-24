@@ -2,6 +2,7 @@ import React from 'react';
 import { Compass, Building2, Anchor, Edit3, User as UserIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationsDropdown from './NotificationsDropdown';
+import { useWorkerStatus } from '../../hooks/useWorkerStatus';
 
 export interface PortailHeaderProps {
   siteType: string;
@@ -32,6 +33,12 @@ export function PortailHeader({
 }: PortailHeaderProps) {
   const navigate = useNavigate();
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const {
+    status: workerStatus,
+    isLoading: isWorkerLoading,
+    isRefreshing: isWorkerRefreshing,
+    refresh: refreshWorkerStatus,
+  } = useWorkerStatus({ enabled: true });
 
   return (
     <header className="h-16 border-b border-slate-200/80 bg-white/85 backdrop-blur-md px-5 md:px-8 flex items-center justify-between shrink-0 z-20 sticky top-0 shadow-xs">
@@ -129,13 +136,55 @@ export function PortailHeader({
             Déconnexion
           </button>
         </div>
-        <div className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full font-semibold border border-emerald-200 shadow-2xs flex items-center gap-1.5 hidden sm:flex">
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </div>
-          En Ligne
-        </div>
+        {(() => {
+          const state = workerStatus?.state;
+          const queueSize = Math.max(0, workerStatus?.queue_size || 0);
+          let pillClasses = 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100/70';
+          let pingClasses = 'bg-emerald-400';
+          let dotClasses = 'bg-emerald-500';
+          let showPing = true;
+          let label = 'En Ligne';
+          let tooltip = 'Moteur de calcul disponible — Cliquez pour actualiser';
+
+          if (isWorkerLoading && !workerStatus) {
+            pillClasses = 'text-slate-600 bg-slate-100 border-slate-200';
+            pingClasses = 'bg-slate-400';
+            dotClasses = 'bg-slate-400';
+            label = 'Vérification...';
+            tooltip = 'Vérification du statut du moteur de calcul...';
+          } else if (state === 'busy') {
+            pillClasses = 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100/70';
+            pingClasses = 'bg-amber-400';
+            dotClasses = 'bg-amber-500';
+            label = queueSize > 0 ? `Occupé (+${queueSize})` : 'Occupé';
+            tooltip = `1 calcul en cours${queueSize > 0 ? ` • ${queueSize} en file d'attente` : ''} — Cliquez pour actualiser`;
+          } else if (state === 'offline') {
+            pillClasses = 'text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100/70';
+            dotClasses = 'bg-rose-500';
+            showPing = false;
+            label = 'Hors Ligne';
+            tooltip = 'Moteur de calcul hors ligne — Cliquez pour actualiser';
+          }
+
+          return (
+            <button
+              type="button"
+              onClick={refreshWorkerStatus}
+              disabled={isWorkerRefreshing}
+              title={tooltip}
+              aria-label={tooltip}
+              className={`text-xs px-3 py-1 rounded-full font-semibold border shadow-2xs hidden sm:flex items-center gap-1.5 transition-colors cursor-pointer ${pillClasses} ${isWorkerRefreshing ? 'opacity-75' : ''}`}
+            >
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                {showPing && (
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${pingClasses}`} />
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${dotClasses}`} />
+              </span>
+              <span>{label}</span>
+            </button>
+          );
+        })()}
         <NotificationsDropdown
           notifications={notifications}
           unreadCount={unreadCount}

@@ -1,14 +1,17 @@
 import os
 from unittest.mock import patch
 
+import requests
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from api.models import CalculationJob, ClientSubscription
 from api.tasks import send_job_to_worker
+from api.worker_status import WORKER_STATUS_CACHE_KEY
 from utils.domain_constants import (
     OPERATORS_WITHOUT_TD,
     V_B0_TO_REGION,
@@ -171,7 +174,7 @@ class ApiAuthAndPermissionsTest(TestCase):
             status="PENDING",
             input_data={"_callback_url": "https://api-ndc.heliosys.io", "operateur": "orange"},
         )
-        with patch("api.tasks.requests.post") as mock_post:
+        with patch("api.tasks.close_old_connections"), patch("api.tasks.requests.post") as mock_post:
             mock_post.return_value.status_code = 202
             ok = send_job_to_worker(job.id)
             self.assertTrue(ok)
@@ -180,3 +183,82 @@ class ApiAuthAndPermissionsTest(TestCase):
             self.assertEqual(sent["input_data"]["callback_url"], "https://api-ndc.heliosys.io")
             self.assertEqual(sent["input_data"]["django_backend_url"], "https://api-ndc.heliosys.io")
             self.assertNotIn("_callback_url", sent["input_data"])
+
+    @override_settings(ROBOT_WORKER_API_KEY="test-worker-secret")
+    def test_worker_status_push_and_read_permissions(self):
+        cache.delete(WORKER_STATUS_CACHE_KEY)
+
+        # Unauthenticated GET is rejected
+        unauth = self.client.get("/api/worker/status/")
+        self.assertIn(unauth.status_code, (401, 403))
+
+        # Regular authenticated user cannot spoof worker status via POST
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        forbidden_post = self.client.post("/api/worker/status/", {"status": "IDLE"}, format="json")
+        self.assertEqual(forbidden_post.status_code, 403)
+
+        # Worker POST with valid X-Worker-API-Key sets BUSY with queue
+        self.client.credentials(HTTP_X_WORKER_API_KEY="test-worker-secret")
+        with patch("api.worker_status.broadcast_worker_status") as mock_broadcast:
+            busy_resp = self.client.post(
+                "/api/worker/status/",
+                {"status": "BUSY", "queue_size": 2, "current_job_type": "ANTENNA"},
+                format="json",
+            )
+            self.assertEqual(busy_resp.status_code, 200)
+            data = busy_resp.json()
+            self.assertEqual(data["state"], "busy")
+            self.assertEqual(data["active_jobs"], 1)
+            self.assertEqual(data["queue_size"], 2)
+            self.assertEqual(data["total_ahead"], 3)
+            self.assertTrue(mock_broadcast.called)
+
+            # Authenticated GET reads cached state without probing the worker HTTP endpoint
+            self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+            with patch("api.worker_status.requests.get") as mock_get:
+                get_resp = self.client.get("/api/worker/status/")
+                self.assertEqual(get_resp.status_code, 200)
+                self.assertEqual(get_resp.json()["state"], "busy")
+                self.assertEqual(get_resp.json()["queue_size"], 2)
+                mock_get.assert_not_called()
+
+            # Worker transitions back to IDLE, then OFFLINE
+            self.client.credentials(HTTP_X_WORKER_API_KEY="test-worker-secret")
+            idle_resp = self.client.post("/api/worker/status/", {"status": "IDLE", "queue_size": 0}, format="json")
+            self.assertEqual(idle_resp.status_code, 200)
+            self.assertEqual(idle_resp.json()["state"], "available")
+            self.assertEqual(idle_resp.json()["total_ahead"], 0)
+
+            off_resp = self.client.post("/api/worker/status/", {"status": "OFFLINE", "queue_size": 4}, format="json")
+            self.assertEqual(off_resp.status_code, 200)
+            self.assertEqual(off_resp.json()["state"], "offline")
+            self.assertEqual(off_resp.json()["queue_size"], 0)
+
+    def test_worker_status_cold_start_probe_and_offline_on_dispatch_error(self):
+        cache.delete(WORKER_STATUS_CACHE_KEY)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+
+        with patch("api.worker_status.requests.get", side_effect=requests.exceptions.ConnectTimeout("timed out")) as mock_get:
+            resp = self.client.get("/api/worker/status/")
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.json()["state"], "offline")
+            mock_get.assert_called_once()
+
+        # Seed BUSY first, then simulate dispatch failure -> flips to offline
+        with patch("api.worker_status.broadcast_worker_status"):
+            from api.worker_status import set_worker_status, get_cached_worker_status
+
+            set_worker_status("BUSY", queue_size=1, source="worker")
+            self.assertEqual(get_cached_worker_status()["state"], "busy")
+
+            job = CalculationJob.objects.create(
+                user=self.user,
+                status="PENDING",
+                input_data={"operateur": "orange"},
+            )
+            with patch("api.tasks.close_old_connections"), patch(
+                "api.tasks.requests.post", side_effect=requests.exceptions.ConnectionError("refused")
+            ):
+                ok = send_job_to_worker(job.id)
+                self.assertFalse(ok)
+                self.assertEqual(get_cached_worker_status()["state"], "offline")

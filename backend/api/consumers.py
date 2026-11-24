@@ -1,6 +1,8 @@
+import asyncio
 import json
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from .worker_status import WORKER_STATUS_GROUP, get_or_probe_worker_status, probe_worker_once
 
 
 @database_sync_to_async
@@ -63,4 +65,45 @@ class CalculationProgressConsumer(AsyncWebsocketConsumer):
         Receives broadcasted progress events and forwards them to the client.
         """
         await self.send(text_data=json.dumps(event.get("data", {})))
+
+
+class WorkerStatusConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for pushing real-time Robot Worker availability and queue status.
+    Route: ws/worker/status/
+    """
+
+    async def connect(self):
+        self.group_name = None
+        user = self.scope.get("user")
+        if not user or not user.is_authenticated:
+            await self.close(code=4403)
+            return
+
+        self.group_name = WORKER_STATUS_GROUP
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+        payload = await asyncio.to_thread(get_or_probe_worker_status, False)
+        await self.send(text_data=json.dumps({"type": "worker_status", **payload}))
+
+    async def disconnect(self, close_code):
+        if self.group_name:
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        if not text_data:
+            return
+        try:
+            msg = json.loads(text_data)
+        except (ValueError, TypeError):
+            return
+        if isinstance(msg, dict) and msg.get("action") == "refresh":
+            await asyncio.to_thread(probe_worker_once)
+
+    async def worker_status_update(self, event):
+        """
+        Forward broadcasted worker status events to the WebSocket client.
+        """
+        await self.send(text_data=json.dumps({"type": "worker_status", **(event.get("data") or {})}))
 

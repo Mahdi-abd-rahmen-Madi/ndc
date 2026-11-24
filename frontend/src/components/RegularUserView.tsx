@@ -585,9 +585,6 @@ export default function RegularUserView({
                                     <h4 className="text-xs font-bold text-slate-900 tracking-tight">Équipements</h4>
                                   </div>
                                 </div>
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                                  Sur mât
-                                </span>
                               </div>
 
                               <SectorEquipmentGrid
@@ -756,6 +753,8 @@ export default function RegularUserView({
                   selectedCoordinates={selectedCoords}
                   flyToLocation={flyToLocation}
                   onMapClick={handleMapLocationSelect}
+                  showTransitionZones={false}
+                  showCoastline={false}
                 />
               </Suspense>
             </div>

@@ -59,9 +59,9 @@ export function TGBTEquipmentToggle({
 
   const specs = selectedItem
     ? [
-        { label: 'Dimensions', value: selectedItem.dimensions || STATIC_EQUIPMENT_SPECS.tgbt.dimensions },
-        { label: 'Poids', value: selectedItem.weight ? `${selectedItem.weight} kg` : `${STATIC_EQUIPMENT_SPECS.tgbt.weightKg} kg` },
-      ]
+      { label: 'Dimensions', value: selectedItem.dimensions || STATIC_EQUIPMENT_SPECS.tgbt.dimensions },
+      { label: 'Poids', value: selectedItem.weight ? `${selectedItem.weight} kg` : `${STATIC_EQUIPMENT_SPECS.tgbt.weightKg} kg` },
+    ]
     : undefined;
 
   return (
@@ -90,7 +90,7 @@ export function TGBTEquipmentToggle({
               onChange={() => setTgbtEmplacement?.('integre_bcube')}
               className="text-violet-600 focus:ring-violet-500"
             />
-            intégré au bcube
+            Intégré au BCube
           </label>
           <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-700 cursor-pointer font-medium whitespace-nowrap">
             <input
@@ -101,7 +101,7 @@ export function TGBTEquipmentToggle({
               onChange={() => setTgbtEmplacement?.('integre_mat')}
               className="text-violet-600 focus:ring-violet-500"
             />
-            intégré au mat
+            Intégré au mât
           </label>
         </div>
       </div>

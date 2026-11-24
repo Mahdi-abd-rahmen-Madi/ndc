@@ -144,7 +144,7 @@ function ensureMapLayers(map: maplibregl.Map) {
         'fill-opacity': 0.15,
       },
       layout: {
-        visibility: 'visible',
+        visibility: 'none',
       },
     });
 
@@ -159,7 +159,7 @@ function ensureMapLayers(map: maplibregl.Map) {
         'line-dasharray': [2, 2],
       },
       layout: {
-        visibility: 'visible',
+        visibility: 'none',
       },
     });
   }
@@ -181,7 +181,7 @@ function ensureMapLayers(map: maplibregl.Map) {
         'line-opacity': 0.9,
       },
       layout: {
-        visibility: 'visible',
+        visibility: 'none',
       },
     });
   }
@@ -259,7 +259,8 @@ function updateMapLayers(
   clcPolygons: any,
   transitionZones: any,
   viewportTransitionZones: any,
-  analysisRadius: number
+  analysisRadius: number,
+  showTransitionZones: boolean
 ) {
   // Update CLC Polygons Source
   const clcSource = map.getSource('clc-polygons') as maplibregl.GeoJSONSource | undefined;
@@ -296,7 +297,7 @@ function updateMapLayers(
     const hasClickedZones = transitionZones && transitionZones.features && transitionZones.features.length > 0;
     const hasViewportZones = viewportTransitionZones && viewportTransitionZones.features && viewportTransitionZones.features.length > 0;
 
-    if (hasClickedZones || hasViewportZones) {
+    if (showTransitionZones && (hasClickedZones || hasViewportZones)) {
       // Combine features and deduplicate by geometry string representation
       const seen = new Set<string>();
       const uniqueFeatures: any[] = [];
@@ -348,15 +349,19 @@ export default function TerrainMap({
   flyToLocation,
   clcPolygons,
   transitionZones,
-  analysisRadius = 0.5
+  analysisRadius = 0.5,
+  showTransitionZones = true,
+  showCoastline = true
 }: TerrainMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const onMapClickRef = useRef(onMapClick);
   const onMapLoadRef = useRef(onMapLoad);
+  const showTransitionZonesRef = useRef(showTransitionZones);
   onMapClickRef.current = onMapClick;
   onMapLoadRef.current = onMapLoad;
+  showTransitionZonesRef.current = showTransitionZones;
   const [coastlineGeoJSON, setCoastlineGeoJSON] = useState<any>(null);
   const [coastlineBufferGeoJSON, setCoastlineBufferGeoJSON] = useState<any>(null);
   const [viewportTransitionZones, setViewportTransitionZones] = useState<any>(null);
@@ -373,6 +378,11 @@ export default function TerrainMap({
 
 
   const fetchViewportTransitionZones = useCallback(async (map: maplibregl.Map) => {
+    if (!showTransitionZonesRef.current) {
+      setViewportTransitionZones(null);
+      return;
+    }
+
     const zoom = map.getZoom();
     if (zoom < 11) {
       setViewportTransitionZones(null);
@@ -388,13 +398,29 @@ export default function TerrainMap({
 
     try {
       const data = await apiClient.get(`/api/geodata/regions/transition_zones/?bbox=${bbox}`);
-      setViewportTransitionZones(data);
+      if (showTransitionZonesRef.current) {
+        setViewportTransitionZones(data);
+      }
     } catch (err) {
       console.error('Failed to fetch viewport transition zones:', err);
     }
   }, []);
 
   useEffect(() => {
+    if (!showTransitionZones) {
+      setViewportTransitionZones(null);
+    } else if (mapRef.current?.isStyleLoaded()) {
+      fetchViewportTransitionZones(mapRef.current);
+    }
+  }, [showTransitionZones, fetchViewportTransitionZones]);
+
+  useEffect(() => {
+    if (!showCoastline) {
+      setCoastlineGeoJSON(null);
+      setCoastlineBufferGeoJSON(null);
+      return;
+    }
+
     const controller = new AbortController();
     const fetchCoastlineData = async () => {
       try {
@@ -423,7 +449,7 @@ export default function TerrainMap({
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [showCoastline]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -518,7 +544,7 @@ export default function TerrainMap({
 
     const applyUpdates = () => {
       ensureMapLayers(map);
-      updateMapLayers(map, selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius);
+      updateMapLayers(map, selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius, showTransitionZones);
     };
 
     if (map.isStyleLoaded()) {
@@ -526,22 +552,36 @@ export default function TerrainMap({
     } else {
       map.once('load', applyUpdates);
     }
-  }, [selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius]);
+  }, [selectedCoordinates, clcPolygons, transitionZones, viewportTransitionZones, analysisRadius, showTransitionZones]);
 
   // Manage static France coastline & buffer layers independently so selection updates don't re-upload them
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || (!coastlineGeoJSON && !coastlineBufferGeoJSON)) return;
+    if (!map) return;
 
     const applyCoastline = () => {
       ensureMapLayers(map);
       const coastlineSource = map.getSource('france-coastline') as maplibregl.GeoJSONSource | undefined;
-      if (coastlineSource && coastlineGeoJSON) {
-        coastlineSource.setData(coastlineGeoJSON);
+      if (coastlineSource) {
+        if (showCoastline && coastlineGeoJSON) {
+          coastlineSource.setData(coastlineGeoJSON);
+          map.setLayoutProperty('france-coastline-line', 'visibility', 'visible');
+        } else {
+          coastlineSource.setData({ type: 'FeatureCollection', features: [] });
+          map.setLayoutProperty('france-coastline-line', 'visibility', 'none');
+        }
       }
       const bufferSource = map.getSource('france-coastline-buffer') as maplibregl.GeoJSONSource | undefined;
-      if (bufferSource && coastlineBufferGeoJSON) {
-        bufferSource.setData(coastlineBufferGeoJSON);
+      if (bufferSource) {
+        if (showCoastline && coastlineBufferGeoJSON) {
+          bufferSource.setData(coastlineBufferGeoJSON);
+          map.setLayoutProperty('france-coastline-buffer-fill', 'visibility', 'visible');
+          map.setLayoutProperty('france-coastline-buffer-line', 'visibility', 'visible');
+        } else {
+          bufferSource.setData({ type: 'FeatureCollection', features: [] });
+          map.setLayoutProperty('france-coastline-buffer-fill', 'visibility', 'none');
+          map.setLayoutProperty('france-coastline-buffer-line', 'visibility', 'none');
+        }
       }
     };
 
@@ -550,7 +590,7 @@ export default function TerrainMap({
     } else {
       map.once('load', applyCoastline);
     }
-  }, [coastlineGeoJSON, coastlineBufferGeoJSON]);
+  }, [showCoastline, coastlineGeoJSON, coastlineBufferGeoJSON]);
 
   // Handle flying to a requested location (e.g. generic commune or street)
   useEffect(() => {

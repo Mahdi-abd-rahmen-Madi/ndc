@@ -1,0 +1,128 @@
+================================================================================
+ROBOT WORKER: EVENT-DRIVEN STATUS & QUEUE PUSH INSTRUCTIONS
+================================================================================
+
+Instead of Django polling the worker every few seconds, the Windows worker
+pushes its state (`IDLE`, `BUSY`, `OFFLINE`) and `queue_size` ONLY when its
+status or queue changes. Django immediately broadcasts that update to all
+open browser tabs over WebSocket (`ws/worker/status/`).
+
+
+1. BACKEND TARGET CONFIGURATION
+--------------------------------------------------------------------------------
+Because both Production and Local Dev can share this worker, support a
+comma-separated list of backend URLs PLUS any dynamic `callback_url` passed
+inside incoming job payloads:
+
+    import os
+    import threading
+    import requests
+
+    DEFAULT_STATUS_BACKENDS = [
+        u.strip().rstrip("/")
+        for u in os.environ.get(
+            "STATUS_CALLBACK_URLS",
+            os.environ.get("DJANGO_BACKEND_URL", "https://api-ndc.heliosys.io"),
+        ).split(",")
+        if u.strip()
+    ]
+
+    KNOWN_BACKENDS: set[str] = set(DEFAULT_STATUS_BACKENDS)
+    WORKER_API_KEY = os.environ.get("ROBOT_WORKER_API_KEY", "").strip()
+
+
+2. NON-BLOCKING STATUS PUSH HELPER
+--------------------------------------------------------------------------------
+Call this ONLY on state or queue transitions (never inside a polling loop):
+
+    def notify_worker_status(
+        status: str,
+        queue_size: int = 0,
+        current_job_type: str | None = None,
+    ):
+        """
+        Push worker state transition (`IDLE` | `BUSY` | `OFFLINE`) to all
+        known Django backends without blocking the FastAPI event loop or worker.
+        """
+        payload = {
+            "status": status.upper(),
+            "queue_size": max(0, int(queue_size)),
+            "current_job_type": current_job_type,
+        }
+        headers = {"Content-Type": "application/json"}
+        if WORKER_API_KEY:
+            headers["X-Worker-API-Key"] = WORKER_API_KEY
+
+        def _send():
+            for base_url in list(KNOWN_BACKENDS):
+                try:
+                    requests.post(
+                        f"{base_url}/api/worker/status/",
+                        json=payload,
+                        headers=headers,
+                        timeout=2.0,
+                    )
+                except Exception as err:
+                    print(f"[Status Push Warning] {base_url}: {err}")
+
+        threading.Thread(target=_send, daemon=True).start()
+
+
+3. LIFECYCLE HOOKS (WHERE TO CALL IT)
+--------------------------------------------------------------------------------
+
+A) FastAPI startup & shutdown (`lifespan`):
+
+    from contextlib import asynccontextmanager
+
+    @asynccontextmanager
+    async def lifespan(app):
+        notify_worker_status("IDLE", queue_size=0)
+        yield
+        notify_worker_status("OFFLINE", queue_size=0)
+
+
+B) Inside `@app.post("/api/jobs")` when a job is enqueued:
+
+    payload = await request.json()
+    input_data = payload.get("input_data", {})
+    backend_url = (
+        payload.get("callback_url")
+        or input_data.get("callback_url")
+        or input_data.get("django_backend_url")
+    )
+    if backend_url:
+        KNOWN_BACKENDS.add(backend_url.rstrip("/"))
+
+    # Put job into your queue, then push BUSY + current queue size:
+    notify_worker_status(
+        "BUSY",
+        queue_size=job_queue.qsize(),
+        current_job_type=current_job_type,
+    )
+
+
+C) Inside your worker execution loop when picking up a job from the queue:
+
+    notify_worker_status(
+        "BUSY",
+        queue_size=job_queue.qsize(),
+        current_job_type=job_type,
+    )
+
+
+D) Inside your worker execution loop's `finally:` block after a job finishes
+   (whether it succeeded or failed):
+
+    if job_queue.empty():
+        notify_worker_status("IDLE", queue_size=0, current_job_type=None)
+    else:
+        notify_worker_status("BUSY", queue_size=job_queue.qsize(), current_job_type=None)
+
+
+4. KEEP `GET /api/status` AS-IS
+--------------------------------------------------------------------------------
+Keep returning `{"status": "IDLE" | "BUSY", "queue_size": <int>, ...}` on
+`GET /api/status`. Django only calls it once on cold start (when cache is
+empty) or when a user clicks the manual refresh icon — never on a timer.
+================================================================================
