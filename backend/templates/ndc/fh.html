@@ -23,15 +23,42 @@
     .fh-page-1 table {
         margin-bottom: 3mm;
     }
+
+    .fh-page-1.fh-with-echelle h1 {
+        margin-bottom: 3mm;
+        font-size: 18pt;
+    }
+
+    .fh-page-1.fh-with-echelle h2 {
+        margin-top: 3mm;
+        margin-bottom: 1.5mm;
+        font-size: 12pt;
+    }
+
+    .fh-page-1.fh-with-echelle p {
+        margin: 1.5mm 0;
+        font-size: 9.5pt;
+        line-height: 1.25;
+    }
+
+    .fh-page-1.fh-with-echelle table {
+        margin-bottom: 2mm;
+        font-size: 9.5pt;
+    }
+
+    .fh-page-1.fh-with-echelle th,
+    .fh-page-1.fh-with-echelle td {
+        padding: 3px 5px;
+    }
 </style>
 
-<div class="fh-page-1">
+<div class="fh-page-1{% if fh_has_echelle %} fh-with-echelle{% endif %}">
     <h1 id="etude-fh">ÉTUDE FH</h1>
 
     <h2>Description</h2>
     <p>
         Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité. <br>
-        Ajout d’un mât en tube {{ fh_mat_diam|default:"88.9" }} mm, d’épaisseur {{ fh_mat_epaisseur|default:"2.5" }} mm
+        Ajout d’un mât en tube {{ fh_mat_diam|default:"88.9" }} mm, d’épaisseur {{ fh_mat_epaisseur|default:"3.2" }} mm
         et de longueur {{ fh_mat_longueur|default:"1700" }} mm supportant une antenne FH{% if fh_items|length > 1 %} ({{
         fh_qty_total }} équipements){% endif %}.
         {% if not fh_sans_plot and not is_sans_plot %}
@@ -66,6 +93,14 @@
                 <td class="text-center">{{ eq_weight|default:"15" }}</td>
             </tr>
             {% endfor %}
+            {% if fh_has_echelle %}
+            <tr>
+                <td>Echelle</td>
+                <td class="text-center">1</td>
+                <td class="text-center">-</td>
+                <td class="text-center">15</td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
 
@@ -107,7 +142,17 @@
     </p>
 
     <h2>Calcul de chute</h2>
+    {% if fh_has_echelle %}
+    <p>
+        L’effort engendré en cas de chute d'un homme sur un point d'ancrage répondant à la norme NF EN 795 - Ancrage de classe A1 "ancres structurelles conçues pour être fixées sur des surfaces verticales".<br>
+        Un essai statique doit être réalisé en exerçant une force de 10 kN dans la direction dans laquelle la force est susceptible d’être appliquée en service.<br>
+        Cette force doit être maintenue pendant 3 min.<br>
+        Le dispositif d’ancrage doit supporter la force. Dans le cas pratique cette force multidirectionnelle s'applique dans un cône d'action de 25°.<br>
+        La chute de l'homme est prise en compte en tête du mât avec les composantes suivantes : F<sub>h</sub> = 2.2 kN et F<sub>v</sub> = 9.8 kN.
+    </p>
+    {% else %}
     <p>Pas de point d’ancrage sur le mât</p>
+    {% endif %}
 </div>
 
 <div class="page-break"></div>
@@ -139,7 +184,7 @@
     </thead>
     <tbody>
         <tr>
-            <td>{{ fh_mat_section|default:"TRON 88x2.5" }}</td>
+            <td>{{ fh_mat_section|default:"TRON 88x3.2" }}</td>
             <td class="text-center">{{ fh_mat_longueur_m|default:"1.70" }}</td>
             <td class="text-center">Mat principal</td>
         </tr>
@@ -168,6 +213,7 @@
     PP : Poids propre de la structure<br>
     PE : Poids équipements ({% if fh_items|length > 1 %}{{ fh_qty_total }}x FH{% else %}{{ fh_qty_total|default:eq_qty
     }}x {{ fh_name|default:"Antenne FH" }}{% endif %})<br>
+    {% if fh_has_echelle %}CH : Chute d’homme<br>{% endif %}
     Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
 </p>
 {% endif %}
@@ -188,7 +234,7 @@
 {% if fh_note_mat_images %}
 <div class="page-break"></div>
 <h2>Vérification mât principal supérieur Ø {{ fh_mat_diam|default:"88.9" }}mm</h2>
-<h3>Section : {{ fh_mat_section|default:"TRON 88x2.5" }}</h3>
+<h3>Section : {{ fh_mat_section|default:"TRON 88x3.2" }}</h3>
 
 <div style="text-align: center; margin-top: 5mm;">
     {% for img in fh_note_mat_images %}

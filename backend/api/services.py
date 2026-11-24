@@ -65,7 +65,7 @@ _DOCX_EQUIPMENT_DEFAULTS = {
     "fh": {
         "label": "FH",
         "depth_key": "diameter_mm",
-        "mast_section": "TRON 88x2.5",
+        "mast_section": "TRON 88x3.2",
         "plot_section": "TCAR 150x5",
         "terrain_type": "II",
         "vb0": 24.0,

@@ -1,0 +1,182 @@
+================================================================================
+ROBOT STRUCTURAL ANALYSIS WORKER - FH ECHELLE (+CHUTE D'HOMME) INSTRUCTIONS
+================================================================================
+
+1. CONTEXT & SCOPE
+--------------------------------------------------------------------------------
+The frontend FH ladder selector ("Présence échelle" in FHEquipmentToggle) now
+has 2 options:
+  - "Pas d'échelle"
+  - "Echelle"
+
+It is sent in `input_data["fh_equipment"]["echelle"]` (for both standalone FH
+and composite `antenna_with_fh` / `antenna_with_rrh_and_fh` jobs).
+
+The Django backend (`equipment_context.py`, `pdf_renderer.py`, `fh.html`) is
+already updated:
+  - When `fh_has_echelle == True`, `fh.html` renders the `+ech` template
+    sections matching `backend/templates/fh/NDC FH +ech.docx`:
+      * Equipements considérés table row: `Echelle | 1 | - | 15`
+      * Calcul de chute: NF EN 795 Class A1 text (10 kN / 3 min / 25° /
+        Fh = 2.2 kN, Fv = 9.8 kN)
+      * Fallback load legend: `CH : Chute d’homme`
+  - Django's `compute_ndc_hash` already includes `fh_equipment.echelle`, so
+    cached jobs with `"Echelle"` vs `"Pas d'échelle"` are cleanly separated.
+
+The Robot Worker MUST update its FH FEA modeling, load cases, combinations,
+verifications, and `result_data` so the Robot model and generated screenshots/
+RTF notes match `NDC FH +ech.docx` when an FH ladder is selected.
+
+
+2. PARSING `fh_has_echelle` ON THE WORKER
+--------------------------------------------------------------------------------
+Resolve the FH ladder flag strictly from FH-specific fields.
+DO NOT read `input_data["structure"]["echelle"]` — that field belongs to the
+main antenna mast, not the FH support mast.
+
+```python
+def resolve_fh_has_echelle(input_data: dict) -> bool:
+    fh_eq = input_data.get("fh_equipment") or {}
+    fh_struct = input_data.get("structure_fh") or {}
+
+    raw = fh_eq.get("echelle")
+    if raw is None:
+        raw = fh_struct.get("echelle")
+
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        norm = raw.strip().lower()
+        return (
+            bool(norm)
+            and "pas d'echelle" not in norm
+            and "pas d'échelle" not in norm
+            and norm not in ("non", "none", "false", "0")
+        )
+    return False
+```
+
+Note: Legacy values such as `"Echelle Söll"`, `"Echelle Perroquet"`, or
+`"Echelle Pivotloc"` also evaluate to `True` with this helper.
+
+
+3. ROBOT FEA MODELING CHANGES (FH SUPPORT)
+--------------------------------------------------------------------------------
+When `fh_has_echelle == False`:
+  - Keep existing behavior unchanged (no +15 kg ladder weight, no `CH` load
+    case, no `ACC:ACC` combinations).
+
+When `fh_has_echelle == True` (per `NDC FH +ech.docx`):
+
+A. Load Cases
+  - Case 1 — `PP` (Poids propre, Permanent):
+      Self-weight of the structure (unchanged).
+
+  - Case 2 — `PE` (Poids équipements, Permanent):
+      Add the ladder weight of 15 kg (15 daN downward, `FZ = -15 daN` / `-150 N`)
+      to the FH antenna(s) dead load at the equipment/top node:
+        `PE_total_dan = sum(item.pe_dan for item in fh_items) + 15.0`
+        `FZ = -PE_total_dan`
+      Do NOT add extra wind force for the ladder.
+
+  - Case 3 — `CH` (Chute d'homme, Accidental nature / `I_CN_ACCIDENTAL`):
+      Apply the fall-arrest anchor load (NF EN 795 Class A1) at the top node of
+      the FH mast (tête du mât):
+        - Horizontal force: `Fh = 2.2 kN` (`220 daN`, e.g. `FX = 220 daN`)
+        - Vertical force:   `Fv = -9.8 kN` (`-980 daN`, downward `FZ = -980 daN`)
+
+  - Cases 4–7 — Wind (`Vent +X`, `Vent -X`, `Vent +Y`, `Vent -Y`):
+      Notice that inserting `CH` as Case 3 shifts the 4 wind cases to 4, 5, 6, 7
+      (matching the Tableau des combinaisons in `NDC FH +ech.docx`):
+        - Case 4: Vent +X (1*Vent_X)
+        - Case 5: Vent -X (1*Vent_X)
+        - Case 6: Vent +Y (1*Vent_Y)
+        - Case 7: Vent -Y (1*Vent_Y)
+      (Wind forces on the FH mast and FH antenna(s) remain unchanged; no ladder
+      wind load is added.)
+
+B. Load Combinations
+  Generate the exact combinations from `NDC FH +ech.docx` when `fh_has_echelle`
+  is `True`:
+    - ELU:
+        * `ELU/ 1`:  `1*1.35 + 2*1.35`
+        * `ELU/ 2`:  `1*1.35 + 2*1.35 + 4*1.50`
+        * `ELU/ 3`:  `1*1.35 + 2*1.35 + 5*1.50`
+        * `ELU/ 4`:  `1*1.35 + 2*1.35 + 6*1.50`
+        * `ELU/ 5`:  `1*1.35 + 2*1.35 + 7*1.50`
+        * `ELU/ 6`:  `1*1.00 + 2*1.00`
+        * `ELU/ 7`:  `1*1.00 + 2*1.00 + 4*1.50`
+        * `ELU/ 8`:  `1*1.00 + 2*1.00 + 5*1.50`
+        * `ELU/ 9`:  `1*1.00 + 2*1.00 + 6*1.50`
+        * `ELU/ 10`: `1*1.00 + 2*1.00 + 7*1.50`
+    - ELS:CAR:
+        * `ELS:CAR/ 1`: `1*1.00 + 2*1.00`
+        * `ELS:CAR/ 2`: `1*1.00 + 2*1.00 + 4*1.00`
+        * `ELS:CAR/ 3`: `1*1.00 + 2*1.00 + 5*1.00`
+        * `ELS:CAR/ 4`: `1*1.00 + 2*1.00 + 6*1.00`
+        * `ELS:CAR/ 5`: `1*1.00 + 2*1.00 + 7*1.00`
+    - ELS:FRE:
+        * `ELS:FRE/ 6` (or `1`):  `1*1.00 + 2*1.00`
+        * `ELS:FRE/ 7` (or `2`):  `1*1.00 + 2*1.00 + 4*0.20`
+        * `ELS:FRE/ 8` (or `3`):  `1*1.00 + 2*1.00 + 5*0.20`
+        * `ELS:FRE/ 9` (or `4`):  `1*1.00 + 2*1.00 + 6*0.20`
+        * `ELS:FRE/ 10` (or `5`): `1*1.00 + 2*1.00 + 7*0.20`
+    - ELS:QPR:
+        * `ELS:QPR/ 11` (or `1`): `1*1.00 + 2*1.00`
+    - ACC (Accidental):
+        * `ACC:ACC/ 1`: `1*1.00 + 2*1.00 + 3*1.00`  (PP + PE + CH)
+        * `ACC:ACC/ 2`: `1*1.00 + 2*1.00`           (PP + PE)
+
+C. Member & Assemblage Verifications + Artifacts
+  - Include the `ACC` combinations alongside `ELU` and `ELS` when running:
+      1. Steel member verification (mât principal TRON 88x2.5, and plot
+         TCAR 150x5 when not `sans_plot`), exporting updated RTF calculation
+         notes and verification ratio screenshot (`fh_verification_screenshot`).
+      2. Baseplate / assemblage verification (when not `sans_plot`), exporting
+         the updated assemblage RTF (`fh_assemblage_note`).
+  - Capture the updated `fh_tableau_charges` image showing Case 3 (`CH`) and
+    the `ACC:ACC` combinations so the rendered PDF matches `NDC FH +ech.docx`.
+
+
+4. WORKER `result_data` PAYLOAD REQUIREMENT
+--------------------------------------------------------------------------------
+When calling `POST /api/calculations/{id}/complete/`:
+  1. Echo the resolved ladder state inside `result_data["fh"]` (and optionally
+     `result_data["fh_echelle"]`):
+     ```json
+     {
+       "fh": {
+         "echelle": "Echelle",
+         "has_echelle": true,
+         ...
+       },
+       "fh_echelle": "Echelle"
+     }
+     ```
+     (Or `"Pas d'échelle"` / `false` when disabled.)
+  2. IMPORTANT — DO NOT add `"Echelle"` inside `fh_items`:
+     `fh.html` already inserts the `Echelle | 1 | - | 15` row automatically
+     when `fh_has_echelle` is `True`. Adding `"Echelle"` to `fh_items` would
+     duplicate the ladder row in the Equipements considérés table and add it to
+     the `FwFH` wind formulas.
+
+
+5. VERIFICATION CHECKLIST
+--------------------------------------------------------------------------------
+1. Submit an FH job (and an `antenna_with_fh` job) with
+   `fh_equipment.echelle = "Echelle"`:
+   - Confirm `PE` includes `+15 daN` for the ladder.
+   - Confirm Case 3 `CH` is created with `Fh = 2.2 kN`, `Fv = -9.8 kN` at the
+     top node of the FH mast.
+   - Confirm `ACC:ACC/ 1` (`1*1.00 + 2*1.00 + 3*1.00`) and `ACC:ACC/ 2`
+     (`1*1.00 + 2*1.00`) exist and are included in steel + assemblage checks.
+   - Confirm `fh_tableau_charges` screenshot displays `CH` and `ACC:ACC`.
+   - Confirm `fh_items` contains only FH antennas (no `"Echelle"` entry).
+2. Submit an FH job with `fh_equipment.echelle = "Pas d'échelle"` while the
+   main mast has `structure.echelle = "Echelle Söll"`:
+   - Confirm `resolve_fh_has_echelle(input_data)` returns `False`.
+   - Confirm no `+15 daN`, no `CH` case, and no `ACC:ACC` combinations are
+     generated on the FH model.
+3. Verify both `with_plot` (`sans_plot = false`) and `sans_plot = true` cases
+   work cleanly with `fh_has_echelle = True`.
+================================================================================

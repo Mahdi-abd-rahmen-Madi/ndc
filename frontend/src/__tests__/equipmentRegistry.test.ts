@@ -172,7 +172,7 @@ describe('equipmentRegistry', () => {
 
     // Structure FH check
     assert.deepEqual(payload.structure_fh, {
-      mast_section: 'TRON 88x2.5',
+      mast_section: 'TRON 88x3.2',
       plot_section: 'TCAR 150x5',
       hauteur_mat_m: 1.70,
       hauteur_plot_m: 0.50,

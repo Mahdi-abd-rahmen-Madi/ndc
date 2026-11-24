@@ -23,6 +23,16 @@ export function formatFoundationLabel(foundationType?: string | null): string {
   return FOUNDATION_LABELS[foundationType] || foundationType;
 }
 
+export function normalizeFhEchelle(val?: string | null): string {
+  const trimmed = (val || '').trim();
+  if (!trimmed) return "Pas d'échelle";
+  const lower = trimmed.toLowerCase();
+  if (lower.includes("pas d'echelle") || lower.includes("pas d'échelle")) {
+    return "Pas d'échelle";
+  }
+  return 'Echelle';
+}
+
 export const CAB_SUPPORT_LABELS: Record<string, string> = {
   plinthes: 'Plinthes',
   support_autostable: 'Support Autostable',
@@ -99,7 +109,7 @@ export function extractSectorAerialState(sector?: SectorData) {
     fhItems: sector?.fhItems ?? [],
     fhFoundationType: sector?.fhFoundationType || fallbackFoundation,
     fhHauteurMatM: sector?.fhHauteurMatM ?? 1.70,
-    fhEchelle: sector?.fhEchelle || "Pas d'échelle",
+    fhEchelle: normalizeFhEchelle(sector?.fhEchelle),
     hasRrhEquipment: !!sector?.hasRrhEquipment,
     rrhSansPlot: !!sector?.rrhSansPlot,
     rrhItems: sector?.rrhItems ?? [],
@@ -287,7 +297,7 @@ export function buildSectorEquipmentPayload({
     },
     structure_fh: hasFh
       ? {
-          mast_section: 'TRON 88x2.5',
+          mast_section: 'TRON 88x3.2',
           plot_section: aerial.fhSansPlot ? null : 'TCAR 150x5',
           hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
           hauteur_plot_m: aerial.fhSansPlot ? 0.0 : 0.50,

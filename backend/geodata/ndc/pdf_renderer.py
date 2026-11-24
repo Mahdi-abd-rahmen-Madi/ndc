@@ -969,6 +969,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         is_multi = fh_ctx['is_multi']
         qty_total = fh_ctx['qty_total']
         is_fh_sans_plot = fh_ctx['is_sans_plot']
+        fh_has_echelle = bool(fh_ctx.get('has_echelle', False))
 
         first_item = items[0] if items else {}
         eq_dims = first_item.get('dimensions_str', 'Ø600')
@@ -983,7 +984,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         fh_mat_section = (
             struct_p.get('mast_section')
             or (structure_data.get('mast_section') if is_standalone_fh else None)
-            or 'TRON 88x2.5'
+            or 'TRON 88x3.2'
         )
         fh_mat_longueur_m = get_support_mast_height_m(
             res_data, 'fh',
@@ -1033,9 +1034,9 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             fh_mat_diam = '88.9'
 
         try:
-            fh_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '2.5')
+            fh_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '3.2')
         except (ValueError, TypeError):
-            fh_mat_epaisseur = '2.5'
+            fh_mat_epaisseur = '3.2'
 
         fh_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
         try:
@@ -1136,6 +1137,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'extremes': extremes,
             'fh_sans_plot': is_fh_sans_plot,
             'is_sans_plot': is_fh_sans_plot,
+            'fh_has_echelle': fh_has_echelle,
             'fh_mat_section': fh_mat_section,
             'fh_mat_diam': fh_mat_diam,
             'fh_mat_epaisseur': fh_mat_epaisseur,

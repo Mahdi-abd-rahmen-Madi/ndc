@@ -1,0 +1,54 @@
+================================================================================
+ROBOT STRUCTURAL ANALYSIS WORKER - FH MAST SECTION (2.5 -> 3.2 mm)
+================================================================================
+
+1. SUMMARY
+--------------------------------------------------------------------------------
+The FH support mast section has been updated from `TRON 88x2.5` (2.5 mm wall
+thickness) to `TRON 88x3.2` (3.2 mm wall thickness, Ø 88.9 mm), matching the
+profile already used for RRH.
+
+NOTE: RRU support masts remain `TRON 88x2.5` — do NOT change RRU.
+
+
+2. REQUIRED WORKER CHANGES (FH ONLY)
+--------------------------------------------------------------------------------
+1. Read FH mast section dynamically from `input_data` with `TRON 88x3.2` as
+   the fallback default:
+     ```python
+     fh_struct = input_data.get("structure_fh") or {}
+     fh_mast_section = (
+         fh_struct.get("mast_section")
+         or "TRON 88x3.2"
+     )
+     ```
+2. Robot Bar Section Assignment (FH model):
+   - Assign `TRON 88x3.2` (instead of `TRON 88x2.5`) to the FH main mast bar
+     in Robot Structural Analysis (same Robot section profile already used by
+     RRH).
+   - If you use a base `.rtd` template file for FH or hardcode geometry/steel
+     profile names, update the FH mast bar section in it to `TRON 88x3.2`.
+3. Hardcoded Thickness Constants (FH only):
+   - Replace any hardcoded `2.5` mm / `0.0025` m thickness constant in the FH
+     handler (steel verification, assemblage verification, or structure_params)
+     with `3.2` mm / `0.0032` m (or parse it from `fh_mast_section`).
+   - Keep outer diameter `88.9` mm (`0.0889` / `0.088` m) unchanged.
+4. `result_data` Payload:
+   - Return the updated section and thickness in `result_data["fh"]["structure_params"]`
+     (and top-level `structure_params` for standalone FH):
+     ```json
+     "structure_params": {
+       "mast_section": "TRON 88x3.2",
+       "mast_t_m": 0.0032
+     }
+     ```
+
+
+3. VERIFICATION
+--------------------------------------------------------------------------------
+- Run an FH job (and an `antenna_with_fh` job) and confirm:
+  * The Robot 3D view legend shows `TRON 88x3.2` on the FH mast.
+  * The exported FH mast RTF calculation note verifies `TRON 88x3.2`.
+  * `result_data["fh"]["structure_params"]["mast_section"] == "TRON 88x3.2"`.
+  * RRU jobs still use `TRON 88x2.5`.
+================================================================================

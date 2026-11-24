@@ -64,6 +64,70 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         sanitized = ndc_generator.sanitize_assemblage_rtf(r"{\cellx480 test}")
         self.assertIn(r"\cellx9360", sanitized)
 
+    def test_fh_echelle_context_and_template_rendering(self):
+        from django.template.loader import render_to_string
+
+        ctx_no = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={
+                "structure": {"echelle": "Echelle Söll"},
+                "fh_equipment": {"enabled": True, "echelle": "Pas d'échelle"},
+            },
+        )
+        self.assertFalse(ctx_no["has_echelle"])
+
+        ctx_missing = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={
+                "structure": {"echelle": "Echelle Söll"},
+                "fh_equipment": {"enabled": True},
+            },
+        )
+        self.assertFalse(ctx_missing["has_echelle"])
+
+        ctx_yes = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={
+                "structure": {"echelle": "Pas d'échelle"},
+                "fh_equipment": {"enabled": True, "echelle": "Echelle"},
+            },
+        )
+        self.assertTrue(ctx_yes["has_echelle"])
+
+        ctx_legacy = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={"fh_equipment": {"enabled": True, "echelle": "Echelle Söll"}},
+        )
+        self.assertTrue(ctx_legacy["has_echelle"])
+
+        render_ctx = {
+            "region": "Region 2",
+            "terrain_type": "IIIa",
+            "building_height": 15,
+            "vb_m_s": 24,
+            "cr_z": "0.85",
+            "vm_z": "20.4",
+            "iv_z": "0.21",
+            "kr_z": "0.22",
+            "qp_z": "50.5",
+            "fh_items": ctx_yes["items"],
+            "fh_totals": ctx_yes["totals"],
+            "fh_qty_total": 1,
+            "fh_has_echelle": True,
+        }
+        html_yes = render_to_string("ndc/fh.html", render_ctx)
+        self.assertIn("<td>Echelle</td>", html_yes)
+        self.assertIn("NF EN 795", html_yes)
+        self.assertIn("F<sub>h</sub> = 2.2 kN", html_yes)
+        self.assertIn("CH : Chute d’homme", html_yes)
+        self.assertNotIn("Pas de point d’ancrage sur le mât", html_yes)
+
+        html_no = render_to_string("ndc/fh.html", {**render_ctx, "fh_has_echelle": False})
+        self.assertIn("Pas de point d’ancrage sur le mât", html_no)
+        self.assertNotIn("<td>Echelle</td>", html_no)
+        self.assertNotIn("NF EN 795", html_no)
+        self.assertNotIn("CH : Chute d’homme", html_no)
+
     def test_vector_tile_paris_transform_and_height_priority(self):
         parser = VectorTileParser()
         # Slippy tile containing Notre-Dame de Paris at zoom 15

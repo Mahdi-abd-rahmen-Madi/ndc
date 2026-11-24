@@ -4,12 +4,11 @@ import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
 import { CustomSelect } from '../../ui/CustomSelect';
 import { DEFAULT_FH_REFERENCES, FHCatalogItem } from '../../../config/catalogueDefaults';
+import { normalizeFhEchelle } from '../../../config/equipmentRegistry';
 
 export const FH_ECHELLE_OPTIONS = [
   { value: "Pas d'échelle", label: "Pas d'échelle" },
-  { value: 'Echelle Söll', label: 'Echelle Söll' },
-  { value: 'Echelle Perroquet', label: 'Echelle Perroquet' },
-  { value: 'Echelle Pivotloc', label: 'Echelle Pivotloc' },
+  { value: 'Echelle', label: 'Echelle' },
 ];
 
 export interface FHEquipmentOption {
@@ -159,7 +158,7 @@ export function FHEquipmentToggle({
           <span>Présence échelle</span>
         </label>
         <CustomSelect
-          value={fhEchelle || "Pas d'échelle"}
+          value={normalizeFhEchelle(fhEchelle)}
           onChange={(val) => setFhEchelle?.(val)}
           options={FH_ECHELLE_OPTIONS}
           placeholder="Sélectionner une échelle"

@@ -558,6 +558,27 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
 
     is_sans_plot = resolve_sans_plot(input_data, result_data, kind="fh")
 
+    fh_eq_in = input_data.get("fh_equipment") if isinstance(input_data.get("fh_equipment"), dict) else {}
+    fh_struct_in = input_data.get("structure_fh") if isinstance(input_data.get("structure_fh"), dict) else {}
+    raw_fh_echelle = (
+        fh_eq_in.get("echelle")
+        or fh_sub.get("echelle")
+        or result_data.get("fh_echelle")
+        or fh_struct_in.get("echelle")
+    )
+    if isinstance(raw_fh_echelle, bool):
+        fh_has_echelle = raw_fh_echelle
+    elif isinstance(raw_fh_echelle, str):
+        norm_ech = raw_fh_echelle.strip().lower()
+        fh_has_echelle = (
+            bool(norm_ech)
+            and "pas d'echelle" not in norm_ech
+            and "pas d'échelle" not in norm_ech
+            and norm_ech not in ("non", "none", "false", "0")
+        )
+    else:
+        fh_has_echelle = False
+
     try:
         qp = float(wind.get("qp_dan") or qp_val or 0.0)
     except (ValueError, TypeError):
@@ -741,7 +762,7 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
             "fw_fh_formula": it.get("fw_fh_formula", ""),
         })
 
-    mast_sec = structure.get("mast_section", "TRON 88x2.5")
+    mast_sec = structure.get("mast_section", "TRON 88x3.2")
     plot_sec = None if is_sans_plot else structure.get("plot_section", "TCAR 150x5")
     h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.7)
     h_plot = 0.0 if is_sans_plot else float(structure.get("plot_h_m") if structure.get("plot_h_m") is not None else (structure.get("hauteur_plot_m") if structure.get("hauteur_plot_m") is not None else 0.5))
@@ -749,6 +770,7 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
     return {
         "is_fh": True,
         "is_sans_plot": is_sans_plot,
+        "has_echelle": fh_has_echelle,
         "table_0_items": table_0_rows,
         "items": items,
         "totals": totals,
