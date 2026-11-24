@@ -20,6 +20,10 @@ describe('equipmentRegistry', () => {
     assert.equal(isEquipmentAllowedForOperator('td', 'orange'), false);
     assert.equal(isEquipmentAllowedForOperator('td', 'bouygues'), false);
 
+    assert.equal(isEquipmentAllowedForOperator('fh', 'orange'), false);
+    assert.equal(isEquipmentAllowedForOperator('fh', 'bouygues'), true);
+    assert.equal(isEquipmentAllowedForOperator('fh', 'free'), true);
+
     assert.equal(isEquipmentAllowedForOperator('rrh', 'bouygues'), false);
     assert.equal(isEquipmentAllowedForOperator('rrh', 'orange'), true);
 
@@ -195,7 +199,7 @@ describe('equipmentRegistry', () => {
     const payload = buildSectorEquipmentPayload({
       sector,
       zoneTechnique: defaultZoneTechniqueData,
-      operator: 'orange',
+      operator: 'bouygues',
       config: null,
       coffretQuantityMultiplier: 1,
       resolveRru: (ref) => ref,

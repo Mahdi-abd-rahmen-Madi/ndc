@@ -508,10 +508,10 @@ export default function RegularUserView({
                     ? [
                       `${nombreSecteurs} secteur(s)`,
                       selectedEchelle && selectedEchelle !== "Pas d'échelle" ? selectedEchelle : null,
-                      (hasFhEquipment || (operator !== 'bouygues' && hasRrhEquipment) || hasRruEquipment || (operator !== 'free' && hasCoffret) || (operator === 'free' && hasBoitierJonction))
+                      ((operator !== 'orange' && hasFhEquipment) || (operator !== 'bouygues' && hasRrhEquipment) || hasRruEquipment || (operator !== 'free' && hasCoffret) || (operator === 'free' && hasBoitierJonction))
                         ? `Ancrage: ${formatFoundationLabel(sectors[0]?.equipmentFoundationType)}`
                         : null,
-                      hasFhEquipment ? 'FH' : null,
+                      (operator !== 'orange' && hasFhEquipment) ? 'FH' : null,
                       (operator !== 'bouygues' && hasRrhEquipment) ? 'RRH' : null,
                       hasRruEquipment ? (operator === 'free' ? 'RF NSN' : 'RRU') : null,
                       (operator !== 'free' && hasCoffret) ? 'Fibre' : null,
@@ -565,15 +565,17 @@ export default function RegularUserView({
                             ) : undefined}
                           >
                             {isCollapsed ? (
-                              <SectorEquipmentGrid
-                                sector={sector}
-                                sectorIndex={idx}
-                                updateSector={updateSector}
-                                config={config}
-                                operator={operator}
-                                nombreSecteurs={nombreSecteurs}
-                                onlyFh
-                              />
+                              operator !== 'orange' ? (
+                                <SectorEquipmentGrid
+                                  sector={sector}
+                                  sectorIndex={idx}
+                                  updateSector={updateSector}
+                                  config={config}
+                                  operator={operator}
+                                  nombreSecteurs={nombreSecteurs}
+                                  onlyFh
+                                />
+                              ) : null
                             ) : (
                             <div className="mt-4 pt-4 border-t border-slate-200/80">
                               <div className="flex items-center justify-between mb-3">

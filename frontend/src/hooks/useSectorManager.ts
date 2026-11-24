@@ -69,8 +69,13 @@ export function useSectorManager({
       }
       return {
         ...s,
+        hasFhEquipment: operator === 'orange' ? false : s.hasFhEquipment,
         hasRrhEquipment: hasRrh,
         hasRruEquipment: hasRru,
+        fhReference: '',
+        fhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
+        fhDiameter: 300,
+        fhWeight: undefined,
         rrhItems: [{
           id: crypto.randomUUID(),
           reference: '',

@@ -15,6 +15,7 @@ export const FH_ECHELLE_OPTIONS = [
 export interface FHEquipmentOption {
   id: string;
   vendor: string;
+  operator?: string;
   name: string;
   reference?: string;
   diameter: number;
@@ -35,6 +36,7 @@ export interface FHEquipmentToggleProps {
   fhWeight?: number;
   setFhWeight?: (val: number) => void;
   fhOptions?: FHEquipmentOption[];
+  operator?: string;
   nombreSecteurs?: number;
   disabled?: boolean;
   disabledReason?: string;
@@ -60,6 +62,7 @@ export function FHEquipmentToggle({
   fhWeight,
   setFhWeight,
   fhOptions = [],
+  operator,
   disabled = false,
   disabledReason,
   foundationType,
@@ -70,8 +73,13 @@ export function FHEquipmentToggle({
   setHauteurMatM,
 }: FHEquipmentToggleProps) {
   const allFhOptions: (FHEquipmentOption | FHCatalogItem)[] = useMemo(() => {
-    return fhOptions && fhOptions.length > 0 ? fhOptions : DEFAULT_FH_REFERENCES;
-  }, [fhOptions]);
+    const base = fhOptions && fhOptions.length > 0 ? fhOptions : DEFAULT_FH_REFERENCES;
+    const op = (operator || '').trim().toLowerCase();
+    if (!op) return base;
+    return base.filter(
+      o => !o.operator || o.operator.toLowerCase() === 'all' || o.operator.toLowerCase() === op
+    );
+  }, [fhOptions, operator]);
 
   const options = useMemo(
     () => allFhOptions.map(o => ({ id: o.id, vendor: o.vendor, label: o.name })),

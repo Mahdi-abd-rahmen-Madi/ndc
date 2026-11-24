@@ -30,7 +30,7 @@ export interface CatalogueConfig {
   standard_montages: MontageConfig[];
   real_world_references: RealWorldReference[];
   coffret_references: { id: string; name: string; operator?: string }[];
-  fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string }[];
+  fh_references: { id: string; vendor: string; name: string; diameter: number; weight: number; reference: string; operator?: string }[];
   td_references: { id: string; vendor: string; name: string; reference: string; weight: number; dimensions: string; phase?: 'monophase' | 'tetraphase' | string }[];
   tgbt_references?: { id: string; vendor?: string; supplier?: string; name: string; reference: string; operator?: string; weight?: number; dimensions?: string }[];
   rru_references: {

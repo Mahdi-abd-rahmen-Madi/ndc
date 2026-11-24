@@ -61,6 +61,8 @@ export function stripVendorPrefix(ref: string, vendor?: string): string {
 export function isEquipmentAllowedForOperator(equipmentId: string, operator: string): boolean {
   const op = (operator || '').toLowerCase().trim();
   switch (equipmentId) {
+    case 'fh':
+      return op !== 'orange';
     case 'rrh':
       return op !== 'bouygues';
     case 'td':
@@ -125,7 +127,7 @@ export function buildEquipmentTogglesMap(
 ): Record<string, boolean> {
   const aerial = extractSectorAerialState(sector);
   return {
-    fh: aerial.hasFhEquipment,
+    fh: isEquipmentAllowedForOperator('fh', operator) && aerial.hasFhEquipment,
     rrh: isEquipmentAllowedForOperator('rrh', operator) && aerial.hasRrhEquipment,
     rru: aerial.hasRruEquipment,
     td: isEquipmentAllowedForOperator('td', operator) && zt.hasTdEquipment,
@@ -206,7 +208,9 @@ export function buildSectorEquipmentPayload({
   resolveBaieItems,
 }: BuildEquipmentPayloadArgs) {
   const aerial = extractSectorAerialState(sector);
-  const fhOpt = aerial.hasFhEquipment
+  const allowFh = isEquipmentAllowedForOperator('fh', operator);
+  const hasFh = allowFh && aerial.hasFhEquipment;
+  const fhOpt = hasFh
     ? config?.fh_references?.find(r => r.id === aerial.fhReference)
     : undefined;
   const allowRrh = isEquipmentAllowedForOperator('rrh', operator);
@@ -236,7 +240,7 @@ export function buildSectorEquipmentPayload({
     return ALLOWED_FH.includes(num) ? num : 600;
   };
 
-  const rawFhItems: EquipmentItem[] = aerial.hasFhEquipment
+  const rawFhItems: EquipmentItem[] = hasFh
     ? (aerial.fhItems && aerial.fhItems.length > 0 && aerial.fhItems.some(i => i.reference)
         ? aerial.fhItems.filter(i => i.reference)
         : (aerial.fhReference ? [{ id: 'default-fh', reference: aerial.fhReference, quantity: aerial.fhQuantity || 1, diameter_mm: aerial.fhDiameter, weight_kg: aerial.fhWeight }] : [])
@@ -258,7 +262,7 @@ export function buildSectorEquipmentPayload({
     };
   });
 
-  const primaryFh = fhItemsList[0] || (aerial.hasFhEquipment ? {
+  const primaryFh = fhItemsList[0] || (hasFh ? {
     reference: 'Antenne FH',
     diameter_mm: sanitizeFhDiameter(aerial.fhDiameter),
     weight_kg: 15.0,
@@ -269,19 +273,19 @@ export function buildSectorEquipmentPayload({
 
   return {
     fh_equipment: {
-      enabled: aerial.hasFhEquipment,
+      enabled: hasFh,
       sans_plot: aerial.fhSansPlot,
       with_plot: !aerial.fhSansPlot,
       hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
-      diameter_mm: aerial.hasFhEquipment && primaryFh ? primaryFh.diameter_mm : null,
-      reference: aerial.hasFhEquipment && primaryFh ? primaryFh.reference : null,
-      quantity: aerial.hasFhEquipment && primaryFh ? primaryFh.quantity : null,
-      weight_kg: aerial.hasFhEquipment && primaryFh ? primaryFh.weight_kg : null,
-      ancrage: aerial.hasFhEquipment ? aerial.fhFoundationType : null,
-      echelle: aerial.hasFhEquipment ? aerial.fhEchelle : null,
-      items: aerial.hasFhEquipment ? finalFhItems : [],
+      diameter_mm: hasFh && primaryFh ? primaryFh.diameter_mm : null,
+      reference: hasFh && primaryFh ? primaryFh.reference : null,
+      quantity: hasFh && primaryFh ? primaryFh.quantity : null,
+      weight_kg: hasFh && primaryFh ? primaryFh.weight_kg : null,
+      ancrage: hasFh ? aerial.fhFoundationType : null,
+      echelle: hasFh ? aerial.fhEchelle : null,
+      items: hasFh ? finalFhItems : [],
     },
-    structure_fh: aerial.hasFhEquipment
+    structure_fh: hasFh
       ? {
           mast_section: 'TRON 88x2.5',
           plot_section: aerial.fhSansPlot ? null : 'TCAR 150x5',

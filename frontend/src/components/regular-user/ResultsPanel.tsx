@@ -74,6 +74,7 @@ function ResultsPanel({
   const enabledConfigs = getEnabledConfigs(equipmentToggles);
   const aerialConfigs = enabledConfigs.filter(c => {
     if (c.zone !== 'aerienne') return false;
+    if (c.id === 'fh' && operator === 'orange') return false;
     if (c.id === 'rrh' && operator === 'bouygues') return false;
     if (c.id === 'baie' && operator !== 'orange') return false;
     return true;

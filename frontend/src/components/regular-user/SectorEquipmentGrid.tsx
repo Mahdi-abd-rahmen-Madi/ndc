@@ -32,10 +32,15 @@ export function SectorEquipmentGrid({
 
   const isRrhDisabled = !!sector.hasRruEquipment;
   const isRruDisabled = !!sector.hasRrhEquipment;
-  
+
+  if (onlyFh && operator === 'orange') {
+    return null;
+  }
+
   return (
     <div className={onlyFh ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
-      {/* 1. FH */}
+      {/* 1. FH (Hidden for Orange) */}
+      {operator !== 'orange' && (
       <FHEquipmentToggle
         hasFhEquipment={!!sector.hasFhEquipment}
         setHasFhEquipment={(val) => {
@@ -55,6 +60,7 @@ export function SectorEquipmentGrid({
         fhWeight={sector.fhWeight}
         setFhWeight={(val) => syncUpdates({ fhWeight: val })}
         fhOptions={config?.fh_references || []}
+        operator={operator}
         nombreSecteurs={nombreSecteurs}
         foundationType={sector.fhFoundationType || sector.equipmentFoundationType || 'dallettes'}
         setFoundationType={(val) => syncUpdates({ fhFoundationType: val, equipmentFoundationType: val })}
@@ -63,6 +69,7 @@ export function SectorEquipmentGrid({
         hauteurMatM={sector.fhHauteurMatM ?? 1.70}
         setHauteurMatM={(val) => syncUpdates({ fhHauteurMatM: val })}
       />
+      )}
 
       {!onlyFh && <>
       {/* 2. RRH (Non-Bouygues) */}

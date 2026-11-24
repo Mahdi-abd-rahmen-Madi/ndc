@@ -70,7 +70,7 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
       missingStep3Equipments.push(`Hauteur du mât antenne (0.5 m à 6.0 m)${secLabel}`);
     }
 
-    if (sector.hasFhEquipment) {
+    if (operator !== 'orange' && sector.hasFhEquipment) {
       const fhH = sector.fhHauteurMatM;
       if (fhH !== undefined && fhH !== null && (fhH < 0.5 || fhH > 6.0 || isNaN(fhH))) {
         missingStep3Equipments.push(`Hauteur du mât FH (0.5 m à 6.0 m)${secLabel}`);

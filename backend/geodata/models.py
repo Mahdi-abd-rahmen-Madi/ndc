@@ -642,9 +642,13 @@ class CatalogueConfig(models.Model):
                     { "id": "SLHDU005-12", "name": "Coffrets HTTA 4 (254x245x99mm, 1.443kg)", "operator": "sfr" }
                 ],
                 'fh_references': [
-                    { "id": "fh_ericsson_60", "vendor": "ERICSSON", "name": "BFZ 622 32/3S03H Ø 600 mm", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H Ø 600 mm" },
-                    { "id": "fh_ericsson_90", "vendor": "ERICSSON", "name": "BFZ 622 33/3S03H Ø 900 mm", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H Ø 900 mm" },
-                    { "id": "fh_ericsson_120", "vendor": "ERICSSON", "name": "BFZ 622 34/3S03H Ø 1200 mm", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H Ø 1200 mm" }
+                    { "id": "fh_ericsson_60", "vendor": "ERICSSON", "operator": "bouygues", "name": "BFZ 622 32/3S03H Ø 600 mm", "diameter": 600, "weight": 7.6, "reference": "BFZ 622 32/3S03H Ø 600 mm" },
+                    { "id": "fh_ericsson_90", "vendor": "ERICSSON", "operator": "bouygues", "name": "BFZ 622 33/3S03H Ø 900 mm", "diameter": 900, "weight": 17, "reference": "BFZ 622 33/3S03H Ø 900 mm" },
+                    { "id": "fh_ericsson_120", "vendor": "ERICSSON", "operator": "bouygues", "name": "BFZ 622 34/3S03H Ø 1200 mm", "diameter": 1200, "weight": 32, "reference": "BFZ 622 34/3S03H Ø 1200 mm" },
+                    { "id": "fh_huawei_30", "vendor": "HUAWEI", "operator": "free", "name": "30cm Ø 300 mm", "diameter": 300, "weight": 6, "reference": "30cm Ø 300 mm" },
+                    { "id": "fh_huawei_60", "vendor": "HUAWEI", "operator": "free", "name": "60cm Ø 600 mm", "diameter": 600, "weight": 14.5, "reference": "60cm Ø 600 mm" },
+                    { "id": "fh_commscope_30", "vendor": "COMMSCOPE", "operator": "free", "name": "30cm Ø 300 mm", "diameter": 300, "weight": 6, "reference": "30cm Ø 300 mm" },
+                    { "id": "fh_commscope_60", "vendor": "COMMSCOPE", "operator": "free", "name": "60cm Ø 600 mm", "diameter": 600, "weight": 14.5, "reference": "60cm Ø 600 mm" }
                 ],
                 'td_references': [
                     { "id": "td_mono_free", "vendor": "FREE", "name": "TD mono", "reference": "68236", "weight": 60, "dimensions": "1055x850x350mm" },
