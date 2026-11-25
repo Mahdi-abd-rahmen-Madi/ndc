@@ -155,7 +155,7 @@ function RightPreviewPanel({
   const {
     hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference, tgbtEmplacement,
     hasGps, gpsReference, gpsMarque,
-    hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
+    hasBoitierLovage, boitierLovageReference, boitierLovageQuantity, boitierLovageFoundationType, boitierLovageHauteurMatM,
     hasAtelierEnergie, bcubeReference,
     hasBcubeRadio, bcubeRadioReference,
     hasBaie, baieRadio, baieEnergie, baieItems,
@@ -942,7 +942,12 @@ function RightPreviewPanel({
                       };
                     })() : null,
                     gps: { marque: gpsMarque || 'N/A', référence: gpsReference || 'N/A' },
-                    boitier_lovage: { référence: boitierLovageReference || 'N/A', quantité: boitierLovageQuantity },
+                    boitier_lovage: {
+                      référence: boitierLovageReference || 'N/A',
+                      quantité: boitierLovageQuantity,
+                      ancrage: formatFoundationLabel(boitierLovageFoundationType),
+                      hauteur_mat_m: Number(boitierLovageHauteurMatM ?? 1.50),
+                    },
                     coffrets_fibre: { référence: group.sector.coffretReference || 'N/A' },
                     boitier_jonction: (operator === 'free' && group.sector.hasBoitierJonction) ? {
                       marque: 'Aginode',

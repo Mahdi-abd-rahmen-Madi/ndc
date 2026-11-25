@@ -57,6 +57,18 @@ export function ZoneTechniqueGrid({
           setTdType={(val) => onChange({ tdType: val })}
           tdReference={data.tdReference}
           setTdReference={(val) => onChange({ tdReference: val })}
+          foundationType={data.tdFoundationType || 'dallettes'}
+          setFoundationType={(val) => onChange({
+            tdFoundationType: val,
+            ...(val === 'dallettes' ? { tdEchelle: "Pas d'échelle" } : {}),
+          })}
+          hauteurMatM={data.tdHauteurMatM ?? 1.70}
+          setHauteurMatM={(val) => onChange({
+            tdHauteurMatM: val,
+            ...(val < 2.0 ? { tdEchelle: "Pas d'échelle" } : {}),
+          })}
+          echelle={data.tdEchelle}
+          setEchelle={(val) => onChange({ tdEchelle: val })}
           tdOptions={config?.td_references || []}
           operator={operator}
         />
@@ -78,6 +90,18 @@ export function ZoneTechniqueGrid({
           setBoitierLovageReference={(val) => onChange({ boitierLovageReference: val })}
           boitierLovageQuantity={data.boitierLovageQuantity}
           setBoitierLovageQuantity={(val) => onChange({ boitierLovageQuantity: val })}
+          foundationType={data.boitierLovageFoundationType || 'dallettes'}
+          setFoundationType={(val) => onChange({
+            boitierLovageFoundationType: val,
+            ...(val === 'dallettes' ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
+          })}
+          hauteurMatM={data.boitierLovageHauteurMatM ?? 1.50}
+          setHauteurMatM={(val) => onChange({
+            boitierLovageHauteurMatM: val,
+            ...(val < 2.0 ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
+          })}
+          echelle={data.boitierLovageEchelle}
+          setEchelle={(val) => onChange({ boitierLovageEchelle: val })}
           boitierOptions={config?.boitier_lovage_references || []}
           operator={operator}
         />
@@ -142,6 +166,18 @@ export function ZoneTechniqueGrid({
             setTgbtReference={(val) => onChange({ tgbtReference: val })}
             tgbtEmplacement={data.tgbtEmplacement}
             setTgbtEmplacement={(val) => onChange({ tgbtEmplacement: val })}
+            foundationType={data.tgbtFoundationType || 'dallettes'}
+            setFoundationType={(val) => onChange({
+              tgbtFoundationType: val,
+              ...(val === 'dallettes' ? { tgbtEchelle: "Pas d'échelle" } : {}),
+            })}
+            hauteurMatM={data.tgbtHauteurMatM ?? 1.50}
+            setHauteurMatM={(val) => onChange({
+              tgbtHauteurMatM: val,
+              ...(val < 2.0 ? { tgbtEchelle: "Pas d'échelle" } : {}),
+            })}
+            echelle={data.tgbtEchelle}
+            setEchelle={(val) => onChange({ tgbtEchelle: val })}
             options={(config?.tgbt_references || []).filter(item => item.id !== 'tgbt_standard_300' && item.reference !== 'TGBT 300x255x160mm' && item.reference !== '300x255x160mm')}
           />
           <GPSEquipmentToggle
@@ -191,6 +227,18 @@ export function ZoneTechniqueGrid({
         setBoitierLovageReference={(val) => onChange({ boitierLovageReference: val })}
         boitierLovageQuantity={data.boitierLovageQuantity}
         setBoitierLovageQuantity={(val) => onChange({ boitierLovageQuantity: val })}
+        foundationType={data.boitierLovageFoundationType || 'dallettes'}
+        setFoundationType={(val) => onChange({
+          boitierLovageFoundationType: val,
+          ...(val === 'dallettes' ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
+        })}
+        hauteurMatM={data.boitierLovageHauteurMatM ?? 1.50}
+        setHauteurMatM={(val) => onChange({
+          boitierLovageHauteurMatM: val,
+          ...(val < 2.0 ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
+        })}
+        echelle={data.boitierLovageEchelle}
+        setEchelle={(val) => onChange({ boitierLovageEchelle: val })}
         boitierOptions={config?.boitier_lovage_references || []}
         operator={operator}
       />

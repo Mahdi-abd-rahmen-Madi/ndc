@@ -1,15 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
-import { AlignJustify } from 'lucide-react';
 import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
-import { CustomSelect } from '../../ui/CustomSelect';
+import { EquipmentEchelleSelector, SUPPORT_ECHELLE_OPTIONS } from './shared/EquipmentEchelleSelector';
 import { DEFAULT_FH_REFERENCES, FHCatalogItem } from '../../../config/catalogueDefaults';
-import { isFhEchelleAllowed, normalizeFhEchelle } from '../../../config/equipmentRegistry';
 
-export const FH_ECHELLE_OPTIONS = [
-  { value: "Pas d'échelle", label: "Pas d'échelle" },
-  { value: 'Echelle', label: 'Echelle' },
-];
+export const FH_ECHELLE_OPTIONS = SUPPORT_ECHELLE_OPTIONS;
 
 export interface FHEquipmentOption {
   id: string;
@@ -43,8 +38,6 @@ export interface FHEquipmentToggleProps {
   setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
   fhEchelle?: string;
   setFhEchelle?: (val: string) => void;
-  sansPlot?: boolean;
-  setSansPlot?: (val: boolean) => void;
   hauteurMatM?: number;
   setHauteurMatM?: (val: number) => void;
 }
@@ -70,8 +63,6 @@ export function FHEquipmentToggle({
   setFoundationType,
   fhEchelle = "Pas d'échelle",
   setFhEchelle,
-  sansPlot = false,
-  setSansPlot,
   hauteurMatM,
   setHauteurMatM,
 }: FHEquipmentToggleProps) {
@@ -135,8 +126,6 @@ export function FHEquipmentToggle({
     [items, setFhItems, setFhReference, setFhQuantity, setFhDiameter, setFhWeight, allFhOptions]
   );
 
-  const canHaveEchelle = isFhEchelleAllowed(sansPlot, hauteurMatM ?? 1.70);
-
   return (
     <MultiRowEquipmentToggle
       title="Présence FH"
@@ -158,63 +147,15 @@ export function FHEquipmentToggle({
       onHauteurMatMChange={setHauteurMatM}
       defaultHauteurMatM={1.70}
     >
-      <div className="flex flex-col gap-2 pt-2 border-t border-slate-200/70">
-        {setSansPlot && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
-              Support plot
-            </label>
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setSansPlot(false)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                  !sansPlot
-                    ? 'bg-amber-50 border-amber-400 text-amber-800'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                Avec plot
-              </button>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setSansPlot(true)}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                  sansPlot
-                    ? 'bg-amber-50 border-amber-400 text-amber-800'
-                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                Sans plot
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!sansPlot && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold flex items-center gap-1.5">
-              <AlignJustify className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>Présence échelle</span>
-            </label>
-            <CustomSelect
-              value={canHaveEchelle ? normalizeFhEchelle(fhEchelle) : "Pas d'échelle"}
-              onChange={(val) => setFhEchelle?.(val)}
-              options={FH_ECHELLE_OPTIONS}
-              disabled={disabled || !canHaveEchelle}
-              placeholder="Sélectionner une échelle"
-              className="w-full focus:ring-2 focus:ring-amber-500"
-            />
-            {!canHaveEchelle && (
-              <p className="text-[11px] text-slate-500">
-                Échelle disponible uniquement avec plot pour une hauteur de mât ≥ 2,00 m.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+      <EquipmentEchelleSelector
+        foundationType={foundationType}
+        hauteurMatM={hauteurMatM}
+        defaultHauteurMatM={1.70}
+        value={fhEchelle}
+        onChange={setFhEchelle}
+        disabled={disabled}
+        accentColor="amber"
+      />
     </MultiRowEquipmentToggle>
   );
 }

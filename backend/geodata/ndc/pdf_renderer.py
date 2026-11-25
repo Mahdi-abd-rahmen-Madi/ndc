@@ -11,6 +11,12 @@ from weasyprint import HTML
 from utils.domain_constants import (
     WIND_REGION_VB0,
     OPERATORS_WITHOUT_TD,
+    LOVAGE_CF_FRONT,
+    LOVAGE_CF_LAT,
+    LOVAGE_DEFAULT_MAST_HEIGHT_M,
+    LOVAGE_DEFAULT_MAST_SECTION,
+    LOVAGE_DEFAULT_PLOT_HEIGHT_M,
+    LOVAGE_DEFAULT_PLOT_SECTION,
     normalize_operator,
     resolve_sans_plot,
 )
@@ -25,6 +31,7 @@ from .artifact_locator import (
     find_job_rrh_rtf_paths,
     find_job_rru_rtf_paths,
     find_job_fh_rtf_paths,
+    find_job_lovage_rtf_paths,
 )
 from .equipment_context import (
     clean_equipment_designation,
@@ -32,6 +39,7 @@ from .equipment_context import (
     extract_rrh_ndc_context,
     extract_rru_ndc_context,
     extract_fh_ndc_context,
+    extract_lovage_ndc_context,
 )
 from .image_cropper import (
     _crop_tableau_charges_image,
@@ -513,6 +521,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     fh_eq = input_data.get('fh_equipment', {})
     rru_eq = input_data.get('rru_equipment', {})
     rrh_eq = input_data.get('rrh_equipment', {})
+    lovage_eq = input_data.get('boitier_lovage') or input_data.get('lovage_equipment') or {}
     res_data = getattr(job, 'result_data', {}) if job else {}
     if not isinstance(res_data, dict):
         res_data = {}
@@ -565,6 +574,19 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     is_fh_active = (
         res_data.get('has_fh') is not False
         and ((isinstance(fh_eq, dict) and fh_eq.get('enabled')) or has_fh_result or is_fh_calc)
+    )
+
+    has_lovage_result = (
+        res_data.get('has_lovage') is True
+        or 'lovage' in active_eqs
+        or ('lovage' in res_data and isinstance(res_data['lovage'], dict))
+        or bool(res_data.get('lovage_items'))
+        or bool(res_data.get('lovage_totals'))
+    )
+    is_lovage_calc = bool(input_data.get('is_lovage') or 'lovage' in calc_type.split('_'))
+    is_lovage_active = (
+        res_data.get('has_lovage') is not False
+        and ((isinstance(lovage_eq, dict) and lovage_eq.get('enabled')) or has_lovage_result or is_lovage_calc)
     )
 
     def _get_or_convert_rtf_images(key_prefix, rtf_abs, convert_dir, is_assemblage=False):
@@ -767,6 +789,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'rrh_is_multi': is_multi,
             'rrh_qty_total': qty_total,
             'is_sans_plot': is_rrh_sans_plot,
+            'rrh_has_echelle': False if is_rrh_sans_plot or float(rrh_mat_longueur_m or 1.5) < 2.0 else bool(rrh_ctx.get('has_echelle', False)),
         }))
 
     # 2. Check for RRU (Stage 2b)
@@ -954,6 +977,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'rru_totals': totals,
             'rru_is_multi': is_multi,
             'rru_qty_total': qty_total,
+            'rru_has_echelle': False if rru_sans_plot or float(rru_mat_longueur_m or 1.5) < 2.0 else bool(rru_ctx.get('has_echelle', False)),
         }))
 
     # 3. Check for FH (Stage 3: Faisceau Hertzien)
@@ -1163,6 +1187,240 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'fh_totals': totals,
             'fh_is_multi': is_multi,
             'fh_qty_total': qty_total,
+        }))
+
+    # 4. Check for Boîtier de Lovage (Zone Technique)
+    if is_lovage_active:
+        try:
+            qp_val = float(context.get('qp_z', 0))
+        except (ValueError, TypeError):
+            qp_val = 0.0
+
+        lovage_ctx = extract_lovage_ndc_context(res_data, input_data=input_data, qp_val=qp_val)
+        items = lovage_ctx['items']
+        totals = lovage_ctx['totals']
+        wind_p = lovage_ctx['wind']
+        is_multi = lovage_ctx['is_multi']
+        qty_total = lovage_ctx['qty_total']
+        is_lovage_sans_plot = lovage_ctx['is_sans_plot']
+
+        first_item = items[0] if items else {}
+        eq_dims = first_item.get('dimensions_str', 'N/A')
+        eq_weight = first_item.get('weight_unit_kg', 'N/A')
+        cf_front = first_item.get('cf_front', LOVAGE_CF_FRONT)
+        cf_lat = first_item.get('cf_lat', LOVAGE_CF_LAT)
+        fw_front = totals.get('fw_front', 0.0)
+        fw_lat = totals.get('fw_lat', 0.0)
+
+        worker_lovage = res_data.get('lovage', {}) if isinstance(res_data.get('lovage'), dict) else {}
+        extremes = lovage_ctx.get('extremes') or worker_lovage.get('extremes', {}) or res_data.get('extremes', {})
+        struct_p = lovage_ctx.get('structure') or worker_lovage.get('structure_params', {}) or res_data.get('structure_params', {})
+        is_standalone_lovage = bool(
+            (input_data.get('is_lovage') or 'lovage' in calc_type.split('_'))
+            and not input_data.get('antenna_4g')
+            and not input_data.get('antenna_5g')
+            and not is_rrh_active
+            and not is_rru_active
+            and not is_fh_active
+        )
+
+        lovage_mat_section = (
+            struct_p.get('mast_section')
+            or (structure_data.get('mast_section') if is_standalone_lovage else None)
+            or LOVAGE_DEFAULT_MAST_SECTION
+        )
+        lovage_mat_longueur_m = get_support_mast_height_m(
+            res_data,
+            'lovage',
+            fallback_h=(
+                struct_p.get('hauteur_mat_m')
+                if struct_p.get('hauteur_mat_m') is not None
+                else (
+                    structure_data.get('hauteur_mat_m')
+                    if is_standalone_lovage and structure_data.get('hauteur_mat_m') is not None
+                    else (
+                        lovage_eq.get('hauteur_mat_m')
+                        if isinstance(lovage_eq, dict) and lovage_eq.get('hauteur_mat_m') is not None
+                        else LOVAGE_DEFAULT_MAST_HEIGHT_M
+                    )
+                )
+            ),
+        )
+
+        if is_lovage_sans_plot:
+            lovage_plot_section = None
+            lovage_plot_longueur_m = 0.0
+        else:
+            lovage_plot_section = (
+                struct_p.get('plot_section')
+                or (structure_data.get('plot_section') if is_standalone_lovage else None)
+                or LOVAGE_DEFAULT_PLOT_SECTION
+            )
+            lovage_plot_longueur_m = (
+                struct_p.get('plot_h_m')
+                if struct_p.get('plot_h_m') is not None
+                else (
+                    structure_data.get('plot_h_m')
+                    if is_standalone_lovage and structure_data.get('plot_h_m') is not None
+                    else LOVAGE_DEFAULT_PLOT_HEIGHT_M
+                )
+            )
+
+        lovage_wind = _resolve_support_wind_params(wind_p, context, env, vb, lovage_plot_longueur_m, lovage_mat_longueur_m)
+        lovage_qp_z = lovage_wind['qp_z']
+
+        if (not wind_p.get('qp_dan')) and lovage_qp_z and lovage_qp_z != '[qp]':
+            try:
+                lovage_qp_num = float(lovage_qp_z)
+                if lovage_qp_num > 0 and lovage_qp_num != qp_val:
+                    lovage_ctx = extract_lovage_ndc_context(res_data, input_data=input_data, qp_val=lovage_qp_num)
+                    items = lovage_ctx['items']
+                    totals = lovage_ctx['totals']
+                    first_item = items[0] if items else {}
+                    fw_front = totals.get('fw_front', fw_front)
+                    fw_lat = totals.get('fw_lat', fw_lat)
+            except (ValueError, TypeError):
+                pass
+
+        try:
+            lovage_mat_longueur = int(round(float(lovage_mat_longueur_m) * 1000))
+        except (ValueError, TypeError):
+            lovage_mat_longueur = 1500
+
+        m_diam, m_ep = parse_dimensions(lovage_mat_section)
+        try:
+            lovage_mat_diam = m_diam or (f"{float(struct_p.get('mast_d_m')) * 1000:g}" if struct_p.get('mast_d_m') else '88.9')
+        except (ValueError, TypeError):
+            lovage_mat_diam = '88.9'
+        if str(lovage_mat_diam).strip() == '88':
+            lovage_mat_diam = '88.9'
+
+        try:
+            lovage_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '3.2')
+        except (ValueError, TypeError):
+            lovage_mat_epaisseur = '3.2'
+
+        lovage_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
+        try:
+            m_diam_m = float(
+                struct_p.get('mast_d_m')
+                or (float(lovage_mat_diam) / 1000.0 if lovage_mat_diam and str(lovage_mat_diam).replace('.', '').isdigit() else 0.088)
+            )
+        except (ValueError, TypeError):
+            m_diam_m = 0.088
+
+        if wind_p.get('fw_mast') is not None:
+            fw_mat = wind_p.get('fw_mast')
+        else:
+            try:
+                fw_mat = round(1.0 * float(lovage_cf_mat) * m_diam_m * float(lovage_qp_z or context.get('qp_z', 0)), 2)
+            except (ValueError, TypeError):
+                fw_mat = '[Fw,Mat]'
+
+        lovage_files = res_data.get('lovage_files') if isinstance(res_data.get('lovage_files'), dict) else {}
+
+        lovage_screenshot_abs = _first_existing_file([
+            getattr(job.screenshot, 'path', None) if getattr(job, 'screenshot', None) and is_standalone_lovage else None,
+            lovage_files.get('lovage_screenshot'),
+            lovage_files.get('screenshot'),
+            res_data.get('lovage_screenshot_path'),
+            worker_lovage.get('screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_lovage', f'job_{job.id}_lovage_3d_view.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'screenshots_lovage', f'job_{job.id}_lovage_3d_view.png') if job else None,
+            f"{ws_dir}/job_{job.id}_lovage_3d_view.jpg" if job else None,
+            f"{ws_dir}/job_{job.id}_lovage_3d_view.png" if job else None,
+        ])
+
+        lovage_tableau_charges_abs = _first_existing_file([
+            lovage_files.get('lovage_tableau_charges'),
+            lovage_files.get('tableau_charges'),
+            lovage_files.get('lovage_loads_table'),
+            res_data.get('lovage_tableau_charges_path'),
+            worker_lovage.get('tableau_charges_path'),
+            os.path.join(settings.MEDIA_ROOT, 'charges_lovage', f'job_{job.id}_lovage_tableau_charges.png') if job else None,
+            f"{ws_dir}/job_{job.id}_lovage_tableau_charges.png" if job else None,
+        ])
+        lovage_tableau_charges_abs = _crop_tableau_charges_image(lovage_tableau_charges_abs)
+
+        lovage_verification_screenshot_abs = _first_existing_file([
+            getattr(job.verification_screenshot, 'path', None) if getattr(job, 'verification_screenshot', None) and is_standalone_lovage else None,
+            lovage_files.get('lovage_verification_screenshot'),
+            lovage_files.get('verification_screenshot'),
+            res_data.get('lovage_verification_screenshot_path'),
+            worker_lovage.get('verification_screenshot_path'),
+            os.path.join(settings.MEDIA_ROOT, 'verif_lovage', f'job_{job.id}_lovage_verification.jpg') if job else None,
+            os.path.join(settings.MEDIA_ROOT, 'verif_lovage', f'job_{job.id}_lovage_verification.png') if job else None,
+            f"{ws_dir}/job_{job.id}_lovage_verification.jpg" if job else None,
+            f"{ws_dir}/job_{job.id}_lovage_verification.png" if job else None,
+        ])
+
+        lovage_paths = find_job_lovage_rtf_paths(job)
+        lovage_convert_dir = os.path.join(settings.MEDIA_ROOT, 'notes_lovage')
+        job_id_lbl = job.id if job else 'preview'
+        lovage_note_mat_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_lovage_note_mat", lovage_paths.get('note_mat'), lovage_convert_dir)
+        lovage_note_plot_images = [] if is_lovage_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_lovage_note_plot", lovage_paths.get('note_plot'), lovage_convert_dir)
+        lovage_assemblage_images = [] if is_lovage_sans_plot else _get_or_convert_rtf_images(f"job_{job_id_lbl}_lovage_assemblage", lovage_paths.get('assemblage_note'), lovage_convert_dir, is_assemblage=True)
+
+        if job and job.id != 'preview' and job.id != 'fast' and getattr(job, 'status', None) == 'COMPLETED':
+            missing_lovage = []
+            if not lovage_screenshot_abs or not os.path.exists(lovage_screenshot_abs):
+                missing_lovage.append("Capture 3D modélisation Boîtiers de lovage")
+            if not lovage_tableau_charges_abs or not os.path.exists(lovage_tableau_charges_abs):
+                missing_lovage.append("Tableau des charges Boîtiers de lovage")
+            if not lovage_verification_screenshot_abs or not os.path.exists(lovage_verification_screenshot_abs):
+                missing_lovage.append("Capture de vérification Robot Boîtiers de lovage")
+            if not lovage_note_mat_images:
+                missing_lovage.append("Note de calcul RTF du mât Boîtiers de lovage")
+            if not is_lovage_sans_plot and not lovage_assemblage_images:
+                missing_lovage.append("Note d'assemblage Robot Boîtiers de lovage")
+
+            if missing_lovage:
+                err_msg = f"Génération annexe Boîtiers de lovage bloquée pour le Job {job.id} : artéfacts obligatoires manquants ({', '.join(missing_lovage)})."
+                logger.error("[NDC HARDENING ERROR] %s", err_msg)
+                raise ValueError(err_msg)
+
+        generated_pdfs.append(_render_and_save('lovage', {
+            'region': lovage_wind['region'],
+            'terrain_type': lovage_wind['terrain_type'],
+            'building_height': lovage_wind['building_height'],
+            'vb_m_s': lovage_wind['vb_m_s'],
+            'cr_z': lovage_wind['cr_z'],
+            'vm_z': lovage_wind['vm_z'],
+            'iv_z': lovage_wind['iv_z'],
+            'kr_z': lovage_wind['kr_z'],
+            'qp_z': lovage_qp_z,
+            'eq_qty': qty_total,
+            'lovage_name': first_item.get('name', 'Boitiers de lovage'),
+            'eq_dims': eq_dims,
+            'eq_weight': eq_weight,
+            'cf_front': cf_front,
+            'cf_lat': cf_lat,
+            'fw_front': fw_front,
+            'fw_lat': fw_lat,
+            'fw_mat': fw_mat,
+            'extremes': extremes,
+            'lovage_sans_plot': is_lovage_sans_plot,
+            'is_sans_plot': is_lovage_sans_plot,
+            'lovage_has_echelle': False if is_lovage_sans_plot or float(lovage_mat_longueur_m or 1.5) < 2.0 else bool(lovage_ctx.get('has_echelle', False)),
+            'lovage_mat_section': lovage_mat_section,
+            'lovage_mat_diam': lovage_mat_diam,
+            'lovage_mat_epaisseur': lovage_mat_epaisseur,
+            'lovage_mat_longueur': lovage_mat_longueur,
+            'lovage_mat_longueur_m': lovage_mat_longueur_m,
+            'lovage_plot_section': lovage_plot_section,
+            'lovage_plot_longueur_m': lovage_plot_longueur_m,
+            'lovage_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
+            'lovage_cf_mat': lovage_cf_mat,
+            'lovage_screenshot_abs': lovage_screenshot_abs,
+            'lovage_tableau_charges_abs': lovage_tableau_charges_abs,
+            'lovage_verification_screenshot_abs': lovage_verification_screenshot_abs,
+            'lovage_note_mat_images': lovage_note_mat_images,
+            'lovage_note_plot_images': lovage_note_plot_images,
+            'lovage_assemblage_images': lovage_assemblage_images,
+            'lovage_items': items,
+            'lovage_totals': totals,
+            'lovage_is_multi': is_multi,
+            'lovage_qty_total': qty_total,
         }))
 
     return generated_pdfs

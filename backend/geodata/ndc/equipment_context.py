@@ -237,11 +237,12 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         cleaned_items.append(it_copy)
     items = cleaned_items
 
-    from utils.domain_constants import resolve_sans_plot
+    from utils.domain_constants import resolve_sans_plot, resolve_support_has_echelle
     is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
     is_sans_plot = resolve_sans_plot(input_data, result_data, kind="rrh")
 
-    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
+    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else ((input_data.get("rrh_equipment") or {}).get("hauteur_mat_m") if (input_data.get("rrh_equipment") or {}).get("hauteur_mat_m") is not None else 1.5))
+    has_echelle = resolve_support_has_echelle(input_data, result_data, kind="rrh", is_sans_plot=is_sans_plot, hauteur_mat_m=h_mat)
 
     return {
         "items": items,
@@ -253,6 +254,7 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         "is_multi": is_multi,
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
         "is_sans_plot": is_sans_plot,
+        "has_echelle": has_echelle,
     }
 
 
@@ -536,7 +538,9 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
 
     is_multi = len(items) > 1 or (totals.get("qty_total", 0) > 1)
 
-    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
+    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else ((input_data.get("rru_equipment") or {}).get("hauteur_mat_m") if (input_data.get("rru_equipment") or {}).get("hauteur_mat_m") is not None else 1.5))
+    from utils.domain_constants import resolve_support_has_echelle
+    has_echelle = resolve_support_has_echelle(input_data, result_data, kind="rru", is_sans_plot=is_sans_plot, hauteur_mat_m=h_mat)
 
     return {
         "items": items,
@@ -547,6 +551,7 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         "extremes": extremes,
         "operateur": operateur,
         "is_sans_plot": is_sans_plot,
+        "has_echelle": has_echelle,
         "is_multi": is_multi,
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
     }
@@ -819,6 +824,343 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
         "extremes": fh_sub.get("extremes") or result_data.get("extremes") or {},
         "qty_total": totals.get("qty_total", sum(it.get("qty", 1) for it in items)),
         "is_multi": len(items) > 1 or totals.get("qty_total", 1) > 1,
+    }
+
+
+def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_val: float = 0.0) -> dict:
+    """
+    Extracts Boîtier de Lovage (Zone Technique) data from result_data with fallback to
+    input_data for preview/pre-worker states.
+    Wind drag coefficients: Cf,front = 1.47, Cf,lat = 1.19.
+    Supports both `avec plot` (TCAR 150x5) and `sans plot` (mât TRON 88x3.2 only).
+    """
+    from utils.domain_constants import (
+        LOVAGE_CF_FRONT,
+        LOVAGE_CF_LAT,
+        LOVAGE_DEFAULT_MAST_HEIGHT_M,
+        LOVAGE_DEFAULT_MAST_SECTION,
+        LOVAGE_DEFAULT_PLOT_HEIGHT_M,
+        LOVAGE_DEFAULT_PLOT_SECTION,
+        resolve_sans_plot,
+    )
+
+    result_data = result_data if isinstance(result_data, dict) else {}
+    input_data = input_data if isinstance(input_data, dict) else {}
+    lovage_sub = result_data.get("lovage") if isinstance(result_data.get("lovage"), dict) else {}
+    lovage_in = input_data.get("boitier_lovage") if isinstance(input_data.get("boitier_lovage"), dict) else {}
+    if not lovage_in and isinstance(input_data.get("lovage_equipment"), dict):
+        lovage_in = input_data.get("lovage_equipment")
+
+    raw_items = result_data.get("lovage_items") or lovage_sub.get("lovage_items") or []
+    totals = result_data.get("lovage_totals") or lovage_sub.get("lovage_totals") or {}
+    wind = (
+        result_data.get("lovage_wind_params")
+        or lovage_sub.get("wind_params")
+        or result_data.get("wind_params")
+        or {}
+    )
+    structure = lovage_sub.get("structure_params") or result_data.get("structure_params") or {}
+    if not structure:
+        structure = input_data.get("structure_lovage") or input_data.get("structure") or {}
+
+    is_sans_plot = resolve_sans_plot(input_data, result_data, kind="lovage")
+
+    try:
+        qp = float(wind.get("qp_dan") or qp_val or 0.0)
+    except (ValueError, TypeError):
+        qp = 0.0
+
+    def _fmt_area(val: float) -> str:
+        return f"{val:.4f}".rstrip("0").rstrip(".") if val else "0"
+
+    items = []
+    if raw_items:
+        tot_qty = 0
+        tot_weight = 0.0
+        tot_fw_front = 0.0
+        tot_fw_lat = 0.0
+        f_front_parts = []
+        f_lat_parts = []
+
+        for idx, it in enumerate(raw_items, start=1):
+            qty = int(it.get("qty") or it.get("quantity") or 1)
+            h_mm = float(it.get("h_mm") or it.get("hauteur_mm") or 0.0)
+            w_mm = float(it.get("w_mm") or it.get("largeur_mm") or 0.0)
+            d_mm = float(
+                it.get("d_mm")
+                if it.get("d_mm") is not None
+                else (it.get("t_mm") or it.get("epaisseur_mm") or 0.0)
+            )
+            dims_str = it.get("dimensions_str") or it.get("dimensions")
+            if not dims_str:
+                dims_str = f"{h_mm:g} x {w_mm:g} x {d_mm:g}" if (h_mm or w_mm or d_mm) else "N/A"
+
+            weight_kg = float(it.get("weight_kg") or it.get("poids_kg") or 0.0)
+            weight_total = float(
+                it.get("weight_total_kg") if it.get("weight_total_kg") is not None else round(qty * weight_kg, 2)
+            )
+            cf_front = float(it.get("cf_front") if it.get("cf_front") is not None else LOVAGE_CF_FRONT)
+            cf_lat = float(it.get("cf_lat") if it.get("cf_lat") is not None else LOVAGE_CF_LAT)
+
+            a_front = float(
+                it.get("area_front_m2")
+                if it.get("area_front_m2") is not None
+                else (
+                    it.get("a_front")
+                    if it.get("a_front") is not None
+                    else (round((h_mm * w_mm) / 1e6, 4) if (h_mm and w_mm) else 0.0)
+                )
+            )
+            a_lat = float(
+                it.get("area_lat_m2")
+                if it.get("area_lat_m2") is not None
+                else (
+                    it.get("a_lat")
+                    if it.get("a_lat") is not None
+                    else (round((h_mm * d_mm) / 1e6, 4) if (h_mm and d_mm) else 0.0)
+                )
+            )
+
+            fw_f_raw = it.get("fw_front") if it.get("fw_front") is not None else it.get("fw_front_dan")
+            fw_l_raw = it.get("fw_lat") if it.get("fw_lat") is not None else it.get("fw_lat_dan")
+            fw_front_i = float(fw_f_raw) if fw_f_raw is not None else (round(qty * cf_front * a_front * qp, 2) if qp else 0.0)
+            fw_lat_i = float(fw_l_raw) if fw_l_raw is not None else (round(qty * cf_lat * a_lat * qp, 2) if qp else 0.0)
+
+            fw_front_formula = it.get("fw_front_formula") or (
+                f"{qty} * {cf_front:.2f} * {_fmt_area(a_front)} * {qp:.2f} = {fw_front_i:.2f} daN"
+                if qp else f"{fw_front_i:.2f} daN"
+            )
+            fw_lat_formula = it.get("fw_lat_formula") or (
+                f"{qty} * {cf_lat:.2f} * {_fmt_area(a_lat)} * {qp:.2f} = {fw_lat_i:.2f} daN"
+                if qp else f"{fw_lat_i:.2f} daN"
+            )
+
+            items.append({
+                "index": it.get("index", idx),
+                "name": it.get("name") or it.get("reference") or "Boitiers de lovage",
+                "catalog_reference": it.get("catalog_reference") or it.get("reference") or it.get("name") or "Boitiers de lovage",
+                "qty": qty,
+                "h_mm": h_mm,
+                "w_mm": w_mm,
+                "d_mm": d_mm,
+                "dimensions_str": dims_str,
+                "weight_kg": weight_kg,
+                "weight_unit_kg": f"{weight_kg:g}",
+                "weight_total_kg": weight_total,
+                "cf_front": cf_front,
+                "cf_lat": cf_lat,
+                "a_front": a_front,
+                "a_lat": a_lat,
+                "fw_front": fw_front_i,
+                "fw_lat": fw_lat_i,
+                "pe_dan": weight_total,
+                "fw_front_formula": fw_front_formula,
+                "fw_lat_formula": fw_lat_formula,
+            })
+            tot_qty += qty
+            tot_weight += weight_total
+            tot_fw_front += fw_front_i
+            tot_fw_lat += fw_lat_i
+            f_front_parts.append(f"{fw_front_i:.2f}")
+            f_lat_parts.append(f"{fw_lat_i:.2f}")
+
+        totals = dict(totals) if isinstance(totals, dict) else {}
+        totals.setdefault("count", len(items))
+        totals.setdefault("qty_total", tot_qty)
+        totals.setdefault("weight_total_kg", round(tot_weight, 2))
+        totals.setdefault("pe_dan", totals.get("weight_total_kg", round(tot_weight, 2)))
+        if totals.get("fw_front") is None:
+            totals["fw_front"] = wind.get("fw_front_total_dan") if wind.get("fw_front_total_dan") is not None else round(tot_fw_front, 2)
+        if totals.get("fw_lat") is None:
+            totals["fw_lat"] = wind.get("fw_lat_total_dan") if wind.get("fw_lat_total_dan") is not None else round(tot_fw_lat, 2)
+        totals.setdefault(
+            "fw_front_formula",
+            " + ".join(f_front_parts) + f" = {round(tot_fw_front, 2):.2f} daN"
+            if len(f_front_parts) > 1
+            else (f"{round(tot_fw_front, 2):.2f} daN" if f_front_parts else "0.00 daN"),
+        )
+        totals.setdefault(
+            "fw_lat_formula",
+            " + ".join(f_lat_parts) + f" = {round(tot_fw_lat, 2):.2f} daN"
+            if len(f_lat_parts) > 1
+            else (f"{round(tot_fw_lat, 2):.2f} daN" if f_lat_parts else "0.00 daN"),
+        )
+
+    if not items:
+        raw_in_items = lovage_in.get("items") or []
+        if not raw_in_items and lovage_in.get("enabled"):
+            raw_in_items = [lovage_in]
+
+        if raw_in_items:
+            built_items = []
+            tot_qty = 0
+            tot_weight = 0.0
+            tot_fw_front = 0.0
+            tot_fw_lat = 0.0
+            f_front_parts = []
+            f_lat_parts = []
+
+            for idx, it in enumerate(raw_in_items, start=1):
+                ref = it.get("reference") or it.get("name") or "Boitiers de lovage"
+                qty = int(it.get("quantity") or it.get("qty") or 1)
+                h_mm = float(it.get("h_mm") or it.get("hauteur_mm") or 0.0)
+                w_mm = float(it.get("w_mm") or it.get("largeur_mm") or 0.0)
+                d_mm = float(it.get("d_mm") or it.get("epaisseur_mm") or it.get("t_mm") or 0.0)
+                if not (h_mm and w_mm and d_mm) and it.get("dimensions"):
+                    parsed = _parse_envelope_dims_m(it.get("dimensions"))
+                    if parsed:
+                        h_mm, w_mm, d_mm = round(parsed[0] * 1000, 1), round(parsed[1] * 1000, 1), round(parsed[2] * 1000, 1)
+                dims_str = (
+                    f"{h_mm:g} x {w_mm:g} x {d_mm:g}"
+                    if (h_mm or w_mm or d_mm)
+                    else (str(it.get("dimensions")) if it.get("dimensions") else "N/A")
+                )
+                weight_kg = float(it.get("weight_kg") or it.get("poids_kg") or 0.0)
+                weight_total = round(qty * weight_kg, 2)
+                cf_front = float(it.get("cf_front") if it.get("cf_front") is not None else LOVAGE_CF_FRONT)
+                cf_lat = float(it.get("cf_lat") if it.get("cf_lat") is not None else LOVAGE_CF_LAT)
+                a_front = float(
+                    it.get("a_front")
+                    if it.get("a_front") is not None
+                    else (round((h_mm * w_mm) / 1e6, 4) if (h_mm and w_mm) else 0.0)
+                )
+                a_lat = float(
+                    it.get("a_lat")
+                    if it.get("a_lat") is not None
+                    else (round((h_mm * d_mm) / 1e6, 4) if (h_mm and d_mm) else 0.0)
+                )
+                fw_front_i = round(qty * cf_front * a_front * qp, 2) if qp else 0.0
+                fw_lat_i = round(qty * cf_lat * a_lat * qp, 2) if qp else 0.0
+
+                built_items.append({
+                    "index": idx,
+                    "name": ref,
+                    "catalog_reference": ref,
+                    "qty": qty,
+                    "h_mm": h_mm,
+                    "w_mm": w_mm,
+                    "d_mm": d_mm,
+                    "dimensions_str": dims_str,
+                    "weight_kg": weight_kg,
+                    "weight_unit_kg": f"{weight_kg:g}" if weight_kg else "N/A",
+                    "weight_total_kg": weight_total,
+                    "cf_front": cf_front,
+                    "cf_lat": cf_lat,
+                    "a_front": a_front,
+                    "a_lat": a_lat,
+                    "fw_front": fw_front_i,
+                    "fw_lat": fw_lat_i,
+                    "pe_dan": weight_total,
+                    "fw_front_formula": (
+                        f"{qty} * {cf_front:.2f} * {_fmt_area(a_front)} * {qp:.2f} = {fw_front_i:.2f} daN"
+                        if qp else f"{fw_front_i:.2f} daN"
+                    ),
+                    "fw_lat_formula": (
+                        f"{qty} * {cf_lat:.2f} * {_fmt_area(a_lat)} * {qp:.2f} = {fw_lat_i:.2f} daN"
+                        if qp else f"{fw_lat_i:.2f} daN"
+                    ),
+                })
+                tot_qty += qty
+                tot_weight += weight_total
+                tot_fw_front += fw_front_i
+                tot_fw_lat += fw_lat_i
+                f_front_parts.append(f"{fw_front_i:.2f}")
+                f_lat_parts.append(f"{fw_lat_i:.2f}")
+
+            items = built_items
+            totals = {
+                "count": len(built_items),
+                "qty_total": tot_qty,
+                "fw_front": round(tot_fw_front, 2),
+                "fw_lat": round(tot_fw_lat, 2),
+                "pe_dan": round(tot_weight, 2),
+                "weight_total_kg": round(tot_weight, 2),
+                "fw_front_formula": (
+                    " + ".join(f_front_parts) + f" = {round(tot_fw_front, 2):.2f} daN"
+                    if len(f_front_parts) > 1
+                    else (f"{round(tot_fw_front, 2):.2f} daN" if f_front_parts else "0.00 daN")
+                ),
+                "fw_lat_formula": (
+                    " + ".join(f_lat_parts) + f" = {round(tot_fw_lat, 2):.2f} daN"
+                    if len(f_lat_parts) > 1
+                    else (f"{round(tot_fw_lat, 2):.2f} daN" if f_lat_parts else "0.00 daN")
+                ),
+            }
+
+    if not items:
+        items = [{
+            "index": 1,
+            "name": "Boitiers de lovage",
+            "catalog_reference": "Boitiers de lovage",
+            "qty": 1,
+            "h_mm": 0.0,
+            "w_mm": 0.0,
+            "d_mm": 0.0,
+            "dimensions_str": "N/A",
+            "weight_kg": 0.0,
+            "weight_unit_kg": "N/A",
+            "weight_total_kg": 0.0,
+            "cf_front": LOVAGE_CF_FRONT,
+            "cf_lat": LOVAGE_CF_LAT,
+            "a_front": 0.0,
+            "a_lat": 0.0,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+            "pe_dan": 0.0,
+            "fw_front_formula": "N/A",
+            "fw_lat_formula": "N/A",
+        }]
+        totals = {
+            "count": 1,
+            "qty_total": 1,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+            "pe_dan": 0.0,
+            "weight_total_kg": 0.0,
+            "fw_front_formula": "N/A",
+            "fw_lat_formula": "N/A",
+        }
+
+    mast_sec = structure.get("mast_section") or LOVAGE_DEFAULT_MAST_SECTION
+    plot_sec = None if is_sans_plot else (structure.get("plot_section") or LOVAGE_DEFAULT_PLOT_SECTION)
+    raw_h_mat = (
+        structure.get("hauteur_mat_m")
+        if structure.get("hauteur_mat_m") is not None
+        else lovage_in.get("hauteur_mat_m")
+    )
+    try:
+        h_mat = float(raw_h_mat) if raw_h_mat is not None else LOVAGE_DEFAULT_MAST_HEIGHT_M
+    except (ValueError, TypeError):
+        h_mat = LOVAGE_DEFAULT_MAST_HEIGHT_M
+    raw_h_plot = (
+        structure.get("plot_h_m")
+        if structure.get("plot_h_m") is not None
+        else structure.get("hauteur_plot_m")
+    )
+    try:
+        h_plot = 0.0 if is_sans_plot else (float(raw_h_plot) if raw_h_plot is not None else LOVAGE_DEFAULT_PLOT_HEIGHT_M)
+    except (ValueError, TypeError):
+        h_plot = 0.0 if is_sans_plot else LOVAGE_DEFAULT_PLOT_HEIGHT_M
+
+    from utils.domain_constants import resolve_support_has_echelle
+    has_echelle = resolve_support_has_echelle(input_data, result_data, kind="lovage", is_sans_plot=is_sans_plot, hauteur_mat_m=h_mat)
+
+    qty_total = totals.get("qty_total", sum(it.get("qty", 1) for it in items))
+    return {
+        "is_lovage": True,
+        "is_sans_plot": is_sans_plot,
+        "has_echelle": has_echelle,
+        "items": items,
+        "totals": totals,
+        "wind": wind,
+        "structure": structure,
+        "mast_section": mast_sec,
+        "plot_section": plot_sec,
+        "hauteur_mat_m": h_mat,
+        "hauteur_plot_m": h_plot,
+        "extremes": lovage_sub.get("extremes") or result_data.get("extremes") or {},
+        "qty_total": qty_total,
+        "is_multi": len(items) > 1 or qty_total > 1,
     }
 
 

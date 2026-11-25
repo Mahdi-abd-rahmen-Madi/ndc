@@ -23,6 +23,10 @@ export function formatFoundationLabel(foundationType?: string | null): string {
   return FOUNDATION_LABELS[foundationType] || foundationType;
 }
 
+export function isSansPlotFromFoundation(foundationType?: string | null): boolean {
+  return (foundationType || '').toLowerCase().trim() === 'dallettes';
+}
+
 export const FH_ECHELLE_MIN_MAST_HEIGHT_M = 2.0;
 
 export function isFhEchelleAllowed(sansPlot?: boolean, hauteurMatM?: number | null): boolean {
@@ -107,10 +111,23 @@ export function isEquipmentAllowedForOperator(equipmentId: string, operator: str
 
 export function extractSectorAerialState(sector?: SectorData) {
   const fallbackFoundation = sector?.equipmentFoundationType || 'dallettes';
-  const fhSansPlot = !!sector?.fhSansPlot;
+  const fhFoundationType = sector?.fhFoundationType || fallbackFoundation;
+  const fhSansPlot = isSansPlotFromFoundation(fhFoundationType);
   const fhHauteurMatM = sector?.fhHauteurMatM ?? 1.70;
   const fhEchelle = isFhEchelleAllowed(fhSansPlot, fhHauteurMatM)
     ? normalizeFhEchelle(sector?.fhEchelle)
+    : "Pas d'échelle";
+  const rrhFoundationType = sector?.rrhFoundationType || fallbackFoundation;
+  const rrhSansPlot = isSansPlotFromFoundation(rrhFoundationType);
+  const rrhHauteurMatM = sector?.rrhHauteurMatM ?? 1.50;
+  const rrhEchelle = isFhEchelleAllowed(rrhSansPlot, rrhHauteurMatM)
+    ? normalizeFhEchelle(sector?.rrhEchelle)
+    : "Pas d'échelle";
+  const rruFoundationType = sector?.rruFoundationType || fallbackFoundation;
+  const rruSansPlot = isSansPlotFromFoundation(rruFoundationType);
+  const rruHauteurMatM = sector?.rruHauteurMatM ?? 1.50;
+  const rruEchelle = isFhEchelleAllowed(rruSansPlot, rruHauteurMatM)
+    ? normalizeFhEchelle(sector?.rruEchelle)
     : "Pas d'échelle";
   return {
     hasFhEquipment: !!sector?.hasFhEquipment,
@@ -120,19 +137,21 @@ export function extractSectorAerialState(sector?: SectorData) {
     fhQuantity: sector?.fhQuantity ?? 1,
     fhWeight: sector?.fhWeight,
     fhItems: sector?.fhItems ?? [],
-    fhFoundationType: sector?.fhFoundationType || fallbackFoundation,
+    fhFoundationType,
     fhHauteurMatM,
     fhEchelle,
     hasRrhEquipment: !!sector?.hasRrhEquipment,
-    rrhSansPlot: !!sector?.rrhSansPlot,
+    rrhSansPlot,
     rrhItems: sector?.rrhItems ?? [],
-    rrhFoundationType: sector?.rrhFoundationType || fallbackFoundation,
-    rrhHauteurMatM: sector?.rrhHauteurMatM ?? 1.50,
+    rrhFoundationType,
+    rrhHauteurMatM,
+    rrhEchelle,
     hasRruEquipment: !!sector?.hasRruEquipment,
-    rruSansPlot: !!sector?.rruSansPlot,
+    rruSansPlot,
     rruItems: sector?.rruItems ?? [],
-    rruFoundationType: sector?.rruFoundationType || fallbackFoundation,
-    rruHauteurMatM: sector?.rruHauteurMatM ?? 1.50,
+    rruFoundationType,
+    rruHauteurMatM,
+    rruEchelle,
     hasCoffret: !!sector?.hasCoffret,
     coffretReference: sector?.coffretReference ?? '',
     coffretFoundationType: sector?.coffretFoundationType || fallbackFoundation,
@@ -322,6 +341,9 @@ export function buildSectorEquipmentPayload({
       with_plot: !aerial.rrhSansPlot,
       ancrage: allowRrh && aerial.hasRrhEquipment ? aerial.rrhFoundationType : null,
       hauteur_mat_m: Number(aerial.rrhHauteurMatM ?? 1.50),
+      echelle: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment
+        ? (isFhEchelleAllowed(aerial.rrhSansPlot, aerial.rrhHauteurMatM) ? aerial.rrhEchelle : "Pas d'échelle")
+        : null,
       items: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment
         ? aerial.rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity }))
         : [],
@@ -332,32 +354,92 @@ export function buildSectorEquipmentPayload({
       with_plot: !aerial.rruSansPlot,
       ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
       hauteur_mat_m: Number(aerial.rruHauteurMatM ?? 1.50),
+      echelle: aerial.hasRruEquipment
+        ? (isFhEchelleAllowed(aerial.rruSansPlot, aerial.rruHauteurMatM) ? aerial.rruEchelle : "Pas d'échelle")
+        : null,
       items: aerial.hasRruEquipment
         ? aerial.rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity }))
         : [],
     },
-    td_equipment: {
-      enabled: allowTd && zt.hasTdEquipment,
-      type: allowTd && zt.hasTdEquipment ? zt.tdType : null,
-      reference: allowTd && zt.hasTdEquipment ? zt.tdReference : null,
-      tgbt_reference: allowTd && zt.hasTdEquipment && zt.tdType === 'monophase' ? zt.tgbtReference : null,
-    },
-    tgbt_equipment: {
-      enabled: allowTgbt && zt.hasTgbt,
-      reference: allowTgbt && zt.hasTgbt ? (zt.tgbtReference || STATIC_EQUIPMENT_SPECS.tgbt.defaultRef) : null,
-      emplacement: allowTgbt && zt.hasTgbt ? (zt.tgbtEmplacement || 'integre_bcube') : null,
-    },
+    td_equipment: (() => {
+      const tdEnabled = allowTd && zt.hasTdEquipment;
+      const tdFoundation = zt.tdFoundationType || 'dallettes';
+      const tdSansPlot = isSansPlotFromFoundation(tdFoundation);
+      const tdH = Number(zt.tdHauteurMatM ?? 1.70);
+      const tdEchelle = isFhEchelleAllowed(tdSansPlot, tdH)
+        ? normalizeFhEchelle(zt.tdEchelle)
+        : "Pas d'échelle";
+      return {
+        enabled: tdEnabled,
+        type: tdEnabled ? zt.tdType : null,
+        reference: tdEnabled ? zt.tdReference : null,
+        tgbt_reference: tdEnabled && zt.tdType === 'monophase' ? zt.tgbtReference : null,
+        ancrage: tdEnabled ? tdFoundation : null,
+        sans_plot: tdSansPlot,
+        with_plot: !tdSansPlot,
+        hauteur_mat_m: tdH,
+        echelle: tdEnabled ? tdEchelle : null,
+      };
+    })(),
+    tgbt_equipment: (() => {
+      const tgbtEnabled = allowTgbt && zt.hasTgbt;
+      const tgbtFoundation = zt.tgbtFoundationType || 'dallettes';
+      const tgbtSansPlot = isSansPlotFromFoundation(tgbtFoundation);
+      const tgbtH = Number(zt.tgbtHauteurMatM ?? 1.50);
+      const tgbtEchelle = isFhEchelleAllowed(tgbtSansPlot, tgbtH)
+        ? normalizeFhEchelle(zt.tgbtEchelle)
+        : "Pas d'échelle";
+      return {
+        enabled: tgbtEnabled,
+        reference: tgbtEnabled ? (zt.tgbtReference || STATIC_EQUIPMENT_SPECS.tgbt.defaultRef) : null,
+        emplacement: tgbtEnabled ? (zt.tgbtEmplacement || 'integre_bcube') : null,
+        ancrage: tgbtEnabled ? tgbtFoundation : null,
+        sans_plot: tgbtSansPlot,
+        with_plot: !tgbtSansPlot,
+        hauteur_mat_m: tgbtH,
+        echelle: tgbtEnabled ? tgbtEchelle : null,
+      };
+    })(),
     gps: {
       enabled: zt.hasGps,
       quantity: 1,
       marque: zt.hasGps ? zt.gpsMarque : null,
       reference: zt.hasGps ? zt.gpsReference : null,
     },
-    boitier_lovage: {
-      enabled: zt.hasBoitierLovage,
-      quantity: zt.boitierLovageQuantity,
-      reference: zt.hasBoitierLovage ? zt.boitierLovageReference : null,
-    },
+    boitier_lovage: (() => {
+      const lovageFoundation = zt.boitierLovageFoundationType || 'dallettes';
+      const lovageSansPlot = isSansPlotFromFoundation(lovageFoundation);
+      const lovageH = Number(zt.boitierLovageHauteurMatM ?? 1.50);
+      const lovageEchelle = isFhEchelleAllowed(lovageSansPlot, lovageH)
+        ? normalizeFhEchelle(zt.boitierLovageEchelle)
+        : "Pas d'échelle";
+      return {
+        enabled: zt.hasBoitierLovage,
+        quantity: zt.boitierLovageQuantity,
+        reference: zt.hasBoitierLovage ? zt.boitierLovageReference : null,
+        ancrage: zt.hasBoitierLovage ? lovageFoundation : null,
+        sans_plot: lovageSansPlot,
+        with_plot: !lovageSansPlot,
+        hauteur_mat_m: lovageH,
+        echelle: zt.hasBoitierLovage ? lovageEchelle : null,
+        cf_front: 1.47,
+        cf_lat: 1.19,
+      };
+    })(),
+    structure_lovage: zt.hasBoitierLovage
+      ? (() => {
+          const lovageFoundation = zt.boitierLovageFoundationType || 'dallettes';
+          const lovageSansPlot = isSansPlotFromFoundation(lovageFoundation);
+          return {
+            mast_section: 'TRON 88x3.2',
+            plot_section: lovageSansPlot ? null : 'TCAR 150x5',
+            hauteur_mat_m: Number(zt.boitierLovageHauteurMatM ?? 1.50),
+            hauteur_plot_m: lovageSansPlot ? 0.0 : 0.50,
+            sans_plot: lovageSansPlot,
+            with_plot: !lovageSansPlot,
+          };
+        })()
+      : null,
     boitier_jonction: {
       enabled: allowBoitierJonction && aerial.hasBoitierJonction,
       quantity: allowBoitierJonction && aerial.hasBoitierJonction ? (aerial.boitierJonctionQuantity || 1) : null,

@@ -41,6 +41,17 @@ def extract_fh_docx_context(job) -> dict:
     return extract_fh_ndc_context(res, input_data=inp)
 
 
+def extract_lovage_docx_context(job) -> dict:
+    """
+    Extracts Boîtier de Lovage data, wind parameters, support geometry and reactions from job.result_data
+    using the canonical geodata extractor (single source of truth).
+    """
+    from geodata.ndc_generator import extract_lovage_ndc_context
+    res = parse_json_dict(getattr(job, 'result_data', None))
+    inp = parse_json_dict(getattr(job, 'input_data', None))
+    return extract_lovage_ndc_context(res, input_data=inp)
+
+
 _DOCX_EQUIPMENT_DEFAULTS = {
     "rrh": {
         "label": "RRH",
@@ -71,6 +82,17 @@ _DOCX_EQUIPMENT_DEFAULTS = {
         "vb0": 24.0,
         "qp_dan": 95.36,
         "template_rel": os.path.join("templates", "fh", "NDC FH.docx"),
+    },
+    "lovage": {
+        "label": "Boitiers de lovages",
+        "depth_key": "d_mm",
+        "mast_section": "TRON 88x3.2",
+        "plot_section": "TCAR 150x5",
+        "terrain_type": "IIIa",
+        "vb0": 24.0,
+        "qp_dan": 45.0,
+        "template_rel": os.path.join("templates", "lovage", "boitier_lovage_avec_plot.docx"),
+        "template_sans_plot_rel": os.path.join("templates", "lovage", "boitier_lovage_sans_plot.docx"),
     },
 }
 
@@ -156,9 +178,15 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     fw_mast = float(wind.get("fw_mast", round(1.0 * cf_mast * mast_d_m * qp, 2)) or 0.0)
 
     # 4. Paragraph replacements
+    qty_total = ctx.get("qty_total") or sum(int(it.get("qty", 1)) for it in items) or 1
     for p in doc.paragraphs:
         txt = p.text
-        if "Région XX" in txt:
+        if "supportant XX boitiers de lovage" in txt:
+            p.text = txt.replace(
+                "supportant XX boitiers de lovage",
+                f"supportant {qty_total} boitier{'s' if qty_total > 1 else ''} de lovage",
+            )
+        elif "Région XX" in txt:
             p.text = f"Région {region}"
         elif "Catégorie de terrain" in txt and "XX" in txt:
             p.text = f"Catégorie de terrain : {terrain}"
@@ -191,11 +219,14 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     front_marker = f"{label} : Fw,Frontale"
     lat_marker = f"{label} : Fw,Latéral"
     for idx, p in enumerate(doc.paragraphs):
-        if front_marker in p.text:
+        norm_txt = " ".join(p.text.split())
+        if front_marker in norm_txt or (kind == "lovage" and "Fw,Frontale" in norm_txt):
             if len(items) == 1:
                 p.text = f"{front_marker} = {items[0].get('fw_front_formula', 'N/A')}"
-                if idx + 1 < len(doc.paragraphs) and lat_marker in doc.paragraphs[idx + 1].text:
-                    doc.paragraphs[idx + 1].text = f"{lat_marker} = {items[0].get('fw_lat_formula', 'N/A')}"
+                if idx + 1 < len(doc.paragraphs):
+                    next_norm = " ".join(doc.paragraphs[idx + 1].text.split())
+                    if lat_marker in next_norm or (kind == "lovage" and "Fw,Latéral" in next_norm):
+                        doc.paragraphs[idx + 1].text = f"{lat_marker} = {items[0].get('fw_lat_formula', 'N/A')}"
             else:
                 lines = []
                 for it in items:
@@ -203,8 +234,10 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
                     lines.append(f"{idx_label} : Fw,Frontale = {it.get('fw_front_formula', 'N/A')}")
                     lines.append(f"{idx_label} : Fw,Latéral = {it.get('fw_lat_formula', 'N/A')}")
                 p.text = "\n".join(lines)
-                if idx + 1 < len(doc.paragraphs) and lat_marker in doc.paragraphs[idx + 1].text:
-                    doc.paragraphs[idx + 1].text = ""
+                if idx + 1 < len(doc.paragraphs):
+                    next_norm = " ".join(doc.paragraphs[idx + 1].text.split())
+                    if lat_marker in next_norm or (kind == "lovage" and "Fw,Latéral" in next_norm):
+                        doc.paragraphs[idx + 1].text = ""
             break
 
 
@@ -246,14 +279,14 @@ def validate_calculation_artifacts(job, files=None) -> list:
                 return True
         return False
 
-    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru/fh/multi-equipment)
+    # 1. Base Antenna Verification (applicable to antenna and composite antenna+rrh/rru/fh/lovage/multi-equipment)
     is_standalone_equipment = (
         not calc_type.startswith('antenna')
         and not _has_active_antenna_input(input_data)
         and (
-            calc_type in ('rrh', 'rrh_sans_plot', 'rru', 'rru_sans_plot', 'fh', 'fh_sans_plot')
+            calc_type in ('rrh', 'rrh_sans_plot', 'rru', 'rru_sans_plot', 'fh', 'fh_sans_plot', 'lovage', 'lovage_sans_plot')
             or '_and_' in calc_type
-            or bool(input_data.get('is_rrh') or input_data.get('is_rru') or input_data.get('is_fh'))
+            or bool(input_data.get('is_rrh') or input_data.get('is_rru') or input_data.get('is_fh') or input_data.get('is_lovage'))
         )
     )
     is_pure_fh = calc_type in ('fh', 'fh_sans_plot') and not _has_active_antenna_input(input_data)
@@ -504,6 +537,65 @@ def validate_calculation_artifacts(job, files=None) -> list:
             if not has_fh_ass:
                 missing.append("Note d'assemblage Robot FH")
 
+    # 5. Boîtier de Lovage Verification (Zone Technique)
+    lovage_in = input_data.get('boitier_lovage') or input_data.get('lovage_equipment') or {}
+    has_lovage = (
+        'lovage' in calc_type.split('_')
+        or 'lovage' in active_eqs
+        or (isinstance(lovage_in, dict) and bool(lovage_in.get('enabled')))
+        or bool(result_data.get('has_lovage'))
+        or bool(input_data.get('is_lovage'))
+    )
+    if has_lovage:
+        from geodata.ndc_generator import find_job_lovage_rtf_paths
+        lovage_paths = find_job_lovage_rtf_paths(job)
+        lovage_files = result_data.get('lovage_files') if isinstance(result_data.get('lovage_files'), dict) else {}
+
+        has_lovage_3d = bool(
+            files.get('lovage_screenshot')
+            or (lovage_files.get('lovage_screenshot') and os.path.exists(lovage_files['lovage_screenshot']))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'screenshots_lovage', f'job_{job.id}_lovage_3d_view.jpg'))
+        )
+        if not has_lovage_3d:
+            missing.append("Capture 3D modélisation Boîtiers de lovage")
+
+        has_lovage_verif = bool(
+            files.get('lovage_verification_screenshot')
+            or (lovage_files.get('lovage_verification_screenshot') and os.path.exists(lovage_files['lovage_verification_screenshot']))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'verif_lovage', f'job_{job.id}_lovage_verification.jpg'))
+        )
+        if not has_lovage_verif:
+            missing.append("Capture de vérification Robot Boîtiers de lovage")
+
+        has_lovage_mat = bool(
+            lovage_paths.get('note_mat')
+            or lovage_paths.get('note_de_calcul')
+            or files.get('note_de_calcul_lovage')
+            or files.get('lovage_note_de_calcul')
+            or files.get('lovage_note_mat')
+        )
+        if not has_lovage_mat:
+            missing.append("Note de calcul RTF du mât Boîtiers de lovage")
+
+        has_lovage_charges = bool(
+            files.get('lovage_tableau_charges')
+            or files.get('lovage_loads_table')
+            or (lovage_files.get('lovage_tableau_charges') and os.path.exists(lovage_files['lovage_tableau_charges']))
+            or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'charges_lovage', f'job_{job.id}_lovage_tableau_charges.png'))
+        )
+        if not has_lovage_charges:
+            missing.append("Tableau des charges Boîtiers de lovage")
+
+        is_lovage_sans_plot = resolve_sans_plot(input_data, result_data, calc_type=calc_type, kind="lovage")
+        if not is_lovage_sans_plot:
+            has_lovage_ass = bool(
+                lovage_paths.get('assemblage_note')
+                or files.get('lovage_assemblage_note')
+                or os.path.exists(os.path.join(settings.MEDIA_ROOT, 'notes_lovage', f'job_{job.id}_lovage_assemblage_note.rtf'))
+            )
+            if not has_lovage_ass:
+                missing.append("Note d'assemblage Robot Boîtiers de lovage")
+
     return missing
 
 
@@ -534,8 +626,11 @@ def assemble_ndc_document(calculation_id):
         isinstance(inp_d.get(k), dict) and any(inp_d[k].get(f) for f in ("model", "hauteur_mm", "largeur_mm", "poids_kg"))
         for k in ("antenna_4g", "antenna_5g")
     )
-    if not has_ant and any(k in calc_type_low for k in ("rrh", "rru", "fh")):
-        primary_kind = "rrh" if "rrh" in calc_type_low else ("rru" if "rru" in calc_type_low else "fh")
+    if not has_ant and any(k in calc_type_low for k in ("rrh", "rru", "fh", "lovage")):
+        primary_kind = (
+            "rrh" if "rrh" in calc_type_low
+            else ("rru" if "rru" in calc_type_low else ("fh" if "fh" in calc_type_low else "lovage"))
+        )
         _assemble_equipment_doc(job, kind=primary_kind)
     else:
         _assemble_antenna(job)
@@ -586,7 +681,21 @@ def _assemble_equipment_doc(job, kind: str = "rrh"):
     except Exception as html_err:
         print(f"WeasyPrint {label} compilation note: {html_err}")
 
-    template_path = os.path.join(settings.BASE_DIR, cfg["template_rel"])
+    if kind == "rru":
+        ctx = extract_rru_docx_context(job)
+    elif kind == "fh":
+        ctx = extract_fh_docx_context(job)
+    elif kind == "lovage":
+        ctx = extract_lovage_docx_context(job)
+    else:
+        ctx = extract_ndc_context(job)
+
+    template_rel = (
+        cfg["template_sans_plot_rel"]
+        if ctx.get("is_sans_plot") and cfg.get("template_sans_plot_rel")
+        else cfg["template_rel"]
+    )
+    template_path = os.path.join(settings.BASE_DIR, template_rel)
     if not os.path.exists(template_path):
         print(f"assemble_ndc_document: Template not found at {template_path}")
         return
@@ -595,13 +704,6 @@ def _assemble_equipment_doc(job, kind: str = "rrh"):
     try:
         from docx import Document
         doc = Document(template_path)
-
-        if kind == "rru":
-            ctx = extract_rru_docx_context(job)
-        elif kind == "fh":
-            ctx = extract_fh_docx_context(job)
-        else:
-            ctx = extract_ndc_context(job)
         _populate_equipment_docx(doc, ctx, kind=kind)
 
         temp_docx = os.path.join(work_dir, f"{prefix}.docx")

@@ -109,7 +109,7 @@ export function BCubeEquipmentToggle({
 
         <div className="flex flex-col flex-1 min-w-0">
           <label className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">
-            Modèle / Référence
+            Modèle
           </label>
           <CustomSelect
             value={selectedValue}

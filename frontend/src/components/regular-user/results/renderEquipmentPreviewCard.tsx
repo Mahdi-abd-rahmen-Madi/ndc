@@ -392,7 +392,7 @@ export function renderEquipmentPreviewCard({
         icon={IconComponent}
         color="purple"
         typeBadge={{
-          text: 'Lovage',
+          text: lovageVal.ancrage || 'Lovage',
           bg: 'bg-purple-50',
           textCol: 'text-purple-700',
           border: 'border-purple-200'

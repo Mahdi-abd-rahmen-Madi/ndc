@@ -1,0 +1,337 @@
+================================================================================
+ROBOT STRUCTURAL ANALYSIS WORKER - BOITIER DE LOVAGE (ZONE TECHNIQUE)
+AVEC PLOT & SANS PLOT INSTRUCTIONS
+================================================================================
+
+1. CONTEXT & SCOPE
+--------------------------------------------------------------------------------
+Boîtier de Lovage (Zone Technique) is now a full Robot-calculated auxiliary
+equipment stage supporting BOTH configurations:
+  - AVEC PLOT (`sans_plot == False`, `with_plot == True`)
+    Reference DOCX template:
+      `backend/templates/lovage/boitier_lovage_avec_plot.docx`
+  - SANS PLOT (`sans_plot == True`, `with_plot == False`)
+    Reference DOCX template:
+      `backend/templates/lovage/boitier_lovage_sans_plot.docx`
+
+The Django backend and React frontend are already updated:
+  - Frontend Zone Technique (`BoitierLovageEquipmentToggle.tsx`) exposes:
+      * Reference selector (`boitier_lovage.reference`)
+      * Quantity (`boitier_lovage.quantity`)
+      * Mast height input (`boitier_lovage.hauteur_mat_m`, default `1.50` m)
+      * "Type d'ancrage" selector (`boitier_lovage.ancrage`):
+          - `dallettes` -> `sans_plot: true`, `with_plot: false`
+          - `beton` (Plot Béton) or `metallique` (Plot métallique) ->
+            `sans_plot: false`, `with_plot: true`
+      * Canonical wind coefficients (`cf_front = 1.47`, `cf_lat = 1.19`)
+      * `structure_lovage` block (`TRON 88x3.2`, `TCAR 150x5` when with plot)
+  - Django backend (`domain_constants.py`, `ndc_hash.py`, `validators.py`,
+    `equipment_context.py`, `artifact_locator.py`, `pdf_renderer.py`,
+    `templates/ndc/lovage.html`, `api/views.py`, `api/services.py`,
+    `api/serializers.py`):
+      * Detects calculation types:
+        `lovage`, `lovage_sans_plot`, `antenna_with_lovage`,
+        `antenna_with_lovage_sans_plot`, and composite multi-equipment types
+        (e.g. `antenna_with_rru_and_lovage`, `antenna_with_fh_and_lovage_sans_plot`).
+      * Computes distinct `ndc_hash` values for `avec_plot` vs `sans_plot`,
+        different mast heights, quantities, and references.
+      * Renders the PDF annex from `backend/templates/ndc/lovage.html` and
+        populates either `boitier_lovage_avec_plot.docx` or
+        `boitier_lovage_sans_plot.docx`.
+
+The Robot Worker MUST implement the Boîtier de Lovage FEA stage (standalone or
+composite alongside Antenna / RRH / RRU / FH) following the exact formulas,
+structural sections, upload keys, and `result_data` contract below.
+
+
+2. PAYLOAD PARSING ON THE WORKER
+--------------------------------------------------------------------------------
+Incoming `input_data` payload structure from Django:
+
+```json
+{
+  "boitier_lovage": {
+    "enabled": true,
+    "reference": "BLM-515709",
+    "quantity": 2,
+    "ancrage": "metallique",
+    "sans_plot": false,
+    "with_plot": true,
+    "hauteur_mat_m": 1.5,
+    "cf_front": 1.47,
+    "cf_lat": 1.19
+  },
+  "structure_lovage": {
+    "mast_section": "TRON 88x3.2",
+    "plot_section": "TCAR 150x5",
+    "hauteur_mat_m": 1.5,
+    "hauteur_plot_m": 0.5,
+    "sans_plot": false,
+    "with_plot": true
+  }
+}
+```
+
+Use the following helper to detect whether the Lovage stage is active and
+whether it is `sans_plot`:
+
+```python
+def is_lovage_stage_active(input_data: dict) -> bool:
+    lv = input_data.get("boitier_lovage") or input_data.get("lovage_equipment") or {}
+    ct = str(input_data.get("calculation_type") or "").lower()
+    return (
+        (isinstance(lv, dict) and bool(lv.get("enabled")))
+        or input_data.get("is_lovage") is True
+        or "lovage" in ct.split("_")
+    )
+
+def resolve_lovage_sans_plot(input_data: dict) -> bool:
+    lv = input_data.get("boitier_lovage") or input_data.get("lovage_equipment") or {}
+    st = input_data.get("structure_lovage") or {}
+    for val in (
+        lv.get("sans_plot"),
+        (not lv["with_plot"]) if isinstance(lv.get("with_plot"), bool) else None,
+        input_data.get("lovage_sans_plot"),
+        (not input_data["lovage_with_plot"]) if isinstance(input_data.get("lovage_with_plot"), bool) else None,
+        st.get("sans_plot"),
+        (not st["with_plot"]) if isinstance(st.get("with_plot"), bool) else None,
+    ):
+        if val is True:
+            return True
+        if val is False:
+            return False
+    ancrage = str(lv.get("ancrage") or "").strip().lower()
+    if ancrage == "dallettes":
+        return True
+    if ancrage in ("beton", "metallique"):
+        return False
+    ct = str(input_data.get("calculation_type") or "").lower()
+    return "lovage_sans_plot" in ct
+```
+
+Mast height resolution:
+  - Read `boitier_lovage["hauteur_mat_m"]` (fallback:
+    `structure_lovage["hauteur_mat_m"]`, default `1.50` m).
+  - Do NOT overwrite with the main antenna mast height (`structure["hauteur_mat_m"]`)
+    on composite jobs.
+
+
+3. WIND CALCULATION (EN 1991-1-4 / EC1) — BOITIER DE LOVAGE
+--------------------------------------------------------------------------------
+A. Aerodynamic Drag Coefficients (MANDATORY):
+  - Frontal drag coefficient: `Cf,front = 1.47`
+  - Lateral drag coefficient: `Cf,lat   = 1.19`
+  - Mast drag coefficient:    `Cf,mat   = 1.00` (tube Ø88.9 mm -> `d = 0.088 m`)
+  - Structural factor:        `cs * cd  = 1.00`
+
+B. Peak Velocity Pressure `qp(z)` (daN/m²):
+  - Reference height `z`:
+      * AVEC PLOT: `z = building_height_m + 0.50 + hauteur_mat_m`
+      * SANS PLOT: `z = building_height_m + hauteur_mat_m`
+  - Standard EC1 chain (clamped to `z_min` per terrain category):
+      * `kr    = 0.19 * (z0 / 0.05) ** 0.07`
+      * `cr(z) = kr * ln(z / z0)`
+      * `Vm    = cr(z) * 1.0 * Vb`
+      * `Iv(z) = 1.0 / ln(z / z0)`
+      * `qp    = (1 + 7 * Iv(z)) * 0.5 * 1.25 * Vm² / 10.0`  (daN/m²)
+
+C. Wind Forces:
+  - Mast distributed wind load (daN/ml):
+      `Fw,mat = 1 * 1.0 * 0.088 * qp`
+  - Boîtier de lovage projected areas (from reference dimensions `H x W x D` in mm):
+      * `A_front = (H_mm * W_mm) / 1e6`  (m²)
+      * `A_lat   = (H_mm * D_mm) / 1e6`  (m²)
+  - Boîtier de lovage wind forces (daN):
+      * `Fw,Frontale = qty * 1.47 * A_front * qp`
+      * `Fw,Latéral  = qty * 1.19 * A_lat   * qp`
+  - Equipment dead load (daN):
+      * `PE = qty * weight_kg`  (`FZ = -PE` daN)
+
+
+4. ROBOT FEA MODELING (AVEC PLOT vs SANS PLOT)
+--------------------------------------------------------------------------------
+A. Structural Sections & Geometry:
+  - Mât principal:
+      * Section: `TRON 88x3.2` (tube Ø88.9 mm, épaisseur 3.2 mm, steel S235)
+      * Length:  `hauteur_mat_m` (default `1.50` m / 1500 mm)
+  - Plot métallique:
+      * AVEC PLOT (`sans_plot == False`):
+          - Section: `TCAR 150x5` (steel S235)
+          - Length:  `0.50` m
+          - Fixed support at base of plot (`Z = 0.0 m`)
+          - Baseplate / assemblage Mât/Plot verified in Robot
+      * SANS PLOT (`sans_plot == True`):
+          - NO plot bar (`TCAR 150x5` omitted completely)
+          - Mât principal `TRON 88x3.2` anchored directly (fixed support at `Z = 0.0 m`)
+          - NO plot verification, NO assemblage Mât/Plot verification
+
+B. Load Cases:
+  - Case 1 — `PP` (Poids propre, Permanent): self-weight of structure
+  - Case 2 — `PE` (Poids équipements, Permanent): `FZ = -PE` daN on mast
+      * When `boitier_lovage.echelle == "Echelle"` (ONLY allowed when
+        `sans_plot == False` AND `hauteur_mat_m >= 2.0` m): add `+15 daN`
+        ladder dead load to `PE` and insert Case 3 — `CH` (Chute d'homme,
+        Accidental: `Fh = 2.2 kN` / `220 daN`, `Fv = -9.8 kN` / `-980 daN`
+        at top of mast, with `ACC:ACC` combinations, identical to FH/RRH/RRU
+        `+ech` modeling).
+  - Wind cases (`Vent +X`, `Vent -X`, `Vent +Y`, `Vent -Y`) — Cases 3–6
+    without ladder, or Cases 4–7 when Case 3 `CH` is active:
+      * `Vent +X`: mast `Fw,mat` (+X) + equipment `Fw,Frontale` (+X)
+      * `Vent -X`: mast `Fw,mat` (-X) + equipment `Fw,Frontale` (-X)
+      * `Vent +Y`: mast `Fw,mat` (+Y) + equipment `Fw,Latéral` (+Y)
+      * `Vent -Y`: mast `Fw,mat` (-Y) + equipment `Fw,Latéral` (-Y)
+
+C. Load Combinations:
+  - Standard Eurocode 1 / Eurocode 3 ELU and ELS combinations (`PP`, `PE`,
+    `Vent ±X`, `Vent ±Y`), matching the RRH/RRU support combination matrix.
+
+D. Verifications & Exports:
+  - Always (both AVEC PLOT and SANS PLOT):
+      1. 3D model screenshot -> `lovage_screenshot` (`job_{id}_lovage_3d_view.jpg`)
+      2. Load table & combinations screenshot -> `lovage_tableau_charges` (`job_{id}_lovage_tableau_charges.png`)
+      3. Steel verification ratios screenshot (ELU/ELS) -> `lovage_verification_screenshot` (`job_{id}_lovage_verification.jpg`)
+      4. Mât principal `TRON 88x3.2` RTF calculation note -> `lovage_note_mat` (`job_{id}_lovage_note_mat.rtf`)
+      5. Support reactions text file -> `lovage_reactions_file` (`job_{id}_lovage_reactions.txt`)
+  - ONLY when AVEC PLOT (`sans_plot == False`):
+      6. Plot `TCAR 150x5` RTF calculation note -> `lovage_note_plot` (`job_{id}_lovage_note_plot.rtf`)
+      7. Assemblage Mât/Plot RTF calculation note -> `lovage_assemblage_note` (`job_{id}_lovage_assemblage_note.rtf`)
+
+
+5. MULTIPART UPLOAD KEYS & `result_data` CONTRACT
+--------------------------------------------------------------------------------
+When calling `POST /api/calculations/{id}/complete/`:
+
+A. Multipart File Field Names:
+  - `lovage_screenshot`               (REQUIRED)
+  - `lovage_tableau_charges`          (REQUIRED; alias: `lovage_loads_table`)
+  - `lovage_verification_screenshot`  (REQUIRED)
+  - `lovage_note_mat`                 (REQUIRED; aliases: `lovage_note_de_calcul`, `note_de_calcul_lovage`)
+  - `lovage_note_plot`                (REQUIRED when `sans_plot == False`; omit when `sans_plot == True`)
+  - `lovage_assemblage_note`          (REQUIRED when `sans_plot == False`; omit when `sans_plot == True`)
+  - `lovage_reactions_file`           (recommended)
+
+  Django saves these strictly segregated under:
+    - `media/screenshots_lovage/job_{id}_lovage_3d_view.jpg`
+    - `media/charges_lovage/job_{id}_lovage_tableau_charges.png`
+    - `media/verif_lovage/job_{id}_lovage_verification.jpg`
+    - `media/notes_lovage/job_{id}_lovage_note_mat.rtf`
+    - `media/notes_lovage/job_{id}_lovage_note_plot.rtf`
+    - `media/notes_lovage/job_{id}_lovage_assemblage_note.rtf`
+    - `media/reactions_lovage/job_{id}_lovage_reactions.txt`
+
+B. `result_data` JSON Payload Structure:
+  Include `"lovage"` in `active_equipments`, set `"has_lovage": true`, and
+  populate `lovage`, `lovage_items`, `lovage_totals`, and `lovage_wind_params`:
+
+```json
+{
+  "has_lovage": true,
+  "lovage_sans_plot": false,
+  "active_equipments": ["lovage"],
+  "lovage": {
+    "sans_plot": false,
+    "with_plot": true,
+    "structure_params": {
+      "mast_section": "TRON 88x3.2",
+      "plot_section": "TCAR 150x5",
+      "hauteur_mat_m": 1.5,
+      "plot_h_m": 0.5,
+      "mast_d_m": 0.0889,
+      "mast_t_m": 0.0032,
+      "cf_mast": 1.0
+    },
+    "wind_params": {
+      "region": 2,
+      "terrain_type": "IIIa",
+      "building_height_m": 15.0,
+      "vb0_ms": 24.0,
+      "kr_z": 0.22,
+      "cr_z": 0.96,
+      "vm_z": 23.04,
+      "iv_z": 0.23,
+      "qp_dan": 86.25,
+      "cf_mast": 1.0,
+      "fw_mast": 7.59
+    },
+    "extremes": {}
+  },
+  "lovage_items": [
+    {
+      "index": 1,
+      "name": "Boitiers de lovage (BLM-515709)",
+      "catalog_reference": "BLM-515709",
+      "qty": 2,
+      "h_mm": 300,
+      "w_mm": 220,
+      "d_mm": 120,
+      "dimensions_str": "300 x 220 x 120",
+      "weight_kg": 2.5,
+      "weight_total_kg": 5.0,
+      "cf_front": 1.47,
+      "cf_lat": 1.19,
+      "area_front_m2": 0.066,
+      "area_lat_m2": 0.036,
+      "fw_front": 16.73,
+      "fw_lat": 7.39,
+      "pe_dan": 5.0,
+      "fw_front_formula": "2 * 1.47 * 0.066 * 86.25 = 16.73 daN",
+      "fw_lat_formula": "2 * 1.19 * 0.036 * 86.25 = 7.39 daN"
+    }
+  ],
+  "lovage_totals": {
+    "count": 1,
+    "qty_total": 2,
+    "weight_total_kg": 5.0,
+    "pe_dan": 5.0,
+    "fw_front": 16.73,
+    "fw_lat": 7.39,
+    "fw_front_formula": "16.73 daN",
+    "fw_lat_formula": "7.39 daN"
+  },
+  "lovage_wind_params": {
+    "region": 2,
+    "terrain_type": "IIIa",
+    "building_height_m": 15.0,
+    "vb0_ms": 24.0,
+    "kr_z": 0.22,
+    "cr_z": 0.96,
+    "vm_z": 23.04,
+    "iv_z": 0.23,
+    "qp_dan": 86.25,
+    "cf_mast": 1.0,
+    "fw_mast": 7.59
+  }
+}
+```
+
+When `sans_plot == True`:
+  - Set `"lovage_sans_plot": true`, `"lovage": { "sans_plot": true, "with_plot": false, ... }`.
+  - Set `structure_params.plot_section = null` and `structure_params.plot_h_m = 0.0`.
+  - Do NOT upload `lovage_note_plot` or `lovage_assemblage_note`.
+
+
+6. VERIFICATION CHECKLIST
+--------------------------------------------------------------------------------
+1. Submit a job with `boitier_lovage.enabled = true`, `sans_plot = false`
+   (AVEC PLOT):
+   - Confirm `TRON 88x3.2` (L = `hauteur_mat_m`, default 1.50 m) + `TCAR 150x5`
+     (L = 0.50 m) are modeled in Robot.
+   - Confirm wind forces use `Cf,front = 1.47` and `Cf,lat = 1.19`.
+   - Confirm NO `CH` (chute d'homme) load case is created.
+   - Confirm all 7 artifacts (including `lovage_note_plot` and
+     `lovage_assemblage_note`) are uploaded and accepted by Django `complete()`.
+   - Confirm rendered PDF includes plot geometry, plot verification, and
+     assemblage Mât/Plot section.
+2. Submit a job with `boitier_lovage.enabled = true`, `sans_plot = true`
+   (SANS PLOT):
+   - Confirm ONLY `TRON 88x3.2` (L = `hauteur_mat_m`) is modeled (no plot bar).
+   - Confirm wind forces use `Cf,front = 1.47` and `Cf,lat = 1.19` with
+     `z = building_height_m + hauteur_mat_m` (no +0.50 m plot height).
+   - Confirm Django accepts `complete()` WITHOUT `lovage_note_plot` or
+     `lovage_assemblage_note`.
+   - Confirm rendered PDF omits the Plot row, plot verification, and assemblage
+     section.
+3. Submit a composite job (e.g. Antenna + RRU + Boîtier de Lovage):
+   - Confirm Lovage files (`_lovage_`) never collide with Antenna, RRH, RRU, or
+     FH files, and all annexes render cleanly in the merged site PDF.
+================================================================================

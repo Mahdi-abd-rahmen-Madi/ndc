@@ -269,11 +269,13 @@ export interface SectorData {
   rrhItems?: EquipmentItem[];
   rrhFoundationType?: 'metallique' | 'beton' | 'dallettes';
   rrhHauteurMatM?: number;
+  rrhEchelle?: string;
   hasRruEquipment?: boolean;
   rruSansPlot?: boolean;
   rruItems?: EquipmentItem[];
   rruFoundationType?: 'metallique' | 'beton' | 'dallettes';
   rruHauteurMatM?: number;
+  rruEchelle?: string;
   hasCoffret?: boolean;
   coffretReference?: string;
   coffretFoundationType?: 'metallique' | 'beton' | 'dallettes';
@@ -291,9 +293,15 @@ export interface ZoneTechniqueData {
   hasTdEquipment: boolean;
   tdType: 'tetraphase' | 'monophase';
   tdReference: string;
+  tdFoundationType: 'metallique' | 'beton' | 'dallettes';
+  tdHauteurMatM: number;
+  tdEchelle: string;
   hasTgbt: boolean;
   tgbtReference: string;
   tgbtEmplacement?: 'integre_bcube' | 'integre_mat';
+  tgbtFoundationType: 'metallique' | 'beton' | 'dallettes';
+  tgbtHauteurMatM: number;
+  tgbtEchelle: string;
 
   hasGps: boolean;
   gpsReference: string;
@@ -302,6 +310,9 @@ export interface ZoneTechniqueData {
   hasBoitierLovage: boolean;
   boitierLovageReference: string;
   boitierLovageQuantity: number;
+  boitierLovageFoundationType: 'metallique' | 'beton' | 'dallettes';
+  boitierLovageHauteurMatM: number;
+  boitierLovageEchelle: string;
 
   hasAtelierEnergie: boolean;
   bcubeReference: string;
@@ -341,9 +352,15 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
   hasTdEquipment: false,
   tdType: 'tetraphase',
   tdReference: '',
+  tdFoundationType: 'dallettes',
+  tdHauteurMatM: 1.70,
+  tdEchelle: "Pas d'échelle",
   hasTgbt: false,
   tgbtReference: '',
   tgbtEmplacement: 'integre_bcube',
+  tgbtFoundationType: 'dallettes',
+  tgbtHauteurMatM: 1.50,
+  tgbtEchelle: "Pas d'échelle",
 
   hasGps: false,
   gpsReference: '',
@@ -352,6 +369,9 @@ export const defaultZoneTechniqueData: ZoneTechniqueData = {
   hasBoitierLovage: false,
   boitierLovageReference: '',
   boitierLovageQuantity: 1,
+  boitierLovageFoundationType: 'dallettes',
+  boitierLovageHauteurMatM: 1.50,
+  boitierLovageEchelle: "Pas d'échelle",
 
   hasAtelierEnergie: false,
   bcubeReference: '',

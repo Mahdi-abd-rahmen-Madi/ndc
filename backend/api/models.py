@@ -97,6 +97,10 @@ class CalculationJob(models.Model):
         ("antenna_with_rru_sans_plot", "Antenne + RRU Sans Plot"),
         ("antenna_with_fh", "Antenne + FH"),
         ("antenna_with_fh_sans_plot", "Antenne + FH Sans Plot"),
+        ("lovage", "Boîtier de Lovage"),
+        ("lovage_sans_plot", "Boîtier de Lovage Sans Plot"),
+        ("antenna_with_lovage", "Antenne + Boîtier de Lovage"),
+        ("antenna_with_lovage_sans_plot", "Antenne + Boîtier de Lovage Sans Plot"),
         ("parabole", "Parabole"),
         ("coffret", "Coffret"),
     ]

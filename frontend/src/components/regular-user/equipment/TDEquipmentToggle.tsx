@@ -3,6 +3,9 @@ import { Activity } from 'lucide-react';
 import { EquipmentToggleCard } from '../../ui/EquipmentToggleCard';
 import { CustomSelect } from '../../ui/CustomSelect';
 import { DEFAULT_TD_OPTIONS } from '../../../config/catalogueDefaults';
+import { EquipmentAncrageSelector, EquipmentFoundationType } from './shared/EquipmentAncrageSelector';
+import { MastHeightInput } from './shared/MastHeightInput';
+import { EquipmentEchelleSelector } from './shared/EquipmentEchelleSelector';
 
 export interface TDEquipmentToggleProps {
   hasTdEquipment: boolean;
@@ -13,6 +16,12 @@ export interface TDEquipmentToggleProps {
   setTdReference: (val: string) => void;
   tgbtReference?: string;
   setTgbtReference?: (val: string) => void;
+  foundationType?: EquipmentFoundationType;
+  setFoundationType?: (val: EquipmentFoundationType) => void;
+  hauteurMatM?: number;
+  setHauteurMatM?: (val: number) => void;
+  echelle?: string;
+  setEchelle?: (val: string) => void;
   tdOptions?: { id: string; vendor?: string; name: string; reference?: string; weight?: number; dimensions?: string; phase?: string }[];
   operator?: string;
 }
@@ -24,6 +33,12 @@ export function TDEquipmentToggle({
   setTdType,
   tdReference,
   setTdReference,
+  foundationType = 'dallettes',
+  setFoundationType,
+  hauteurMatM = 1.70,
+  setHauteurMatM,
+  echelle = "Pas d'échelle",
+  setEchelle,
   tdOptions = [],
   operator = 'free'
 }: TDEquipmentToggleProps) {
@@ -90,12 +105,37 @@ export function TDEquipmentToggle({
             className="focus:ring-2 focus:ring-violet-500"
             options={filteredTdOptions.map(opt => ({
               value: opt.id,
-              label: (opt.vendor || 'FREE') ? `${opt.vendor || 'FREE'} - ${opt.name}` : opt.name
+              label: (opt.name || opt.reference || '').replace(/^FREE\s*[-–]?\s*/i, '').trim()
             }))}
             placeholder="Sélectionner un équipement"
           />
         </div>
       </div>
+
+      {setFoundationType && (
+        <EquipmentAncrageSelector
+          value={foundationType}
+          onChange={setFoundationType}
+          className="pt-2 border-t border-slate-200/70"
+        />
+      )}
+
+      {setHauteurMatM && (
+        <MastHeightInput
+          value={hauteurMatM}
+          onChange={setHauteurMatM}
+          defaultValue={1.70}
+        />
+      )}
+
+      <EquipmentEchelleSelector
+        foundationType={foundationType}
+        hauteurMatM={hauteurMatM}
+        defaultHauteurMatM={1.70}
+        value={echelle}
+        onChange={setEchelle}
+        accentColor="violet"
+      />
     </EquipmentToggleCard>
   );
 }

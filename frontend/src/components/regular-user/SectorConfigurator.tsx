@@ -89,9 +89,6 @@ export default function SectorConfigurator({
         </div>
         {children && (
           <div className="mt-4 pt-4 border-t border-slate-200/80">
-            <p className="text-[11px] text-slate-500 mb-3">
-              Le FH se configure par secteur, même si les antennes sont identiques.
-            </p>
             {children}
           </div>
         )}

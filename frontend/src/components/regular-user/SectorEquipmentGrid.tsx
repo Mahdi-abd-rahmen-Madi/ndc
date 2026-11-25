@@ -63,14 +63,17 @@ export function SectorEquipmentGrid({
         operator={operator}
         nombreSecteurs={nombreSecteurs}
         foundationType={sector.fhFoundationType || sector.equipmentFoundationType || 'dallettes'}
-        setFoundationType={(val) => syncUpdates({ fhFoundationType: val, equipmentFoundationType: val })}
+        setFoundationType={(val) => {
+          const isSp = val === 'dallettes';
+          syncUpdates({
+            fhFoundationType: val,
+            equipmentFoundationType: val,
+            fhSansPlot: isSp,
+            ...(isSp ? { fhEchelle: "Pas d'échelle" } : {}),
+          });
+        }}
         fhEchelle={sector.fhEchelle}
         setFhEchelle={(val) => syncUpdates({ fhEchelle: val })}
-        sansPlot={!!sector.fhSansPlot}
-        setSansPlot={(val) => syncUpdates({
-          fhSansPlot: val,
-          ...(val ? { fhEchelle: "Pas d'échelle" } : {}),
-        })}
         hauteurMatM={sector.fhHauteurMatM ?? 1.70}
         setHauteurMatM={(val) => syncUpdates({
           fhHauteurMatM: val,
@@ -100,11 +103,23 @@ export function SectorEquipmentGrid({
           operator={operator}
           nombreSecteurs={nombreSecteurs}
           disabled={isRrhDisabled}
-          disabledReason={isRrhDisabled ? 'RRH et RRU ne peuvent pas coexister sur le même site' : undefined}
           foundationType={sector.rrhFoundationType || sector.equipmentFoundationType || 'dallettes'}
-          setFoundationType={(val) => syncUpdates({ rrhFoundationType: val, equipmentFoundationType: val })}
+          setFoundationType={(val) => {
+            const isSp = val === 'dallettes';
+            syncUpdates({
+              rrhFoundationType: val,
+              equipmentFoundationType: val,
+              rrhSansPlot: isSp,
+              ...(isSp ? { rrhEchelle: "Pas d'échelle" } : {}),
+            });
+          }}
           hauteurMatM={sector.rrhHauteurMatM ?? 1.50}
-          setHauteurMatM={(val) => syncUpdates({ rrhHauteurMatM: val })}
+          setHauteurMatM={(val) => syncUpdates({
+            rrhHauteurMatM: val,
+            ...(val < 2.0 ? { rrhEchelle: "Pas d'échelle" } : {}),
+          })}
+          echelle={sector.rrhEchelle}
+          setEchelle={(val) => syncUpdates({ rrhEchelle: val })}
         />
       )}
 
@@ -128,11 +143,23 @@ export function SectorEquipmentGrid({
         operator={operator}
         nombreSecteurs={nombreSecteurs}
         disabled={isRruDisabled}
-        disabledReason={isRruDisabled ? 'RRH et RRU ne peuvent pas coexister sur le même site' : undefined}
         foundationType={sector.rruFoundationType || sector.equipmentFoundationType || 'dallettes'}
-        setFoundationType={(val) => syncUpdates({ rruFoundationType: val, equipmentFoundationType: val })}
+        setFoundationType={(val) => {
+          const isSp = val === 'dallettes';
+          syncUpdates({
+            rruFoundationType: val,
+            equipmentFoundationType: val,
+            rruSansPlot: isSp,
+            ...(isSp ? { rruEchelle: "Pas d'échelle" } : {}),
+          });
+        }}
         hauteurMatM={sector.rruHauteurMatM ?? 1.50}
-        setHauteurMatM={(val) => syncUpdates({ rruHauteurMatM: val })}
+        setHauteurMatM={(val) => syncUpdates({
+          rruHauteurMatM: val,
+          ...(val < 2.0 ? { rruEchelle: "Pas d'échelle" } : {}),
+        })}
+        echelle={sector.rruEchelle}
+        setEchelle={(val) => syncUpdates({ rruEchelle: val })}
       />
 
       {/* 4. Boîtier de jonction FO (Free) ou Coffrets fibre (hors Free) */}

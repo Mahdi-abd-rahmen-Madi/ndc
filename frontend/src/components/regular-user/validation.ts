@@ -126,10 +126,10 @@ export function calculateStepValidation(params: ValidationParams): ValidationRes
     missingStep4Equipments.push('Modèle B-cube énergie');
   }
   if (operator === 'bouygues' && zoneTechnique.hasBcubeRadio && !zoneTechnique.bcubeRadioReference) {
-    missingStep4Equipments.push('CARTES RADIO BYTEL');
+    missingStep4Equipments.push('CARTES RADIO');
   }
   if (operator === 'bouygues' && zoneTechnique.hasTgbt && !zoneTechnique.tgbtReference) {
-    missingStep4Equipments.push('Modèle TGBT');
+    missingStep4Equipments.push('Modèle');
   }
 
   const isStep1Complete = !!selectedCoords && !pendingGenericAddress;

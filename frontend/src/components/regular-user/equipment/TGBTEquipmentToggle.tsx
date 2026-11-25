@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 import { Zap } from 'lucide-react';
-import { DEFAULT_TGBT_OPTIONS, STATIC_EQUIPMENT_SPECS } from '../../../config/catalogueDefaults';
+import { DEFAULT_TGBT_OPTIONS } from '../../../config/catalogueDefaults';
 import { SelectEquipmentToggle } from './shared/SelectEquipmentToggle';
+import { EquipmentAncrageSelector, EquipmentFoundationType } from './shared/EquipmentAncrageSelector';
+import { MastHeightInput } from './shared/MastHeightInput';
+import { EquipmentEchelleSelector } from './shared/EquipmentEchelleSelector';
 
 export interface TGBTItem {
   id: string;
@@ -23,6 +26,12 @@ export interface TGBTEquipmentToggleProps {
   setTgbtReference: (val: string) => void;
   tgbtEmplacement?: TGBTEmplacement;
   setTgbtEmplacement?: (val: TGBTEmplacement) => void;
+  foundationType?: EquipmentFoundationType;
+  setFoundationType?: (val: EquipmentFoundationType) => void;
+  hauteurMatM?: number;
+  setHauteurMatM?: (val: number) => void;
+  echelle?: string;
+  setEchelle?: (val: string) => void;
   options?: TGBTItem[];
 }
 
@@ -33,6 +42,12 @@ export function TGBTEquipmentToggle({
   setTgbtReference,
   tgbtEmplacement = 'integre_bcube',
   setTgbtEmplacement,
+  foundationType = 'dallettes',
+  setFoundationType,
+  hauteurMatM = 1.50,
+  setHauteurMatM,
+  echelle = "Pas d'échelle",
+  setEchelle,
   options = [],
 }: TGBTEquipmentToggleProps) {
   const availableOptions = useMemo(
@@ -49,21 +64,6 @@ export function TGBTEquipmentToggle({
     [availableOptions]
   );
 
-  const selectedItem = useMemo(
-    () =>
-      availableOptions.find(
-        o => o.id === tgbtReference || o.name === tgbtReference || o.reference === tgbtReference
-      ) || availableOptions[0],
-    [availableOptions, tgbtReference]
-  );
-
-  const specs = selectedItem
-    ? [
-      { label: 'Dimensions', value: selectedItem.dimensions || STATIC_EQUIPMENT_SPECS.tgbt.dimensions },
-      { label: 'Poids', value: selectedItem.weight ? `${selectedItem.weight} kg` : `${STATIC_EQUIPMENT_SPECS.tgbt.weightKg} kg` },
-    ]
-    : undefined;
-
   return (
     <SelectEquipmentToggle
       title="TGBT"
@@ -72,7 +72,7 @@ export function TGBTEquipmentToggle({
       value={tgbtReference}
       onChange={setTgbtReference}
       options={selectOptions}
-      fieldLabel="Modèle TGBT"
+      fieldLabel="Modèle"
       placeholder="Sélectionner un TGBT"
       icon={Zap}
     >
@@ -105,6 +105,31 @@ export function TGBTEquipmentToggle({
           </label>
         </div>
       </div>
+
+      {setFoundationType && (
+        <EquipmentAncrageSelector
+          value={foundationType}
+          onChange={setFoundationType}
+          className="pt-2 border-t border-slate-200/70"
+        />
+      )}
+
+      {setHauteurMatM && (
+        <MastHeightInput
+          value={hauteurMatM}
+          onChange={setHauteurMatM}
+          defaultValue={1.50}
+        />
+      )}
+
+      <EquipmentEchelleSelector
+        foundationType={foundationType}
+        hauteurMatM={hauteurMatM}
+        defaultHauteurMatM={1.50}
+        value={echelle}
+        onChange={setEchelle}
+        accentColor="violet"
+      />
     </SelectEquipmentToggle>
   );
 }

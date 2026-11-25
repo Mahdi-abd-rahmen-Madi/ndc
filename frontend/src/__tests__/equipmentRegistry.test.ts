@@ -156,7 +156,7 @@ describe('equipmentRegistry', () => {
     });
 
     assert.equal(payload.fh_equipment.enabled, true);
-    assert.equal(payload.fh_equipment.sans_plot, false);
+    assert.equal(payload.fh_equipment.sans_plot, true);
     assert.equal(payload.fh_equipment.hauteur_mat_m, 1.70);
     // When Huawei 30cm Ø 300 mm is selected, diameter must be 300 and weight 6
     assert.equal(payload.fh_equipment.diameter_mm, 300);
@@ -171,18 +171,18 @@ describe('equipmentRegistry', () => {
       quantity: 2,
     });
 
-    // Structure FH check
+    // Structure FH check (dallettes => sans plot)
     assert.deepEqual(payload.structure_fh, {
       mast_section: 'TRON 88x3.2',
-      plot_section: 'TCAR 150x5',
+      plot_section: null,
       hauteur_mat_m: 1.70,
-      hauteur_plot_m: 0.50,
+      hauteur_plot_m: 0.0,
     });
 
-    // FH and RRU coexist, while RRH and RRU are mutually exclusive
+    // FH and RRU coexist, while RRH and RRU are mutually exclusive (default foundation dallettes => sans_plot)
     assert.equal(payload.rru_equipment.enabled, true);
-    assert.equal(payload.rru_equipment.sans_plot, false);
-    assert.equal(payload.rru_equipment.with_plot, true);
+    assert.equal(payload.rru_equipment.sans_plot, true);
+    assert.equal(payload.rru_equipment.with_plot, false);
     assert.equal(payload.rrh_equipment.enabled, false);
     assert.deepEqual(payload.rrh_equipment.items, []);
   });
@@ -281,12 +281,12 @@ describe('equipmentRegistry', () => {
     assert.equal(fhPayload.structure_fh?.hauteur_mat_m, 2.50);
   });
 
-  it('enforces FH echelle only when Avec plot (sans_plot=false) AND hauteur_mat_m >= 2.0m', () => {
-    // 1. Sans plot even with 2.50m mast => echelle forced to Pas d'échelle
+  it('enforces FH sans_plot and echelle from Type d\'ancrage (dallettes = sans plot, beton/metallique = with plot)', () => {
+    // 1. Dallettes (sans plot) even with 2.50m mast => sans_plot=true, echelle forced to Pas d'échelle
     const sansPlotSector = {
       ...defaultSectorData(1),
       hasFhEquipment: true,
-      fhSansPlot: true,
+      fhFoundationType: 'dallettes' as const,
       fhHauteurMatM: 2.50,
       fhEchelle: 'Echelle',
       fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
@@ -307,15 +307,16 @@ describe('equipmentRegistry', () => {
     });
     assert.equal(payloadSp.fh_equipment.sans_plot, true);
     assert.equal(payloadSp.fh_equipment.with_plot, false);
+    assert.equal(payloadSp.fh_equipment.ancrage, 'dallettes');
     assert.equal(payloadSp.fh_equipment.echelle, "Pas d'échelle");
     assert.equal(payloadSp.structure_fh?.plot_section, null);
     assert.equal(payloadSp.structure_fh?.hauteur_plot_m, 0);
 
-    // 2. Avec plot but mast < 2.0m (1.70m) => avec plot, echelle forced to Pas d'échelle
+    // 2. Plot béton (with plot) but mast < 2.0m (1.70m) => with_plot=true, echelle forced to Pas d'échelle
     const shortWithPlotSector = {
       ...defaultSectorData(1),
       hasFhEquipment: true,
-      fhSansPlot: false,
+      fhFoundationType: 'beton' as const,
       fhHauteurMatM: 1.70,
       fhEchelle: 'Echelle',
       fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
@@ -336,14 +337,15 @@ describe('equipmentRegistry', () => {
     });
     assert.equal(payloadShort.fh_equipment.sans_plot, false);
     assert.equal(payloadShort.fh_equipment.with_plot, true);
+    assert.equal(payloadShort.fh_equipment.ancrage, 'beton');
     assert.equal(payloadShort.fh_equipment.echelle, "Pas d'échelle");
     assert.equal(payloadShort.structure_fh?.plot_section, 'TCAR 150x5');
 
-    // 3. Avec plot AND mast >= 2.0m (2.00m) => Echelle allowed
+    // 3. Plot métallique (with plot) AND mast >= 2.0m (2.00m) => Echelle allowed
     const tallWithPlotSector = {
       ...defaultSectorData(1),
       hasFhEquipment: true,
-      fhSansPlot: false,
+      fhFoundationType: 'metallique' as const,
       fhHauteurMatM: 2.00,
       fhEchelle: 'Echelle',
       fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
@@ -364,8 +366,214 @@ describe('equipmentRegistry', () => {
     });
     assert.equal(payloadTall.fh_equipment.sans_plot, false);
     assert.equal(payloadTall.fh_equipment.with_plot, true);
+    assert.equal(payloadTall.fh_equipment.ancrage, 'metallique');
     assert.equal(payloadTall.fh_equipment.echelle, 'Echelle');
     assert.equal(payloadTall.structure_fh?.plot_section, 'TCAR 150x5');
     assert.equal(payloadTall.structure_fh?.hauteur_plot_m, 0.5);
+  });
+
+  it('serializes boitier_lovage from Type d\'ancrage (dallettes = sans plot, beton/metallique = with plot) with Cf,front=1.47 and Cf,lat=1.19', () => {
+    const ztAvec = {
+      ...defaultZoneTechniqueData,
+      hasBoitierLovage: true,
+      boitierLovageReference: 'BLM-515709',
+      boitierLovageQuantity: 2,
+      boitierLovageFoundationType: 'metallique' as const,
+      boitierLovageHauteurMatM: 1.50,
+    };
+    const payloadAvec = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: ztAvec,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadAvec.boitier_lovage.enabled, true);
+    assert.equal(payloadAvec.boitier_lovage.quantity, 2);
+    assert.equal(payloadAvec.boitier_lovage.ancrage, 'metallique');
+    assert.equal(payloadAvec.boitier_lovage.sans_plot, false);
+    assert.equal(payloadAvec.boitier_lovage.with_plot, true);
+    assert.equal(payloadAvec.boitier_lovage.hauteur_mat_m, 1.5);
+    assert.equal(payloadAvec.boitier_lovage.cf_front, 1.47);
+    assert.equal(payloadAvec.boitier_lovage.cf_lat, 1.19);
+    assert.equal(payloadAvec.structure_lovage?.mast_section, 'TRON 88x3.2');
+    assert.equal(payloadAvec.structure_lovage?.plot_section, 'TCAR 150x5');
+    assert.equal(payloadAvec.structure_lovage?.hauteur_plot_m, 0.5);
+
+    const ztBeton = {
+      ...ztAvec,
+      boitierLovageFoundationType: 'beton' as const,
+    };
+    const payloadBeton = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: ztBeton,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadBeton.boitier_lovage.ancrage, 'beton');
+    assert.equal(payloadBeton.boitier_lovage.sans_plot, false);
+    assert.equal(payloadBeton.boitier_lovage.with_plot, true);
+
+    const ztSans = {
+      ...ztAvec,
+      boitierLovageFoundationType: 'dallettes' as const,
+      boitierLovageHauteurMatM: 2.0,
+    };
+    const payloadSans = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: ztSans,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadSans.boitier_lovage.ancrage, 'dallettes');
+    assert.equal(payloadSans.boitier_lovage.sans_plot, true);
+    assert.equal(payloadSans.boitier_lovage.with_plot, false);
+    assert.equal(payloadSans.boitier_lovage.hauteur_mat_m, 2.0);
+    assert.equal(payloadSans.boitier_lovage.echelle, "Pas d'échelle");
+    assert.equal(payloadSans.structure_lovage?.plot_section, null);
+    assert.equal(payloadSans.structure_lovage?.hauteur_plot_m, 0.0);
+
+    // Lovage with plot (metallique) and hauteur >= 2.0m allows Echelle
+    const ztAvecEch = {
+      ...ztAvec,
+      boitierLovageHauteurMatM: 2.2,
+      boitierLovageEchelle: 'Echelle',
+    };
+    const payloadAvecEch = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: ztAvecEch,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadAvecEch.boitier_lovage.echelle, 'Echelle');
+
+    // RRH & RRU derive sans_plot and echelle from foundationType (dallettes = sans plot, beton/metallique = with plot)
+    const rrhWithPlotSector = {
+      ...defaultSectorData(1),
+      hasRrhEquipment: true,
+      rrhItems: [{ id: '1', reference: 'AHHB', quantity: 1 }],
+      rrhFoundationType: 'beton' as const,
+      rrhHauteurMatM: 2.5,
+      rrhEchelle: 'Echelle',
+    };
+    const rrhPayload = buildSectorEquipmentPayload({
+      sector: rrhWithPlotSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(rrhPayload.rrh_equipment.sans_plot, false);
+    assert.equal(rrhPayload.rrh_equipment.with_plot, true);
+    assert.equal(rrhPayload.rrh_equipment.echelle, 'Echelle');
+
+    const rruSansPlotSector = {
+      ...defaultSectorData(1),
+      hasRruEquipment: true,
+      rruItems: [{ id: '1', reference: 'Radio 4486', quantity: 1 }],
+      rruFoundationType: 'dallettes' as const,
+      rruHauteurMatM: 2.5,
+      rruEchelle: 'Echelle',
+    };
+    const rruPayload = buildSectorEquipmentPayload({
+      sector: rruSansPlotSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(rruPayload.rru_equipment.sans_plot, true);
+    assert.equal(rruPayload.rru_equipment.with_plot, false);
+    assert.equal(rruPayload.rru_equipment.echelle, "Pas d'échelle");
+
+    // TGBT (Bouygues) & TD (Free) derive sans_plot and 2m echelle from Type d'ancrage
+    const tgbtPayload = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: {
+        ...defaultZoneTechniqueData,
+        hasTgbt: true,
+        tgbtReference: 'ACTIA',
+        tgbtEmplacement: 'integre_mat',
+        tgbtFoundationType: 'metallique',
+        tgbtHauteurMatM: 2.0,
+        tgbtEchelle: 'Echelle',
+      },
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(tgbtPayload.tgbt_equipment.ancrage, 'metallique');
+    assert.equal(tgbtPayload.tgbt_equipment.sans_plot, false);
+    assert.equal(tgbtPayload.tgbt_equipment.with_plot, true);
+    assert.equal(tgbtPayload.tgbt_equipment.hauteur_mat_m, 2.0);
+    assert.equal(tgbtPayload.tgbt_equipment.echelle, 'Echelle');
+
+    const tdPayload = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: {
+        ...defaultZoneTechniqueData,
+        hasTdEquipment: true,
+        tdReference: 'td_5g',
+        tdFoundationType: 'beton',
+        tdHauteurMatM: 2.3,
+        tdEchelle: 'Echelle',
+      },
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(tdPayload.td_equipment.ancrage, 'beton');
+    assert.equal(tdPayload.td_equipment.sans_plot, false);
+    assert.equal(tdPayload.td_equipment.with_plot, true);
+    assert.equal(tdPayload.td_equipment.hauteur_mat_m, 2.3);
+    assert.equal(tdPayload.td_equipment.echelle, 'Echelle');
+
+    const tdDallettesPayload = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: {
+        ...defaultZoneTechniqueData,
+        hasTdEquipment: true,
+        tdReference: 'td_5g',
+        tdFoundationType: 'dallettes',
+        tdHauteurMatM: 2.5,
+        tdEchelle: 'Echelle',
+      },
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(tdDallettesPayload.td_equipment.sans_plot, true);
+    assert.equal(tdDallettesPayload.td_equipment.with_plot, false);
+    assert.equal(tdDallettesPayload.td_equipment.echelle, "Pas d'échelle");
   });
 });

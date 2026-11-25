@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
+import { EquipmentEchelleSelector } from './shared/EquipmentEchelleSelector';
 
 export interface RRHEquipmentToggleProps {
   hasRrhEquipment: boolean;
@@ -16,6 +17,8 @@ export interface RRHEquipmentToggleProps {
   setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
   hauteurMatM?: number;
   setHauteurMatM?: (val: number) => void;
+  echelle?: string;
+  setEchelle?: (val: string) => void;
 }
 
 export function RRHEquipmentToggle({
@@ -32,6 +35,8 @@ export function RRHEquipmentToggle({
   setFoundationType,
   hauteurMatM,
   setHauteurMatM,
+  echelle = "Pas d'échelle",
+  setEchelle,
 }: RRHEquipmentToggleProps) {
   const options = useMemo(
     () =>
@@ -61,7 +66,17 @@ export function RRHEquipmentToggle({
       hauteurMatM={hauteurMatM}
       onHauteurMatMChange={setHauteurMatM}
       defaultHauteurMatM={1.50}
-    />
+    >
+      <EquipmentEchelleSelector
+        foundationType={foundationType}
+        hauteurMatM={hauteurMatM}
+        defaultHauteurMatM={1.50}
+        value={echelle}
+        onChange={setEchelle}
+        disabled={disabled}
+        accentColor="rose"
+      />
+    </MultiRowEquipmentToggle>
   );
 }
 

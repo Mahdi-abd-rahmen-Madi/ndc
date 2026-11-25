@@ -42,8 +42,8 @@ export function BCubeRadioEquipmentToggle({
       value={bcubeRadioReference}
       onChange={setBcubeRadioReference}
       options={selectOptions}
-      fieldLabel="CARTES RADIO BYTEL"
-      placeholder="Sélectionner un CARTES RADIO BYTEL"
+      fieldLabel="CARTES RADIO"
+      placeholder="Sélectionner un CARTES RADIO"
       icon={Radio}
     />
   );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { apiClient } from '../services/apiClient';
+import { isSansPlotFromFoundation } from '../config/equipmentRegistry';
 import {
   SectorData,
   SimilarityMode,
@@ -36,9 +37,10 @@ function getFhSignature(s: SectorData): string {
   const items = (s.fhItems && s.fhItems.length > 0 ? s.fhItems : [{ reference: s.fhReference, quantity: s.fhQuantity }])
     .map(i => `${i.reference}x${i.quantity ?? 1}`).join(',');
   const hMat = s.fhHauteurMatM ?? 1.70;
-  const isSansPlot = !!s.fhSansPlot;
+  const foundation = s.fhFoundationType || s.equipmentFoundationType || 'dallettes';
+  const isSansPlot = isSansPlotFromFoundation(foundation);
   const effectiveEchelle = !isSansPlot && hMat >= 2.0 ? (s.fhEchelle || "Pas d'échelle") : "Pas d'échelle";
-  return `fh:${items}:${isSansPlot ? 'sp' : 'wp'}:${hMat}:${s.fhFoundationType ?? ''}:${effectiveEchelle}`;
+  return `fh:${items}:${isSansPlot ? 'sp' : 'wp'}:${hMat}:${foundation}:${effectiveEchelle}`;
 }
 
 export function useSectorManager({

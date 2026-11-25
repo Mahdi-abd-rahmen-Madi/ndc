@@ -281,7 +281,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         # 1. Detect type and compute unique deterministic NDC hash
         calc_type = detect_calculation_type(input_data)
 
-        # Normalize per-equipment sans_plot / with_plot defaults independently
+        # Normalize per-equipment sans_plot / with_plot / echelle defaults independently
         for eq_key in ("rrh_equipment", "rru_equipment", "fh_equipment"):
             eq_blk = input_data.get(eq_key)
             if isinstance(eq_blk, dict):
@@ -290,15 +290,16 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     is_sp = resolve_sans_plot(input_data, calc_type=calc_type, kind=kind)
                     eq_blk["sans_plot"] = is_sp
                     eq_blk["with_plot"] = not is_sp
-                    if eq_key == "fh_equipment":
-                        raw_fh_h = eq_blk.get("hauteur_mat_m")
-                        if raw_fh_h is None:
-                            raw_fh_h = (input_data.get("structure_fh") or {}).get("hauteur_mat_m")
-                        try:
-                            fh_h_num = float(raw_fh_h) if raw_fh_h is not None else 1.70
-                        except (ValueError, TypeError):
-                            fh_h_num = 1.70
-                        if is_sp or fh_h_num < 2.0:
+                    default_h = 1.70 if kind == "fh" else 1.50
+                    raw_eq_h = eq_blk.get("hauteur_mat_m")
+                    if raw_eq_h is None:
+                        raw_eq_h = (input_data.get(f"structure_{kind}") or {}).get("hauteur_mat_m")
+                    try:
+                        eq_h_num = float(raw_eq_h) if raw_eq_h is not None else default_h
+                    except (ValueError, TypeError):
+                        eq_h_num = default_h
+                    if is_sp or eq_h_num < 2.0:
+                        if kind == "fh" or "echelle" in eq_blk:
                             eq_blk["echelle"] = "Pas d'échelle"
                 else:
                     eq_blk["enabled"] = False
@@ -322,6 +323,44 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     "plot_section": None if is_sp else "TCAR 150x5",
                     "hauteur_mat_m": fh_h,
                     "hauteur_plot_m": 0.0 if is_sp else 0.50,
+                }
+
+        if (calc_type in ("lovage", "lovage_sans_plot", "antenna_with_lovage", "antenna_with_lovage_sans_plot")
+                or "lovage" in calc_type.split("_")
+                or input_data.get("is_lovage")
+                or (isinstance(input_data.get("boitier_lovage"), dict) and input_data["boitier_lovage"].get("enabled"))
+                or (isinstance(input_data.get("lovage_equipment"), dict) and input_data["lovage_equipment"].get("enabled"))):
+            lovage_blk = input_data.get("boitier_lovage") if isinstance(input_data.get("boitier_lovage"), dict) else input_data.get("lovage_equipment")
+            is_lv_sp = resolve_sans_plot(input_data, calc_type=calc_type, kind="lovage")
+            lv_h = (lovage_blk or {}).get("hauteur_mat_m") or (input_data.get("structure_lovage") or {}).get("hauteur_mat_m") or 1.50
+            if isinstance(lovage_blk, dict):
+                lovage_blk["sans_plot"] = is_lv_sp
+                lovage_blk["with_plot"] = not is_lv_sp
+                lovage_blk.setdefault("hauteur_mat_m", lv_h)
+                try:
+                    lv_h_num = float(lovage_blk.get("hauteur_mat_m") or 1.50)
+                except (ValueError, TypeError):
+                    lv_h_num = 1.50
+                if is_lv_sp or lv_h_num < 2.0:
+                    if "echelle" in lovage_blk:
+                        lovage_blk["echelle"] = "Pas d'échelle"
+                lovage_blk.setdefault("cf_front", 1.47)
+                lovage_blk.setdefault("cf_lat", 1.19)
+            if not input_data.get("structure_lovage") and not input_data.get("is_lovage"):
+                input_data["structure_lovage"] = {
+                    "mast_section": "TRON 88x3.2",
+                    "plot_section": None if is_lv_sp else "TCAR 150x5",
+                    "hauteur_mat_m": lv_h,
+                    "hauteur_plot_m": 0.0 if is_lv_sp else 0.50,
+                    "sans_plot": is_lv_sp,
+                    "with_plot": not is_lv_sp,
+                }
+            if input_data.get("is_lovage") and not input_data.get("structure"):
+                input_data["structure"] = {
+                    "mast_section": "TRON 88x3.2",
+                    "plot_section": None if is_lv_sp else "TCAR 150x5",
+                    "hauteur_mat_m": lv_h,
+                    "hauteur_plot_m": 0.0 if is_lv_sp else 0.50,
                 }
 
         if input_data.get("sans_plot") is None:
@@ -637,7 +676,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             calc_type_low == "antenna"
             or calc_type_low.startswith("antenna_with_")
             or bool(inp.get("antenna_4g") or inp.get("antenna_5g"))
-        ) and calc_type_low not in ("rrh", "rrh_sans_plot", "rru", "rru_sans_plot", "fh", "fh_sans_plot")
+        ) and calc_type_low not in ("rrh", "rrh_sans_plot", "rru", "rru_sans_plot", "fh", "fh_sans_plot", "lovage", "lovage_sans_plot")
 
         has_rrh = (
             bool(result_data.get("has_rrh"))
@@ -662,6 +701,15 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             or "fh" in calc_type_low
         )
         is_pure_fh = (calc_type_low in ("fh", "fh_sans_plot")) and not has_base_antenna and not has_rrh and not has_rru
+        lovage_inp = inp.get("boitier_lovage") or inp.get("lovage_equipment") or {}
+        has_lovage = (
+            bool(result_data.get("has_lovage"))
+            or bool(result_data.get("is_lovage"))
+            or "lovage" in active_eqs
+            or (isinstance(lovage_inp, dict) and bool(lovage_inp.get("enabled")))
+            or bool(inp.get("is_lovage"))
+            or "lovage" in calc_type_low
+        )
 
         def _save_stage_uploaded_file(file_obj, subdir, filename):
             target_dir = os.path.join(settings.MEDIA_ROOT, subdir)
@@ -852,6 +900,42 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 existing_fh_files = job.result_data.get("fh_files") if isinstance(job.result_data.get("fh_files"), dict) else {}
                 existing_fh_files.update(fh_files_saved)
                 job.result_data["fh_files"] = existing_fh_files
+
+        # 4b. Boîtier de Lovage Support Files (Zone Technique - independent block)
+        if has_lovage or any(k in files for k in (
+            'note_de_calcul_lovage', 'lovage_note_de_calcul', 'lovage_note_mat', 'lovage_note_plot',
+            'lovage_assemblage_note', 'lovage_verification_screenshot', 'lovage_tableau_charges',
+            'lovage_loads_table', 'lovage_reactions_file', 'lovage_screenshot',
+        )):
+            lovage_files_saved = {}
+            lovage_ndc = files.get("note_de_calcul_lovage") or files.get("lovage_note_de_calcul")
+            if lovage_ndc:
+                ext = os.path.splitext(lovage_ndc.name)[1] or ".rtf"
+                lovage_files_saved["note_de_calcul"] = _save_stage_uploaded_file(lovage_ndc, "notes_lovage", f"job_{job.id}_lovage_note_de_calcul{ext}")
+
+            lovage_mat = files.get("lovage_note_mat") or lovage_ndc
+            if lovage_mat:
+                lovage_files_saved["note_mat"] = _save_stage_uploaded_file(lovage_mat, "notes_lovage", f"job_{job.id}_lovage_note_mat.rtf")
+            if 'lovage_note_plot' in files:
+                lovage_files_saved["note_plot"] = _save_stage_uploaded_file(files['lovage_note_plot'], "notes_lovage", f"job_{job.id}_lovage_note_plot.rtf")
+            if 'lovage_assemblage_note' in files:
+                lovage_files_saved["assemblage_note"] = _save_stage_uploaded_file(files['lovage_assemblage_note'], "notes_lovage", f"job_{job.id}_lovage_assemblage_note.rtf")
+            if 'lovage_verification_screenshot' in files:
+                lovage_files_saved["lovage_verification_screenshot"] = _save_stage_uploaded_file(files['lovage_verification_screenshot'], "verif_lovage", f"job_{job.id}_lovage_verification.jpg")
+            lovage_charges = files.get("lovage_tableau_charges") or files.get("lovage_loads_table")
+            if lovage_charges:
+                lovage_files_saved["lovage_tableau_charges"] = _save_stage_uploaded_file(lovage_charges, "charges_lovage", f"job_{job.id}_lovage_tableau_charges.png")
+            if 'lovage_reactions_file' in files:
+                lovage_files_saved["lovage_reactions_file"] = _save_stage_uploaded_file(files['lovage_reactions_file'], "reactions_lovage", f"job_{job.id}_lovage_reactions.txt")
+            if 'lovage_screenshot' in files:
+                lovage_files_saved["lovage_screenshot"] = _save_stage_uploaded_file(files['lovage_screenshot'], "screenshots_lovage", f"job_{job.id}_lovage_3d_view.jpg")
+
+            if lovage_files_saved:
+                if not isinstance(job.result_data, dict):
+                    job.result_data = {}
+                existing_lovage_files = job.result_data.get("lovage_files") if isinstance(job.result_data.get("lovage_files"), dict) else {}
+                existing_lovage_files.update(lovage_files_saved)
+                job.result_data["lovage_files"] = existing_lovage_files
 
         # 5. Strict Quality & Completeness Validation
         from .services import validate_calculation_artifacts

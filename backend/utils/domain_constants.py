@@ -23,6 +23,14 @@ FH_DIAMETER_COEFFICIENTS: Dict[int, float] = {
     1200: 1.2,
 }
 
+# Boîtier de Lovage (Zone Technique) aerodynamic wind drag coefficients & structural defaults
+LOVAGE_CF_FRONT: float = 1.47
+LOVAGE_CF_LAT: float = 1.19
+LOVAGE_DEFAULT_MAST_SECTION: str = "TRON 88x3.2"
+LOVAGE_DEFAULT_PLOT_SECTION: str = "TCAR 150x5"
+LOVAGE_DEFAULT_MAST_HEIGHT_M: float = 1.50
+LOVAGE_DEFAULT_PLOT_HEIGHT_M: float = 0.50
+
 OPERATORS_WITHOUT_TD = frozenset({"bouygues", "orange"})
 
 OPERATOR_ALIASES: Dict[str, str] = {
@@ -123,6 +131,16 @@ def resolve_sans_plot(
             return True
         return None
 
+    def _from_ancrage(val):
+        if not val:
+            return None
+        norm = str(val).strip().lower()
+        if norm == "dallettes":
+            return True
+        if norm in ("beton", "metallique"):
+            return False
+        return None
+
     if eq_kind in ("fh", "fh_sans_plot") or (not kind and (inp.get("is_fh") is True or ct in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot"))):
         fh_eq = inp.get("fh_equipment") if isinstance(inp.get("fh_equipment"), dict) else {}
         fh_sub = res.get("fh") if isinstance(res.get("fh"), dict) else {}
@@ -134,6 +152,7 @@ def resolve_sans_plot(
             _invert_bool(fh_sub.get("with_plot")),
             fh_eq.get("sans_plot"),
             _invert_bool(fh_eq.get("with_plot")),
+            _from_ancrage(fh_eq.get("ancrage")),
             inp.get("fh_sans_plot"),
             _invert_bool(inp.get("fh_with_plot")),
             struct_fh.get("sans_plot"),
@@ -147,6 +166,39 @@ def resolve_sans_plot(
                 return False
         return "fh_sans_plot" in ct or (ct in ("fh_sans_plot", "antenna_with_fh_sans_plot"))
 
+    if eq_kind in ("lovage", "lovage_sans_plot", "boitier_lovage", "boitier_lovage_sans_plot") or (
+        not kind
+        and (
+            inp.get("is_lovage") is True
+            or ct in ("lovage", "lovage_sans_plot", "antenna_with_lovage", "antenna_with_lovage_sans_plot")
+        )
+    ):
+        lovage_eq = inp.get("boitier_lovage") if isinstance(inp.get("boitier_lovage"), dict) else {}
+        if not lovage_eq and isinstance(inp.get("lovage_equipment"), dict):
+            lovage_eq = inp.get("lovage_equipment")
+        lovage_sub = res.get("lovage") if isinstance(res.get("lovage"), dict) else {}
+        struct_lovage = inp.get("structure_lovage") if isinstance(inp.get("structure_lovage"), dict) else {}
+        for explicit in (
+            res.get("lovage_sans_plot"),
+            _invert_bool(res.get("lovage_with_plot")),
+            lovage_sub.get("sans_plot"),
+            _invert_bool(lovage_sub.get("with_plot")),
+            lovage_eq.get("sans_plot"),
+            _invert_bool(lovage_eq.get("with_plot")),
+            _from_ancrage(lovage_eq.get("ancrage")),
+            inp.get("lovage_sans_plot"),
+            _invert_bool(inp.get("lovage_with_plot")),
+            struct_lovage.get("sans_plot"),
+            _invert_bool(struct_lovage.get("with_plot")),
+            inp.get("sans_plot"),
+            struct.get("sans_plot"),
+        ):
+            if explicit is True:
+                return True
+            if explicit is False:
+                return False
+        return "lovage_sans_plot" in ct
+
     if eq_kind in ("rru", "rru_sans_plot") or (not kind and (inp.get("is_rru") is True or ct in ("rru", "rru_sans_plot", "antenna_with_rru", "antenna_with_rru_sans_plot"))):
         rru_eq = inp.get("rru_equipment") if isinstance(inp.get("rru_equipment"), dict) else {}
         rru_sub = res.get("rru") if isinstance(res.get("rru"), dict) else {}
@@ -158,6 +210,7 @@ def resolve_sans_plot(
             _invert_bool(rru_sub.get("with_plot")),
             rru_eq.get("sans_plot"),
             _invert_bool(rru_eq.get("with_plot")),
+            _from_ancrage(rru_eq.get("ancrage")),
             inp.get("rru_sans_plot"),
             _invert_bool(inp.get("rru_with_plot")),
             struct_rru.get("sans_plot"),
@@ -181,6 +234,7 @@ def resolve_sans_plot(
         _invert_bool(rrh_sub.get("with_plot")),
         rrh_eq.get("sans_plot"),
         _invert_bool(rrh_eq.get("with_plot")),
+        _from_ancrage(rrh_eq.get("ancrage")),
         inp.get("rrh_sans_plot"),
         _invert_bool(inp.get("rrh_with_plot")),
         struct_rrh.get("sans_plot"),
@@ -193,5 +247,72 @@ def resolve_sans_plot(
             return True
         if explicit is False:
             return False
-    return "rrh_sans_plot" in ct or (eq_kind not in ("rrh", "rru", "fh") and "sans_plot" in ct)
+    return "rrh_sans_plot" in ct or (eq_kind not in ("rrh", "rru", "fh", "lovage") and "sans_plot" in ct)
+
+
+def resolve_support_has_echelle(
+    input_data: Optional[Dict[str, Any]] = None,
+    result_data: Optional[Dict[str, Any]] = None,
+    kind: str = "fh",
+    is_sans_plot: bool = False,
+    hauteur_mat_m: Optional[float] = None,
+) -> bool:
+    """
+    Canonical ladder (echelle) resolution for auxiliary supports (FH, RRH, RRU, Boîtier de Lovage).
+    Allowed ONLY when WITH plot (is_sans_plot == False) AND hauteur_mat_m >= 2.0 m.
+    Never reads main antenna `structure.echelle`.
+    """
+    if is_sans_plot:
+        return False
+
+    inp = parse_json_dict(input_data)
+    res = parse_json_dict(result_data)
+    k = (kind or "fh").lower().strip()
+    eq_key = "boitier_lovage" if k in ("lovage", "boitier_lovage") else f"{k}_equipment"
+    sub_key = "lovage" if k in ("lovage", "boitier_lovage") else k
+    struct_key = f"structure_{sub_key}"
+
+    eq_in = inp.get(eq_key) if isinstance(inp.get(eq_key), dict) else {}
+    if not eq_in and sub_key == "lovage" and isinstance(inp.get("lovage_equipment"), dict):
+        eq_in = inp.get("lovage_equipment")
+    sub_res = res.get(sub_key) if isinstance(res.get(sub_key), dict) else {}
+    struct_in = inp.get(struct_key) if isinstance(inp.get(struct_key), dict) else {}
+
+    default_h = 1.70 if sub_key == "fh" else 1.50
+    raw_h = hauteur_mat_m
+    if raw_h is None:
+        raw_h = eq_in.get("hauteur_mat_m")
+    if raw_h is None:
+        raw_h = struct_in.get("hauteur_mat_m")
+    try:
+        h_num = float(raw_h) if raw_h is not None else default_h
+    except (ValueError, TypeError):
+        h_num = default_h
+    if h_num < 2.0:
+        return False
+
+    raw = (
+        eq_in.get("echelle")
+        if eq_in.get("echelle") is not None
+        else (
+            sub_res.get("echelle")
+            if sub_res.get("echelle") is not None
+            else (
+                res.get(f"{sub_key}_echelle")
+                if res.get(f"{sub_key}_echelle") is not None
+                else struct_in.get("echelle")
+            )
+        )
+    )
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        norm = raw.strip().lower()
+        return (
+            bool(norm)
+            and "pas d'echelle" not in norm
+            and "pas d'échelle" not in norm
+            and norm not in ("non", "none", "false", "0")
+        )
+    return False
 

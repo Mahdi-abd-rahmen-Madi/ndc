@@ -207,14 +207,42 @@ class RRHEquipmentSerializer(serializers.Serializer):
     sans_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
+    echelle = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="Pas d'échelle")
     items = EquipmentItemSerializer(many=True, required=False)
 
 class RRUEquipmentSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
-    sans_plot = serializers.BooleanField(required=False, default=False)
+    sans_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
+    echelle = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="Pas d'échelle")
+    items = EquipmentItemSerializer(many=True, required=False)
+
+class StructureLovageSerializer(serializers.Serializer):
+    mast_section = serializers.CharField(required=False, default="TRON 88x3.2", allow_blank=True, allow_null=True)
+    plot_section = serializers.CharField(required=False, default="TCAR 150x5", allow_blank=True, allow_null=True)
+    hauteur_mat_m = serializers.FloatField(required=False, default=1.50, allow_null=True)
+    hauteur_plot_m = serializers.FloatField(required=False, default=0.50, allow_null=True)
+    sans_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
+    with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
+
+class BoitierLovageSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField(required=False, default=False)
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    quantity = serializers.IntegerField(required=False, default=1, allow_null=True, min_value=1)
+    hauteur_mat_m = serializers.FloatField(required=False, allow_null=True, default=1.50)
+    ancrage = serializers.ChoiceField(choices=['metallique', 'beton', 'dallettes'], required=False, allow_null=True)
+    echelle = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="Pas d'échelle")
+    sans_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
+    with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
+    cf_front = serializers.FloatField(required=False, allow_null=True, default=1.47)
+    cf_lat = serializers.FloatField(required=False, allow_null=True, default=1.19)
+    hauteur_mm = serializers.FloatField(required=False, allow_null=True)
+    largeur_mm = serializers.FloatField(required=False, allow_null=True)
+    epaisseur_mm = serializers.FloatField(required=False, allow_null=True)
+    poids_kg = serializers.FloatField(required=False, allow_null=True)
+    dimensions = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
 
 class CatalogueMatchSerializer(serializers.Serializer):
@@ -228,6 +256,7 @@ class CalculationPayloadSerializer(serializers.Serializer):
     is_rrh = serializers.BooleanField(required=False, default=False)
     is_rru = serializers.BooleanField(required=False, default=False)
     is_fh = serializers.BooleanField(required=False, default=False)
+    is_lovage = serializers.BooleanField(required=False, default=False)
     sans_plot = serializers.BooleanField(required=False, default=None, allow_null=True)
     operateur = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     calculation_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -237,12 +266,15 @@ class CalculationPayloadSerializer(serializers.Serializer):
     environment = EnvironmentSerializer()
     structure = StructureSerializer()
     structure_fh = StructureFHSerializer(required=False, allow_null=True)
+    structure_lovage = StructureLovageSerializer(required=False, allow_null=True)
     antenna_4g = AntennaSerializer(required=False, allow_null=True)
     antenna_5g = AntennaSerializer(required=False, allow_null=True)
     equipment = EquipmentPayloadSerializer(required=False, allow_null=True)
     fh_equipment = FHEquipmentSerializer(required=False, allow_null=True)
     rrh_equipment = RRHEquipmentSerializer(required=False, allow_null=True)
     rru_equipment = RRUEquipmentSerializer(required=False, allow_null=True)
+    boitier_lovage = BoitierLovageSerializer(required=False, allow_null=True)
+    lovage_equipment = BoitierLovageSerializer(required=False, allow_null=True)
     catalogue_match = CatalogueMatchSerializer(required=False, allow_null=True)
 
     def validate(self, data):

@@ -34,14 +34,17 @@ def detect_calculation_type(input_data: Dict[str, Any]) -> str:
     # Check active equipment stages in canonical worker execution order:
     # 1. RRH or RRU
     # 2. FH
-    # 3. Any future registered <kind>_equipment blocks
+    # 3. Boîtier de lovage (Zone Technique)
+    # 4. Any future registered <kind>_equipment blocks
     rrh_eq = input_data.get("rrh_equipment")
     rru_eq = input_data.get("rru_equipment")
     fh_eq = input_data.get("fh_equipment")
+    lovage_eq = input_data.get("boitier_lovage") or input_data.get("lovage_equipment")
 
     rrh_active = (isinstance(rrh_eq, dict) and bool(rrh_eq.get("enabled"))) or input_data.get("is_rrh") is True
     rru_active = (isinstance(rru_eq, dict) and bool(rru_eq.get("enabled"))) or input_data.get("is_rru") is True
     fh_active = (isinstance(fh_eq, dict) and bool(fh_eq.get("enabled"))) or input_data.get("is_fh") is True
+    lovage_active = (isinstance(lovage_eq, dict) and bool(lovage_eq.get("enabled"))) or input_data.get("is_lovage") is True
 
     active_segments = []
     if rrh_active:
@@ -52,11 +55,16 @@ def detect_calculation_type(input_data: Dict[str, Any]) -> str:
     if fh_active:
         active_segments.append("fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh")
 
+    if lovage_active:
+        active_segments.append("lovage_sans_plot" if resolve_sans_plot(input_data, kind="lovage") else "lovage")
+
     if active_segments:
         joined = "_and_".join(active_segments)
         return f"antenna_with_{joined}" if has_antenna else joined
 
     type_str = f"{input_data.get('type_support', '')} {input_data.get('type', '')}".lower()
+    if "lovage" in type_str:
+        return "lovage_sans_plot" if resolve_sans_plot(input_data, kind="lovage") else "lovage"
     if "fh" in type_str or "faisceau" in type_str:
         return "fh_sans_plot" if resolve_sans_plot(input_data, kind="fh") else "fh"
     if "rru" in type_str:
@@ -138,7 +146,7 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     active_equipments = []
     equipment_keys = list(dict.fromkeys(
         ["rrh_equipment", "rru_equipment", "fh_equipment"]
-        + [k for k in sorted(data.keys()) if str(k).endswith("_equipment") and str(k) not in ("td_equipment", "tgbt_equipment")]
+        + [k for k in sorted(data.keys()) if str(k).endswith("_equipment") and str(k) not in ("td_equipment", "tgbt_equipment", "lovage_equipment")]
     ))
     for eq_key in equipment_keys:
         eq_blk = data.get(eq_key)
@@ -160,13 +168,15 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
             is_kind_sp = resolve_sans_plot(data, calc_type=normalized_type, kind=kind)
             eq_copy["sans_plot"] = is_kind_sp
             eq_copy["with_plot"] = not is_kind_sp
-            if kind == "fh":
+            if kind in ("fh", "rrh", "rru"):
+                default_h = 1.70 if kind == "fh" else 1.50
                 try:
-                    fh_h_val = float(eq_copy.get("hauteur_mat_m")) if eq_copy.get("hauteur_mat_m") is not None else 1.70
+                    eq_h_val = float(eq_copy.get("hauteur_mat_m")) if eq_copy.get("hauteur_mat_m") is not None else default_h
                 except (ValueError, TypeError):
-                    fh_h_val = 1.70
-                if is_kind_sp or fh_h_val < 2.0:
-                    eq_copy["echelle"] = "Pas d'échelle"
+                    eq_h_val = default_h
+                if is_kind_sp or eq_h_val < 2.0:
+                    if kind == "fh" or "echelle" in eq_copy:
+                        eq_copy["echelle"] = "Pas d'échelle"
             canonical[eq_key] = _normalize(eq_copy)
             sub_struct_key = f"structure_{kind}"
             if sub_struct_key in data and isinstance(data[sub_struct_key], dict):
@@ -175,6 +185,31 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     if "structure_fh" in data and isinstance(data["structure_fh"], dict):
         canonical["structure_fh"] = _normalize(data["structure_fh"])
 
+    lovage_blk = data.get("boitier_lovage") or data.get("lovage_equipment")
+    if isinstance(lovage_blk, dict) and lovage_blk.get("enabled"):
+        lv_copy = dict(lovage_blk)
+        active_equipments.append("lovage")
+        raw_h = lv_copy.get("hauteur_mat_m")
+        if raw_h is None:
+            raw_h = (data.get("structure_lovage") or {}).get("hauteur_mat_m")
+        if raw_h is None and not has_antenna:
+            raw_h = structure.get("hauteur_mat_m")
+        try:
+            lv_copy["hauteur_mat_m"] = round(float(raw_h), 3) if raw_h is not None else 1.5
+        except (ValueError, TypeError):
+            lv_copy["hauteur_mat_m"] = 1.5
+        is_lv_sp = resolve_sans_plot(data, calc_type=normalized_type, kind="lovage")
+        lv_copy["sans_plot"] = is_lv_sp
+        lv_copy["with_plot"] = not is_lv_sp
+        if is_lv_sp or lv_copy["hauteur_mat_m"] < 2.0:
+            if "echelle" in lv_copy:
+                lv_copy["echelle"] = "Pas d'échelle"
+        lv_copy.setdefault("cf_front", 1.47)
+        lv_copy.setdefault("cf_lat", 1.19)
+        canonical["boitier_lovage"] = _normalize(lv_copy)
+        if "structure_lovage" in data and isinstance(data["structure_lovage"], dict):
+            canonical["structure_lovage"] = _normalize(data["structure_lovage"])
+
     if len(active_equipments) == 1:
         single_kind = active_equipments[0]
         if resolve_sans_plot(data, calc_type=normalized_type, kind=single_kind):
@@ -182,7 +217,8 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     elif not active_equipments:
         is_rru = normalized_type in ("rru", "rru_sans_plot", "antenna_with_rru", "antenna_with_rru_sans_plot") or data.get("is_rru") is True
         is_fh = normalized_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot") or data.get("is_fh") is True
-        target_kind = "fh" if is_fh else ("rru" if is_rru else normalized_type)
+        is_lovage = normalized_type in ("lovage", "lovage_sans_plot", "antenna_with_lovage", "antenna_with_lovage_sans_plot") or data.get("is_lovage") is True
+        target_kind = "lovage" if is_lovage else ("fh" if is_fh else ("rru" if is_rru else normalized_type))
         if resolve_sans_plot(data, calc_type=normalized_type, kind=target_kind):
             canonical["sans_plot"] = True
 

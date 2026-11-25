@@ -83,9 +83,6 @@ export function PileAmodEquipmentToggle({
       <div className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
           <span>Sous-modules et cartes de capacité</span>
-          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md font-bold normal-case tracking-normal border border-slate-200">
-            Constructeur : Nokia
-          </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-0.5">
           {AMOD_MODULES_LIST.map((mod) => {

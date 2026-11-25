@@ -52,6 +52,18 @@ def validate_calculation_mast_heights(input_data: dict) -> None:
         # Normalize into canonical location before sending to worker
         eq_blk["hauteur_mat_m"] = h_val
 
+    # 3. Zone Technique: Boîtier de lovage (defaults to 1.50 m if omitted by legacy clients)
+    lovage_blk = input_data.get("boitier_lovage") or input_data.get("lovage_equipment")
+    if isinstance(lovage_blk, dict) and lovage_blk.get("enabled"):
+        sub_struct = input_data.get("structure_lovage") or {}
+        raw_h = lovage_blk.get("hauteur_mat_m")
+        if raw_h is None:
+            raw_h = sub_struct.get("hauteur_mat_m")
+        if raw_h is None:
+            raw_h = 1.50
+        h_val = validate_hauteur_mat_m(raw_h, "boitier_lovage.hauteur_mat_m")
+        lovage_blk["hauteur_mat_m"] = h_val
+
 
 def get_support_mast_height_m(result_data: dict, kind: str, fallback_h: float = None) -> float:
     """
@@ -73,4 +85,4 @@ def get_support_mast_height_m(result_data: dict, kind: str, fallback_h: float = 
             return float(fallback_h)
         except (ValueError, TypeError):
             pass
-    return 1.5 if kind in ("rrh", "rru") else 1.7
+    return 1.5 if kind in ("rrh", "rru", "lovage", "boitier_lovage") else 1.7

@@ -137,7 +137,7 @@ export function SiteConfirmationModal({
   const {
     hasTdEquipment, tdType, tdReference, hasTgbt, tgbtReference, tgbtEmplacement,
     hasGps, gpsReference, gpsMarque,
-    hasBoitierLovage, boitierLovageReference, boitierLovageQuantity,
+    hasBoitierLovage, boitierLovageReference, boitierLovageQuantity, boitierLovageFoundationType, boitierLovageHauteurMatM,
     hasAtelierEnergie, bcubeReference,
     hasBcubeRadio, bcubeRadioReference,
     hasBaie, baieRadio, baieEnergie, baieItems,
@@ -388,6 +388,9 @@ export function SiteConfirmationModal({
                   <ZoneTechniqueCard title={`Boîtier de Lovage (Qté: ${boitierLovageQuantity})`}>
                     <span className="text-xs font-bold text-slate-900 block truncate" title={config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || boitierLovageReference}>
                       {config?.boitier_lovage_references?.find((r: any) => r.id === boitierLovageReference)?.reference || boitierLovageReference || 'Sélectionné'}
+                    </span>
+                    <span className="text-[11px] text-slate-500 block mt-0.5">
+                      {formatFoundationLabel(boitierLovageFoundationType)} • Mât {Number(boitierLovageHauteurMatM ?? 1.5).toFixed(2)} m
                     </span>
                   </ZoneTechniqueCard>
                 )}
