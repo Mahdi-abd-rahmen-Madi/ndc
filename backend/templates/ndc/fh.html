@@ -52,7 +52,7 @@
     }
 </style>
 
-<div class="fh-page-1{% if fh_has_echelle %} fh-with-echelle{% endif %}">
+<div class="fh-page-1{% if fh_has_echelle and not fh_sans_plot and not is_sans_plot %} fh-with-echelle{% endif %}">
     <h1 id="etude-fh">ÉTUDE FH</h1>
 
     <h2>Description</h2>
@@ -87,13 +87,13 @@
             </tr>
             {% empty %}
             <tr>
-                <td>{{ fh_name|default:"Antenne FH" }}</td>
+                <td>{{ fh_name|default:"FH" }}</td>
                 <td class="text-center">{{ eq_qty|default:"1" }}</td>
                 <td class="text-center">{{ eq_dims|default:"Ø600" }}</td>
                 <td class="text-center">{{ eq_weight|default:"15" }}</td>
             </tr>
             {% endfor %}
-            {% if fh_has_echelle %}
+            {% if fh_has_echelle and not fh_sans_plot and not is_sans_plot %}
             <tr>
                 <td>Echelle</td>
                 <td class="text-center">1</td>
@@ -142,7 +142,7 @@
     </p>
 
     <h2>Calcul de chute</h2>
-    {% if fh_has_echelle %}
+    {% if fh_has_echelle and not fh_sans_plot and not is_sans_plot %}
     <p>
         L’effort engendré en cas de chute d'un homme sur un point d'ancrage répondant à la norme NF EN 795 - Ancrage de classe A1 "ancres structurelles conçues pour être fixées sur des surfaces verticales".<br>
         Un essai statique doit être réalisé en exerçant une force de 10 kN dans la direction dans laquelle la force est susceptible d’être appliquée en service.<br>
@@ -213,7 +213,7 @@
     PP : Poids propre de la structure<br>
     PE : Poids équipements ({% if fh_items|length > 1 %}{{ fh_qty_total }}x FH{% else %}{{ fh_qty_total|default:eq_qty
     }}x {{ fh_name|default:"Antenne FH" }}{% endif %})<br>
-    {% if fh_has_echelle %}CH : Chute d’homme<br>{% endif %}
+    {% if fh_has_echelle and not fh_sans_plot and not is_sans_plot %}CH : Chute d’homme<br>{% endif %}
     Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
 </p>
 {% endif %}

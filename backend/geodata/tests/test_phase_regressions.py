@@ -89,16 +89,39 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
             {},
             input_data={
                 "structure": {"echelle": "Pas d'échelle"},
-                "fh_equipment": {"enabled": True, "echelle": "Echelle"},
+                "fh_equipment": {"enabled": True, "hauteur_mat_m": 2.0, "echelle": "Echelle"},
             },
         )
         self.assertTrue(ctx_yes["has_echelle"])
 
+        ctx_short = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={
+                "fh_equipment": {"enabled": True, "hauteur_mat_m": 1.7, "echelle": "Echelle"},
+            },
+        )
+        self.assertFalse(ctx_short["is_sans_plot"])
+        self.assertFalse(ctx_short["has_echelle"])
+
         ctx_legacy = ndc_generator.extract_fh_ndc_context(
             {},
-            input_data={"fh_equipment": {"enabled": True, "echelle": "Echelle Söll"}},
+            input_data={"fh_equipment": {"enabled": True, "hauteur_mat_m": 2.5, "echelle": "Echelle Söll"}},
         )
         self.assertTrue(ctx_legacy["has_echelle"])
+
+        ctx_sans_plot = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={"fh_equipment": {"enabled": True, "sans_plot": True, "hauteur_mat_m": 2.5, "echelle": "Echelle"}},
+        )
+        self.assertTrue(ctx_sans_plot["is_sans_plot"])
+        self.assertFalse(ctx_sans_plot["has_echelle"])
+
+        ctx_without_plot = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={"fh_equipment": {"enabled": True, "with_plot": False, "hauteur_mat_m": 2.5, "echelle": "Echelle"}},
+        )
+        self.assertTrue(ctx_without_plot["is_sans_plot"])
+        self.assertFalse(ctx_without_plot["has_echelle"])
 
         render_ctx = {
             "region": "Region 2",
@@ -127,6 +150,45 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         self.assertNotIn("<td>Echelle</td>", html_no)
         self.assertNotIn("NF EN 795", html_no)
         self.assertNotIn("CH : Chute d’homme", html_no)
+
+        html_sans_plot = render_to_string("ndc/fh.html", {**render_ctx, "fh_has_echelle": True, "fh_sans_plot": True})
+        self.assertIn("Pas de point d’ancrage sur le mât", html_sans_plot)
+        self.assertNotIn("<td>Echelle</td>", html_sans_plot)
+        self.assertNotIn("NF EN 795", html_sans_plot)
+        self.assertNotIn("CH : Chute d’homme", html_sans_plot)
+
+    def test_fh_designation_strips_dimensions_and_falls_back_to_fh(self):
+        from django.template.loader import render_to_string
+        from geodata.ndc.equipment_context import clean_fh_designation
+
+        self.assertEqual(clean_fh_designation("BFZ 622 34/3S03H Ø 1200 mm"), "BFZ 622 34/3S03H")
+        self.assertEqual(clean_fh_designation("BFZ 622 32/3S03H Ø 600 mm"), "BFZ 622 32/3S03H")
+        self.assertEqual(clean_fh_designation("30cm Ø 300 mm"), "FH")
+        self.assertEqual(clean_fh_designation("60cm Ø 600 mm"), "FH")
+        self.assertEqual(clean_fh_designation("HUAWEI 30cm Ø 300 mm"), "FH")
+        self.assertEqual(clean_fh_designation("COMMSCOPE 60cm Ø 600 mm"), "FH")
+        self.assertEqual(clean_fh_designation("30cm"), "FH")
+        self.assertEqual(clean_fh_designation(""), "FH")
+
+        ctx_ref = ndc_generator.extract_fh_ndc_context(
+            {"fh_items": [{"name": "BFZ 622 34/3S03H Ø 1200 mm", "qty": 1, "diameter_mm": 1200, "weight_kg": 32}]},
+            input_data={"fh_equipment": {"enabled": True, "echelle": "Echelle"}},
+        )
+        self.assertEqual(ctx_ref["items"][0]["name"], "BFZ 622 34/3S03H")
+
+        ctx_dim = ndc_generator.extract_fh_ndc_context(
+            {"fh_items": [{"name": "30cm Ø 300 mm", "qty": 1, "diameter_mm": 300, "weight_kg": 6}]},
+            input_data={"fh_equipment": {"enabled": True, "echelle": "Echelle"}},
+        )
+        self.assertEqual(ctx_dim["items"][0]["name"], "FH")
+
+        html_ref = render_to_string("ndc/fh.html", {"fh_items": ctx_ref["items"], "fh_has_echelle": True})
+        self.assertIn("<td>BFZ 622 34/3S03H</td>", html_ref)
+        self.assertNotIn("BFZ 622 34/3S03H Ø 1200 mm", html_ref)
+
+        html_dim = render_to_string("ndc/fh.html", {"fh_items": ctx_dim["items"], "fh_has_echelle": True})
+        self.assertIn("<td>FH</td>", html_dim)
+        self.assertNotIn("30cm", html_dim)
 
     def test_vector_tile_paris_transform_and_height_priority(self):
         parser = VectorTileParser()

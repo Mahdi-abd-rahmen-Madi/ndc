@@ -3,6 +3,8 @@ import { apiClient } from '../services/apiClient';
 import {
   SectorData,
   SimilarityMode,
+  StructureCase,
+  DEFAULT_STRUCTURE_CASE,
   ZoneTechniqueData,
   defaultSectorData
 } from '../components/regular-user/types';
@@ -18,6 +20,7 @@ interface UseSectorManagerOptions {
   apiBaseUrl: string;
   config: any;
   operator: string;
+  structureCase?: StructureCase;
   selectedCoords: { latitude: number; longitude: number } | null;
   selectedBuildingHeight: number | string;
   setZoneTechnique: React.Dispatch<React.SetStateAction<ZoneTechniqueData>>;
@@ -25,20 +28,24 @@ interface UseSectorManagerOptions {
 
 // FH is configured per sector, even when sectors share identical antennas.
 const FH_KEYS: (keyof SectorData)[] = [
-  'hasFhEquipment', 'fhItems', 'fhReference', 'fhDiameter', 'fhQuantity', 'fhWeight', 'fhFoundationType', 'fhEchelle',
+  'hasFhEquipment', 'fhSansPlot', 'fhHauteurMatM', 'fhItems', 'fhReference', 'fhDiameter', 'fhQuantity', 'fhWeight', 'fhFoundationType', 'fhEchelle',
 ];
 
 function getFhSignature(s: SectorData): string {
   if (!s.hasFhEquipment) return 'nofh';
   const items = (s.fhItems && s.fhItems.length > 0 ? s.fhItems : [{ reference: s.fhReference, quantity: s.fhQuantity }])
     .map(i => `${i.reference}x${i.quantity ?? 1}`).join(',');
-  return `fh:${items}:${s.fhFoundationType ?? ''}:${s.fhEchelle ?? ''}`;
+  const hMat = s.fhHauteurMatM ?? 1.70;
+  const isSansPlot = !!s.fhSansPlot;
+  const effectiveEchelle = !isSansPlot && hMat >= 2.0 ? (s.fhEchelle || "Pas d'échelle") : "Pas d'échelle";
+  return `fh:${items}:${isSansPlot ? 'sp' : 'wp'}:${hMat}:${s.fhFoundationType ?? ''}:${effectiveEchelle}`;
 }
 
 export function useSectorManager({
   apiBaseUrl,
   config,
   operator,
+  structureCase = DEFAULT_STRUCTURE_CASE,
   selectedCoords,
   selectedBuildingHeight,
   setZoneTechnique
@@ -168,7 +175,7 @@ export function useSectorManager({
           if (!isCustom) {
             path += `&montage=${encodeURIComponent(sector.selectedMontage4G)}`;
           }
-          const cacheKey = `${apiBaseUrl}${path}`;
+          const cacheKey = `${apiBaseUrl}${path}&structure_case=${structureCase}`;
 
           if (lookupCache.has(cacheKey)) {
             return { hash, data: lookupCache.get(cacheKey), error: null };
@@ -218,7 +225,7 @@ export function useSectorManager({
   const uniqueGroups = useMemo(() => {
     const uniqueGroupsMap = new Map<string, { hash: string; indices: number[]; sector: SectorData }>();
     activeSectors.forEach((s, idx) => {
-      let hash = `${s.selectedHeight}_${s.selectedMontage4G}_${s.selectedMontage5G}_${s.matPrincipal}_${s.matSecondaire}_${s.brasDeDeport}_${s.plotMetallique}`;
+      let hash = `${structureCase}_${s.selectedHeight}_${s.selectedMontage4G}_${s.selectedMontage5G}_${s.matPrincipal}_${s.matSecondaire}_${s.brasDeDeport}_${s.plotMetallique}`;
       if (s.selectedMontage4G === 'custom' || s.selectedMontage5G === 'custom') {
         hash += `_4G${s.ant4gConfig.height}x${s.ant4gConfig.width}x${s.ant4gConfig.thickness}w${s.ant4gConfig.weight}`;
         hash += `_5G${s.ant5gConfig.height}x${s.ant5gConfig.width}x${s.ant5gConfig.thickness}w${s.ant5gConfig.weight}`;
@@ -227,7 +234,7 @@ export function useSectorManager({
         hash += `_ref4G${s.selectedReference4G}_ref5G${s.selectedReference5G}`;
       }
       if (similarityMode === 'all_similar') {
-        hash = 'unified_group';
+        hash = `${structureCase}_unified_group`;
       }
       hash += `_${getFhSignature(s)}`;
       if (!uniqueGroupsMap.has(hash)) {
@@ -237,7 +244,7 @@ export function useSectorManager({
       }
     });
     return Array.from(uniqueGroupsMap.values());
-  }, [activeSectors, similarityMode]);
+  }, [activeSectors, similarityMode, structureCase]);
 
   const anyLoading = activeSectors.some(s => s.loading);
   const anyError = activeSectors.find(s => s.error)?.error;

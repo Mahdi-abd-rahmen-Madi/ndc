@@ -4,6 +4,7 @@ import { Database, Map, Sliders, ExternalLink, ShieldCheck, Compass } from 'luci
 import type maplibregl from 'maplibre-gl';
 import { useAppStore } from '../stores/useAppStore';
 import { cn } from '../utils/cn';
+import { formatStructureCaseLabel } from './regular-user/types';
 import TerrainMap from './TerrainMap';
 import CLCLegend from './CLCLegend';
 import InfoPanel from './InfoPanel';
@@ -195,7 +196,7 @@ export default function EngineerWorkspace() {
                 <span>Classification de terrain</span>
                 <span className="text-slate-300">•</span>
                 <span className="font-medium text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded text-[10px]">
-                  {selectedCivilMontage || 'Cas 1'}
+                  {formatStructureCaseLabel(selectedCivilMontage)}
                 </span>
               </p>
             </div>

@@ -66,8 +66,16 @@ export function SectorEquipmentGrid({
         setFoundationType={(val) => syncUpdates({ fhFoundationType: val, equipmentFoundationType: val })}
         fhEchelle={sector.fhEchelle}
         setFhEchelle={(val) => syncUpdates({ fhEchelle: val })}
+        sansPlot={!!sector.fhSansPlot}
+        setSansPlot={(val) => syncUpdates({
+          fhSansPlot: val,
+          ...(val ? { fhEchelle: "Pas d'échelle" } : {}),
+        })}
         hauteurMatM={sector.fhHauteurMatM ?? 1.70}
-        setHauteurMatM={(val) => syncUpdates({ fhHauteurMatM: val })}
+        setHauteurMatM={(val) => syncUpdates({
+          fhHauteurMatM: val,
+          ...(val < 2.0 ? { fhEchelle: "Pas d'échelle" } : {}),
+        })}
       />
       )}
 

@@ -2,7 +2,7 @@ import json
 import hashlib
 from typing import Dict, Any
 
-from utils.domain_constants import normalize_operator, resolve_sans_plot
+from utils.domain_constants import normalize_operator, normalize_structure_case, resolve_sans_plot
 
 VOLATILE_KEYS = {
     "id", "job_id", "client_id", "client", "project_name", "site_name", "site",
@@ -120,9 +120,12 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
     has_antenna = bool(data.get("antenna_4g") or data.get("antenna_5g"))
     if normalized_type in ("rrh", "rru") or equipment:
         canonical["equipment"] = _normalize(equipment)
-    if normalized_type == "antenna" or antenna_4g or antenna_5g or has_antenna:
+    if normalized_type.startswith("antenna") or antenna_4g or antenna_5g or has_antenna:
         canonical["antenna_4g"] = _normalize(antenna_4g)
         canonical["antenna_5g"] = _normalize(antenna_5g)
+        canonical["structure"]["structure_case"] = normalize_structure_case(
+            structure.get("structure_case") or data.get("structure_case")
+        )
 
     # 1. Base Antenna mast height in structure
     if has_antenna and "hauteur_mat_m" in structure and structure["hauteur_mat_m"] is not None:
@@ -157,6 +160,13 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
             is_kind_sp = resolve_sans_plot(data, calc_type=normalized_type, kind=kind)
             eq_copy["sans_plot"] = is_kind_sp
             eq_copy["with_plot"] = not is_kind_sp
+            if kind == "fh":
+                try:
+                    fh_h_val = float(eq_copy.get("hauteur_mat_m")) if eq_copy.get("hauteur_mat_m") is not None else 1.70
+                except (ValueError, TypeError):
+                    fh_h_val = 1.70
+                if is_kind_sp or fh_h_val < 2.0:
+                    eq_copy["echelle"] = "Pas d'échelle"
             canonical[eq_key] = _normalize(eq_copy)
             sub_struct_key = f"structure_{kind}"
             if sub_struct_key in data and isinstance(data[sub_struct_key], dict):

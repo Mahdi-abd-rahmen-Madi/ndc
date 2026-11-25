@@ -5,6 +5,7 @@ import {
   Camera, Layers, ShieldCheck, Ruler, UserCheck, Hash, Check
 } from 'lucide-react';
 import ResultsPanel from './ResultsPanel';
+import NdcPdfPreviewSection from './NdcPdfPreviewSection';
 import WorkerStatusBanner from './WorkerStatusBanner';
 import { useWorkerStatus } from '../../hooks/useWorkerStatus';
 import {
@@ -164,6 +165,34 @@ function RightPreviewPanel({
     hasCoffretTransFo, coffretTransFoQuantity,
     hasPileAmod, amodModules
   } = zoneTechnique;
+
+  const handleEditParameters = () => {
+    setNdcPdfUrl(null);
+    setShowPdfPreview(false);
+    setSiteNdcError(null);
+  };
+
+  const handleNewCalculation = () => {
+    window.location.reload();
+  };
+
+  if (ndcPdfUrl && showPdfPreview) {
+    return (
+      <div className="absolute inset-0 z-0 flex flex-col overflow-hidden p-3 sm:p-4">
+        {/* Ambient Background Decorative Glows */}
+        <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-violet-400/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-indigo-400/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <NdcPdfPreviewSection
+          ndcPdfUrl={ndcPdfUrl}
+          siteName={siteName}
+          onShowSummary={() => setShowPdfPreview(false)}
+          onEditParameters={handleEditParameters}
+          onNewCalculation={handleNewCalculation}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 overflow-y-auto z-0 flex flex-col justify-between p-3 sm:p-4 lg:p-5 xl:p-6 custom-scrollbar">
@@ -779,6 +808,48 @@ function RightPreviewPanel({
       {selectedCoords && sectors[0].selectedMontage4G && sectors[0].selectedMontage5G && !anyLoading && !anyError && (
         <div className="flex-1 space-y-6 w-full">
 
+          {/* Sticky Return-to-PDF Bar when viewing Récapitulatif after NDC completion */}
+          {ndcPdfUrl && !showPdfPreview && (
+            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border border-emerald-200/90 rounded-2xl p-3 shadow-md shadow-emerald-500/5 flex flex-wrap items-center justify-between gap-2.5 animate-fadeIn">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shrink-0">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold text-slate-900 truncate">Note de Calcul générée</p>
+                  <p className="text-[11px] text-slate-500 truncate">Mode récapitulatif</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPdfPreview(true)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs shadow-emerald-600/20 transition-all cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Afficher la Note de Calcul</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEditParameters}
+                  className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Modifier les paramètres"
+                >
+                  <Settings className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Modifier</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNewCalculation}
+                  className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Nouveau Calcul</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Shared Analysis Header — shown once at top */}
           {uniqueGroups[0]?.sector.lookupResult && (
             <ResultsPanel
@@ -940,9 +1011,9 @@ function RightPreviewPanel({
           ))}
 
           {/* GENERATE GLOBAL NDC / STEP GUIDANCE */}
-          <div className="mt-6 pt-5 border-t border-slate-200">
-            {!ndcPdfUrl ? (
-              !isConfirmed ? (
+          {!ndcPdfUrl && (
+            <div className="mt-6 pt-5 border-t border-slate-200">
+              {!isConfirmed ? (
                 activeStep === 3 ? (
                   <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 animate-fadeIn">
                     <div className="flex items-center justify-between gap-4">
@@ -1089,50 +1160,9 @@ function RightPreviewPanel({
                     </div>
                   )}
                 </div>
-              )
-            ) : (
-              <div className="flex flex-col gap-4">
-                <button
-                  onClick={() => setShowPdfPreview(!showPdfPreview)}
-                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center justify-center gap-3 shadow-md shadow-emerald-500/20 transition-all text-lg cursor-pointer"
-                >
-                  <Eye className="w-5 h-5" />
-                  {showPdfPreview ? 'Fermer la Note de Calcul' : 'Ouvrir la Note de Calcul'}
-                </button>
-
-                <div className="flex gap-4 border-t border-slate-200 pt-4 mt-2">
-                  <button
-                    onClick={() => {
-                      setNdcPdfUrl(null);
-                      setShowPdfPreview(false);
-                      setSiteNdcError(null);
-                    }}
-                    className="flex-1 py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-slate-200 shadow-sm cursor-pointer"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Modifier les paramètres
-                  </button>
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold flex items-center justify-center gap-3 transition-all text-sm border border-rose-200 cursor-pointer"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Nouveau Calcul
-                  </button>
-                </div>
-                {showPdfPreview && ndcPdfUrl && (
-                  <div className="w-full h-[75vh] min-h-[600px] border border-slate-200 rounded-xl overflow-hidden bg-white mt-4 shadow-md">
-                    <iframe
-                      src={ndcPdfUrl}
-                      className="w-full h-full"
-                      title="Aperçu de la Note de Calcul"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-          </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

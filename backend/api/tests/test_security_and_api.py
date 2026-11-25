@@ -14,9 +14,11 @@ from api.tasks import send_job_to_worker
 from api.worker_status import WORKER_STATUS_CACHE_KEY
 from utils.domain_constants import (
     OPERATORS_WITHOUT_TD,
+    STRUCTURE_CASES,
     V_B0_TO_REGION,
     WIND_REGION_VB0,
     normalize_operator,
+    normalize_structure_case,
     resolve_sans_plot,
 )
 from utils.libreoffice import convert_to_pdf
@@ -66,6 +68,46 @@ class SecurityAndDomainUtilsTest(SimpleTestCase):
             "structure": {"hauteur_mat_m": 4, "mat_principal": "TRON 139x6.3"},
         }
         self.assertEqual(compute_ndc_hash("antenna", payload_a), compute_ndc_hash("antenna", payload_b))
+
+    def test_structure_case_normalization_serializer_and_hash_isolation(self):
+        from api.serializers import CalculationPayloadSerializer
+
+        self.assertEqual(STRUCTURE_CASES, ("cas1", "cas2", "cas3", "cas4"))
+        self.assertEqual(normalize_structure_case(None), "cas1")
+        self.assertEqual(normalize_structure_case(""), "cas1")
+        self.assertEqual(normalize_structure_case("A1"), "cas1")
+        self.assertEqual(normalize_structure_case("Cas 2"), "cas2")
+        self.assertEqual(normalize_structure_case("C3"), "cas3")
+        self.assertEqual(normalize_structure_case("CAS_4"), "cas4")
+
+        base_env = {"region": 2, "terrain_type": "IIIa", "building_height_m": 15}
+        base_ant = {"model": "A1", "hauteur_mm": 2100, "largeur_mm": 470, "epaisseur_mm": 210, "poids_kg": 45}
+
+        # Omitted, legacy 'A1', and explicit 'cas1' must hash identically
+        p_omitted = {"environment": base_env, "structure": {"hauteur_mat_m": 3}, "antenna_4g": base_ant}
+        p_legacy = {"environment": base_env, "structure": {"structure_case": "A1", "hauteur_mat_m": 3}, "antenna_4g": base_ant}
+        p_cas1 = {"environment": base_env, "structure": {"structure_case": "cas1", "hauteur_mat_m": 3}, "antenna_4g": base_ant}
+        p_cas2 = {"environment": base_env, "structure": {"structure_case": "cas2", "hauteur_mat_m": 3}, "antenna_4g": base_ant}
+        p_cas4 = {"environment": base_env, "structure": {"structure_case": "cas4", "hauteur_mat_m": 3}, "antenna_4g": base_ant}
+
+        self.assertEqual(compute_ndc_hash("antenna", p_omitted), compute_ndc_hash("antenna", p_cas1))
+        self.assertEqual(compute_ndc_hash("antenna", p_legacy), compute_ndc_hash("antenna", p_cas1))
+        self.assertNotEqual(compute_ndc_hash("antenna", p_cas1), compute_ndc_hash("antenna", p_cas2))
+        self.assertNotEqual(compute_ndc_hash("antenna", p_cas2), compute_ndc_hash("antenna", p_cas4))
+
+        # Serializer accepts and normalizes valid cases, defaults missing to cas1, rejects unknown
+        ser_ok = CalculationPayloadSerializer(data=p_legacy)
+        self.assertTrue(ser_ok.is_valid(), ser_ok.errors)
+        self.assertEqual(ser_ok.validated_data["structure"]["structure_case"], "cas1")
+
+        ser_default = CalculationPayloadSerializer(data=p_omitted)
+        self.assertTrue(ser_default.is_valid(), ser_default.errors)
+        self.assertEqual(ser_default.validated_data["structure"]["structure_case"], "cas1")
+
+        p_bad = {"environment": base_env, "structure": {"structure_case": "cas99", "hauteur_mat_m": 3}}
+        ser_bad = CalculationPayloadSerializer(data=p_bad)
+        self.assertFalse(ser_bad.is_valid())
+        self.assertIn("structure_case", str(ser_bad.errors))
 
     def test_libreoffice_empty_input_and_isolated_profile(self):
         self.assertEqual(convert_to_pdf([], "/tmp"), [])

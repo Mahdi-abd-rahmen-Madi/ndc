@@ -33,6 +33,36 @@ OPERATOR_ALIASES: Dict[str, str] = {
     "free_mobile": "free",
 }
 
+# Canonical antenna structure cases (Cas 1 to Cas 4)
+STRUCTURE_CASES = ("cas1", "cas2", "cas3", "cas4")
+DEFAULT_STRUCTURE_CASE = "cas1"
+STRUCTURE_CASE_ALIASES: Dict[str, str] = {
+    "cas1": "cas1", "cas 1": "cas1", "cas_1": "cas1", "cas-1": "cas1", "c1": "cas1", "a1": "cas1", "1": "cas1",
+    "cas2": "cas2", "cas 2": "cas2", "cas_2": "cas2", "cas-2": "cas2", "c2": "cas2", "a2": "cas2", "2": "cas2",
+    "cas3": "cas3", "cas 3": "cas3", "cas_3": "cas3", "cas-3": "cas3", "c3": "cas3", "a3": "cas3", "3": "cas3",
+    "cas4": "cas4", "cas 4": "cas4", "cas_4": "cas4", "cas-4": "cas4", "c4": "cas4", "a4": "cas4", "4": "cas4",
+}
+
+
+def normalize_structure_case(
+    raw: Any = None,
+    fallback_structure: Optional[Dict[str, Any]] = None,
+) -> str:
+    """
+    Return canonical structure case slug (`cas1`, `cas2`, `cas3`, or `cas4`).
+    Normalizes legacy aliases (e.g. `A1`, `C1`, `Cas 1`) and defaults missing/blank
+    values to `cas1` for backward compatibility.
+    """
+    val = raw
+    if (val is None or str(val).strip() == "") and isinstance(fallback_structure, dict):
+        val = fallback_structure.get("structure_case")
+    if val is None:
+        return DEFAULT_STRUCTURE_CASE
+    cleaned = str(val).strip().lower()
+    if not cleaned:
+        return DEFAULT_STRUCTURE_CASE
+    return STRUCTURE_CASE_ALIASES.get(cleaned, cleaned)
+
 
 def normalize_operator(raw: Optional[str], fallback_site: Optional[Dict[str, Any]] = None) -> str:
     """

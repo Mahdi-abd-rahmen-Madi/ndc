@@ -23,6 +23,14 @@ export function formatFoundationLabel(foundationType?: string | null): string {
   return FOUNDATION_LABELS[foundationType] || foundationType;
 }
 
+export const FH_ECHELLE_MIN_MAST_HEIGHT_M = 2.0;
+
+export function isFhEchelleAllowed(sansPlot?: boolean, hauteurMatM?: number | null): boolean {
+  if (sansPlot) return false;
+  const h = Number(hauteurMatM ?? 1.70);
+  return Number.isFinite(h) && h >= FH_ECHELLE_MIN_MAST_HEIGHT_M;
+}
+
 export function normalizeFhEchelle(val?: string | null): string {
   const trimmed = (val || '').trim();
   if (!trimmed) return "Pas d'échelle";
@@ -99,17 +107,22 @@ export function isEquipmentAllowedForOperator(equipmentId: string, operator: str
 
 export function extractSectorAerialState(sector?: SectorData) {
   const fallbackFoundation = sector?.equipmentFoundationType || 'dallettes';
+  const fhSansPlot = !!sector?.fhSansPlot;
+  const fhHauteurMatM = sector?.fhHauteurMatM ?? 1.70;
+  const fhEchelle = isFhEchelleAllowed(fhSansPlot, fhHauteurMatM)
+    ? normalizeFhEchelle(sector?.fhEchelle)
+    : "Pas d'échelle";
   return {
     hasFhEquipment: !!sector?.hasFhEquipment,
-    fhSansPlot: !!sector?.fhSansPlot,
+    fhSansPlot,
     fhDiameter: sector?.fhDiameter ?? 300,
     fhReference: sector?.fhReference ?? '',
     fhQuantity: sector?.fhQuantity ?? 1,
     fhWeight: sector?.fhWeight,
     fhItems: sector?.fhItems ?? [],
     fhFoundationType: sector?.fhFoundationType || fallbackFoundation,
-    fhHauteurMatM: sector?.fhHauteurMatM ?? 1.70,
-    fhEchelle: normalizeFhEchelle(sector?.fhEchelle),
+    fhHauteurMatM,
+    fhEchelle,
     hasRrhEquipment: !!sector?.hasRrhEquipment,
     rrhSansPlot: !!sector?.rrhSansPlot,
     rrhItems: sector?.rrhItems ?? [],
@@ -292,7 +305,7 @@ export function buildSectorEquipmentPayload({
       quantity: hasFh && primaryFh ? primaryFh.quantity : null,
       weight_kg: hasFh && primaryFh ? primaryFh.weight_kg : null,
       ancrage: hasFh ? aerial.fhFoundationType : null,
-      echelle: hasFh ? aerial.fhEchelle : null,
+      echelle: hasFh ? (isFhEchelleAllowed(aerial.fhSansPlot, aerial.fhHauteurMatM) ? aerial.fhEchelle : "Pas d'échelle") : null,
       items: hasFh ? finalFhItems : [],
     },
     structure_fh: hasFh

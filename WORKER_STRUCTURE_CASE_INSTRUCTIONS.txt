@@ -1,0 +1,48 @@
+================================================================================
+ROBOT STRUCTURAL ANALYSIS WORKER - ANTENNA STRUCTURE CASE (cas1 .. cas4)
+================================================================================
+
+1. SUMMARY
+--------------------------------------------------------------------------------
+The backend and frontend now pass a canonical `structure.structure_case` field
+identifying which antenna support structure case is being calculated:
+
+  - `cas1` : Cas 1 — Mât + Plot (Ant. 4G intégrée + 5G sur bras) [CURRENTLY ACTIVE]
+  - `cas2` : Cas 2 — Mât + Plot (Ant. 4G/5G – bras séparés)      [ON THE WAY]
+  - `cas3` : Cas 3 — Mât + Plot (Ant. 4G/5G – mât commun)        [ON THE WAY]
+  - `cas4` : Cas 4 — Mât + Plot (Antenne multitechno)            [ON THE WAY]
+
+NOTE: `structure.montage_id` remains reserved for agile antenna dimension
+presets (e.g. `"custom"` or catalogue preset IDs). Do NOT confuse the two.
+
+
+2. REQUIRED WORKER CHANGES
+--------------------------------------------------------------------------------
+1. Read `structure_case` dynamically from `input_data["structure"]` with `"cas1"`
+   as the fallback default (for backward compatibility with older jobs):
+     ```python
+     struct = input_data.get("structure") or {}
+     structure_case = (
+         str(struct.get("structure_case") or "cas1").strip().lower()
+     )
+     ```
+2. Route antenna modeling by `structure_case`:
+   - `cas1`: keep existing Robot modeling logic unchanged.
+   - `cas2`, `cas3`, `cas4`: plug in each new geometry handler once its
+     engineering parameters are finalized. Until then, reject unsupported cases
+     cleanly with a clear error message if received.
+3. `result_data` Payload:
+   - Echo `structure_case` inside `result_data["structure_params"]`:
+     ```json
+     "structure_params": {
+       "structure_case": "cas1"
+     }
+     ```
+
+
+3. CACHE / HASH COMPATIBILITY
+--------------------------------------------------------------------------------
+- `compute_ndc_hash` normalizes missing / blank / legacy (`A1`, `C1`, `Cas 1`)
+  values to `"cas1"`, so existing Cas 1 cache entries remain compatible while
+  future `cas2`–`cas4` jobs are isolated under distinct hashes.
+================================================================================

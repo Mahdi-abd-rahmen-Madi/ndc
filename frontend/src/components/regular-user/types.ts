@@ -202,6 +202,28 @@ export interface PreviewDocState {
   conversionFailed?: boolean;
 }
 
+export type StructureCase = 'cas1' | 'cas2' | 'cas3' | 'cas4';
+export const DEFAULT_STRUCTURE_CASE: StructureCase = 'cas1';
+
+const STRUCTURE_CASE_ALIASES: Record<string, StructureCase> = {
+  cas1: 'cas1', 'cas 1': 'cas1', cas_1: 'cas1', 'cas-1': 'cas1', c1: 'cas1', a1: 'cas1', '1': 'cas1',
+  cas2: 'cas2', 'cas 2': 'cas2', cas_2: 'cas2', 'cas-2': 'cas2', c2: 'cas2', a2: 'cas2', '2': 'cas2',
+  cas3: 'cas3', 'cas 3': 'cas3', cas_3: 'cas3', 'cas-3': 'cas3', c3: 'cas3', a3: 'cas3', '3': 'cas3',
+  cas4: 'cas4', 'cas 4': 'cas4', cas_4: 'cas4', 'cas-4': 'cas4', c4: 'cas4', a4: 'cas4', '4': 'cas4',
+};
+
+export function normalizeStructureCase(raw?: string | null): StructureCase {
+  if (!raw) return DEFAULT_STRUCTURE_CASE;
+  const cleaned = raw.trim().toLowerCase();
+  return STRUCTURE_CASE_ALIASES[cleaned] || DEFAULT_STRUCTURE_CASE;
+}
+
+export function formatStructureCaseLabel(raw?: string | null): string {
+  const normalized = normalizeStructureCase(raw);
+  const num = normalized.replace('cas', '');
+  return `Cas ${num}`;
+}
+
 export type ConfigMode = 'agile' | 'reference';
 export type SimilarityMode = 'all_similar' | 'all_different' | 'none';
 
@@ -421,6 +443,7 @@ export const defaultSectorData = (id: number): SectorData => ({
   fhFoundationType: 'dallettes',
   fhHauteurMatM: 1.70,
   fhEchelle: "Pas d'échelle",
+  fhSansPlot: false,
   hasRrhEquipment: false,
   rrhItems: [{ id: crypto.randomUUID(), reference: '', quantity: 1 }],
   rrhFoundationType: 'dallettes',

@@ -139,6 +139,7 @@ describe('equipmentRegistry', () => {
         { id: '1', reference: 'fh_huawei_30', quantity: 2 },
       ],
       fhFoundationType: 'dallettes' as const,
+      fhEchelle: 'Echelle',
       hasRruEquipment: true, // Coexists with FH
       hasRrhEquipment: true, // Segregated because RRU is present
     };
@@ -278,5 +279,93 @@ describe('equipmentRegistry', () => {
     assert.equal(fhPayload.fh_equipment.enabled, true);
     assert.equal(fhPayload.fh_equipment.hauteur_mat_m, 2.50);
     assert.equal(fhPayload.structure_fh?.hauteur_mat_m, 2.50);
+  });
+
+  it('enforces FH echelle only when Avec plot (sans_plot=false) AND hauteur_mat_m >= 2.0m', () => {
+    // 1. Sans plot even with 2.50m mast => echelle forced to Pas d'échelle
+    const sansPlotSector = {
+      ...defaultSectorData(1),
+      hasFhEquipment: true,
+      fhSansPlot: true,
+      fhHauteurMatM: 2.50,
+      fhEchelle: 'Echelle',
+      fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
+    };
+    const aerialSp = extractSectorAerialState(sansPlotSector);
+    assert.equal(aerialSp.fhSansPlot, true);
+    assert.equal(aerialSp.fhEchelle, "Pas d'échelle");
+
+    const payloadSp = buildSectorEquipmentPayload({
+      sector: sansPlotSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadSp.fh_equipment.sans_plot, true);
+    assert.equal(payloadSp.fh_equipment.with_plot, false);
+    assert.equal(payloadSp.fh_equipment.echelle, "Pas d'échelle");
+    assert.equal(payloadSp.structure_fh?.plot_section, null);
+    assert.equal(payloadSp.structure_fh?.hauteur_plot_m, 0);
+
+    // 2. Avec plot but mast < 2.0m (1.70m) => avec plot, echelle forced to Pas d'échelle
+    const shortWithPlotSector = {
+      ...defaultSectorData(1),
+      hasFhEquipment: true,
+      fhSansPlot: false,
+      fhHauteurMatM: 1.70,
+      fhEchelle: 'Echelle',
+      fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
+    };
+    const aerialShort = extractSectorAerialState(shortWithPlotSector);
+    assert.equal(aerialShort.fhSansPlot, false);
+    assert.equal(aerialShort.fhEchelle, "Pas d'échelle");
+
+    const payloadShort = buildSectorEquipmentPayload({
+      sector: shortWithPlotSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadShort.fh_equipment.sans_plot, false);
+    assert.equal(payloadShort.fh_equipment.with_plot, true);
+    assert.equal(payloadShort.fh_equipment.echelle, "Pas d'échelle");
+    assert.equal(payloadShort.structure_fh?.plot_section, 'TCAR 150x5');
+
+    // 3. Avec plot AND mast >= 2.0m (2.00m) => Echelle allowed
+    const tallWithPlotSector = {
+      ...defaultSectorData(1),
+      hasFhEquipment: true,
+      fhSansPlot: false,
+      fhHauteurMatM: 2.00,
+      fhEchelle: 'Echelle',
+      fhItems: [{ id: '1', reference: 'fh_huawei_30', quantity: 1 }],
+    };
+    const aerialTall = extractSectorAerialState(tallWithPlotSector);
+    assert.equal(aerialTall.fhSansPlot, false);
+    assert.equal(aerialTall.fhEchelle, 'Echelle');
+
+    const payloadTall = buildSectorEquipmentPayload({
+      sector: tallWithPlotSector,
+      zoneTechnique: defaultZoneTechniqueData,
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(payloadTall.fh_equipment.sans_plot, false);
+    assert.equal(payloadTall.fh_equipment.with_plot, true);
+    assert.equal(payloadTall.fh_equipment.echelle, 'Echelle');
+    assert.equal(payloadTall.structure_fh?.plot_section, 'TCAR 150x5');
+    assert.equal(payloadTall.structure_fh?.hauteur_plot_m, 0.5);
   });
 });

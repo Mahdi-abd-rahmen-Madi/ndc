@@ -28,6 +28,7 @@ from .artifact_locator import (
 )
 from .equipment_context import (
     clean_equipment_designation,
+    clean_fh_designation,
     extract_rrh_ndc_context,
     extract_rru_ndc_context,
     extract_fh_ndc_context,
@@ -969,7 +970,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         is_multi = fh_ctx['is_multi']
         qty_total = fh_ctx['qty_total']
         is_fh_sans_plot = fh_ctx['is_sans_plot']
-        fh_has_echelle = bool(fh_ctx.get('has_echelle', False))
+        fh_has_echelle = False if is_fh_sans_plot else bool(fh_ctx.get('has_echelle', False))
 
         first_item = items[0] if items else {}
         eq_dims = first_item.get('dimensions_str', 'Ø600')
@@ -990,6 +991,11 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             res_data, 'fh',
             fallback_h=struct_p.get('hauteur_mat_m') or (structure_data.get('hauteur_mat_m') if is_standalone_fh else (input_data.get('fh_equipment') or {}).get('hauteur_mat_m', 1.70))
         )
+        try:
+            if float(fh_mat_longueur_m) < 2.0:
+                fh_has_echelle = False
+        except (ValueError, TypeError):
+            pass
 
         if is_fh_sans_plot:
             fh_plot_section = None
@@ -1129,7 +1135,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'kr_z': fh_wind['kr_z'],
             'qp_z': fh_qp_z,
             'eq_qty': qty_total,
-            'fh_name': clean_equipment_designation(first_item.get('name', 'Antenne FH')),
+            'fh_name': clean_fh_designation(first_item.get('name', 'FH')),
             'eq_dims': eq_dims,
             'eq_weight': eq_weight,
             'fw_fh': fw_fh,

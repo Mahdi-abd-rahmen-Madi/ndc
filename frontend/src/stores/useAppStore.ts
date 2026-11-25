@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { GeocodingAddress } from '../utils/types';
+import { type StructureCase, normalizeStructureCase } from '../components/regular-user/types';
 
 interface AppState {
   // Auth & Profile State
@@ -32,7 +33,7 @@ interface AppState {
   // Montage Selection State
   showMontageModal: boolean;
   setShowMontageModal: (show: boolean) => void;
-  selectedCivilMontage: string | null;
+  selectedCivilMontage: StructureCase | null;
   setSelectedCivilMontage: (montage: string | null) => void;
   selectedSiteType: 'nouveau' | 'existant' | null;
   setSelectedSiteType: (type: 'nouveau' | 'existant' | null) => void;
@@ -94,7 +95,7 @@ export const useAppStore = create<AppState>((set) => ({
   showMontageModal: true,
   setShowMontageModal: (show) => set({ showMontageModal: show }),
   selectedCivilMontage: null,
-  setSelectedCivilMontage: (montage) => set({ selectedCivilMontage: montage }),
+  setSelectedCivilMontage: (montage) => set({ selectedCivilMontage: montage ? normalizeStructureCase(montage) : null }),
   selectedSiteType: null,
   setSelectedSiteType: (type) => set({ selectedSiteType: type }),
   selectedFoundationType: 'metallique',

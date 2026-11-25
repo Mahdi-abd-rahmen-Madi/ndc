@@ -46,7 +46,7 @@ import { AccordionStep } from './regular-user/AccordionStep';
 import { PortailHeader } from './regular-user/PortailHeader';
 import { calculateStepValidation } from './regular-user/validation';
 import { createResolvers } from './regular-user/resolvers';
-import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData, ProjectData, defaultProjectData } from './regular-user/types';
+import { SectorData, RequestFormData, PreviewDocState, SimilarityMode, SelectedBaieItem, ZoneTechniqueData, defaultZoneTechniqueData, ProjectData, defaultProjectData, normalizeStructureCase } from './regular-user/types';
 
 interface RegularUserViewProps {
   apiBaseUrl: string;
@@ -112,6 +112,7 @@ export default function RegularUserView({
   }, [foundationType, setSelectedFoundationType]);
 
   const siteType = initialSiteType || 'nouveau';
+  const structureCase = normalizeStructureCase(initialMontage);
   const ancrageInfo = foundationType === 'metallique' ? 'Fixation sur plot métallique' :
     foundationType === 'beton' ? 'Fixation sur plot béton' :
       foundationType === 'dallettes' ? 'Fixation sur dallettes' :
@@ -173,6 +174,7 @@ export default function RegularUserView({
     apiBaseUrl,
     config,
     operator,
+    structureCase,
     selectedCoords,
     selectedBuildingHeight: buildingHeight,
     setZoneTechnique
@@ -249,6 +251,7 @@ export default function RegularUserView({
     clientLogoUrl,
     siteImageUrl,
     siteType,
+    structureCase,
     dalleThickness,
     etancheite,
     plotHeight,
@@ -265,6 +268,16 @@ export default function RegularUserView({
   });
 
   const [forceRecalculateOnConfirm, setForceRecalculateOnConfirm] = useState(false);
+
+  // Automatically open the fitted PDF preview in the right panel once a Note de Calcul is ready
+  useEffect(() => {
+    if (ndcPdfUrl) {
+      setShowPdfPreview(true);
+      setShowMap(false);
+    } else {
+      setShowPdfPreview(false);
+    }
+  }, [ndcPdfUrl, setShowMap]);
 
   const handleGenerateSiteNdc = (options?: { forceRecalculate?: boolean }) => {
     if (!siteName.trim() || !clientName.trim()) {
@@ -327,7 +340,11 @@ export default function RegularUserView({
           clientLogoUrl={clientLogoUrl}
           onClientLogoUploaded={setClientLogoUrl}
           apiBaseUrl={apiBaseUrl}
-          onSelectCalculation={(url) => setNdcPdfUrl(url)}
+          onSelectCalculation={(url) => {
+            setNdcPdfUrl(url);
+            setShowPdfPreview(true);
+            setShowMap(false);
+          }}
         />
       )}
 
@@ -397,40 +414,37 @@ export default function RegularUserView({
                     <div key={s.num} className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-1.5">
                         <div
-                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition-all ${
-                            isCompleted
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shrink-0 transition-all ${isCompleted
                               ? 'bg-emerald-500 text-white shadow-2xs'
                               : isCurrent
                                 ? 'bg-violet-600 text-white ring-2 ring-violet-200 shadow-2xs'
                                 : isStepLocked
                                   ? 'bg-slate-200 text-slate-400'
                                   : 'bg-slate-300 text-slate-600'
-                          }`}
+                            }`}
                         >
                           {isCompleted ? '✓' : s.num}
                         </div>
                         <div
-                          className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                            isStepLocked
+                          className={`h-2 flex-1 rounded-full transition-all duration-300 ${isStepLocked
                               ? 'bg-slate-100'
                               : isCompleted
                                 ? 'bg-emerald-500'
                                 : isCurrent
                                   ? 'bg-gradient-to-r from-violet-600 to-indigo-600 shadow-2xs'
                                   : 'bg-slate-200'
-                          }`}
+                            }`}
                         />
                       </div>
                       <span
-                        className={`text-[11px] truncate transition-colors ${
-                          isStepLocked
+                        className={`text-[11px] truncate transition-colors ${isStepLocked
                             ? 'text-slate-400 font-normal'
                             : isCurrent
                               ? 'font-bold text-violet-900'
                               : isCompleted
                                 ? 'font-semibold text-emerald-800'
                                 : 'font-medium text-slate-600'
-                        }`}
+                          }`}
                       >
                         {s.label}
                       </span>
@@ -577,27 +591,27 @@ export default function RegularUserView({
                                 />
                               ) : null
                             ) : (
-                            <div className="mt-4 pt-4 border-t border-slate-200/80">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div className="p-1.5 bg-gradient-to-br from-violet-500/10 to-indigo-500/20 text-violet-600 rounded-lg border border-violet-200/50 shadow-2xs">
-                                    <Radio className="w-3.5 h-3.5" />
-                                  </div>
-                                  <div>
-                                    <h4 className="text-xs font-bold text-slate-900 tracking-tight">Équipements</h4>
+                              <div className="mt-4 pt-4 border-t border-slate-200/80">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-gradient-to-br from-violet-500/10 to-indigo-500/20 text-violet-600 rounded-lg border border-violet-200/50 shadow-2xs">
+                                      <Radio className="w-3.5 h-3.5" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-bold text-slate-900 tracking-tight">Équipements</h4>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              <SectorEquipmentGrid
-                                sector={sector}
-                                sectorIndex={idx}
-                                updateSector={updateSector}
-                                config={config}
-                                operator={operator}
-                                nombreSecteurs={nombreSecteurs}
-                              />
-                            </div>
+                                <SectorEquipmentGrid
+                                  sector={sector}
+                                  sectorIndex={idx}
+                                  updateSector={updateSector}
+                                  config={config}
+                                  operator={operator}
+                                  nombreSecteurs={nombreSecteurs}
+                                />
+                              </div>
                             )}
                           </SectorConfigurator>
                         </Fragment>

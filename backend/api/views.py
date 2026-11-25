@@ -290,6 +290,16 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     is_sp = resolve_sans_plot(input_data, calc_type=calc_type, kind=kind)
                     eq_blk["sans_plot"] = is_sp
                     eq_blk["with_plot"] = not is_sp
+                    if eq_key == "fh_equipment":
+                        raw_fh_h = eq_blk.get("hauteur_mat_m")
+                        if raw_fh_h is None:
+                            raw_fh_h = (input_data.get("structure_fh") or {}).get("hauteur_mat_m")
+                        try:
+                            fh_h_num = float(raw_fh_h) if raw_fh_h is not None else 1.70
+                        except (ValueError, TypeError):
+                            fh_h_num = 1.70
+                        if is_sp or fh_h_num < 2.0:
+                            eq_blk["echelle"] = "Pas d'échelle"
                 else:
                     eq_blk["enabled"] = False
                     eq_blk["items"] = []

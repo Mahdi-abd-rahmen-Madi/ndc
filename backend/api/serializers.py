@@ -1,7 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import UserProfile, Role, EngineerProfile, CalculationJob, GeneratedSiteNdc
-from utils.domain_constants import ALLOWED_FH_DIAMETERS
+from utils.domain_constants import (
+    ALLOWED_FH_DIAMETERS,
+    DEFAULT_STRUCTURE_CASE,
+    STRUCTURE_CASES,
+    normalize_structure_case,
+)
 
 
 class RoleSerializer(serializers.ModelSerializer):
@@ -99,6 +104,9 @@ class EnvironmentSerializer(serializers.Serializer):
     plot_height_m = serializers.FloatField(required=False, allow_null=True)
 
 class StructureSerializer(serializers.Serializer):
+    structure_case = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, default=DEFAULT_STRUCTURE_CASE
+    )
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True)
     hauteur_plot_m = serializers.FloatField(required=False, allow_null=True)
     plot_h_m = serializers.FloatField(required=False, allow_null=True)
@@ -115,6 +123,14 @@ class StructureSerializer(serializers.Serializer):
     mast_5g_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     mast_section = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     nombre_secteurs = serializers.IntegerField(required=False, allow_null=True, default=3)
+
+    def validate_structure_case(self, value):
+        normalized = normalize_structure_case(value)
+        if normalized not in STRUCTURE_CASES:
+            raise serializers.ValidationError(
+                f"structure_case must be one of {', '.join(STRUCTURE_CASES)} (got {value!r})."
+            )
+        return normalized
 
 class AntennaSerializer(serializers.Serializer):
     model = serializers.CharField(required=False, allow_blank=True, allow_null=True)

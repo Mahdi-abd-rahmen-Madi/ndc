@@ -368,6 +368,7 @@ export default function TerrainMap({
 
   const [zoom, setZoom] = useState<number>(6);
   const [showWarning, setShowWarning] = useState<boolean>(false);
+  const [webglError, setWebglError] = useState<string | null>(null);
 
   useEffect(() => {
     if (showWarning) {
@@ -455,31 +456,39 @@ export default function TerrainMap({
     if (!mapContainerRef.current) return;
 
     // Initialize the map once per mount (callbacks accessed via refs)
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      attributionControl: false,
-      style: {
-        version: 8,
-        sources: {
-          'google-satellite': {
-            type: 'raster',
-            tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
-            tileSize: 256,
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        attributionControl: false,
+        style: {
+          version: 8,
+          sources: {
+            'google-satellite': {
+              type: 'raster',
+              tiles: ['https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'],
+              tileSize: 256,
+            },
           },
+          layers: [
+            {
+              id: 'google-satellite',
+              type: 'raster',
+              source: 'google-satellite',
+              minzoom: 0,
+              maxzoom: 22,
+            },
+          ],
         },
-        layers: [
-          {
-            id: 'google-satellite',
-            type: 'raster',
-            source: 'google-satellite',
-            minzoom: 0,
-            maxzoom: 22,
-          },
-        ],
-      },
-      center: [2.3522, 48.8566], // Paris, France
-      zoom: 6,
-    });
+        center: [2.3522, 48.8566], // Paris, France
+        zoom: 6,
+      });
+      setWebglError(null);
+    } catch (err) {
+      console.error('Failed to initialize MapLibre WebGL context:', err);
+      setWebglError("WebGL n'est pas disponible dans ce navigateur.");
+      return;
+    }
 
     mapRef.current = map;
 
@@ -689,8 +698,22 @@ export default function TerrainMap({
     <div className="map-container relative w-full h-full">
       <div ref={mapContainerRef} className="w-full h-full" />
 
+      {webglError && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/90 p-6 text-center text-white">
+          <div className="max-w-md rounded-2xl border border-white/15 bg-slate-800/90 p-5 shadow-xl">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-semibold">{webglError}</p>
+            <p className="mt-1.5 text-xs text-slate-300">
+              Activez l&apos;accélération matérielle / WebGL dans les paramètres de votre navigateur ou redémarrez-le pour afficher la carte interactive.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Zoom guidance overlay */}
-      {zoom < 13 && (
+      {!webglError && zoom < 13 && (
         <div className="absolute top-4 right-4 pointer-events-none z-10 transition-all duration-300">
           <div className="bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 px-3.5 shadow-xl flex items-center gap-3 text-white ring-1 ring-black/10">
             <div className="flex items-center gap-2 text-amber-400 shrink-0">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertCircle, ZoomIn, X, Check } from 'lucide-react';
+import type { StructureCase } from './regular-user/types';
 
 interface MontageSelectionModalProps {
   show: boolean;
@@ -8,11 +9,11 @@ interface MontageSelectionModalProps {
   selectedFoundationType?: 'metallique' | 'beton' | 'encastre' | 'dallettes' | null;
   onSiteTypeSelect: (type: 'nouveau' | 'existant') => void;
   onFoundationTypeSelect?: (type: 'metallique' | 'beton' | 'encastre' | 'dallettes') => void;
-  onCasSelect: (cas: string) => void;
+  onCasSelect: (cas: StructureCase) => void;
 }
 
 interface CaseStructure {
-  id: string;
+  id: StructureCase;
   name: string;
   code: string;
   image: string;
@@ -24,9 +25,9 @@ interface CaseStructure {
 
 const CASES_DATA: CaseStructure[] = [
   {
-    id: 'A1',
+    id: 'cas1',
     name: 'Cas 1',
-    code: 'C1',
+    code: 'Cas 1',
     image: '/cas1.png',
     title: 'Mât + Plot',
     subtitle: 'Ant. 4G intégrée + 5G sur bras',
@@ -34,9 +35,9 @@ const CASES_DATA: CaseStructure[] = [
     statusLabel: 'En exploitation',
   },
   {
-    id: 'A2',
+    id: 'cas2',
     name: 'Cas 2',
-    code: 'C2',
+    code: 'Cas 2',
     image: '/cas2.png',
     title: 'Mât + Plot',
     subtitle: 'Ant. 4G/5G – bras séparés',
@@ -44,9 +45,9 @@ const CASES_DATA: CaseStructure[] = [
     statusLabel: 'En développement',
   },
   {
-    id: 'A3',
+    id: 'cas3',
     name: 'Cas 3',
-    code: 'C3',
+    code: 'Cas 3',
     image: '/cas3.png',
     title: 'Mât + Plot',
     subtitle: 'Ant. 4G/5G – mât commun',
@@ -54,9 +55,9 @@ const CASES_DATA: CaseStructure[] = [
     statusLabel: 'En développement',
   },
   {
-    id: 'A4',
+    id: 'cas4',
     name: 'Cas 4',
-    code: 'C4',
+    code: 'Cas 4',
     image: '/cas4.png',
     title: 'Mât + Plot',
     subtitle: 'Antenne multitechno',
@@ -147,14 +148,14 @@ export default function MontageSelectionModal({
         {/* 4 Cases Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-3 flex-1 overflow-y-auto pr-0.5">
           {CASES_DATA.map((item) => {
-            const isCas1Available = item.id === 'A1' && selectedSiteType === 'nouveau';
+            const isCas1Available = item.id === 'cas1' && selectedSiteType === 'nouveau';
 
             return (
               <div
                 key={item.id}
                 onClick={() => {
                   if (isCas1Available) {
-                    onCasSelect('A1');
+                    onCasSelect('cas1');
                     onClose();
                   }
                 }}
@@ -215,7 +216,7 @@ export default function MontageSelectionModal({
                       </span>
                     ) : (
                       <span className="bg-slate-200/90 text-slate-500 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                        {item.id === 'A1' ? 'Site Neuf requis' : 'Indisponible'}
+                        {item.id === 'cas1' ? 'Site Neuf requis' : 'Indisponible'}
                       </span>
                     )}
                   </div>
@@ -255,7 +256,7 @@ export default function MontageSelectionModal({
                       </div>
                     ) : (
                       <span className="text-[11px] text-slate-400 font-medium bg-slate-50 border border-slate-100 py-1.5 px-2.5 rounded-lg block w-full text-center truncate">
-                        {item.id === 'A1'
+                        {item.id === 'cas1'
                           ? 'Sélectionner "Site Neuf" ci-dessus'
                           : 'En cours de développement'}
                       </span>
@@ -311,17 +312,17 @@ export default function MontageSelectionModal({
 
               {/* Actions Footer */}
               <div className="p-4 bg-white border-t border-slate-100 flex justify-end">
-                {zoomedCase.id === 'A1' && selectedSiteType === 'nouveau' ? (
+                {zoomedCase.id === 'cas1' && selectedSiteType === 'nouveau' ? (
                   <button
                     type="button"
                     onClick={() => {
-                      onCasSelect('A1');
+                      onCasSelect('cas1');
                       setZoomedCase(null);
                       onClose();
                     }}
                     className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
                   >
-                    Choisir ce Cas (A1)
+                    Choisir ce Cas (Cas 1)
                   </button>
                 ) : (
                   <button

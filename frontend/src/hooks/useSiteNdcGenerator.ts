@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
-import type {
-  SectorData,
-  CatalogueConfig,
-  ZoneTechniqueData,
-  SelectedBaieItem
+import {
+  type SectorData,
+  type CatalogueConfig,
+  type ZoneTechniqueData,
+  type SelectedBaieItem,
+  type StructureCase,
+  DEFAULT_STRUCTURE_CASE,
 } from '../components/regular-user/types';
 import { getTerrainDetails } from '../utils/terrainDetails';
 import { buildSectorEquipmentPayload } from '../config/equipmentRegistry';
@@ -41,6 +43,7 @@ interface UseSiteNdcGeneratorParams {
   clientLogoUrl?: string | null;
   siteImageUrl: string | null;
   siteType: string;
+  structureCase?: StructureCase;
   dalleThickness: number | string;
   etancheite: number | string;
   plotHeight: number;
@@ -69,6 +72,7 @@ export function useSiteNdcGenerator({
   clientLogoUrl,
   siteImageUrl,
   siteType,
+  structureCase = DEFAULT_STRUCTURE_CASE,
   dalleThickness,
   etancheite,
   plotHeight,
@@ -93,6 +97,8 @@ export function useSiteNdcGenerator({
   const isFullyStandard = useCallback(() => {
     // If development flag is set to force worker execution, bypass catalogue fast-track
     if (FORCE_WORKER_CALCULATION) return false;
+    // Only Cas 1 has precalculated standard catalogue documents
+    if (structureCase !== 'cas1') return false;
 
     // Any auxiliary equipment requiring dedicated Robot simulation (e.g. RRH mast/structure)
     const s1 = activeSectors[0];
@@ -126,7 +132,7 @@ export function useSiteNdcGenerator({
       }
     }
     return true;
-  }, [uniqueGroups, config, foundationType, selectedBuildingHeight, activeSectors, operator]);
+  }, [uniqueGroups, config, foundationType, selectedBuildingHeight, activeSectors, operator, structureCase]);
 
   const confirmGenerateSiteNdc = useCallback(async (forceRecalculate: boolean = false) => {
     setIsGeneratingSiteNdc(true);
@@ -204,6 +210,7 @@ export function useSiteNdcGenerator({
             plot_height_m: 0.6
           },
           structure: {
+            structure_case: structureCase,
             mast_height_m: activeSectors[0]?.selectedHeight,
             mat_principal: "CH 88.9x3",
             nombre_secteurs: activeSectors.length,
@@ -296,6 +303,7 @@ export function useSiteNdcGenerator({
             plot_height_m: plotHeight
           },
           structure: {
+            structure_case: structureCase,
             hauteur_mat_m: sector.selectedHeight,
             montage_id: (sector.selectedMontage4G === sector.selectedMontage5G && sector.selectedMontage4G !== 'custom') ? sector.selectedMontage4G : 'custom',
             is_custom_montage: sector.selectedMontage4G !== sector.selectedMontage5G || sector.selectedMontage4G === 'custom',
@@ -530,6 +538,7 @@ export function useSiteNdcGenerator({
     selectedAddress,
     selectedCoords,
     siteType,
+    structureCase,
     etancheite,
     dalleThickness,
     plotHeight,

@@ -11,10 +11,30 @@ def clean_equipment_designation(name: str) -> str:
     if not name:
         return ""
     cleaned = str(name).strip()
-    cleaned = re.sub(r'^(?:NOKIA|HUAWEI|ERICSSON|ZTE|SAMSUNG)\s+', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'^(?:NOKIA|HUAWEI|ERICSSON|ZTE|SAMSUNG|COMMSCOPE)\s+', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'^(?:RRH|RRU)\s+', '', cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r'^(?:NOKIA|HUAWEI|ERICSSON|ZTE|SAMSUNG)\s+', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'^(?:NOKIA|HUAWEI|ERICSSON|ZTE|SAMSUNG|COMMSCOPE)\s+', '', cleaned, flags=re.IGNORECASE)
     return cleaned.strip() or str(name)
+
+
+def clean_fh_designation(name: str) -> str:
+    """
+    Formats an FH designation for the NDC report:
+    - Strips brand prefixes and trailing diameter/dimension annotations (e.g. "Ø 1200 mm", "600mm").
+    - If a proper reference remains (e.g. "BFZ 622 34/3S03H"), returns just that reference.
+    - If the name only contained dimensions (e.g. "30cm Ø 300 mm", "60cm") or is empty, returns "FH".
+    """
+    if not name or not str(name).strip():
+        return "FH"
+    cleaned = clean_equipment_designation(str(name))
+    # Remove diameter annotations like "Ø 1200 mm", "Ø300", "(Ø 600 mm)"
+    cleaned = re.sub(r'[\s\-–(]*[Øø]\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)?\s*\)?', '', cleaned, flags=re.IGNORECASE)
+    # Remove standalone or trailing dimension tokens like "30cm", "60 cm", "1200 mm"
+    cleaned = re.sub(r'(?:^|[\s\-–(]+)\d+(?:[.,]\d+)?\s*(?:mm|cm)\b\s*\)?', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip(" -–/()")
+    if not cleaned or re.fullmatch(r'\d+(?:[.,]\d+)?\s*(?:mm|cm|m)?', cleaned, flags=re.IGNORECASE):
+        return "FH"
+    return cleaned
 
 
 def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: float = 0.0) -> dict:
@@ -560,13 +580,29 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
 
     fh_eq_in = input_data.get("fh_equipment") if isinstance(input_data.get("fh_equipment"), dict) else {}
     fh_struct_in = input_data.get("structure_fh") if isinstance(input_data.get("structure_fh"), dict) else {}
+    raw_h_mat_for_ech = (
+        structure.get("hauteur_mat_m")
+        if structure.get("hauteur_mat_m") is not None
+        else (
+            fh_eq_in.get("hauteur_mat_m")
+            if fh_eq_in.get("hauteur_mat_m") is not None
+            else fh_struct_in.get("hauteur_mat_m")
+        )
+    )
+    try:
+        fh_h_mat_num = float(raw_h_mat_for_ech) if raw_h_mat_for_ech is not None else 1.70
+    except (ValueError, TypeError):
+        fh_h_mat_num = 1.70
+
     raw_fh_echelle = (
         fh_eq_in.get("echelle")
         or fh_sub.get("echelle")
         or result_data.get("fh_echelle")
         or fh_struct_in.get("echelle")
     )
-    if isinstance(raw_fh_echelle, bool):
+    if is_sans_plot or fh_h_mat_num < 2.0:
+        fh_has_echelle = False
+    elif isinstance(raw_fh_echelle, bool):
         fh_has_echelle = raw_fh_echelle
     elif isinstance(raw_fh_echelle, str):
         norm_ech = raw_fh_echelle.strip().lower()
@@ -610,7 +646,7 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
 
             items.append({
                 "index": it.get("index", idx),
-                "name": clean_equipment_designation(it.get("name") or it.get("reference") or "Antenne FH"),
+                "name": clean_fh_designation(it.get("name") or it.get("reference") or "FH"),
                 "qty": qty,
                 "quantity": qty,
                 "diameter_mm": diam,
@@ -679,7 +715,7 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
 
                 items.append({
                     "index": idx,
-                    "name": clean_equipment_designation(spec.get("name") if spec else ref),
+                    "name": clean_fh_designation((spec.get("name") if spec else None) or ref),
                     "qty": qty,
                     "quantity": qty,
                     "diameter_mm": diam,
@@ -753,7 +789,7 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
     table_0_rows = []
     for it in items:
         table_0_rows.append({
-            "name": it.get("name", "Antenne FH"),
+            "name": clean_fh_designation(it.get("name") or "FH"),
             "quantity": it.get("qty", 1),
             "dimensions_str": it.get("dimensions_str", f"Ø{it.get('diameter_mm', 600):g}"),
             "weight_unit_kg": f"{float(it.get('weight_kg', 0)):g}",

@@ -4,10 +4,11 @@ ROBOT STRUCTURAL ANALYSIS WORKER - FH ECHELLE (+CHUTE D'HOMME) INSTRUCTIONS
 
 1. CONTEXT & SCOPE
 --------------------------------------------------------------------------------
-The frontend FH ladder selector ("Présence échelle" in FHEquipmentToggle) now
-has 2 options:
-  - "Pas d'échelle"
-  - "Echelle"
+The frontend FH card now has an independent "Avec plot / Sans plot" toggle and
+a 2-option "Présence échelle" selector ("Pas d'échelle" / "Echelle").
+Echelle is ONLY allowed when FH is WITH plot (`sans_plot == False`) AND the FH
+mast height is at least 2.0 m (`hauteur_mat_m >= 2.0`). If `sans_plot == True`
+or `hauteur_mat_m < 2.0`, echelle is forced to `"Pas d'échelle"`.
 
 It is sent in `input_data["fh_equipment"]["echelle"]` (for both standalone FH
 and composite `antenna_with_fh` / `antenna_with_rrh_and_fh` jobs).
@@ -38,6 +39,25 @@ main antenna mast, not the FH support mast.
 def resolve_fh_has_echelle(input_data: dict) -> bool:
     fh_eq = input_data.get("fh_equipment") or {}
     fh_struct = input_data.get("structure_fh") or {}
+
+    # Echelle is ONLY allowed for FH with plot AND hauteur_mat_m >= 2.0 m
+    if (
+        fh_eq.get("sans_plot") is True
+        or fh_eq.get("with_plot") is False
+        or fh_struct.get("sans_plot") is True
+        or input_data.get("fh_sans_plot") is True
+        or "fh_sans_plot" in str(input_data.get("calculation_type") or "").lower()
+    ):
+        return False
+
+    raw_h = fh_eq.get("hauteur_mat_m")
+    if raw_h is None:
+        raw_h = fh_struct.get("hauteur_mat_m")
+    try:
+        if (float(raw_h) if raw_h is not None else 1.70) < 2.0:
+            return False
+    except (ValueError, TypeError):
+        return False
 
     raw = fh_eq.get("echelle")
     if raw is None:
@@ -177,6 +197,7 @@ When calling `POST /api/calculations/{id}/complete/`:
    - Confirm `resolve_fh_has_echelle(input_data)` returns `False`.
    - Confirm no `+15 daN`, no `CH` case, and no `ACC:ACC` combinations are
      generated on the FH model.
-3. Verify both `with_plot` (`sans_plot = false`) and `sans_plot = true` cases
-   work cleanly with `fh_has_echelle = True`.
+3. Verify `sans_plot = true` (`with_plot = false`) NEVER applies ladder weight
+   or `CH` / `ACC:ACC` combinations even if `echelle = "Echelle"` is present
+   (echelle is only for FH with plot).
 ================================================================================
