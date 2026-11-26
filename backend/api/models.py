@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _
@@ -200,4 +201,38 @@ class GeneratedSiteNdc(models.Model):
 
     def __str__(self):
         return f"NDC - {self.code_site or self.site_name or 'Site'} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+
+class PdfGenerationTask(models.Model):
+    """Tracks asynchronous Note de Calcul PDF assembly jobs running in Django-Q2."""
+
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('RUNNING', 'Running'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pdf_generation_tasks',
+        verbose_name=_("User"),
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING', verbose_name=_("Status"))
+    pdf_url = models.CharField(max_length=512, blank=True, default='', verbose_name=_("PDF URL"))
+    error_message = models.TextField(blank=True, default='', verbose_name=_("Error Message"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    class Meta:
+        verbose_name = _("PDF Generation Task")
+        verbose_name_plural = _("PDF Generation Tasks")
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"PdfTask {self.id} [{self.status}]"
 

@@ -755,3 +755,222 @@ def _assemble_antenna(job):
         print(f"assemble_ndc_document error for Antenna Job {job.id}: {e}")
 
 
+def execute_site_ndc_generation(payload: dict, user_id=None) -> str:
+    """
+    Assemble a combined Site Note de Calcul PDF (both fast-track catalogue merge
+    and full multi-sector Robot NDC merge) and return the final MEDIA_URL path.
+    Runs cleanly either inline or inside a Django-Q2 qcluster worker.
+    """
+    import json
+    import uuid
+    from django.contrib.auth.models import User
+    from pypdf import PdfReader, PdfWriter
+    from geodata.ndc_generator import (
+        _batch_convert_rtf_files,
+        collect_site_ndc_rtf_specs,
+        generate_auxiliary_pdfs,
+        generate_ndc_pdf,
+    )
+    from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator
+    from utils.path_security import safe_media_path
+    from .models import GeneratedSiteNdc
+
+    user = User.objects.filter(id=user_id).first() if user_id else None
+    fast_track = bool(payload.get('fast_track', False))
+    photo_url = payload.get('photo_url', '') or ''
+
+    if fast_track:
+        catalogue_pdf_urls = payload.get('catalogue_pdf_urls', [])
+        if isinstance(catalogue_pdf_urls, str):
+            catalogue_pdf_urls = [catalogue_pdf_urls]
+
+        preview_data = dict(payload)
+        for key in [
+            'site', 'environment', 'structure', 'antenna_4g', 'antenna_5g',
+            'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment',
+            'gps', 'boitier_lovage', 'coffrets_fibre', 'baie', 'cab', 'atelier_energie',
+        ]:
+            val = preview_data.get(key)
+            if isinstance(val, str):
+                try:
+                    preview_data[key] = json.loads(val)
+                except json.JSONDecodeError:
+                    pass
+
+        operator_name = normalize_operator(
+            payload.get('operator') or payload.get('operateur'),
+            fallback_site=preview_data.get('site'),
+        )
+        if operator_name in OPERATORS_WITHOUT_TD and isinstance(preview_data.get('td_equipment'), dict):
+            preview_data['td_equipment']['enabled'] = False
+
+        code_val = payload.get('code_site') or payload.get('ref_site') or ''
+        if not isinstance(preview_data.get('site'), dict):
+            preview_data['site'] = {
+                'name': payload.get('site_name', ''),
+                'code_site': code_val,
+                'ref_site': code_val,
+                'client': payload.get('client_name', ''),
+                'address': payload.get('address', ''),
+            }
+        else:
+            if not preview_data['site'].get('code_site') and code_val:
+                preview_data['site']['code_site'] = code_val
+                preview_data['site']['ref_site'] = code_val
+
+        if not isinstance(preview_data.get('environment'), dict):
+            preview_data['environment'] = {
+                'etancheite': payload.get('etancheite'),
+                'dalle_thickness_m': payload.get('dalle_thickness_m'),
+            }
+
+        cover_pdf_url = generate_ndc_pdf(None, photo_url, preview_data=preview_data, is_cover_only=True)
+        merger = PdfWriter()
+        try:
+            if cover_pdf_url.startswith(settings.MEDIA_URL):
+                cover_rel_path = cover_pdf_url[len(settings.MEDIA_URL):]
+                cover_abs_path = os.path.join(settings.MEDIA_ROOT, cover_rel_path)
+                if os.path.exists(cover_abs_path):
+                    merger.append(cover_abs_path)
+
+            for cat_url in catalogue_pdf_urls:
+                cat_abs_path = safe_media_path(cat_url)
+                if not cat_abs_path:
+                    continue
+                cat_rel_path = os.path.relpath(cat_abs_path, settings.MEDIA_ROOT)
+                if not cat_rel_path.lower().endswith('.pdf'):
+                    from geodata.utils_preview import get_pdf_preview_path
+                    pdf_rel_path = get_pdf_preview_path(cat_rel_path)
+                    if pdf_rel_path:
+                        cat_abs_path = safe_media_path(pdf_rel_path)
+                if cat_abs_path and os.path.isfile(cat_abs_path):
+                    reader = PdfReader(cat_abs_path)
+                    for i, page in enumerate(reader.pages):
+                        if i in (0, 1):
+                            continue
+                        merger.add_page(page)
+
+            has_any_eq = False
+            for eq_key in ['fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre']:
+                eq = preview_data.get(eq_key, {})
+                if isinstance(eq, dict) and eq.get('enabled'):
+                    if eq_key == 'td_equipment' and operator_name in OPERATORS_WITHOUT_TD:
+                        continue
+                    has_any_eq = True
+                    break
+
+            if has_any_eq:
+                class DummyJob:
+                    input_data = preview_data
+                    id = 'fast'
+
+                aux_paths = generate_auxiliary_pdfs(DummyJob(), start_page=len(merger.pages) + 1)
+                for aux in aux_paths:
+                    if os.path.exists(aux):
+                        merger.append(aux)
+
+            output_filename = f"SITE_NDC_FAST_{uuid.uuid4().hex[:8]}.pdf"
+            outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+            os.makedirs(outdir, exist_ok=True)
+            merged_pdf_path = os.path.join(outdir, output_filename)
+            merger.write(merged_pdf_path)
+        finally:
+            merger.close()
+
+        final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+        if user is not None:
+            GeneratedSiteNdc.objects.create(
+                user=user,
+                site_name=payload.get('site_name', '') or preview_data.get('site', {}).get('name', ''),
+                code_site=payload.get('code_site', '') or payload.get('ref_site', '') or preview_data.get('site', {}).get('code_site', ''),
+                client_name=payload.get('client_name', '') or preview_data.get('site', {}).get('client', ''),
+                address=payload.get('address', '') or preview_data.get('site', {}).get('address', ''),
+                operator=payload.get('operator', '') or preview_data.get('site', {}).get('operator', ''),
+                pdf_url=final_pdf_url,
+            )
+        return final_pdf_url
+
+    job_ids = payload.get('job_ids', [])
+    jobs_by_id = CalculationJob.objects.select_related('user').in_bulk(job_ids)
+    jobs = [jobs_by_id[jid] for jid in job_ids if jid in jobs_by_id]
+
+    rtf_specs = collect_site_ndc_rtf_specs(jobs)
+    preconverted_images = _batch_convert_rtf_files(rtf_specs) if rtf_specs else {}
+
+    temp_pdfs = []
+    merger = PdfWriter()
+    total_pages = 0
+
+    for i, job in enumerate(jobs):
+        is_subsequent = (i > 0)
+        job_photo_url = photo_url
+        if not job_photo_url and job.input_data and job.input_data.get('site_image_url'):
+            job_photo_url = job.input_data.get('site_image_url')
+
+        if isinstance(job.input_data, dict):
+            if 'site' not in job.input_data or not isinstance(job.input_data['site'], dict):
+                job.input_data['site'] = {}
+            if not job.input_data['site'].get('code_site') and (payload.get('code_site') or payload.get('ref_site')):
+                c_val = payload.get('code_site') or payload.get('ref_site')
+                job.input_data['site']['code_site'] = c_val
+                job.input_data['site']['ref_site'] = c_val
+            if not job.input_data['site'].get('name') and payload.get('site_name'):
+                job.input_data['site']['name'] = payload.get('site_name')
+
+        pdf_url = generate_ndc_pdf(
+            job,
+            job_photo_url,
+            is_subsequent_sector=is_subsequent,
+            start_page=total_pages + 1,
+            preconverted_images=preconverted_images,
+        )
+        if pdf_url.startswith(settings.MEDIA_URL):
+            rel_path = pdf_url[len(settings.MEDIA_URL):]
+            abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+            if os.path.exists(abs_path):
+                temp_pdfs.append(abs_path)
+                merger.append(abs_path)
+                reader = PdfReader(abs_path)
+                total_pages += len(reader.pages)
+
+    if jobs:
+        aux_pdf_paths = generate_auxiliary_pdfs(
+            jobs[0],
+            start_page=total_pages + 1,
+            preconverted_images=preconverted_images,
+        )
+        for aux_path in aux_pdf_paths:
+            if os.path.exists(aux_path):
+                temp_pdfs.append(aux_path)
+                merger.append(aux_path)
+
+    output_filename = f"SITE_NDC_{uuid.uuid4().hex[:8]}.pdf"
+    outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
+    os.makedirs(outdir, exist_ok=True)
+    merged_pdf_path = os.path.join(outdir, output_filename)
+    try:
+        merger.write(merged_pdf_path)
+    finally:
+        merger.close()
+        for tmp_pdf in temp_pdfs:
+            if tmp_pdf and tmp_pdf != merged_pdf_path and os.path.isfile(tmp_pdf):
+                try:
+                    os.remove(tmp_pdf)
+                except OSError:
+                    pass
+
+    final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+    if user is not None:
+        GeneratedSiteNdc.objects.create(
+            user=user,
+            site_name=payload.get('site_name', ''),
+            code_site=payload.get('code_site', '') or payload.get('ref_site', ''),
+            client_name=payload.get('client_name', ''),
+            address=payload.get('address', ''),
+            operator=payload.get('operator', ''),
+            pdf_url=final_pdf_url,
+        )
+    return final_pdf_url
+
+
+

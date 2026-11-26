@@ -102,3 +102,46 @@ def compile_job_documents_task(job_id):
         logger.exception("Background document compilation failed for Job %s", job_id)
     finally:
         close_old_connections()
+
+
+def generate_site_ndc_task(task_id: str, payload: dict, user_id=None):
+    """
+    Background Django-Q2 task for assembling a full Site Note de Calcul PDF.
+    Updates PdfGenerationTask status so clients can poll or receive completion.
+    """
+    from .models import PdfGenerationTask
+    from .services import execute_site_ndc_generation
+
+    close_old_connections()
+    try:
+        PdfGenerationTask.objects.filter(id=task_id).update(status='RUNNING')
+        pdf_url = execute_site_ndc_generation(payload, user_id=user_id)
+        PdfGenerationTask.objects.filter(id=task_id).update(status='COMPLETED', pdf_url=pdf_url, error_message='')
+        return pdf_url
+    except Exception as exc:
+        logger.exception("Async site NDC generation failed for task %s", task_id)
+        PdfGenerationTask.objects.filter(id=task_id).update(status='FAILED', error_message=str(exc))
+        return None
+    finally:
+        close_old_connections()
+
+
+def generate_single_pdf_task(task_id: str, job_id: int, photo_url: str = ''):
+    """
+    Background Django-Q2 task for generating a single CalculationJob Note de Calcul PDF.
+    """
+    from .models import PdfGenerationTask
+    from geodata.ndc_generator import generate_ndc_pdf_task
+
+    close_old_connections()
+    try:
+        PdfGenerationTask.objects.filter(id=task_id).update(status='RUNNING')
+        pdf_url = generate_ndc_pdf_task(job_id, photo_url)
+        PdfGenerationTask.objects.filter(id=task_id).update(status='COMPLETED', pdf_url=pdf_url, error_message='')
+        return pdf_url
+    except Exception as exc:
+        logger.exception("Async single PDF generation failed for task %s (job %s)", task_id, job_id)
+        PdfGenerationTask.objects.filter(id=task_id).update(status='FAILED', error_message=str(exc))
+        return None
+    finally:
+        close_old_connections()

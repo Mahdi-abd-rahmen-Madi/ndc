@@ -30,6 +30,41 @@ export const FORCE_WORKER_CALCULATION = true;
  */
 export const FORCE_RECALCULATE_BYPASS_CACHE = true;
 
+interface SiteNdcApiResponse {
+  ndc_pdf_url?: string;
+  task_id?: string;
+  status?: string;
+  error?: string;
+}
+
+async function resolveSiteNdcResponse(
+  resp: SiteNdcApiResponse,
+  apiBaseUrl: string
+): Promise<string | undefined> {
+  if (resp.ndc_pdf_url) {
+    return resp.ndc_pdf_url;
+  }
+  if (!resp.task_id) {
+    return undefined;
+  }
+
+  const maxAttempts = 120; // 120 * 1.5s = 180s max wait
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const taskState = await apiClient.get<SiteNdcApiResponse>(
+      `/api/calculations/pdf-tasks/${resp.task_id}/`,
+      { baseUrl: apiBaseUrl }
+    );
+    if (taskState.status === 'COMPLETED' && taskState.ndc_pdf_url) {
+      return taskState.ndc_pdf_url;
+    }
+    if (taskState.status === 'FAILED') {
+      throw new Error(taskState.error || 'La génération du PDF a échoué.');
+    }
+  }
+  throw new Error("Le délai d'attente de génération du PDF a été dépassé.");
+}
+
 interface UseSiteNdcGeneratorParams {
   apiBaseUrl: string;
   config: CatalogueConfig | null;
@@ -243,13 +278,14 @@ export function useSiteNdcGenerator({
         };
 
         try {
-          const mergeData = await apiClient.post<{ ndc_pdf_url?: string }>(
+          const mergeResp = await apiClient.post<SiteNdcApiResponse>(
             '/api/calculations/generate_site_ndc/',
             payload,
             { baseUrl: apiBaseUrl }
           );
-          if (mergeData.ndc_pdf_url) {
-            const fullUrl = resolveMediaUrl(mergeData.ndc_pdf_url, apiBaseUrl);
+          const resolvedPdfUrl = await resolveSiteNdcResponse(mergeResp, apiBaseUrl);
+          if (resolvedPdfUrl) {
+            const fullUrl = resolveMediaUrl(resolvedPdfUrl, apiBaseUrl);
 
             setSiteNdcProgressPercent(100);
             setIsGeneratingSiteNdc(false);
@@ -477,9 +513,9 @@ export function useSiteNdcGenerator({
       setSiteNdcPollingMsg('Fusion des documents PDF... (95%)');
 
       // Call the merge endpoint
-      let mergeData: { ndc_pdf_url?: string };
+      let resolvedPdfUrl: string | undefined;
       try {
-        mergeData = await apiClient.post<{ ndc_pdf_url?: string }>(
+        const mergeResp = await apiClient.post<SiteNdcApiResponse>(
           '/api/calculations/generate_site_ndc/',
           {
             job_ids: jobIds,
@@ -492,14 +528,15 @@ export function useSiteNdcGenerator({
           },
           { baseUrl: apiBaseUrl }
         );
+        resolvedPdfUrl = await resolveSiteNdcResponse(mergeResp, apiBaseUrl);
       } catch (mergeErr: any) {
         const serverError = mergeErr?.message || "Erreur lors de la génération du document global. Veuillez réessayer.";
         console.error('[NDC Site Merge Error]:', serverError);
         throw new Error(serverError);
       }
 
-      if (mergeData.ndc_pdf_url) {
-        const fullUrl = resolveMediaUrl(mergeData.ndc_pdf_url, apiBaseUrl);
+      if (resolvedPdfUrl) {
+        const fullUrl = resolveMediaUrl(resolvedPdfUrl, apiBaseUrl);
         setSiteNdcProgressPercent(100);
         setNdcPdfUrl(fullUrl);
       } else {

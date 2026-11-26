@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import UserProfile, Role, EngineerProfile, CalculationJob, GeneratedSiteNdc
+from .models import UserProfile, Role, EngineerProfile, CalculationJob, GeneratedSiteNdc, PdfGenerationTask
 
 
 @admin.register(Role)
@@ -68,4 +68,12 @@ class GeneratedSiteNdcAdmin(admin.ModelAdmin):
     list_filter = ('operator', 'created_at')
     search_fields = ('code_site', 'site_name', 'client_name', 'address', 'user__username')
     readonly_fields = ('created_at',)
+
+
+@admin.register(PdfGenerationTask)
+class PdfGenerationTaskAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'status', 'pdf_url', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('id', 'user__username', 'pdf_url')
+    readonly_fields = ('id', 'created_at', 'updated_at')
 

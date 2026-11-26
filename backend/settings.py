@@ -165,6 +165,10 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Shared cache (PostgreSQL DatabaseCache when USE_DB_CACHE=true, e.g. in docker-compose.prod.yml,
 # so web + qcluster share state without Redis; LocMemCache by default for local dev)
 USE_DB_CACHE = config('USE_DB_CACHE', default=False, cast=bool)
+_LOCAL_CACHE = {
+    'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    'LOCATION': 'ndc-local-cache',
+}
 if USE_DB_CACHE:
     CACHES = {
         'default': {
@@ -174,14 +178,13 @@ if USE_DB_CACHE:
                 'MAX_ENTRIES': 5000,
                 'CULL_FREQUENCY': 4,
             },
-        }
+        },
+        'local': _LOCAL_CACHE,
     }
 else:
     CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'ndc-local-cache',
-        }
+        'default': _LOCAL_CACHE,
+        'local': _LOCAL_CACHE,
     }
 
 # Default primary key field type
@@ -190,6 +193,7 @@ else:
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework settings
+DRF_DISABLE_THROTTLE = config('DRF_DISABLE_THROTTLE', default=False, cast=bool)
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
@@ -198,15 +202,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
+}
+if not DRF_DISABLE_THROTTLE:
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
-    ],
-    'DEFAULT_THROTTLE_RATES': {
+    ]
+    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
         'anon': config('DRF_THROTTLE_ANON', default='300/min'),
         'user': config('DRF_THROTTLE_USER', default='1200/min'),
-    },
-}
+    }
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173', cast=lambda v: [s.strip() for s in v.split(',') if s.strip()])
@@ -232,6 +237,7 @@ ROBOT_WORKER_API_KEY = config('ROBOT_WORKER_API_KEY', default='')
 Q_CLUSTER = {
     'name': 'ndc_cluster',
     'workers': config('Q_CLUSTER_WORKERS', default=2, cast=int),
+    'poll': config('Q_CLUSTER_POLL', default=1.5, cast=float),
     'recycle': 500,
     'timeout': 300,
     'retry': 360,
@@ -242,6 +248,12 @@ Q_CLUSTER = {
     'label': 'Django Q',
     'orm': 'default'
 }
+
+# Production Scaling Services (Zero-Redis Go WS Hub, Async PDFs, Gotenberg)
+WS_HUB_URL = config('WS_HUB_URL', default='').strip().rstrip('/')
+WS_HUB_SECRET = config('WS_HUB_SECRET', default='')
+ASYNC_PDF_GENERATION = config('ASYNC_PDF_GENERATION', default=False, cast=bool)
+GOTENBERG_URL = config('GOTENBERG_URL', default='').strip().rstrip('/')
 
 LOGGING = {
     'version': 1,

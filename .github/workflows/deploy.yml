@@ -56,10 +56,11 @@ jobs:
             # Build and deploy the Docker containers (backend + qcluster + frontend + caddy)
             docker compose -f docker-compose.prod.yml up -d --build
             
-            # Automatically apply pending migrations, PostgreSQL cache table, and static files
+            # Automatically apply pending migrations, PostgreSQL cache table, static files, and PostGIS geodata
             docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
             docker compose -f docker-compose.prod.yml exec -T backend python manage.py createcachetable
             docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py import_static_geodata_to_postgis || true
             
             # Prune unused build cache and dangling images after build
             docker system prune -f

@@ -1,9 +1,8 @@
 """Height calculation requests & real-time notification ViewSets."""
 import hashlib
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.contrib.auth.models import User as AuthUser
+from utils.ws_hub import publish_ws_event
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
@@ -21,16 +20,13 @@ from geodata.serializers import (
 
 def send_ws_notification(email: str, notification_data: dict):
     """Send a WebSocket notification to a specific email's channel group."""
-    channel_layer = get_channel_layer()
     email_hash = hashlib.md5(email.encode()).hexdigest()
     group_name = f'notifications_{email_hash}'
 
-    async_to_sync(channel_layer.group_send)(
+    publish_ws_event(
         group_name,
-        {
-            'type': 'send_notification',
-            'notification': notification_data,
-        },
+        {'type': 'notification', 'notification': notification_data},
+        channel_event={'type': 'send_notification', 'notification': notification_data},
     )
 
 

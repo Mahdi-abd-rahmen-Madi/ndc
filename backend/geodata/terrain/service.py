@@ -23,8 +23,10 @@ from geodata.terrain_config_service import terrain_config_service
 from .repository import (
     fetch_local_land_use_gdf,
     is_point_near_coastline_gdf,
+    is_point_near_coastline_sql,
     load_geojson_with_sindex,
     query_spatial_extent_code_areas_sql,
+    query_wind_vb0_sql,
 )
 from .rules import TerrainRuleEngineMixin
 from .spatial_metrics import (
@@ -110,6 +112,9 @@ class TerrainClassificationService(TerrainRuleEngineMixin):
         return self.coastline_data
 
     def _is_near_physical_coastline(self, longitude: float, latitude: float, threshold_km: float = 1.0) -> bool:
+        sql_hit = is_point_near_coastline_sql(longitude, latitude, threshold_km=threshold_km)
+        if sql_hit is not None:
+            return sql_hit
         try:
             coastline = self._load_coastline_data()
             return is_point_near_coastline_gdf(coastline, longitude, latitude, threshold_km=threshold_km)
@@ -123,6 +128,13 @@ class TerrainClassificationService(TerrainRuleEngineMixin):
 
     def get_region_from_coordinates(self, longitude: float, latitude: float) -> Optional[int]:
         try:
+            sql_vb0 = query_wind_vb0_sql(longitude, latitude)
+            if sql_vb0 is not None:
+                region = AntennaEquipment.get_region_from_vb0(sql_vb0)
+                if region is not None:
+                    logger.debug("PostGIS region hit (%s, %s) -> V_B0: %s -> Region: %s", longitude, latitude, sql_vb0, region)
+                    return region
+
             gdf = self._load_wind_coeff_data()
             point = Point(longitude, latitude)
             intersects = gdf[gdf.geometry.intersects(point)]

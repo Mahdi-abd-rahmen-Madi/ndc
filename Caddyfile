@@ -3,6 +3,7 @@
 
 {
     email admin@heliosys.io
+    auto_https off
 }
 
 # Reusable backend proxy snippet
@@ -11,6 +12,68 @@
         header_up Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Reusable WebSocket hub proxy snippet (Go ws-hub service)
+(ws_hub_proxy) {
+    reverse_proxy ws-hub:8081 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Reusable IGN BDTOPO vector tile proxy (offloads tile fetching & caching from Django)
+(bdtopo_tile_proxy) {
+    @bdtopo path_regexp bdtopo ^/api/geodata/bdtopo-tiles/(\d+)/(\d+)/(\d+)/?$
+    handle @bdtopo {
+        rewrite * /tms/1.0.0/BDTOPO/{re.bdtopo.1}/{re.bdtopo.2}/{re.bdtopo.3}.pbf
+        reverse_proxy https://data.geopf.fr {
+            header_up Host data.geopf.fr
+            header_down Cache-Control "public, max-age=86400, immutable"
+        }
+    }
+}
+
+# Reusable static GeoJSON handler:
+# Serves large static coastline GeoJSON directly at Go speed if /srv/data is mounted,
+# otherwise proxies cleanly to Django backend.
+(static_geodata_handler) {
+    @coastline_file file {
+        root /srv/data
+        try_files france_coastline.geojson
+    }
+    @coastline_path path /api/geodata/regions/coastline /api/geodata/regions/coastline/
+    handle @coastline_path {
+        handle @coastline_file {
+            root * /srv/data
+            rewrite * /france_coastline.geojson
+            header Content-Type "application/json"
+            header Cache-Control "public, max-age=86400, immutable"
+            file_server
+        }
+        handle {
+            import backend_proxy
+        }
+    }
+
+    @coastline_buf_file file {
+        root /srv/data
+        try_files france_coastline_buffer_1km.geojson
+    }
+    @coastline_buf_path path /api/geodata/regions/coastline_buffer /api/geodata/regions/coastline_buffer/
+    handle @coastline_buf_path {
+        handle @coastline_buf_file {
+            root * /srv/data
+            rewrite * /france_coastline_buffer_1km.geojson
+            header Content-Type "application/json"
+            header Cache-Control "public, max-age=86400, immutable"
+            file_server
+        }
+        handle {
+            import backend_proxy
+        }
     }
 }
 
@@ -35,60 +98,19 @@
     }
 }
 
-# Production Frontend & Reverse Proxy
-ndc.heliosys.io {
+# Cloudflare Tunnel API & Real-Time Edge (:8008)
+# Terminates HTTP/WS compression and static/media/tile offloading before Gunicorn/ws-hub.
+:8008 {
     encode zstd gzip
 
-    handle /api/* {
-        import backend_proxy
-    }
-    handle /admin/* {
-        import backend_proxy
-    }
-    handle /static/* {
-        import backend_proxy
-    }
+    import bdtopo_tile_proxy
+    import static_geodata_handler
+    import media_handler
+
     handle /ws/* {
-        import backend_proxy
+        import ws_hub_proxy
     }
-    import media_handler
-
-    # All other traffic directed to frontend container
-    handle {
-        reverse_proxy frontend:80
-    }
-}
-
-# Production Backend API Domain
-api-ndc.heliosys.io {
-    encode zstd gzip
-
-    import media_handler
-
     handle {
         import backend_proxy
-    }
-}
-
-# Local development / Docker host fallback (e.g. http://localhost)
-:80 {
-    encode zstd gzip
-
-    handle /api/* {
-        import backend_proxy
-    }
-    handle /admin/* {
-        import backend_proxy
-    }
-    handle /static/* {
-        import backend_proxy
-    }
-    handle /ws/* {
-        import backend_proxy
-    }
-    import media_handler
-
-    handle {
-        reverse_proxy frontend:80
     }
 }

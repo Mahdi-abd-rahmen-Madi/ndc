@@ -1,10 +1,9 @@
 import logging
 import requests
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
+from utils.ws_hub import publish_ws_event
 
 logger = logging.getLogger(__name__)
 
@@ -63,15 +62,11 @@ def broadcast_worker_status(payload: dict) -> None:
     """
     Broadcast a worker status snapshot to all WebSocket subscribers.
     """
-    try:
-        channel_layer = get_channel_layer()
-        if channel_layer is not None:
-            async_to_sync(channel_layer.group_send)(
-                WORKER_STATUS_GROUP,
-                {"type": "worker_status_update", "data": payload},
-            )
-    except Exception:
-        logger.debug("Failed to broadcast worker status update", exc_info=True)
+    publish_ws_event(
+        WORKER_STATUS_GROUP,
+        {"type": "worker_status", **payload},
+        channel_event={"type": "worker_status_update", "data": payload},
+    )
 
 
 def set_worker_status(

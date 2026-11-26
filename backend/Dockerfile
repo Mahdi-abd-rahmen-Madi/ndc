@@ -3,7 +3,9 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies required for GeoDjango, PostGIS, WeasyPrint, and headless LibreOffice
+ARG INSTALL_LIBREOFFICE=false
+
+# Install system dependencies required for GeoDjango, PostGIS, WeasyPrint, and optional LibreOffice fallback
 RUN apt-get update && apt-get install -y --no-install-recommends \
     binutils \
     libproj-dev \
@@ -16,8 +18,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf-2.0-0 \
     libffi-dev \
     shared-mime-info \
-    libreoffice-writer-nogui \
     fonts-dejavu-core \
+    && if [ "$INSTALL_LIBREOFFICE" = "true" ]; then apt-get install -y --no-install-recommends libreoffice-writer-nogui; fi \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -37,6 +39,6 @@ USER appuser
 
 EXPOSE 8000
 
-# Single async ASGI worker keeps InMemoryChannelLayer WebSockets reliable without Redis,
-# while heavy CPU/blocking tasks run in the separate `qcluster` container.
-CMD ["gunicorn", "asgi:application", "-k", "uvicorn_worker.UvicornWorker", "--workers", "1", "--timeout", "180", "--graceful-timeout", "30", "--bind", "0.0.0.0:8000"]
+# Multi-worker WSGI Gunicorn (--preload shares read-only code/data across workers),
+# while WebSockets run in Go `ws-hub` and heavy PDF/Robot tasks run in `qcluster`.
+CMD ["sh", "-c", "gunicorn wsgi:application --workers ${GUNICORN_WORKERS:-3} --threads ${GUNICORN_THREADS:-2} --preload --timeout 180 --graceful-timeout 30 --max-requests 1000 --max-requests-jitter 100 --bind 0.0.0.0:8000"]

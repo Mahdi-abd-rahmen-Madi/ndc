@@ -20,7 +20,7 @@ import logging
 import threading
 
 logger = logging.getLogger(__name__)
-from .models import UserProfile, CalculationJob, GeneratedSiteNdc, ClientSubscription
+from .models import UserProfile, CalculationJob, GeneratedSiteNdc, ClientSubscription, PdfGenerationTask
 from .permissions import IsRobotWorkerOrAdminPermission
 from .serializers import (
     UserProfileSerializer, CalculationJobSerializer, CalculationPayloadSerializer,
@@ -44,17 +44,12 @@ MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 def _broadcast_calc_progress(job_id: int, data: dict):
     """Broadcast a calculation progress/completion event to WebSocket listeners."""
-    try:
-        from asgiref.sync import async_to_sync
-        from channels.layers import get_channel_layer
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            async_to_sync(channel_layer.group_send)(
-                f"calc_{job_id}",
-                {"type": "calc_progress", "data": data},
-            )
-    except Exception as ws_err:
-        logger.warning("WebSocket broadcast warning for job %s: %s", job_id, ws_err)
+    from utils.ws_hub import publish_ws_event
+    publish_ws_event(
+        f"calc_{job_id}",
+        data,
+        channel_event={"type": "calc_progress", "data": data},
+    )
 
 
 def _validate_image_upload(file_obj):
@@ -1060,6 +1055,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         """
         Endpoint to generate the Note de Calcul PDF from a completed job.
         Expects {"photo_url": "..."} in the request body.
+        When ASYNC_PDF_GENERATION is enabled, enqueues in qcluster and returns 202.
         """
         job = self.get_object()
         if job.status not in ['COMPLETED', 'PENDING']:
@@ -1068,9 +1064,22 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         photo_url = request.data.get('photo_url')
         if not photo_url and job.input_data and job.input_data.get('site_image_url'):
             photo_url = job.input_data.get('site_image_url')
-            
-        # photo_url is optional, it will be None or empty string if not provided
         photo_url = photo_url or ''
+
+        use_async = getattr(settings, 'ASYNC_PDF_GENERATION', False) and not request.data.get('sync')
+        if use_async:
+            task = PdfGenerationTask.objects.create(
+                user=request.user if request.user and request.user.is_authenticated else None,
+                status='PENDING',
+            )
+            task_id_str = str(task.id)
+            transaction.on_commit(
+                lambda: enqueue_task('api.tasks.generate_single_pdf_task', task_id_str, job.id, photo_url)
+            )
+            return Response(
+                {'task_id': task_id_str, 'status': 'PENDING'},
+                status=status.HTTP_202_ACCEPTED,
+            )
 
         from geodata.ndc_generator import generate_ndc_pdf_task
         try:
@@ -1078,6 +1087,20 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             return Response({'message': 'PDF generated successfully', 'ndc_pdf_url': pdf_url}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path=r'pdf-tasks/(?P<task_id>[0-9a-f-]+)')
+    def pdf_task_status(self, request, task_id=None):
+        """Poll status for an asynchronous PDF / Site NDC generation task."""
+        task = get_object_or_404(PdfGenerationTask, id=task_id)
+        if not (request.user.is_staff or request.user.is_superuser):
+            if task.user_id and task.user_id != request.user.id:
+                return Response({'error': 'Accès refusé.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({
+            'task_id': str(task.id),
+            'status': task.status,
+            'ndc_pdf_url': task.pdf_url or None,
+            'error': task.error_message or None,
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get', 'post'])
     def preview_template(self, request):
@@ -1112,257 +1135,67 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
     def generate_site_ndc(self, request):
         """
         Endpoint to generate a combined Site Note de Calcul PDF.
-        Expects a list of job IDs in the request body, and optionally a photo_url.
+        Validates job ownership and artifacts synchronously, then either executes inline
+        or offloads assembly to Django-Q2 qcluster when ASYNC_PDF_GENERATION=true.
         """
         try:
-            from geodata.ndc_generator import generate_ndc_pdf, generate_auxiliary_pdfs
-            import os
-            from django.conf import settings
-            import uuid
-            from pypdf import PdfWriter
-            from api.models import CalculationJob
-    
-            fast_track = request.data.get('fast_track', False)
-            photo_url = request.data.get('photo_url', '')
-            
-            if fast_track:
-                catalogue_pdf_urls = request.data.get('catalogue_pdf_urls', [])
-                if isinstance(catalogue_pdf_urls, str):
-                    catalogue_pdf_urls = [catalogue_pdf_urls]
-                    
-                preview_data = dict(request.data)
-                
-                import json
-                for key in ['site', 'environment', 'structure', 'antenna_4g', 'antenna_5g', 'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre', 'baie', 'cab', 'atelier_energie']:
-                    val = preview_data.get(key)
-                    if isinstance(val, str):
-                        try:
-                            preview_data[key] = json.loads(val)
-                        except json.JSONDecodeError:
-                            pass
+            from .services import execute_site_ndc_generation, validate_calculation_artifacts
 
-                operator_name = normalize_operator(
-                    request.data.get('operator') or request.data.get('operateur'),
-                    fallback_site=preview_data.get('site'),
-                )
-                if operator_name in OPERATORS_WITHOUT_TD and 'td_equipment' in preview_data and isinstance(preview_data['td_equipment'], dict):
-                    preview_data['td_equipment']['enabled'] = False
+            payload = dict(request.data)
+            fast_track = bool(payload.get('fast_track', False))
 
-                code_val = request.data.get('code_site') or request.data.get('ref_site') or ''
-                if 'site' not in preview_data or not isinstance(preview_data['site'], dict):
-                    preview_data['site'] = {
-                        'name': request.data.get('site_name', ''),
-                        'code_site': code_val,
-                        'ref_site': code_val,
-                        'client': request.data.get('client_name', ''),
-                        'address': request.data.get('address', '')
-                    }
-                else:
-                    if not preview_data['site'].get('code_site') and code_val:
-                        preview_data['site']['code_site'] = code_val
-                        preview_data['site']['ref_site'] = code_val
-                if 'environment' not in preview_data or not isinstance(preview_data['environment'], dict):
-                    preview_data['environment'] = {
-                        'etancheite': request.data.get('etancheite'),
-                        'dalle_thickness_m': request.data.get('dalle_thickness_m')
-                    }
-                
-                # Generate cover only
-                cover_pdf_url = generate_ndc_pdf(None, photo_url, preview_data=preview_data, is_cover_only=True)
-                
-                # Merge Cover + Catalogue PDFs
-                merger = PdfWriter()
-                import urllib.parse
-                
-                # Cover path
-                if cover_pdf_url.startswith(settings.MEDIA_URL):
-                    cover_rel_path = cover_pdf_url[len(settings.MEDIA_URL):]
-                    cover_abs_path = os.path.join(settings.MEDIA_ROOT, cover_rel_path)
-                    if os.path.exists(cover_abs_path):
-                        merger.append(cover_abs_path)
-                        
-                # Catalogue paths (strictly confined to MEDIA_ROOT)
-                for cat_url in catalogue_pdf_urls:
-                    cat_abs_path = safe_media_path(cat_url)
-                    if not cat_abs_path:
-                        continue
-                    cat_rel_path = os.path.relpath(cat_abs_path, settings.MEDIA_ROOT)
-                    if not cat_rel_path.lower().endswith('.pdf'):
-                        from geodata.utils_preview import get_pdf_preview_path
-                        pdf_rel_path = get_pdf_preview_path(cat_rel_path)
-                        if pdf_rel_path:
-                            cat_abs_path = safe_media_path(pdf_rel_path)
-                    if cat_abs_path and os.path.isfile(cat_abs_path):
-                        from pypdf import PdfReader
-                        reader = PdfReader(cat_abs_path)
-                        for i, page in enumerate(reader.pages):
-                            if i in [0, 1]:  # Skip pages 1-2 of catalogue - already generated by template
-                                continue
-                            merger.add_page(page)
-                
-                has_any_eq = False
-                for eq_key in ['fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment', 'gps', 'boitier_lovage', 'coffrets_fibre']:
-                    eq = preview_data.get(eq_key, {})
-                    if isinstance(eq, dict) and eq.get('enabled'):
-                        if eq_key == 'td_equipment' and operator_name in OPERATORS_WITHOUT_TD:
-                            continue
-                        has_any_eq = True
-                        break
-                        
-                if has_any_eq:
-                    from geodata.ndc_generator import generate_auxiliary_pdfs
-                    class DummyJob:
-                        input_data = preview_data
-                        id = 'fast'
-                    aux_paths = generate_auxiliary_pdfs(DummyJob(), start_page=len(merger.pages) + 1)
-                    for aux in aux_paths:
-                        if os.path.exists(aux):
-                            merger.append(aux)
-                
-                output_filename = f"SITE_NDC_FAST_{uuid.uuid4().hex[:8]}.pdf"
-                outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
-                os.makedirs(outdir, exist_ok=True)
-                merged_pdf_path = os.path.join(outdir, output_filename)
-                merger.write(merged_pdf_path)
-                merger.close()
-                
-                final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
+            if not fast_track:
+                job_ids = payload.get('job_ids', [])
+                if not job_ids:
+                    return Response({'error': 'No job IDs provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-                # Persist to history if user is authenticated
-                if request.user and request.user.is_authenticated:
-                    GeneratedSiteNdc.objects.create(
-                        user=request.user,
-                        site_name=request.data.get('site_name', '') or preview_data.get('site', {}).get('name', ''),
-                        code_site=request.data.get('code_site', '') or request.data.get('ref_site', '') or preview_data.get('site', {}).get('code_site', ''),
-                        client_name=request.data.get('client_name', '') or preview_data.get('site', {}).get('client', ''),
-                        address=request.data.get('address', '') or preview_data.get('site', {}).get('address', ''),
-                        operator=request.data.get('operator', '') or preview_data.get('site', {}).get('operator', ''),
-                        pdf_url=final_pdf_url
+                jobs_by_id = CalculationJob.objects.select_related('user').in_bulk(job_ids)
+                missing_ids = [jid for jid in job_ids if jid not in jobs_by_id]
+                if missing_ids:
+                    return Response(
+                        {'error': f"Job(s) introuvable(s): {missing_ids}"},
+                        status=status.HTTP_404_NOT_FOUND,
                     )
+                jobs = [jobs_by_id[jid] for jid in job_ids]
 
-                return Response({'ndc_pdf_url': final_pdf_url}, status=status.HTTP_200_OK)
+                if not (request.user.is_staff or request.user.is_superuser):
+                    for job in jobs:
+                        if job.user_id and job.user_id != request.user.id:
+                            return Response(
+                                {'error': "Accès refusé à l'un des calculs demandés."},
+                                status=status.HTTP_403_FORBIDDEN,
+                            )
 
-            job_ids = request.data.get('job_ids', [])
-    
-            if not job_ids:
-                return Response({'error': 'No job IDs provided'}, status=status.HTTP_400_BAD_REQUEST)
-    
-            temp_pdfs = []
-            merger = PdfWriter()
-            total_pages = 0
+                for i, job in enumerate(jobs):
+                    if job.status != 'COMPLETED':
+                        return Response({
+                            'error': f"Le secteur {i+1} (Job {job.id}) a le statut '{job.status}'. "
+                                     f"Erreur associée : {job.error_message or 'Calcul en cours ou incomplet'}. "
+                                     f"La génération du document de synthèse est bloquée pour éviter un PDF tronqué."
+                        }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Batch pre-conversion of all RTF files across jobs and auxiliary equipment
-            # Guarantees zero cross-job leakage and reduces multiple LibreOffice cold starts to one.
-            from geodata.ndc_generator import collect_site_ndc_rtf_specs, _batch_convert_rtf_files
-            jobs_by_id = CalculationJob.objects.select_related('user').in_bulk(job_ids)
-            missing_ids = [jid for jid in job_ids if jid not in jobs_by_id]
-            if missing_ids:
+                    missing_artifacts = validate_calculation_artifacts(job)
+                    if missing_artifacts:
+                        return Response({
+                            'error': f"Le secteur {i+1} (Job {job.id}) est incomplet : artéfacts obligatoires manquants ({', '.join(missing_artifacts)}). "
+                                     f"La génération du document de synthèse est bloquée pour éviter la livraison d'un PDF incomplet. "
+                                     f"Veuillez relancer le calcul pour ce secteur."
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+            user_id = request.user.id if request.user and request.user.is_authenticated else None
+            use_async = getattr(settings, 'ASYNC_PDF_GENERATION', False) and not payload.get('sync')
+            if use_async:
+                task = PdfGenerationTask.objects.create(user_id=user_id, status='PENDING')
+                task_id_str = str(task.id)
+                transaction.on_commit(
+                    lambda: enqueue_task('api.tasks.generate_site_ndc_task', task_id_str, payload, user_id)
+                )
                 return Response(
-                    {'error': f"Job(s) introuvable(s): {missing_ids}"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            jobs = [jobs_by_id[jid] for jid in job_ids]
-
-            # Ownership check (prevent IDOR across users)
-            if not (request.user.is_staff or request.user.is_superuser):
-                for job in jobs:
-                    if job.user_id and job.user_id != request.user.id:
-                        return Response(
-                            {'error': "Accès refusé à l'un des calculs demandés."},
-                            status=status.HTTP_403_FORBIDDEN
-                        )
-
-            # Hardened Validation: Never assemble a site NDC if any sector calculation failed or is incomplete
-            from .services import validate_calculation_artifacts
-            for i, job in enumerate(jobs):
-                if job.status != 'COMPLETED':
-                    return Response({
-                        'error': f"Le secteur {i+1} (Job {job.id}) a le statut '{job.status}'. "
-                                 f"Erreur associée : {job.error_message or 'Calcul en cours ou incomplet'}. "
-                                 f"La génération du document de synthèse est bloquée pour éviter un PDF tronqué."
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-                missing_artifacts = validate_calculation_artifacts(job)
-                if missing_artifacts:
-                    return Response({
-                        'error': f"Le secteur {i+1} (Job {job.id}) est incomplet : artéfacts obligatoires manquants ({', '.join(missing_artifacts)}). "
-                                 f"La génération du document de synthèse est bloquée pour éviter la livraison d'un PDF incomplet. "
-                                 f"Veuillez relancer le calcul pour ce secteur."
-                    }, status=status.HTTP_400_BAD_REQUEST)
-
-            rtf_specs = collect_site_ndc_rtf_specs(jobs)
-            preconverted_images = _batch_convert_rtf_files(rtf_specs) if rtf_specs else {}
-
-            for i, job in enumerate(jobs):
-                # First sector gets the cover page and hypotheses. Subsequent ones don't.
-                is_subsequent = (i > 0)
-                
-                job_photo_url = photo_url
-                if not job_photo_url and job.input_data and job.input_data.get('site_image_url'):
-                    job_photo_url = job.input_data.get('site_image_url')
-
-                if isinstance(job.input_data, dict):
-                    if 'site' not in job.input_data or not isinstance(job.input_data['site'], dict):
-                        job.input_data['site'] = {}
-                    if not job.input_data['site'].get('code_site') and (request.data.get('code_site') or request.data.get('ref_site')):
-                        c_val = request.data.get('code_site') or request.data.get('ref_site')
-                        job.input_data['site']['code_site'] = c_val
-                        job.input_data['site']['ref_site'] = c_val
-                    if not job.input_data['site'].get('name') and request.data.get('site_name'):
-                        job.input_data['site']['name'] = request.data.get('site_name')
-                    
-                pdf_url = generate_ndc_pdf(job, job_photo_url, is_subsequent_sector=is_subsequent, start_page=total_pages + 1, preconverted_images=preconverted_images)
-                
-                # Convert relative URL back to absolute file path
-                if pdf_url.startswith(settings.MEDIA_URL):
-                    rel_path = pdf_url[len(settings.MEDIA_URL):]
-                    abs_path = os.path.join(settings.MEDIA_ROOT, rel_path)
-                    if os.path.exists(abs_path):
-                        temp_pdfs.append(abs_path)
-                        merger.append(abs_path)
-                        from pypdf import PdfReader
-                        reader = PdfReader(abs_path)
-                        total_pages += len(reader.pages)
-    
-            # Generate and append auxiliary equipment PDFs if enabled
-            if jobs:
-                first_job = jobs[0]
-                aux_pdf_paths = generate_auxiliary_pdfs(first_job, start_page=total_pages + 1, preconverted_images=preconverted_images)
-                for aux_path in aux_pdf_paths:
-                    if os.path.exists(aux_path):
-                        temp_pdfs.append(aux_path)
-                        merger.append(aux_path)
-    
-            output_filename = f"SITE_NDC_{uuid.uuid4().hex[:8]}.pdf"
-            outdir = os.path.join(settings.MEDIA_ROOT, 'uploads')
-            os.makedirs(outdir, exist_ok=True)
-            
-            merged_pdf_path = os.path.join(outdir, output_filename)
-            try:
-                merger.write(merged_pdf_path)
-            finally:
-                merger.close()
-                for tmp_pdf in temp_pdfs:
-                    if tmp_pdf and tmp_pdf != merged_pdf_path and os.path.isfile(tmp_pdf):
-                        try:
-                            os.remove(tmp_pdf)
-                        except OSError:
-                            pass
-            
-            final_pdf_url = settings.MEDIA_URL + f"uploads/{output_filename}"
-
-            # Persist to history if user is authenticated
-            if request.user and request.user.is_authenticated:
-                GeneratedSiteNdc.objects.create(
-                    user=request.user,
-                    site_name=request.data.get('site_name', ''),
-                    code_site=request.data.get('code_site', '') or request.data.get('ref_site', ''),
-                    client_name=request.data.get('client_name', ''),
-                    address=request.data.get('address', ''),
-                    operator=request.data.get('operator', ''),
-                    pdf_url=final_pdf_url
+                    {'task_id': task_id_str, 'status': 'PENDING'},
+                    status=status.HTTP_202_ACCEPTED,
                 )
 
+            final_pdf_url = execute_site_ndc_generation(payload, user_id=user_id)
             return Response({'ndc_pdf_url': final_pdf_url}, status=status.HTTP_200_OK)
 
         except Exception as e:

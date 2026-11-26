@@ -3,7 +3,6 @@ Backward-compatible façade re-exporting terrain classification and BDTOPO servi
 from the modular `geodata.terrain` package.
 """
 from .terrain import (
-    _get_land_use_engine,
     TerrainClassificationService,
     terrain_service,
     BDTOPOService,
@@ -11,7 +10,6 @@ from .terrain import (
 )
 
 __all__ = [
-    '_get_land_use_engine',
     'TerrainClassificationService',
     'terrain_service',
     'BDTOPOService',

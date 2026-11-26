@@ -1,49 +1,24 @@
 """
 PostGIS & GeoJSON data access layer for terrain classification.
-Includes pooled SQLAlchemy engine management and PostGIS SQL pushdown for
-metric spatial-extent area aggregation (EPSG:2154 Lambert-93).
+Reuses Django's managed PostgreSQL connection pool (zero duplicate SQLAlchemy pools)
+with PostGIS SQL pushdown for metric spatial-extent area aggregation, wind region lookup,
+and coastline proximity checks.
 """
 import logging
 import math
-import os
-import threading
 from typing import Dict, Optional
 
 import geopandas as gpd
 from django.conf import settings
+from django.db import connection
 from shapely.geometry import Point
 
 logger = logging.getLogger(__name__)
 
-_land_use_engine = None
-_engine_lock = threading.Lock()
 
-
-def _get_land_use_engine():
-    """Return a shared pooled SQLAlchemy engine for PostGIS land_use_data queries."""
-    global _land_use_engine
-    if _land_use_engine is None:
-        with _engine_lock:
-            if _land_use_engine is None:
-                from sqlalchemy import create_engine
-                from sqlalchemy.engine import URL
-
-                db_settings = settings.DATABASES['default']
-                url = URL.create(
-                    drivername="postgresql+psycopg",
-                    username=db_settings.get('USER') or None,
-                    password=db_settings.get('PASSWORD') or None,
-                    host=db_settings.get('HOST') or 'localhost',
-                    port=int(db_settings.get('PORT') or 5432),
-                    database=db_settings.get('NAME') or None,
-                )
-                _land_use_engine = create_engine(
-                    url,
-                    pool_pre_ping=True,
-                    pool_size=5,
-                    max_overflow=10,
-                )
-    return _land_use_engine
+def _is_sqlite_backend() -> bool:
+    db_engine = settings.DATABASES.get('default', {}).get('ENGINE', '')
+    return 'sqlite' in db_engine
 
 
 def query_spatial_extent_code_areas_sql(
@@ -58,21 +33,16 @@ def query_spatial_extent_code_areas_sql(
     Returns `{code_18: area_m2}` on success, or `None` if PostGIS is unavailable
     so callers can transparently fall back to local GeoDataFrame computation.
     """
-    db_engine = settings.DATABASES.get('default', {}).get('ENGINE', '')
-    if 'sqlite' in db_engine:
+    if _is_sqlite_backend():
         return None
 
     try:
-        from sqlalchemy import text
-
-        engine = _get_land_use_engine()
         radius_m = float(radius_km) * 1000.0
-        sql = text(
-            """
+        sql = """
             WITH search_circle AS (
                 SELECT ST_Buffer(
-                    ST_Transform(ST_SetSRID(ST_MakePoint(:lon, :lat), 4326), 2154),
-                    :radius_m
+                    ST_Transform(ST_SetSRID(ST_MakePoint(%s, %s), 4326), 2154),
+                    %s
                 ) AS geom_2154
             ),
             search_env AS (
@@ -86,19 +56,76 @@ def query_spatial_extent_code_areas_sql(
             WHERE l.geometry && e.geom_4326
               AND ST_Intersects(ST_Transform(l.geometry, 2154), e.geom_2154)
             GROUP BY l."Code_18"
-            """
-        )
-        with engine.connect() as conn:
-            rows = conn.execute(
-                sql,
-                {"lon": float(longitude), "lat": float(latitude), "radius_m": radius_m},
-            ).fetchall()
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [float(longitude), float(latitude), radius_m])
+            rows = cursor.fetchall()
 
         if not rows:
             return {}
         return {str(row[0]): float(row[1] or 0.0) for row in rows if row[0] is not None}
     except Exception as e:
         logger.debug("PostGIS spatial extent pushdown unavailable, falling back to GeoPandas: %s", e)
+        return None
+
+
+def query_wind_vb0_sql(longitude: float, latitude: float) -> Optional[float]:
+    """
+    Query EC1 wind region V_B0 at (longitude, latitude) directly from PostGIS `ec1_wind_coeff`.
+    Returns None if PostGIS or the `ec1_wind_coeff` table is unavailable (caller falls back to GeoJSON).
+    """
+    if _is_sqlite_backend():
+        return None
+
+    try:
+        sql = """
+            SELECT v_b0
+            FROM ec1_wind_coeff
+            WHERE ST_Intersects(geometry, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
+            LIMIT 1
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [float(longitude), float(latitude)])
+            row = cursor.fetchone()
+        if row and row[0] is not None:
+            return float(row[0])
+        return None
+    except Exception as e:
+        logger.debug("PostGIS wind region query unavailable, falling back to GeoJSON: %s", e)
+        return None
+
+
+def is_point_near_coastline_sql(
+    longitude: float,
+    latitude: float,
+    threshold_km: float = 1.0,
+) -> Optional[bool]:
+    """
+    Check coastline proximity using PostGIS `france_coastline` (metric EPSG:2154 ST_DWithin).
+    Returns True/False on success, or None if PostGIS / table is unavailable (caller falls back to GeoJSON).
+    """
+    if _is_sqlite_backend():
+        return None
+
+    try:
+        threshold_m = float(threshold_km) * 1000.0
+        sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM france_coastline
+                WHERE ST_DWithin(
+                    ST_Transform(geometry, 2154),
+                    ST_Transform(ST_SetSRID(ST_MakePoint(%s, %s), 4326), 2154),
+                    %s
+                )
+            )
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(sql, [float(longitude), float(latitude), threshold_m])
+            row = cursor.fetchone()
+        return bool(row[0]) if row else False
+    except Exception as e:
+        logger.debug("PostGIS coastline proximity query unavailable, falling back to GeoJSON: %s", e)
         return None
 
 
@@ -123,28 +150,28 @@ def fetch_local_land_use_gdf(
     logger.debug("Querying local land use data within bbox: %s", (minx, miny, maxx, maxy))
 
     from shapely import wkb
-    from sqlalchemy import text
 
-    engine = _get_land_use_engine()
-    sql = text(
+    sql = (
         "SELECT *, ST_AsBinary(geometry) AS _geom_wkb FROM land_use_data "
-        "WHERE geometry && ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326)"
+        "WHERE geometry && ST_MakeEnvelope(%s, %s, %s, %s, 4326)"
     )
-    with engine.connect() as conn:
-        rows = conn.execute(
-            sql,
-            {"minx": minx, "miny": miny, "maxx": maxx, "maxy": maxy},
-        ).mappings().all()
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [minx, miny, maxx, maxy])
+        columns = [col[0] for col in (cursor.description or [])]
+        rows = cursor.fetchall()
 
     if not rows:
         return gpd.GeoDataFrame(columns=['Code_18', 'geometry'], geometry='geometry', crs='EPSG:4326')
 
+    geom_idx = columns.index('_geom_wkb')
+    prop_indices = [(i, name) for i, name in enumerate(columns) if name not in ('geometry', '_geom_wkb')]
+
     records = []
     geometries = []
     for row in rows:
-        raw_wkb = row['_geom_wkb']
+        raw_wkb = row[geom_idx]
         geometries.append(wkb.loads(bytes(raw_wkb)) if raw_wkb is not None else None)
-        records.append({k: v for k, v in row.items() if k not in ('geometry', '_geom_wkb')})
+        records.append({name: row[i] for i, name in prop_indices})
 
     gdf = gpd.GeoDataFrame(records, geometry=geometries, crs='EPSG:4326')
     if not gdf.empty:
