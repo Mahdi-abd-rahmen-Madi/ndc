@@ -444,7 +444,7 @@ describe('equipmentRegistry', () => {
     assert.equal(payloadSans.structure_lovage?.plot_section, null);
     assert.equal(payloadSans.structure_lovage?.hauteur_plot_m, 0.0);
 
-    // Lovage with plot (metallique) and hauteur >= 2.0m allows Echelle
+    // Lovage never supports Echelle even with plot (metallique) and hauteur >= 2.0m
     const ztAvecEch = {
       ...ztAvec,
       boitierLovageHauteurMatM: 2.2,
@@ -460,7 +460,7 @@ describe('equipmentRegistry', () => {
       resolveRrh: (ref) => ref,
       resolveBaieItems: () => [],
     });
-    assert.equal(payloadAvecEch.boitier_lovage.echelle, 'Echelle');
+    assert.equal(payloadAvecEch.boitier_lovage.echelle, "Pas d'échelle");
 
     // RRH & RRU derive sans_plot and echelle from foundationType (dallettes = sans plot, beton/metallique = with plot)
     const rrhWithPlotSector = {
@@ -575,5 +575,70 @@ describe('equipmentRegistry', () => {
     assert.equal(tdDallettesPayload.td_equipment.sans_plot, true);
     assert.equal(tdDallettesPayload.td_equipment.with_plot, false);
     assert.equal(tdDallettesPayload.td_equipment.echelle, "Pas d'échelle");
+  });
+
+  it('serializes co-mounted GPS and Convertisseur MDEA on boitier_lovage mast respecting operator gating', () => {
+    const ztFull = {
+      ...defaultZoneTechniqueData,
+      hasBoitierLovage: true,
+      boitierLovageReference: 'BLM-515709',
+      boitierLovageQuantity: 2,
+      boitierLovageFoundationType: 'metallique' as const,
+      boitierLovageHauteurMatM: 1.50,
+      hasGps: true,
+      gpsMarque: 'NOKIA',
+      gpsReference: 'FYGC 474074A',
+      hasConvertisseurMdea: true,
+      convertisseurMdeaQuantity: 2,
+    };
+
+    const freePayload = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: ztFull,
+      operator: 'free',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+
+    assert.equal(freePayload.boitier_lovage.has_gps, true);
+    assert.equal(freePayload.boitier_lovage.has_mdea, true);
+    assert.equal(freePayload.boitier_lovage.gps?.reference, 'FYGC 474074A');
+    assert.equal(freePayload.boitier_lovage.gps?.dimensions, 'Ø95 x 72.5');
+    assert.equal(freePayload.boitier_lovage.gps?.weight_kg, 0.154);
+    assert.equal(freePayload.boitier_lovage.mdea?.enabled, true);
+    assert.equal(freePayload.boitier_lovage.mdea?.quantity, 2);
+    assert.equal(freePayload.boitier_lovage.mdea?.hauteur_mm, 338);
+    assert.equal(freePayload.boitier_lovage.mdea?.largeur_mm, 295);
+    assert.equal(freePayload.boitier_lovage.mdea?.epaisseur_mm, 140);
+    assert.equal(freePayload.boitier_lovage.mdea?.weight_kg, 10);
+    assert.equal(freePayload.boitier_lovage.mdea?.cf_front, 1.46);
+    assert.equal(freePayload.boitier_lovage.mdea?.cf_lat, 1.12);
+    assert.equal(freePayload.convertisseur_mdea.cf_front, 1.46);
+    assert.equal(freePayload.convertisseur_mdea.cf_lat, 1.12);
+
+    // Non-free operator gates out MDEA while keeping GPS co-mounted (verify Ericsson GPS specs too)
+    const bouyguesPayload = buildSectorEquipmentPayload({
+      sector: defaultSectorData(1),
+      zoneTechnique: {
+        ...ztFull,
+        gpsMarque: 'ERICSSON',
+        gpsReference: 'KRE 101 2395/2',
+      },
+      operator: 'bouygues',
+      config: null,
+      coffretQuantityMultiplier: 1,
+      resolveRru: (ref) => ref,
+      resolveRrh: (ref) => ref,
+      resolveBaieItems: () => [],
+    });
+    assert.equal(bouyguesPayload.boitier_lovage.has_gps, true);
+    assert.equal(bouyguesPayload.boitier_lovage.gps?.reference, 'KRE 101 2395/2');
+    assert.equal(bouyguesPayload.boitier_lovage.gps?.dimensions, 'Ø78');
+    assert.equal(bouyguesPayload.boitier_lovage.gps?.weight_kg, 0.225);
+    assert.equal(bouyguesPayload.boitier_lovage.has_mdea, false);
+    assert.equal(bouyguesPayload.boitier_lovage.mdea, null);
   });
 });

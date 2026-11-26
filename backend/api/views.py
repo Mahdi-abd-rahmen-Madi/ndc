@@ -29,9 +29,15 @@ from .serializers import (
 from .aps_service import get_aps_token
 from .tasks import enqueue_task
 from .worker_status import get_or_probe_worker_status, set_worker_status
-from utils.ndc_hash import detect_calculation_type, compute_ndc_hash
+from utils.ndc_hash import detect_calculation_type, compute_ndc_hash, compute_stage_hashes
 from utils.validators import validate_calculation_mast_heights
-from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator, resolve_sans_plot
+from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator, resolve_lovage_comounts, resolve_sans_plot
+from .stage_cache import (
+    apply_cached_stages_to_job_kwargs,
+    lookup_cached_stages,
+    merge_worker_result_with_cached,
+    save_job_stages_to_cache,
+)
 from utils.path_security import safe_media_path, safe_resolve_under
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
@@ -332,15 +338,16 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 lovage_blk["sans_plot"] = is_lv_sp
                 lovage_blk["with_plot"] = not is_lv_sp
                 lovage_blk.setdefault("hauteur_mat_m", lv_h)
-                try:
-                    lv_h_num = float(lovage_blk.get("hauteur_mat_m") or 1.50)
-                except (ValueError, TypeError):
-                    lv_h_num = 1.50
-                if is_lv_sp or lv_h_num < 2.0:
-                    if "echelle" in lovage_blk:
-                        lovage_blk["echelle"] = "Pas d'échelle"
+                lovage_blk["echelle"] = "Pas d'échelle"
                 lovage_blk.setdefault("cf_front", 1.47)
                 lovage_blk.setdefault("cf_lat", 1.19)
+                comounts = resolve_lovage_comounts(input_data)
+                lovage_blk["has_gps"] = comounts["has_gps"]
+                lovage_blk["has_mdea"] = comounts["has_mdea"]
+                if comounts["has_gps"] and comounts["gps"]:
+                    lovage_blk["gps"] = comounts["gps"]
+                if comounts["has_mdea"] and comounts["mdea"]:
+                    lovage_blk["mdea"] = comounts["mdea"]
             if not input_data.get("structure_lovage") and not input_data.get("is_lovage"):
                 input_data["structure_lovage"] = {
                     "mast_section": "TRON 88x3.2",
@@ -362,231 +369,305 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             input_data["sans_plot"] = False
 
         ndc_hash = compute_ndc_hash(calc_type, input_data)
+        stage_hashes = compute_stage_hashes(input_data, calc_type)
 
-        # 2. Check Database Cache for Instant Hit
+        partial_field_kwargs = {}
+        partial_result_data = {}
+        cached_stages = []
+        missing_stages = list(stage_hashes.keys())
+
+        # 2. Check Per-Stage Cache (Full Hit, Partial Hit) & Legacy Monolithic Fallback
         if not force_recalculate:
             from .services import validate_calculation_artifacts
-            # Prefer original non-cached worker jobs first (is_cached=False before is_cached=True), then newest id
-            candidate_cached = CalculationJob.objects.filter(
-                ndc_hash=ndc_hash,
-                status="COMPLETED"
-            ).order_by("is_cached", "-id")
+            cached_entries = lookup_cached_stages(stage_hashes, input_data)
 
-            cached_job = None
-            for cand in candidate_cached:
-                if (cand.compiled_pdf or cand.result_data):
-                    missing_in_cand = validate_calculation_artifacts(cand)
-                    if not missing_in_cand:
-                        cached_job = cand
-                        break
-                    else:
-                        print(f"[NDC HARDENING] Skipping cached Job {cand.id} with incomplete artifacts: {missing_in_cand}")
-                        # Immediately mark invalid cached job so it doesn't pollute subsequent queries
-                        try:
-                            cand.status = 'FAILED'
-                            cand.error_message = f"Cache incomplet rejeté : artéfacts obligatoires manquants ({', '.join(missing_in_cand)})."
-                            cand.save(update_fields=['status', 'error_message'])
-                        except Exception:
-                            pass
+            # 2a. Full Per-Stage Cache Hit (all active stages found, even across different source jobs)
+            if stage_hashes and len(cached_entries) == len(stage_hashes):
+                field_kwargs, merged_res = apply_cached_stages_to_job_kwargs(cached_entries)
+                source_jobs = [e.get("source_job") for e in cached_entries.values() if e.get("source_job")]
+                same_source = len(source_jobs) == len(cached_entries) and len({sj.id for sj in source_jobs}) == 1
+                compiled_docx = None
+                compiled_pdf = None
+                if same_source:
+                    src_job = source_jobs[0]
+                    compiled_docx = src_job.compiled_docx.name if (src_job.compiled_docx and bool(src_job.compiled_docx.name)) else None
+                    compiled_pdf = src_job.compiled_pdf.name if (src_job.compiled_pdf and bool(src_job.compiled_pdf.name)) else None
 
-            if cached_job:
-                def _resolve_cached_file(source_job, field_name, candidate_rel_paths):
-                    field_val = getattr(source_job, field_name, None)
-                    if field_val and bool(getattr(field_val, 'name', None)):
-                        abs_p = os.path.join(settings.MEDIA_ROOT, field_val.name)
-                        if os.path.exists(abs_p):
-                            return field_val.name
-                    for rel_p in candidate_rel_paths:
-                        abs_p = os.path.join(settings.MEDIA_ROOT, rel_p)
-                        if os.path.exists(abs_p):
-                            return rel_p
-                    return None
-
-                screenshot = _resolve_cached_file(
-                    cached_job, 'screenshot',
-                    [f'screenshots/job_{cached_job.id}_3d_view.jpg']
-                )
-                verification_screenshot = _resolve_cached_file(
-                    cached_job, 'verification_screenshot',
-                    [
-                        f'screenshots/verification/job_{cached_job.id}_verification.jpg',
-                        f'screenshots/job_{cached_job.id}_verification.jpg',
-                        f'screenshots/verification/job_{cached_job.id}_antenna_verification.jpg',
-                        f'screenshots/job_{cached_job.id}_antenna_verification.jpg'
-                    ]
-                )
-                note_de_calcul = _resolve_cached_file(
-                    cached_job, 'note_de_calcul',
-                    [
-                        f'notes_de_calcul/job_{cached_job.id}_note_de_calcul.rtf',
-                        f'notes_de_calcul/job_{cached_job.id}_antenna_note_de_calcul.rtf'
-                    ]
-                )
-                note_mat = _resolve_cached_file(
-                    cached_job, 'note_mat',
-                    [
-                        f'notes_de_calcul/job_{cached_job.id}_antenna_note_mat.rtf',
-                        f'notes_rrh/job_{cached_job.id}_rrh_note_mat.rtf',
-                        f'notes_de_calcul/job_{cached_job.id}_rrh_note_mat.rtf'
-                    ]
-                )
-                note_plot = _resolve_cached_file(
-                    cached_job, 'note_plot',
-                    [
-                        f'notes_de_calcul/job_{cached_job.id}_antenna_note_plot.rtf',
-                        f'notes_rrh/job_{cached_job.id}_rrh_note_plot.rtf',
-                        f'notes_de_calcul/job_{cached_job.id}_rrh_note_plot.rtf'
-                    ]
-                )
-                assemblage_note = _resolve_cached_file(
-                    cached_job, 'assemblage_note',
-                    [
-                        f'assemblages/job_{cached_job.id}_assemblage_note.rtf',
-                        f'assemblages/job_{cached_job.id}_antenna_assemblage_note.rtf'
-                    ]
-                )
-                reactions_file = _resolve_cached_file(
-                    cached_job, 'reactions_file',
-                    [f'reactions/job_{cached_job.id}_reactions.txt']
-                )
-
-                # Dedicated RRH Support Files
-                note_de_calcul_rrh = _resolve_cached_file(
-                    cached_job, 'note_de_calcul_rrh',
-                    [
-                        f'notes_rrh/job_{cached_job.id}_rrh_note_de_calcul.rtf',
-                        f'notes_de_calcul/job_{cached_job.id}_rrh_note_de_calcul.rtf'
-                    ]
-                )
-                rrh_assemblage_note = _resolve_cached_file(
-                    cached_job, 'rrh_assemblage_note',
-                    [
-                        f'notes_rrh/job_{cached_job.id}_rrh_assemblage_note.rtf',
-                        f'assemblages/job_{cached_job.id}_rrh_assemblage_note.rtf'
-                    ]
-                )
-                rrh_verification_screenshot = _resolve_cached_file(
-                    cached_job, 'rrh_verification_screenshot',
-                    [f'verif_rrh/job_{cached_job.id}_rrh_verification.jpg']
-                )
-                rrh_tableau_charges = _resolve_cached_file(
-                    cached_job, 'rrh_tableau_charges',
-                    [f'charges_rrh/job_{cached_job.id}_rrh_tableau_charges.png']
-                )
-                rrh_reactions_file = _resolve_cached_file(
-                    cached_job, 'rrh_reactions_file',
-                    [f'reactions_rrh/job_{cached_job.id}_rrh_reactions.txt']
-                )
-                rrh_screenshot = _resolve_cached_file(
-                    cached_job, 'rrh_screenshot',
-                    [f'screenshots_rrh/job_{cached_job.id}_rrh_3d_view.jpg']
-                )
-
-                # Dedicated FH Support Files
-                note_de_calcul_fh = _resolve_cached_file(
-                    cached_job, 'note_de_calcul_fh',
-                    [
-                        f'notes_fh/job_{cached_job.id}_fh_note_de_calcul.rtf',
-                        f'notes_fh/job_{cached_job.id}_fh_note_de_calcul.pdf',
-                        f'notes_de_calcul/job_{cached_job.id}_fh_note_de_calcul.rtf'
-                    ]
-                )
-                fh_note_mat = _resolve_cached_file(
-                    cached_job, 'fh_note_mat',
-                    [
-                        f'notes_fh/job_{cached_job.id}_fh_note_mat.rtf',
-                        f'notes_de_calcul/job_{cached_job.id}_fh_note_mat.rtf'
-                    ]
-                )
-                fh_note_plot = _resolve_cached_file(
-                    cached_job, 'fh_note_plot',
-                    [
-                        f'notes_fh/job_{cached_job.id}_fh_note_plot.rtf',
-                        f'notes_de_calcul/job_{cached_job.id}_fh_note_plot.rtf'
-                    ]
-                )
-                fh_assemblage_note = _resolve_cached_file(
-                    cached_job, 'fh_assemblage_note',
-                    [
-                        f'notes_fh/job_{cached_job.id}_fh_assemblage_note.rtf',
-                        f'assemblages/job_{cached_job.id}_fh_assemblage_note.rtf'
-                    ]
-                )
-                fh_verification_screenshot = _resolve_cached_file(
-                    cached_job, 'fh_verification_screenshot',
-                    [f'verif_fh/job_{cached_job.id}_fh_verification.jpg']
-                )
-                fh_tableau_charges = _resolve_cached_file(
-                    cached_job, 'fh_tableau_charges',
-                    [f'charges_fh/job_{cached_job.id}_fh_tableau_charges.png']
-                )
-                fh_reactions_file = _resolve_cached_file(
-                    cached_job, 'fh_reactions_file',
-                    [f'reactions_fh/job_{cached_job.id}_fh_reactions.txt']
-                )
-                fh_screenshot = _resolve_cached_file(
-                    cached_job, 'fh_screenshot',
-                    [f'screenshots_fh/job_{cached_job.id}_fh_3d_view.jpg']
-                )
-
-                compiled_docx = cached_job.compiled_docx.name if (cached_job.compiled_docx and bool(cached_job.compiled_docx.name)) else None
-                compiled_pdf = cached_job.compiled_pdf.name if (cached_job.compiled_pdf and bool(cached_job.compiled_pdf.name)) else None
-
-                # Create a cloned record with all artifacts preserved
                 new_job = CalculationJob.objects.create(
                     user=user,
                     client_id=client_id,
                     calculation_type=calc_type,
                     ndc_hash=ndc_hash,
                     input_hash=ndc_hash,
+                    stage_hashes=stage_hashes,
                     is_cached=True,
                     status="COMPLETED",
                     input_data=input_data,
-                    result_data=cached_job.result_data,
-                    screenshot=screenshot,
-                    verification_screenshot=verification_screenshot,
-                    note_de_calcul=note_de_calcul,
-                    note_mat=note_mat,
-                    note_plot=note_plot,
-                    assemblage_note=assemblage_note,
-                    reactions_file=reactions_file,
-                    note_de_calcul_rrh=note_de_calcul_rrh,
-                    rrh_assemblage_note=rrh_assemblage_note,
-                    rrh_verification_screenshot=rrh_verification_screenshot,
-                    rrh_tableau_charges=rrh_tableau_charges,
-                    rrh_reactions_file=rrh_reactions_file,
-                    rrh_screenshot=rrh_screenshot,
-                    note_de_calcul_fh=note_de_calcul_fh,
-                    fh_note_mat=fh_note_mat,
-                    fh_note_plot=fh_note_plot,
-                    fh_assemblage_note=fh_assemblage_note,
-                    fh_verification_screenshot=fh_verification_screenshot,
-                    fh_tableau_charges=fh_tableau_charges,
-                    fh_reactions_file=fh_reactions_file,
-                    fh_screenshot=fh_screenshot,
+                    result_data=merged_res,
                     compiled_docx=compiled_docx,
                     compiled_pdf=compiled_pdf,
+                    **field_kwargs,
                 )
 
-                # Post-clone hardened validation: verify the cloned job is 100% complete
                 missing_in_new = validate_calculation_artifacts(new_job)
                 if missing_in_new:
-                    print(f"[NDC HARDENING ERROR] Cloned Job {new_job.id} failed artifact validation: {missing_in_new}. Discarding cache hit and recalculating.")
+                    print(f"[NDC HARDENING ERROR] Stage-cached Job {new_job.id} failed artifact validation: {missing_in_new}. Discarding cache hit and recalculating.")
                     new_job.status = 'FAILED'
                     new_job.error_message = f"Calcul dupliqué incomplet : artéfacts manquants ({', '.join(missing_in_new)})"
                     new_job.save(update_fields=['status', 'error_message'])
                 else:
+                    if not (compiled_pdf and compiled_docx):
+                        new_job_id = new_job.id
+                        transaction.on_commit(
+                            lambda: enqueue_task('api.tasks.compile_job_documents_task', new_job_id)
+                        )
                     serializer = self.get_serializer(new_job)
                     return Response({
-                        "message": "Instant Cache Hit! NDC loaded without recalculation.",
+                        "message": "Instant Stage Cache Hit! NDC loaded without recalculation.",
                         "calculation_id": new_job.id,
                         "cached": True,
                         "ndc_hash": ndc_hash,
+                        "stage_hashes": stage_hashes,
+                        "cached_stages": sorted(cached_entries.keys()),
                         "status": "COMPLETED",
                         "data": serializer.data,
                         "pdf_url": new_job.compiled_pdf.url if new_job.compiled_pdf else None,
                         "result_data": new_job.result_data,
                     }, status=status.HTTP_200_OK)
+
+            # 2b. Partial Per-Stage Cache Hit (only uncached stages will be sent to the Robot worker)
+            elif cached_entries:
+                partial_field_kwargs, partial_result_data = apply_cached_stages_to_job_kwargs(cached_entries)
+                cached_stages = sorted(cached_entries.keys())
+                missing_stages = [s for s in stage_hashes.keys() if s not in cached_entries]
+                input_data["_cached_stages"] = cached_stages
+                input_data["_stages_to_compute"] = missing_stages
+
+            # 2c. Legacy Monolithic ndc_hash Fallback (auto-backfills stage cache on hit)
+            if not cached_entries:
+                candidate_cached = CalculationJob.objects.filter(
+                    ndc_hash=ndc_hash,
+                    status="COMPLETED"
+                ).order_by("is_cached", "-id")
+
+                cached_job = None
+                for cand in candidate_cached:
+                    if (cand.compiled_pdf or cand.result_data):
+                        missing_in_cand = validate_calculation_artifacts(cand)
+                        if not missing_in_cand:
+                            cached_job = cand
+                            break
+                        else:
+                            print(f"[NDC HARDENING] Skipping cached Job {cand.id} with incomplete artifacts: {missing_in_cand}")
+                            try:
+                                cand.status = 'FAILED'
+                                cand.error_message = f"Cache incomplet rejeté : artéfacts obligatoires manquants ({', '.join(missing_in_cand)})."
+                                cand.save(update_fields=['status', 'error_message'])
+                            except Exception:
+                                pass
+
+                if cached_job:
+                    def _resolve_cached_file(source_job, field_name, candidate_rel_paths):
+                        field_val = getattr(source_job, field_name, None)
+                        if field_val and bool(getattr(field_val, 'name', None)):
+                            abs_p = os.path.join(settings.MEDIA_ROOT, field_val.name)
+                            if os.path.exists(abs_p):
+                                return field_val.name
+                        for rel_p in candidate_rel_paths:
+                            abs_p = os.path.join(settings.MEDIA_ROOT, rel_p)
+                            if os.path.exists(abs_p):
+                                return rel_p
+                        return None
+
+                    screenshot = _resolve_cached_file(
+                        cached_job, 'screenshot',
+                        [f'screenshots/job_{cached_job.id}_3d_view.jpg']
+                    )
+                    verification_screenshot = _resolve_cached_file(
+                        cached_job, 'verification_screenshot',
+                        [
+                            f'screenshots/verification/job_{cached_job.id}_verification.jpg',
+                            f'screenshots/job_{cached_job.id}_verification.jpg',
+                            f'screenshots/verification/job_{cached_job.id}_antenna_verification.jpg',
+                            f'screenshots/job_{cached_job.id}_antenna_verification.jpg'
+                        ]
+                    )
+                    note_de_calcul = _resolve_cached_file(
+                        cached_job, 'note_de_calcul',
+                        [
+                            f'notes_de_calcul/job_{cached_job.id}_note_de_calcul.rtf',
+                            f'notes_de_calcul/job_{cached_job.id}_antenna_note_de_calcul.rtf'
+                        ]
+                    )
+                    note_mat = _resolve_cached_file(
+                        cached_job, 'note_mat',
+                        [
+                            f'notes_de_calcul/job_{cached_job.id}_antenna_note_mat.rtf',
+                            f'notes_rrh/job_{cached_job.id}_rrh_note_mat.rtf',
+                            f'notes_de_calcul/job_{cached_job.id}_rrh_note_mat.rtf'
+                        ]
+                    )
+                    note_plot = _resolve_cached_file(
+                        cached_job, 'note_plot',
+                        [
+                            f'notes_de_calcul/job_{cached_job.id}_antenna_note_plot.rtf',
+                            f'notes_rrh/job_{cached_job.id}_rrh_note_plot.rtf',
+                            f'notes_de_calcul/job_{cached_job.id}_rrh_note_plot.rtf'
+                        ]
+                    )
+                    assemblage_note = _resolve_cached_file(
+                        cached_job, 'assemblage_note',
+                        [
+                            f'assemblages/job_{cached_job.id}_assemblage_note.rtf',
+                            f'assemblages/job_{cached_job.id}_antenna_assemblage_note.rtf'
+                        ]
+                    )
+                    reactions_file = _resolve_cached_file(
+                        cached_job, 'reactions_file',
+                        [f'reactions/job_{cached_job.id}_reactions.txt']
+                    )
+
+                    # Dedicated RRH Support Files
+                    note_de_calcul_rrh = _resolve_cached_file(
+                        cached_job, 'note_de_calcul_rrh',
+                        [
+                            f'notes_rrh/job_{cached_job.id}_rrh_note_de_calcul.rtf',
+                            f'notes_de_calcul/job_{cached_job.id}_rrh_note_de_calcul.rtf'
+                        ]
+                    )
+                    rrh_assemblage_note = _resolve_cached_file(
+                        cached_job, 'rrh_assemblage_note',
+                        [
+                            f'notes_rrh/job_{cached_job.id}_rrh_assemblage_note.rtf',
+                            f'assemblages/job_{cached_job.id}_rrh_assemblage_note.rtf'
+                        ]
+                    )
+                    rrh_verification_screenshot = _resolve_cached_file(
+                        cached_job, 'rrh_verification_screenshot',
+                        [f'verif_rrh/job_{cached_job.id}_rrh_verification.jpg']
+                    )
+                    rrh_tableau_charges = _resolve_cached_file(
+                        cached_job, 'rrh_tableau_charges',
+                        [f'charges_rrh/job_{cached_job.id}_rrh_tableau_charges.png']
+                    )
+                    rrh_reactions_file = _resolve_cached_file(
+                        cached_job, 'rrh_reactions_file',
+                        [f'reactions_rrh/job_{cached_job.id}_rrh_reactions.txt']
+                    )
+                    rrh_screenshot = _resolve_cached_file(
+                        cached_job, 'rrh_screenshot',
+                        [f'screenshots_rrh/job_{cached_job.id}_rrh_3d_view.jpg']
+                    )
+
+                    # Dedicated FH Support Files
+                    note_de_calcul_fh = _resolve_cached_file(
+                        cached_job, 'note_de_calcul_fh',
+                        [
+                            f'notes_fh/job_{cached_job.id}_fh_note_de_calcul.rtf',
+                            f'notes_fh/job_{cached_job.id}_fh_note_de_calcul.pdf',
+                            f'notes_de_calcul/job_{cached_job.id}_fh_note_de_calcul.rtf'
+                        ]
+                    )
+                    fh_note_mat = _resolve_cached_file(
+                        cached_job, 'fh_note_mat',
+                        [
+                            f'notes_fh/job_{cached_job.id}_fh_note_mat.rtf',
+                            f'notes_de_calcul/job_{cached_job.id}_fh_note_mat.rtf'
+                        ]
+                    )
+                    fh_note_plot = _resolve_cached_file(
+                        cached_job, 'fh_note_plot',
+                        [
+                            f'notes_fh/job_{cached_job.id}_fh_note_plot.rtf',
+                            f'notes_de_calcul/job_{cached_job.id}_fh_note_plot.rtf'
+                        ]
+                    )
+                    fh_assemblage_note = _resolve_cached_file(
+                        cached_job, 'fh_assemblage_note',
+                        [
+                            f'notes_fh/job_{cached_job.id}_fh_assemblage_note.rtf',
+                            f'assemblages/job_{cached_job.id}_fh_assemblage_note.rtf'
+                        ]
+                    )
+                    fh_verification_screenshot = _resolve_cached_file(
+                        cached_job, 'fh_verification_screenshot',
+                        [f'verif_fh/job_{cached_job.id}_fh_verification.jpg']
+                    )
+                    fh_tableau_charges = _resolve_cached_file(
+                        cached_job, 'fh_tableau_charges',
+                        [f'charges_fh/job_{cached_job.id}_fh_tableau_charges.png']
+                    )
+                    fh_reactions_file = _resolve_cached_file(
+                        cached_job, 'fh_reactions_file',
+                        [f'reactions_fh/job_{cached_job.id}_fh_reactions.txt']
+                    )
+                    fh_screenshot = _resolve_cached_file(
+                        cached_job, 'fh_screenshot',
+                        [f'screenshots_fh/job_{cached_job.id}_fh_3d_view.jpg']
+                    )
+
+                    compiled_docx = cached_job.compiled_docx.name if (cached_job.compiled_docx and bool(cached_job.compiled_docx.name)) else None
+                    compiled_pdf = cached_job.compiled_pdf.name if (cached_job.compiled_pdf and bool(cached_job.compiled_pdf.name)) else None
+
+                    new_job = CalculationJob.objects.create(
+                        user=user,
+                        client_id=client_id,
+                        calculation_type=calc_type,
+                        ndc_hash=ndc_hash,
+                        input_hash=ndc_hash,
+                        stage_hashes=stage_hashes,
+                        is_cached=True,
+                        status="COMPLETED",
+                        input_data=input_data,
+                        result_data=cached_job.result_data,
+                        screenshot=screenshot,
+                        verification_screenshot=verification_screenshot,
+                        note_de_calcul=note_de_calcul,
+                        note_mat=note_mat,
+                        note_plot=note_plot,
+                        assemblage_note=assemblage_note,
+                        reactions_file=reactions_file,
+                        note_de_calcul_rrh=note_de_calcul_rrh,
+                        rrh_assemblage_note=rrh_assemblage_note,
+                        rrh_verification_screenshot=rrh_verification_screenshot,
+                        rrh_tableau_charges=rrh_tableau_charges,
+                        rrh_reactions_file=rrh_reactions_file,
+                        rrh_screenshot=rrh_screenshot,
+                        note_de_calcul_fh=note_de_calcul_fh,
+                        fh_note_mat=fh_note_mat,
+                        fh_note_plot=fh_note_plot,
+                        fh_assemblage_note=fh_assemblage_note,
+                        fh_verification_screenshot=fh_verification_screenshot,
+                        fh_tableau_charges=fh_tableau_charges,
+                        fh_reactions_file=fh_reactions_file,
+                        fh_screenshot=fh_screenshot,
+                        compiled_docx=compiled_docx,
+                        compiled_pdf=compiled_pdf,
+                    )
+
+                    missing_in_new = validate_calculation_artifacts(new_job)
+                    if missing_in_new:
+                        print(f"[NDC HARDENING ERROR] Cloned Job {new_job.id} failed artifact validation: {missing_in_new}. Discarding cache hit and recalculating.")
+                        new_job.status = 'FAILED'
+                        new_job.error_message = f"Calcul dupliqué incomplet : artéfacts manquants ({', '.join(missing_in_new)})"
+                        new_job.save(update_fields=['status', 'error_message'])
+                    else:
+                        try:
+                            save_job_stages_to_cache(cached_job)
+                        except Exception as cache_exc:
+                            logger.warning("Failed to backfill stage cache from Job %s: %s", cached_job.id, cache_exc)
+                        serializer = self.get_serializer(new_job)
+                        return Response({
+                            "message": "Instant Cache Hit! NDC loaded without recalculation.",
+                            "calculation_id": new_job.id,
+                            "cached": True,
+                            "ndc_hash": ndc_hash,
+                            "stage_hashes": stage_hashes,
+                            "status": "COMPLETED",
+                            "data": serializer.data,
+                            "pdf_url": new_job.compiled_pdf.url if new_job.compiled_pdf else None,
+                            "result_data": new_job.result_data,
+                        }, status=status.HTTP_200_OK)
 
         # 3. Create Pending Job
         callback_url = (getattr(settings, 'BACKEND_PUBLIC_URL', '') or '').strip().rstrip('/')
@@ -603,9 +684,12 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             calculation_type=calc_type,
             ndc_hash=ndc_hash,
             input_hash=ndc_hash,
+            stage_hashes=stage_hashes,
             is_cached=False,
             status="PENDING",
-            input_data=input_data
+            input_data=input_data,
+            result_data=partial_result_data or None,
+            **partial_field_kwargs,
         )
 
         # 4. Dispatch to Unified Robot Worker via Django-Q2 (zero-Redis PostgreSQL queue)
@@ -617,6 +701,9 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             "message": f"{calc_type.upper()} Calculation enqueued successfully.",
             "calculation_id": job.id,
             "ndc_hash": ndc_hash,
+            "stage_hashes": stage_hashes,
+            "cached_stages": cached_stages,
+            "stages_to_compute": missing_stages,
             "cached": False,
             "status": "PENDING",
             "data": serializer.data
@@ -651,19 +738,25 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
         error_message = request.data.get('error_message') or request.POST.get('error_message', '')
         job_status = request.data.get('status') or request.POST.get('status', 'COMPLETED')
 
-        # Store ndc_hash and calculation_type reported by worker if present
-        if result_data and "ndc_hash" in result_data:
-            job.ndc_hash = result_data["ndc_hash"]
-        if result_data and "calculation_type" in result_data:
-            job.calculation_type = result_data["calculation_type"]
+        inp = job.input_data if isinstance(job.input_data, dict) else {}
+        cached_stages = inp.get("_cached_stages") or []
+
+        # Store ndc_hash and calculation_type reported by worker only for full-job runs
+        if not cached_stages:
+            if result_data and "ndc_hash" in result_data:
+                job.ndc_hash = result_data["ndc_hash"]
+            if result_data and "calculation_type" in result_data:
+                job.calculation_type = result_data["calculation_type"]
+            job.result_data = result_data
+        else:
+            result_data = merge_worker_result_with_cached(job.result_data, result_data, cached_stages)
+            job.result_data = result_data
 
         job.status = job_status
-        job.result_data = result_data
         job.error_message = error_message
 
         # Save uploaded artifact files from worker across ALL active stages independently
         files = request.FILES
-        inp = job.input_data if isinstance(job.input_data, dict) else {}
         calc_type_low = str(job.calculation_type or "").lower()
         active_eqs = result_data.get("active_equipments") if isinstance(result_data.get("active_equipments"), list) else []
 
@@ -720,8 +813,8 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                     pass
             return target_path
 
-        # 1. Base Antenna Files (accepting standard and worker aliases)
-        if not is_pure_fh:
+        # 1. Base Antenna Files (accepting standard and worker aliases; skipped if cached)
+        if not is_pure_fh and "antenna" not in cached_stages:
             if 'screenshot' in files:
                 job.screenshot = files['screenshot']
             elif 'antenna_screenshot' in files:
@@ -974,6 +1067,10 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
 
         # Enqueue backend document compilation (DOCX / PDF) on qcluster so callback returns fast
         if job_status == 'COMPLETED':
+            try:
+                save_job_stages_to_cache(job)
+            except Exception as cache_exc:
+                logger.warning("Failed to populate stage cache for Job %s: %s", job.id, cache_exc)
             job_id_to_compile = job.id
             transaction.on_commit(
                 lambda: enqueue_task('api.tasks.compile_job_documents_task', job_id_to_compile)

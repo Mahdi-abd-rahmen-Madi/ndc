@@ -74,11 +74,25 @@ export const DEFAULT_FH_REFERENCES: FHCatalogItem[] = [
 
 export const STATIC_EQUIPMENT_SPECS = {
   tgbt: { defaultRef: 'TGBT ACTIA', dimensions: '500x400x230mm', weightKg: 15 },
-  mdea: { dimensions: '338*295*140mm', weightKg: 10 },
+  mdea: {
+    dimensions: '338*295*140mm',
+    hMm: 338,
+    wMm: 295,
+    dMm: 140,
+    weightKg: 10,
+    cfFront: 1.46,
+    cfLat: 1.12,
+  },
   transFo: { reference: 'TRANS_FO', label: 'TRANS FO', dimensions: '260x380x97mm', weightKg: 2.1 },
   boitierJonction: { marque: 'Aginode', dimensions: '427*380*127mm', dimensionsDisplay: '427 × 380 × 127 mm', weightKg: 0 },
   bcubeRadio: { defaultRef: 'RP6647 5G TDD' },
 } as const;
+
+export const GPS_REFERENCE_SPECS: Record<string, { marque: string; dimensions: string | null; weightKg: number }> = {
+  'FYGC 474074A': { marque: 'NOKIA', dimensions: 'Ø95 x 72.5', weightKg: 0.154 },
+  'FYGB 472748A': { marque: 'NOKIA', dimensions: 'Ø95 x 72.5', weightKg: 0.154 },
+  'KRE 101 2395/2': { marque: 'ERICSSON', dimensions: 'Ø78', weightKg: 0.225 },
+};
 
 export const DEFAULT_ORANGE_BAIES: BaieReference[] = [
   {

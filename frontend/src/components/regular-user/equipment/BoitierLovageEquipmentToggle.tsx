@@ -4,7 +4,6 @@ import { DEFAULT_BOITIER_LOVAGE_OPTIONS } from '../../../config/catalogueDefault
 import { SelectEquipmentToggle } from './shared/SelectEquipmentToggle';
 import { EquipmentAncrageSelector, EquipmentFoundationType } from './shared/EquipmentAncrageSelector';
 import { MastHeightInput } from './shared/MastHeightInput';
-import { EquipmentEchelleSelector } from './shared/EquipmentEchelleSelector';
 
 export interface BoitierLovageEquipmentToggleProps {
   hasBoitierLovage: boolean;
@@ -17,10 +16,10 @@ export interface BoitierLovageEquipmentToggleProps {
   setFoundationType?: (val: EquipmentFoundationType) => void;
   hauteurMatM?: number;
   setHauteurMatM?: (val: number) => void;
-  echelle?: string;
-  setEchelle?: (val: string) => void;
   boitierOptions?: any[];
   operator?: string;
+  coMountedGps?: boolean;
+  coMountedMdea?: boolean;
 }
 
 export function BoitierLovageEquipmentToggle({
@@ -34,10 +33,10 @@ export function BoitierLovageEquipmentToggle({
   setFoundationType,
   hauteurMatM = 1.50,
   setHauteurMatM,
-  echelle = "Pas d'échelle",
-  setEchelle,
   boitierOptions = [],
   operator,
+  coMountedGps = false,
+  coMountedMdea = false,
 }: BoitierLovageEquipmentToggleProps) {
   const selectOptions = useMemo(() => {
     const src = boitierOptions.length > 0 ? boitierOptions : DEFAULT_BOITIER_LOVAGE_OPTIONS;
@@ -93,14 +92,16 @@ export function BoitierLovageEquipmentToggle({
         />
       )}
 
-      <EquipmentEchelleSelector
-        foundationType={foundationType}
-        hauteurMatM={hauteurMatM}
-        defaultHauteurMatM={1.50}
-        value={echelle}
-        onChange={setEchelle}
-        accentColor="violet"
-      />
+      {hasBoitierLovage && (coMountedGps || coMountedMdea) && (
+        <div className="rounded-lg bg-violet-50 border border-violet-200 px-3 py-2 text-[11px] text-violet-800 flex items-center gap-1.5">
+          <span className="font-semibold">Mât partagé :</span>
+          <span>
+            Boîtier de lovage
+            {coMountedGps ? ' + GPS' : ''}
+            {coMountedMdea ? ' + Convertisseur MDEA' : ''}
+          </span>
+        </div>
+      )}
     </SelectEquipmentToggle>
   );
 }

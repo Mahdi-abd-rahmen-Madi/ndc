@@ -204,8 +204,8 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         self.assertTrue(resolve_sans_plot({"rru_equipment": {"enabled": True, "ancrage": "dallettes"}}, kind="rru"))
         self.assertFalse(resolve_sans_plot({"rru_equipment": {"enabled": True, "ancrage": "metallique"}}, kind="rru"))
 
-        # Unified echelle resolution across lovage, rrh, rru (only when with plot AND hauteur >= 2.0m)
-        self.assertTrue(
+        # Lovage never supports echelle; RRH/RRU resolve echelle only when with plot AND hauteur >= 2.0m
+        self.assertFalse(
             ndc_generator.extract_lovage_ndc_context(
                 {}, input_data={"boitier_lovage": {"enabled": True, "ancrage": "metallique", "hauteur_mat_m": 2.0, "echelle": "Echelle"}}
             )["has_echelle"]
@@ -291,6 +291,384 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
             self.assertIn("supportant 2 boitiers de lovage", full_txt)
             self.assertIn("1.47", full_txt)
             self.assertIn("1.19", full_txt)
+
+    def test_lovage_comounted_gps_and_mdea_all_variants(self):
+        import os
+        from django.conf import settings
+        from django.template.loader import render_to_string
+        from docx import Document
+        from api.serializers import CalculationPayloadSerializer
+        from api.services import _populate_equipment_docx, select_equipment_docx_template
+        from utils.domain_constants import MDEA_CF_FRONT, MDEA_CF_LAT
+        from utils.ndc_hash import compute_ndc_hash, detect_calculation_type
+
+        self.assertEqual(MDEA_CF_FRONT, 1.46)
+        self.assertEqual(MDEA_CF_LAT, 1.12)
+
+        base_payload = {
+            "operateur": "free",
+            "environment": {"region": 2, "terrain_type": "IIIa", "building_height_m": 15.0},
+            "structure": {"hauteur_mat_m": 3.0},
+            "boitier_lovage": {
+                "enabled": True,
+                "reference": "BLM-515709",
+                "quantity": 2,
+                "hauteur_mat_m": 1.5,
+                "hauteur_mm": 300,
+                "largeur_mm": 200,
+                "epaisseur_mm": 100,
+                "poids_kg": 2.5,
+                "ancrage": "metallique",
+                "sans_plot": False,
+                "with_plot": True,
+            },
+        }
+        gps_payload = {
+            **base_payload,
+            "gps": {"enabled": True, "quantity": 1, "marque": "NOKIA", "reference": "FYGC 474074A"},
+        }
+        gps_mdea_payload = {
+            **gps_payload,
+            "convertisseur_mdea": {
+                "enabled": True,
+                "quantite": 2,
+                "dimensions": "338*295*140mm",
+                "poids": 10,
+                "cf_front": 1.46,
+                "cf_lat": 1.12,
+            },
+        }
+        gps_mdea_qty1_payload = {
+            **gps_payload,
+            "convertisseur_mdea": {"enabled": True, "quantite": 1, "dimensions": "338*295*140mm", "poids": 10},
+        }
+
+        # 1. Serializer preserves gps, convertisseur_mdea, and co-mount fields
+        ser = CalculationPayloadSerializer(data=gps_mdea_payload)
+        self.assertTrue(ser.is_valid(), ser.errors)
+        self.assertTrue(ser.validated_data["gps"]["enabled"])
+        self.assertEqual(ser.validated_data["gps"]["reference"], "FYGC 474074A")
+        self.assertTrue(ser.validated_data["convertisseur_mdea"]["enabled"])
+        self.assertEqual(ser.validated_data["convertisseur_mdea"]["quantite"], 2)
+
+        # 2. Hash uniqueness across Lovage, Lovage+GPS, Lovage+GPS+MDEA (qty 1 vs qty 2)
+        #    and unchanged hash for Lovage-only when gps/mdea disabled
+        ct = detect_calculation_type(base_payload)
+        h_base = compute_ndc_hash(ct, base_payload)
+        h_base_disabled = compute_ndc_hash(
+            ct,
+            {
+                **base_payload,
+                "gps": {"enabled": False},
+                "convertisseur_mdea": {"enabled": False},
+            },
+        )
+        h_gps = compute_ndc_hash(ct, gps_payload)
+        h_gps_mdea_1 = compute_ndc_hash(ct, gps_mdea_qty1_payload)
+        h_gps_mdea_2 = compute_ndc_hash(ct, gps_mdea_payload)
+        self.assertEqual(h_base, h_base_disabled)
+        self.assertEqual(len({h_base, h_gps, h_gps_mdea_1, h_gps_mdea_2}), 4)
+
+        # Composite multi-equipment hashes exceed 64 chars and must fit in CalculationJob hash fields
+        from api.models import CalculationJob
+        max_ndc_len = CalculationJob._meta.get_field("ndc_hash").max_length
+        max_inp_len = CalculationJob._meta.get_field("input_hash").max_length
+        for long_ct in (
+            "antenna_with_rrh_sans_plot_and_fh_sans_plot",
+            "antenna_with_rrh_sans_plot_and_fh_sans_plot_and_lovage_sans_plot",
+        ):
+            long_h = compute_ndc_hash(long_ct, gps_mdea_payload)
+            self.assertGreater(len(long_h), 64)
+            self.assertLessEqual(len(long_h), max_ndc_len)
+            self.assertLessEqual(len(long_h), max_inp_len)
+
+        # 3. Context extraction math: GPS catalog specs & negligible FEA, MDEA Cf_front=1.46 / Cf_lat=1.12
+        ctx_gps = ndc_generator.extract_lovage_ndc_context({}, input_data=gps_payload, qp_val=100.0)
+        self.assertTrue(ctx_gps["has_gps"])
+        self.assertFalse(ctx_gps["has_mdea"])
+        self.assertEqual(ctx_gps["lovage_variant"], "lovage_gps")
+        self.assertEqual(ctx_gps["gps_item"]["dimensions_str"], "Ø95 x 72.5")
+        self.assertAlmostEqual(ctx_gps["gps_item"]["weight_kg"], 0.154, places=3)
+        self.assertEqual(ctx_gps["gps_item"]["weight_unit_kg"], "0.154")
+        self.assertEqual(ctx_gps["gps_item"]["pe_dan"], 0.0)
+        self.assertEqual(ctx_gps["gps_item"]["fw_front"], 0.0)
+
+        ctx_ericsson_gps = ndc_generator.extract_lovage_ndc_context(
+            {},
+            input_data={**base_payload, "gps": {"enabled": True, "quantity": 1, "marque": "ERICSSON", "reference": "KRE 101 2395/2"}},
+            qp_val=100.0,
+        )
+        self.assertEqual(ctx_ericsson_gps["gps_item"]["dimensions_str"], "Ø78")
+        self.assertAlmostEqual(ctx_ericsson_gps["gps_item"]["weight_kg"], 0.225, places=3)
+        self.assertEqual(ctx_ericsson_gps["gps_item"]["weight_unit_kg"], "0.225")
+        self.assertEqual(ctx_ericsson_gps["gps_item"]["pe_dan"], 0.0)
+
+        ctx_full = ndc_generator.extract_lovage_ndc_context({}, input_data=gps_mdea_payload, qp_val=100.0)
+        self.assertTrue(ctx_full["has_gps"])
+        self.assertTrue(ctx_full["has_mdea"])
+        self.assertEqual(ctx_full["lovage_variant"], "lovage_gps_mdea")
+        mdea = ctx_full["mdea_item"]
+        self.assertEqual(mdea["qty"], 2)
+        self.assertEqual(mdea["cf_front"], 1.46)
+        self.assertEqual(mdea["cf_lat"], 1.12)
+        self.assertAlmostEqual(mdea["a_front"], 0.0997, places=4)
+        self.assertAlmostEqual(mdea["a_lat"], 0.0473, places=4)
+        self.assertAlmostEqual(mdea["fw_front"], round(2 * 1.46 * 0.0997 * 100.0, 2), places=2)
+        self.assertAlmostEqual(mdea["fw_lat"], round(2 * 1.12 * 0.0473 * 100.0, 2), places=2)
+        self.assertAlmostEqual(mdea["pe_dan"], 20.0, places=2)
+        # Combined totals: Lovage (5.0 daN) + MDEA (20.0 daN) = 25.0 daN
+        self.assertAlmostEqual(ctx_full["totals"]["pe_dan"], 25.0, places=2)
+        self.assertAlmostEqual(
+            ctx_full["totals"]["fw_front"],
+            round(ctx_full["items"][0]["fw_front"] + mdea["fw_front"], 2),
+            places=2,
+        )
+
+        # 4. HTML template rendering for Lovage+GPS and Lovage+GPS+MDEA
+        render_common = {
+            "region": "Region 2",
+            "terrain_type": "IIIa",
+            "building_height": 15,
+            "vb_m_s": 24,
+            "cr_z": "0.96",
+            "vm_z": "23.04",
+            "iv_z": "0.23",
+            "kr_z": "0.22",
+            "qp_z": "100.00",
+            "lovage_mat_section": "TRON 88x3.2",
+            "lovage_plot_section": "TCAR 150x5",
+            "lovage_mat_longueur_m": 1.5,
+            "lovage_plot_longueur_m": 0.5,
+            "lovage_sans_plot": False,
+            "is_sans_plot": False,
+        }
+        html_gps = render_to_string(
+            "ndc/lovage.html",
+            {
+                **render_common,
+                "lovage_items": ctx_gps["items"],
+                "lovage_totals": ctx_gps["totals"],
+                "lovage_qty_total": ctx_gps["qty_total"],
+                "lovage_has_gps": True,
+                "lovage_has_mdea": False,
+                "lovage_gps_item": ctx_gps["gps_item"],
+                "lovage_mdea_item": None,
+            },
+        )
+        self.assertIn("ÉTUDE BOÎTIERS DE LOVAGE + GPS", html_gps)
+        self.assertIn("Antenne GPS (FYGC 474074A)", html_gps)
+        self.assertNotIn("MDEA : F", html_gps)
+
+        html_full = render_to_string(
+            "ndc/lovage.html",
+            {
+                **render_common,
+                "lovage_items": ctx_full["items"],
+                "lovage_totals": ctx_full["totals"],
+                "lovage_qty_total": ctx_full["qty_total"],
+                "lovage_has_gps": True,
+                "lovage_has_mdea": True,
+                "lovage_gps_item": ctx_full["gps_item"],
+                "lovage_mdea_item": ctx_full["mdea_item"],
+            },
+        )
+        self.assertIn("ÉTUDE BOÎTIERS DE LOVAGE + GPS + MDEA", html_full)
+        self.assertIn("Antenne GPS (FYGC 474074A)", html_full)
+        self.assertIn("338 x 295 x 140", html_full)
+        self.assertIn("MDEA : F<sub>w,Frontale</sub>", html_full)
+        self.assertIn("MDEA : F<sub>w,Latéral</sub>", html_full)
+
+        # 5. All 6 DOCX templates selection & population
+        sp_gps_payload = {
+            **gps_payload,
+            "boitier_lovage": {**gps_payload["boitier_lovage"], "sans_plot": True, "with_plot": False},
+        }
+        sp_full_payload = {
+            **gps_mdea_payload,
+            "boitier_lovage": {**gps_mdea_payload["boitier_lovage"], "sans_plot": True, "with_plot": False},
+        }
+        ctx_gps_sp = ndc_generator.extract_lovage_ndc_context({}, input_data=sp_gps_payload, qp_val=100.0)
+        ctx_full_sp = ndc_generator.extract_lovage_ndc_context({}, input_data=sp_full_payload, qp_val=100.0)
+
+        cases = [
+            (ctx_gps, "boitier_lovage+gps_avec_plot.docx", True, False),
+            (ctx_gps_sp, "boitier_lovage+gps_sans_plot.docx", True, False),
+            (ctx_full, "boitier_lovage+GPS+MDEA_avec_plot.docx", True, True),
+            (ctx_full_sp, "boitiers_lovage+GPS+MDEA_sans_plot.docx", True, True),
+        ]
+        for ctx_case, expected_fname, expect_gps, expect_mdea in cases:
+            tpl_rel = select_equipment_docx_template("lovage", ctx_case)
+            self.assertTrue(tpl_rel.endswith(expected_fname), f"Expected {expected_fname}, got {tpl_rel}")
+            tpl_path = os.path.join(settings.BASE_DIR, tpl_rel)
+            self.assertTrue(os.path.exists(tpl_path), f"Missing template {tpl_path}")
+            doc = Document(tpl_path)
+            _populate_equipment_docx(doc, ctx_case, kind="lovage")
+            full_txt = "\n".join(p.text for p in doc.paragraphs)
+            self.assertNotIn("XX", full_txt, f"Leftover XX in {expected_fname}")
+            t0_txt = "\n".join(c.text for r in doc.tables[0].rows for c in r.cells)
+            self.assertNotIn("XX", t0_txt, f"Leftover XX in Table 0 of {expected_fname}")
+            t1_txt = "\n".join(c.text for r in doc.tables[1].rows for c in r.cells)
+            self.assertIn("TRON 88x3.2", t1_txt)
+            self.assertNotIn("TCAR 105x5", t1_txt)
+            if not ctx_case["is_sans_plot"]:
+                self.assertIn("TCAR 150x5", t1_txt)
+            if expect_gps:
+                self.assertIn("Antenne GPS (FYGC 474074A)", t0_txt)
+                self.assertIn("une antenne GPS", full_txt)
+            if expect_mdea:
+                self.assertIn("MDEA", t0_txt)
+                self.assertIn("338 x 295 x 140", t0_txt)
+                self.assertIn("2 convertisseurs MDEA", full_txt)
+                self.assertIn("MDEA : Fw,Frontale = 2 * 1.46", full_txt)
+                self.assertIn("MDEA : Fw,Latéral = 2 * 1.12", full_txt)
+                # Ensure MDEA row État column is populated with Projet
+                mdea_row = [r for r in doc.tables[0].rows if r.cells[0].text.strip() == "MDEA"][0]
+                self.assertEqual(mdea_row.cells[4].text.strip(), "Projet")
+
+    def test_per_stage_hashing_and_partial_cache_helpers(self):
+        from api.stage_cache import (
+            apply_cached_stages_to_job_kwargs,
+            build_worker_input_for_missing_stages,
+            merge_worker_result_with_cached,
+        )
+        from utils.ndc_hash import compute_stage_hashes
+
+        base_composite = {
+            "operateur": "free",
+            "environment": {"region": 2, "terrain_type": "IIIa", "building_height_m": 15.0, "plot_height_m": 0.0},
+            "structure": {"hauteur_mat_m": 3.0, "structure_case": "cas1"},
+            "antenna_4g": {"model": "ANT-4G", "hauteur_mm": 2000, "largeur_mm": 400, "epaisseur_mm": 150, "poids_kg": 30},
+            "rrh_equipment": {"enabled": True, "hauteur_mat_m": 1.5, "sans_plot": True, "with_plot": False, "items": [{"reference": "AHHB 2600", "quantity": 1}]},
+            "fh_equipment": {"enabled": True, "hauteur_mat_m": 1.7, "sans_plot": True, "with_plot": False, "items": [{"reference": "30cm Ø 300 mm", "diameter_mm": 300, "quantity": 1}]},
+            "boitier_lovage": {"enabled": True, "reference": "BLM-515709", "quantity": 1, "hauteur_mat_m": 1.5, "sans_plot": False, "with_plot": True},
+        }
+
+        h1 = compute_stage_hashes(base_composite)
+        self.assertEqual(set(h1.keys()), {"antenna", "rrh", "fh", "lovage"})
+        for st, val in h1.items():
+            self.assertLessEqual(len(val), 48, f"Stage hash {st}={val} exceeded 48 chars")
+            self.assertTrue(val.startswith(f"stg_{st}_v1_"))
+
+        # Changing FH only must keep antenna, rrh, and lovage hashes identical
+        changed_fh = {
+            **base_composite,
+            "fh_equipment": {"enabled": True, "hauteur_mat_m": 1.7, "sans_plot": True, "with_plot": False, "items": [{"reference": "60cm Ø 600 mm", "diameter_mm": 600, "quantity": 1}]},
+        }
+        h2 = compute_stage_hashes(changed_fh)
+        self.assertEqual(h1["antenna"], h2["antenna"])
+        self.assertEqual(h1["rrh"], h2["rrh"])
+        self.assertEqual(h1["lovage"], h2["lovage"])
+        self.assertNotEqual(h1["fh"], h2["fh"])
+
+        # Changing Lovage MDEA only must keep antenna, rrh, and fh hashes identical
+        changed_lovage = {
+            **base_composite,
+            "convertisseur_mdea": {"enabled": True, "quantite": 1, "dimensions": "338*295*140mm", "poids": 10},
+        }
+        h3 = compute_stage_hashes(changed_lovage)
+        self.assertEqual(h1["antenna"], h3["antenna"])
+        self.assertEqual(h1["rrh"], h3["rrh"])
+        self.assertEqual(h1["fh"], h3["fh"])
+        self.assertNotEqual(h1["lovage"], h3["lovage"])
+
+        # Changing wind region invalidates all active stages
+        changed_wind = {
+            **base_composite,
+            "environment": {**base_composite["environment"], "region": 3},
+        }
+        h4 = compute_stage_hashes(changed_wind)
+        for st in ("antenna", "rrh", "fh", "lovage"):
+            self.assertNotEqual(h1[st], h4[st])
+
+        # Partial cache pruning: keep ONLY fh when antenna + rrh + lovage are cached
+        pruned_fh_only = build_worker_input_for_missing_stages(
+            base_composite,
+            cached_stages=["antenna", "lovage", "rrh"],
+            missing_stages=["fh"],
+        )
+        self.assertEqual(pruned_fh_only["calculation_type"], "fh_sans_plot")
+        self.assertTrue(pruned_fh_only["is_fh"])
+        self.assertFalse(pruned_fh_only["rrh_equipment"]["enabled"])
+        self.assertFalse(pruned_fh_only["boitier_lovage"]["enabled"])
+        self.assertNotIn("antenna_4g", pruned_fh_only)
+
+        # Partial cache pruning: keep ONLY antenna when rrh + fh + lovage are cached
+        pruned_ant_only = build_worker_input_for_missing_stages(
+            base_composite,
+            cached_stages=["fh", "lovage", "rrh"],
+            missing_stages=["antenna"],
+        )
+        self.assertEqual(pruned_ant_only["calculation_type"], "antenna")
+        self.assertIn("antenna_4g", pruned_ant_only)
+        self.assertFalse(pruned_ant_only["fh_equipment"]["enabled"])
+
+        # Merging cached stages and worker output preserves both
+        cached_entries = {
+            "antenna": {
+                "result_payload": {"wind_params": {"qp_dan": 80.0}},
+                "artifact_paths": {"model_fields": {"screenshot": "screenshots/job_1_3d_view.jpg"}},
+            },
+            "rrh": {
+                "result_payload": {"has_rrh": True, "rrh_items": [{"name": "AHHB 2600"}], "rrh_files": {"rrh_screenshot": "/tmp/rrh.jpg"}},
+                "artifact_paths": {"model_fields": {"rrh_screenshot": "screenshots_rrh/job_1_rrh_3d_view.jpg"}},
+            },
+        }
+        field_kwargs, pre_res = apply_cached_stages_to_job_kwargs(cached_entries)
+        self.assertEqual(field_kwargs["screenshot"], "screenshots/job_1_3d_view.jpg")
+        self.assertEqual(field_kwargs["rrh_screenshot"], "screenshots_rrh/job_1_rrh_3d_view.jpg")
+        merged = merge_worker_result_with_cached(
+            pre_res,
+            {"has_fh": True, "fh_items": [{"name": "FH"}], "active_equipments": ["fh"], "fh_files": {"fh_screenshot": "/tmp/fh.jpg"}},
+            cached_stages=["antenna", "rrh"],
+        )
+        self.assertTrue(merged["has_rrh"])
+        self.assertTrue(merged["has_fh"])
+        self.assertEqual(merged["wind_params"]["qp_dan"], 80.0)
+        self.assertEqual(set(merged["active_equipments"]), {"rrh", "fh"})
+        self.assertEqual(merged["rrh_files"]["rrh_screenshot"], "/tmp/rrh.jpg")
+        self.assertEqual(merged["fh_files"]["fh_screenshot"], "/tmp/fh.jpg")
+
+    def test_clear_calculation_cache_media_only_preserves_static_assets(self):
+        import os
+        import tempfile
+        from django.test import override_settings
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            uploads_dir = os.path.join(tmpdir, "uploads")
+            comb_dir = os.path.join(tmpdir, "combinaisons")
+            cat_dir = os.path.join(tmpdir, "catalogue")
+            scr_verif_dir = os.path.join(tmpdir, "screenshots", "verification")
+            ndc_dir = os.path.join(tmpdir, "ndc")
+            os.makedirs(uploads_dir)
+            os.makedirs(comb_dir)
+            os.makedirs(cat_dir)
+            os.makedirs(scr_verif_dir)
+            os.makedirs(ndc_dir)
+
+            keep_paths = [
+                os.path.join(uploads_dir, "logo_cometa.png"),
+                os.path.join(comb_dir, "table.png"),
+                os.path.join(cat_dir, "antennas.pdf"),
+            ]
+            delete_paths = [
+                os.path.join(uploads_dir, "SITE_NDC_abc123.pdf"),
+                os.path.join(uploads_dir, "NDC_12_def456.pdf"),
+                os.path.join(uploads_dir, "LOVAGE_12_abc.pdf"),
+                os.path.join(scr_verif_dir, "job_1_verification.jpg"),
+                os.path.join(ndc_dir, "ndc_1.pdf"),
+            ]
+            for p in keep_paths + delete_paths:
+                with open(p, "wb") as f:
+                    f.write(b"test")
+
+            out = StringIO()
+            with override_settings(MEDIA_ROOT=tmpdir):
+                call_command("clear_calculation_cache", media_only=True, yes=True, stdout=out)
+
+            for p in keep_paths:
+                self.assertTrue(os.path.exists(p), f"Static asset {p} should be preserved")
+            for p in delete_paths:
+                self.assertFalse(os.path.exists(p), f"Generated file {p} should be removed")
 
     def test_fh_designation_strips_dimensions_and_falls_back_to_fh(self):
         from django.template.loader import render_to_string

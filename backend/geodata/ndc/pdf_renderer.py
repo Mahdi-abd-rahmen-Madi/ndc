@@ -1203,6 +1203,11 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         is_multi = lovage_ctx['is_multi']
         qty_total = lovage_ctx['qty_total']
         is_lovage_sans_plot = lovage_ctx['is_sans_plot']
+        has_gps = lovage_ctx['has_gps']
+        has_mdea = lovage_ctx['has_mdea']
+        gps_item = lovage_ctx['gps_item']
+        mdea_item = lovage_ctx['mdea_item']
+        lovage_variant = lovage_ctx['lovage_variant']
 
         first_item = items[0] if items else {}
         eq_dims = first_item.get('dimensions_str', 'N/A')
@@ -1279,6 +1284,11 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
                     first_item = items[0] if items else {}
                     fw_front = totals.get('fw_front', fw_front)
                     fw_lat = totals.get('fw_lat', fw_lat)
+                    has_gps = lovage_ctx['has_gps']
+                    has_mdea = lovage_ctx['has_mdea']
+                    gps_item = lovage_ctx['gps_item']
+                    mdea_item = lovage_ctx['mdea_item']
+                    lovage_variant = lovage_ctx['lovage_variant']
             except (ValueError, TypeError):
                 pass
 
@@ -1401,7 +1411,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'extremes': extremes,
             'lovage_sans_plot': is_lovage_sans_plot,
             'is_sans_plot': is_lovage_sans_plot,
-            'lovage_has_echelle': False if is_lovage_sans_plot or float(lovage_mat_longueur_m or 1.5) < 2.0 else bool(lovage_ctx.get('has_echelle', False)),
+            'lovage_has_echelle': False,
             'lovage_mat_section': lovage_mat_section,
             'lovage_mat_diam': lovage_mat_diam,
             'lovage_mat_epaisseur': lovage_mat_epaisseur,
@@ -1421,6 +1431,11 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'lovage_totals': totals,
             'lovage_is_multi': is_multi,
             'lovage_qty_total': qty_total,
+            'lovage_has_gps': has_gps,
+            'lovage_has_mdea': has_mdea,
+            'lovage_gps_item': gps_item,
+            'lovage_mdea_item': mdea_item,
+            'lovage_variant': lovage_variant,
         }))
 
     return generated_pdfs

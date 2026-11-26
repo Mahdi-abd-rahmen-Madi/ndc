@@ -40,6 +40,14 @@ def send_job_to_worker(job_id):
         url = getattr(settings, 'ROBOT_WORKER_JOBS_URL', f"{settings.WORKER_BASE_URL.rstrip('/')}/api/jobs")
 
         raw_input_data = dict(job.input_data or {})
+        cached_stages = raw_input_data.pop("_cached_stages", None) or []
+        stages_to_compute = raw_input_data.pop("_stages_to_compute", None) or []
+        if cached_stages and stages_to_compute:
+            from .stage_cache import build_worker_input_for_missing_stages
+            raw_input_data = build_worker_input_for_missing_stages(
+                raw_input_data, cached_stages, stages_to_compute
+            )
+
         callback_url = (
             raw_input_data.pop("_callback_url", None)
             or getattr(settings, 'BACKEND_PUBLIC_URL', '')

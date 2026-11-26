@@ -227,6 +227,34 @@ class StructureLovageSerializer(serializers.Serializer):
     sans_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
     with_plot = serializers.BooleanField(required=False, allow_null=True, default=None)
 
+class GpsEquipmentSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField(required=False, default=False)
+    quantity = serializers.IntegerField(required=False, default=1, allow_null=True, min_value=1)
+    marque = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    dimensions = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    weight_kg = serializers.FloatField(required=False, allow_null=True)
+    poids_kg = serializers.FloatField(required=False, allow_null=True)
+
+
+class ConvertisseurMdeaSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField(required=False, default=False)
+    quantity = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    quantite = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    dimensions = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    hauteur_mm = serializers.FloatField(required=False, allow_null=True)
+    largeur_mm = serializers.FloatField(required=False, allow_null=True)
+    epaisseur_mm = serializers.FloatField(required=False, allow_null=True)
+    h_mm = serializers.FloatField(required=False, allow_null=True)
+    w_mm = serializers.FloatField(required=False, allow_null=True)
+    d_mm = serializers.FloatField(required=False, allow_null=True)
+    poids = serializers.FloatField(required=False, allow_null=True)
+    poids_kg = serializers.FloatField(required=False, allow_null=True)
+    weight_kg = serializers.FloatField(required=False, allow_null=True)
+    cf_front = serializers.FloatField(required=False, allow_null=True, default=1.46)
+    cf_lat = serializers.FloatField(required=False, allow_null=True, default=1.12)
+
+
 class BoitierLovageSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False, default=False)
     reference = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -244,6 +272,10 @@ class BoitierLovageSerializer(serializers.Serializer):
     poids_kg = serializers.FloatField(required=False, allow_null=True)
     dimensions = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     items = EquipmentItemSerializer(many=True, required=False)
+    has_gps = serializers.BooleanField(required=False, allow_null=True, default=None)
+    has_mdea = serializers.BooleanField(required=False, allow_null=True, default=None)
+    gps = GpsEquipmentSerializer(required=False, allow_null=True)
+    mdea = ConvertisseurMdeaSerializer(required=False, allow_null=True)
 
 class CatalogueMatchSerializer(serializers.Serializer):
     found = serializers.BooleanField(required=False, default=False)
@@ -275,6 +307,8 @@ class CalculationPayloadSerializer(serializers.Serializer):
     rru_equipment = RRUEquipmentSerializer(required=False, allow_null=True)
     boitier_lovage = BoitierLovageSerializer(required=False, allow_null=True)
     lovage_equipment = BoitierLovageSerializer(required=False, allow_null=True)
+    gps = GpsEquipmentSerializer(required=False, allow_null=True)
+    convertisseur_mdea = ConvertisseurMdeaSerializer(required=False, allow_null=True)
     catalogue_match = CatalogueMatchSerializer(required=False, allow_null=True)
 
     def validate(self, data):

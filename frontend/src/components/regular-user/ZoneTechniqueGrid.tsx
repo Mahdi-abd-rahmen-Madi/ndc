@@ -91,19 +91,13 @@ export function ZoneTechniqueGrid({
           boitierLovageQuantity={data.boitierLovageQuantity}
           setBoitierLovageQuantity={(val) => onChange({ boitierLovageQuantity: val })}
           foundationType={data.boitierLovageFoundationType || 'dallettes'}
-          setFoundationType={(val) => onChange({
-            boitierLovageFoundationType: val,
-            ...(val === 'dallettes' ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
-          })}
+          setFoundationType={(val) => onChange({ boitierLovageFoundationType: val })}
           hauteurMatM={data.boitierLovageHauteurMatM ?? 1.50}
-          setHauteurMatM={(val) => onChange({
-            boitierLovageHauteurMatM: val,
-            ...(val < 2.0 ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
-          })}
-          echelle={data.boitierLovageEchelle}
-          setEchelle={(val) => onChange({ boitierLovageEchelle: val })}
+          setHauteurMatM={(val) => onChange({ boitierLovageHauteurMatM: val })}
           boitierOptions={config?.boitier_lovage_references || []}
           operator={operator}
+          coMountedGps={data.hasGps}
+          coMountedMdea={data.hasConvertisseurMdea}
         />
         <ConvertisseurMdeaEquipmentToggle
           hasConvertisseurMdea={data.hasConvertisseurMdea}
@@ -228,19 +222,12 @@ export function ZoneTechniqueGrid({
         boitierLovageQuantity={data.boitierLovageQuantity}
         setBoitierLovageQuantity={(val) => onChange({ boitierLovageQuantity: val })}
         foundationType={data.boitierLovageFoundationType || 'dallettes'}
-        setFoundationType={(val) => onChange({
-          boitierLovageFoundationType: val,
-          ...(val === 'dallettes' ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
-        })}
+        setFoundationType={(val) => onChange({ boitierLovageFoundationType: val })}
         hauteurMatM={data.boitierLovageHauteurMatM ?? 1.50}
-        setHauteurMatM={(val) => onChange({
-          boitierLovageHauteurMatM: val,
-          ...(val < 2.0 ? { boitierLovageEchelle: "Pas d'échelle" } : {}),
-        })}
-        echelle={data.boitierLovageEchelle}
-        setEchelle={(val) => onChange({ boitierLovageEchelle: val })}
+        setHauteurMatM={(val) => onChange({ boitierLovageHauteurMatM: val })}
         boitierOptions={config?.boitier_lovage_references || []}
         operator={operator}
+        coMountedGps={data.hasGps}
       />
 
       {/* 5. Baies (Orange) */}

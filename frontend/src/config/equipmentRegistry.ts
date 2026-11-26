@@ -5,7 +5,7 @@ import type {
   SelectedBaieItem,
   ZoneTechniqueData,
 } from '../components/regular-user/types';
-import { DEFAULT_FH_REFERENCES, DEFAULT_ORANGE_BAIES, STATIC_EQUIPMENT_SPECS } from './catalogueDefaults';
+import { DEFAULT_FH_REFERENCES, DEFAULT_ORANGE_BAIES, GPS_REFERENCE_SPECS, STATIC_EQUIPMENT_SPECS } from './catalogueDefaults';
 
 // ============================================================================
 // Canonical Display Labels (Single Source of Truth across UI, Modals & Results)
@@ -410,9 +410,9 @@ export function buildSectorEquipmentPayload({
       const lovageFoundation = zt.boitierLovageFoundationType || 'dallettes';
       const lovageSansPlot = isSansPlotFromFoundation(lovageFoundation);
       const lovageH = Number(zt.boitierLovageHauteurMatM ?? 1.50);
-      const lovageEchelle = isFhEchelleAllowed(lovageSansPlot, lovageH)
-        ? normalizeFhEchelle(zt.boitierLovageEchelle)
-        : "Pas d'échelle";
+      const hasGpsCoMount = zt.hasBoitierLovage && zt.hasGps;
+      const hasMdeaCoMount = zt.hasBoitierLovage && allowMdea && zt.hasConvertisseurMdea;
+      const gpsSpec = zt.gpsReference ? GPS_REFERENCE_SPECS[zt.gpsReference] : undefined;
       return {
         enabled: zt.hasBoitierLovage,
         quantity: zt.boitierLovageQuantity,
@@ -421,9 +421,34 @@ export function buildSectorEquipmentPayload({
         sans_plot: lovageSansPlot,
         with_plot: !lovageSansPlot,
         hauteur_mat_m: lovageH,
-        echelle: zt.hasBoitierLovage ? lovageEchelle : null,
+        echelle: zt.hasBoitierLovage ? "Pas d'échelle" : null,
         cf_front: 1.47,
         cf_lat: 1.19,
+        has_gps: hasGpsCoMount,
+        has_mdea: hasMdeaCoMount,
+        gps: hasGpsCoMount
+          ? {
+              enabled: true,
+              quantity: 1,
+              marque: zt.gpsMarque || gpsSpec?.marque || null,
+              reference: zt.gpsReference || null,
+              dimensions: gpsSpec?.dimensions ?? null,
+              weight_kg: gpsSpec?.weightKg ?? 0,
+            }
+          : null,
+        mdea: hasMdeaCoMount
+          ? {
+              enabled: true,
+              quantity: Math.max(1, Number(zt.convertisseurMdeaQuantity || 1)),
+              dimensions: STATIC_EQUIPMENT_SPECS.mdea.dimensions,
+              hauteur_mm: STATIC_EQUIPMENT_SPECS.mdea.hMm,
+              largeur_mm: STATIC_EQUIPMENT_SPECS.mdea.wMm,
+              epaisseur_mm: STATIC_EQUIPMENT_SPECS.mdea.dMm,
+              weight_kg: STATIC_EQUIPMENT_SPECS.mdea.weightKg,
+              cf_front: STATIC_EQUIPMENT_SPECS.mdea.cfFront,
+              cf_lat: STATIC_EQUIPMENT_SPECS.mdea.cfLat,
+            }
+          : null,
       };
     })(),
     structure_lovage: zt.hasBoitierLovage
@@ -501,6 +526,8 @@ export function buildSectorEquipmentPayload({
       quantite: allowMdea && zt.hasConvertisseurMdea ? zt.convertisseurMdeaQuantity : 0,
       dimensions: STATIC_EQUIPMENT_SPECS.mdea.dimensions,
       poids: STATIC_EQUIPMENT_SPECS.mdea.weightKg,
+      cf_front: STATIC_EQUIPMENT_SPECS.mdea.cfFront,
+      cf_lat: STATIC_EQUIPMENT_SPECS.mdea.cfLat,
     },
     pile_amod: {
       enabled: allowPileAmod && zt.hasPileAmod,

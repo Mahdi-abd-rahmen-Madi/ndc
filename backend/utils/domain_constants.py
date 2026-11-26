@@ -31,6 +31,22 @@ LOVAGE_DEFAULT_PLOT_SECTION: str = "TCAR 150x5"
 LOVAGE_DEFAULT_MAST_HEIGHT_M: float = 1.50
 LOVAGE_DEFAULT_PLOT_HEIGHT_M: float = 0.50
 
+# Convertisseur MDEA (co-mounted on Boîtier de Lovage mast)
+MDEA_CF_FRONT: float = 1.46
+MDEA_CF_LAT: float = 1.12
+MDEA_DEFAULT_H_MM: float = 338.0
+MDEA_DEFAULT_W_MM: float = 295.0
+MDEA_DEFAULT_D_MM: float = 140.0
+MDEA_DEFAULT_DIMENSIONS_STR: str = "338 x 295 x 140"
+MDEA_DEFAULT_WEIGHT_KG: float = 10.0
+
+# Antenne GPS (co-mounted on Boîtier de Lovage mast; negligible weight & wind load)
+GPS_REFERENCE_SPECS: Dict[str, Dict[str, Any]] = {
+    "FYGC 474074A": {"marque": "NOKIA", "dimensions": "Ø95 x 72.5", "weight_kg": 0.154},
+    "FYGB 472748A": {"marque": "NOKIA", "dimensions": "Ø95 x 72.5", "weight_kg": 0.154},
+    "KRE 101 2395/2": {"marque": "ERICSSON", "dimensions": "Ø78", "weight_kg": 0.225},
+}
+
 OPERATORS_WITHOUT_TD = frozenset({"bouygues", "orange"})
 
 OPERATOR_ALIASES: Dict[str, str] = {
@@ -265,9 +281,12 @@ def resolve_support_has_echelle(
     if is_sans_plot:
         return False
 
+    k = (kind or "fh").lower().strip()
+    if k in ("lovage", "boitier_lovage"):
+        return False
+
     inp = parse_json_dict(input_data)
     res = parse_json_dict(result_data)
-    k = (kind or "fh").lower().strip()
     eq_key = "boitier_lovage" if k in ("lovage", "boitier_lovage") else f"{k}_equipment"
     sub_key = "lovage" if k in ("lovage", "boitier_lovage") else k
     struct_key = f"structure_{sub_key}"
@@ -315,4 +334,234 @@ def resolve_support_has_echelle(
             and norm not in ("non", "none", "false", "0")
         )
     return False
+
+
+def _parse_dims_triplet_mm(raw_dims: Any) -> Optional[tuple]:
+    if not raw_dims or not isinstance(raw_dims, str):
+        return None
+    import re
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*[*x×]\s*(\d+(?:[.,]\d+)?)\s*[*x×]\s*(\d+(?:[.,]\d+)?)", raw_dims)
+    if not m:
+        return None
+    try:
+        return (
+            float(m.group(1).replace(",", ".")),
+            float(m.group(2).replace(",", ".")),
+            float(m.group(3).replace(",", ".")),
+        )
+    except (ValueError, TypeError):
+        return None
+
+
+def resolve_lovage_comounts(
+    input_data: Optional[Dict[str, Any]] = None,
+    result_data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Resolve co-mounted Antenne GPS and Convertisseur MDEA installed on the
+    Boîtier de Lovage mast from worker result_data and/or frontend input_data.
+    """
+    inp = parse_json_dict(input_data)
+    res = parse_json_dict(result_data)
+
+    lovage_in = inp.get("boitier_lovage") if isinstance(inp.get("boitier_lovage"), dict) else {}
+    if not lovage_in and isinstance(inp.get("lovage_equipment"), dict):
+        lovage_in = inp.get("lovage_equipment")
+    lovage_sub = res.get("lovage") if isinstance(res.get("lovage"), dict) else {}
+
+    # 1. Resolve Antenne GPS co-mount
+    gps_in_nested = lovage_in.get("gps") if isinstance(lovage_in.get("gps"), dict) else {}
+    gps_in_top = inp.get("gps") if isinstance(inp.get("gps"), dict) else {}
+    gps_res = (
+        res.get("lovage_gps")
+        if isinstance(res.get("lovage_gps"), dict)
+        else (lovage_sub.get("gps") if isinstance(lovage_sub.get("gps"), dict) else {})
+    )
+
+    has_gps = False
+    for candidate in (
+        lovage_sub.get("has_gps"),
+        res.get("lovage_has_gps"),
+        lovage_in.get("has_gps"),
+        gps_in_nested.get("enabled") if gps_in_nested else None,
+        gps_in_top.get("enabled") if gps_in_top else None,
+    ):
+        if isinstance(candidate, bool):
+            has_gps = candidate
+            break
+    else:
+        has_gps = bool(gps_res)
+
+    gps_dict = None
+    if has_gps:
+        gps_src = {**gps_in_top, **gps_in_nested, **gps_res}
+        ref = str(gps_src.get("reference") or "").strip()
+        spec = GPS_REFERENCE_SPECS.get(ref)
+        if spec is None and ref:
+            ref_low = ref.lower()
+            for k, v in GPS_REFERENCE_SPECS.items():
+                if k.lower() == ref_low:
+                    spec = v
+                    break
+        marque = str(gps_src.get("marque") or (spec.get("marque") if spec else "") or "").strip() or None
+        dims_raw = gps_src.get("dimensions") or gps_src.get("dimensions_str") or (spec.get("dimensions") if spec else None)
+        dims_clean = str(dims_raw).strip() if dims_raw and str(dims_raw).strip().lower() not in ("none", "n/a") else None
+        dims_str = dims_clean if dims_clean else "N/A"
+        raw_w = (
+            gps_src.get("weight_kg")
+            if gps_src.get("weight_kg") is not None
+            else (
+                gps_src.get("poids_kg")
+                if gps_src.get("poids_kg") is not None
+                else (spec.get("weight_kg") if spec else 0.0)
+            )
+        )
+        try:
+            gps_weight_kg = float(raw_w) if raw_w is not None else 0.0
+        except (ValueError, TypeError):
+            gps_weight_kg = 0.0
+        try:
+            gps_qty = max(1, int(gps_src.get("quantity") or gps_src.get("qty") or 1))
+        except (ValueError, TypeError):
+            gps_qty = 1
+        gps_dict = {
+            "enabled": True,
+            "quantity": gps_qty,
+            "marque": marque,
+            "reference": ref or None,
+            "dimensions": dims_clean,
+            "dimensions_str": dims_str,
+            "weight_kg": gps_weight_kg,
+        }
+
+    # 2. Resolve Convertisseur MDEA co-mount
+    mdea_in_nested = lovage_in.get("mdea") if isinstance(lovage_in.get("mdea"), dict) else {}
+    mdea_in_top = inp.get("convertisseur_mdea") if isinstance(inp.get("convertisseur_mdea"), dict) else {}
+    mdea_res = (
+        res.get("lovage_mdea")
+        if isinstance(res.get("lovage_mdea"), dict)
+        else (lovage_sub.get("mdea") if isinstance(lovage_sub.get("mdea"), dict) else {})
+    )
+
+    has_mdea = False
+    for candidate in (
+        lovage_sub.get("has_mdea"),
+        res.get("lovage_has_mdea"),
+        lovage_in.get("has_mdea"),
+        mdea_in_nested.get("enabled") if mdea_in_nested else None,
+        mdea_in_top.get("enabled") if mdea_in_top else None,
+    ):
+        if isinstance(candidate, bool):
+            has_mdea = candidate
+            break
+    else:
+        has_mdea = bool(mdea_res)
+
+    op = normalize_operator(inp.get("operateur") or inp.get("operator"), fallback_site=inp.get("site"))
+    if op and op != "free" and has_mdea:
+        explicit_mdea = (
+            lovage_sub.get("has_mdea")
+            if isinstance(lovage_sub.get("has_mdea"), bool)
+            else (
+                res.get("lovage_has_mdea")
+                if isinstance(res.get("lovage_has_mdea"), bool)
+                else (
+                    lovage_in.get("has_mdea")
+                    if isinstance(lovage_in.get("has_mdea"), bool)
+                    else (
+                        mdea_in_nested.get("enabled")
+                        if isinstance(mdea_in_nested.get("enabled"), bool)
+                        else (True if mdea_res else None)
+                    )
+                )
+            )
+        )
+        if explicit_mdea is not True:
+            has_mdea = False
+
+    mdea_dict = None
+    if has_mdea:
+        mdea_src = {**mdea_in_top, **mdea_in_nested, **mdea_res}
+        raw_qty = (
+            mdea_src.get("quantity")
+            if mdea_src.get("quantity") is not None
+            else (
+                mdea_src.get("qty")
+                if mdea_src.get("qty") is not None
+                else mdea_src.get("quantite")
+            )
+        )
+        try:
+            mdea_qty = max(1, int(raw_qty)) if raw_qty is not None else 1
+        except (ValueError, TypeError):
+            mdea_qty = 1
+
+        parsed_dims = _parse_dims_triplet_mm(mdea_src.get("dimensions") or mdea_src.get("dimensions_str"))
+        raw_h = mdea_src.get("h_mm") if mdea_src.get("h_mm") is not None else mdea_src.get("hauteur_mm")
+        raw_w = mdea_src.get("w_mm") if mdea_src.get("w_mm") is not None else mdea_src.get("largeur_mm")
+        raw_d = (
+            mdea_src.get("d_mm")
+            if mdea_src.get("d_mm") is not None
+            else (mdea_src.get("epaisseur_mm") if mdea_src.get("epaisseur_mm") is not None else mdea_src.get("t_mm"))
+        )
+        try:
+            h_mm = float(raw_h) if raw_h is not None else (parsed_dims[0] if parsed_dims else MDEA_DEFAULT_H_MM)
+        except (ValueError, TypeError):
+            h_mm = parsed_dims[0] if parsed_dims else MDEA_DEFAULT_H_MM
+        try:
+            w_mm = float(raw_w) if raw_w is not None else (parsed_dims[1] if parsed_dims else MDEA_DEFAULT_W_MM)
+        except (ValueError, TypeError):
+            w_mm = parsed_dims[1] if parsed_dims else MDEA_DEFAULT_W_MM
+        try:
+            d_mm = float(raw_d) if raw_d is not None else (parsed_dims[2] if parsed_dims else MDEA_DEFAULT_D_MM)
+        except (ValueError, TypeError):
+            d_mm = parsed_dims[2] if parsed_dims else MDEA_DEFAULT_D_MM
+
+        raw_weight = (
+            mdea_src.get("weight_kg")
+            if mdea_src.get("weight_kg") is not None
+            else (mdea_src.get("poids_kg") if mdea_src.get("poids_kg") is not None else mdea_src.get("poids"))
+        )
+        try:
+            mdea_weight_kg = float(raw_weight) if raw_weight is not None else MDEA_DEFAULT_WEIGHT_KG
+        except (ValueError, TypeError):
+            mdea_weight_kg = MDEA_DEFAULT_WEIGHT_KG
+
+        try:
+            cf_front = float(mdea_src.get("cf_front")) if mdea_src.get("cf_front") is not None else MDEA_CF_FRONT
+        except (ValueError, TypeError):
+            cf_front = MDEA_CF_FRONT
+        try:
+            cf_lat = float(mdea_src.get("cf_lat")) if mdea_src.get("cf_lat") is not None else MDEA_CF_LAT
+        except (ValueError, TypeError):
+            cf_lat = MDEA_CF_LAT
+
+        mdea_dict = {
+            "enabled": True,
+            "quantity": mdea_qty,
+            "h_mm": h_mm,
+            "w_mm": w_mm,
+            "d_mm": d_mm,
+            "dimensions_str": f"{h_mm:g} x {w_mm:g} x {d_mm:g}",
+            "weight_kg": mdea_weight_kg,
+            "cf_front": cf_front,
+            "cf_lat": cf_lat,
+        }
+
+    if has_gps and has_mdea:
+        variant = "lovage_gps_mdea"
+    elif has_gps:
+        variant = "lovage_gps"
+    elif has_mdea:
+        variant = "lovage_mdea"
+    else:
+        variant = "lovage"
+
+    return {
+        "has_gps": has_gps,
+        "has_mdea": has_mdea,
+        "variant": variant,
+        "gps": gps_dict,
+        "mdea": mdea_dict,
+    }
 

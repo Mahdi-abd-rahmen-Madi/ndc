@@ -120,8 +120,9 @@ class CalculationJob(models.Model):
     calculation_type = models.CharField(max_length=128, blank=True, default="antenna", verbose_name=_("Calculation Type"))
 
     # Deterministic physical hash for instant deduplication & caching
-    ndc_hash = models.CharField(max_length=64, db_index=True, null=True, blank=True, verbose_name=_("NDC Hash"))
-    input_hash = models.CharField(max_length=64, db_index=True, blank=True, null=True, verbose_name=_("Legacy Input Hash"))
+    ndc_hash = models.CharField(max_length=160, db_index=True, null=True, blank=True, verbose_name=_("NDC Hash"))
+    input_hash = models.CharField(max_length=160, db_index=True, blank=True, null=True, verbose_name=_("Legacy Input Hash"))
+    stage_hashes = models.JSONField(default=dict, blank=True, verbose_name=_("Per-Stage Hashes"))
     is_cached = models.BooleanField(default=False, verbose_name=_("Is Cached"))
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING', verbose_name=_("Status"))
@@ -175,6 +176,37 @@ class CalculationJob(models.Model):
 
     def __str__(self):
         return f"Job {self.id} [{self.calculation_type}] - {self.status}"
+
+
+class CalculationStageCache(models.Model):
+    """
+    Content-addressed cache storing individual FEA stages (`antenna`, `rrh`, `rru`,
+    `fh`, `lovage`) so composite jobs can reuse cached stages independently.
+    """
+    stage = models.CharField(max_length=24, db_index=True, verbose_name=_("Stage"))
+    stage_hash = models.CharField(max_length=64, unique=True, db_index=True, verbose_name=_("Stage Hash"))
+    source_job = models.ForeignKey(
+        CalculationJob,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cached_stages',
+        verbose_name=_("Source Job"),
+    )
+    result_payload = models.JSONField(default=dict, verbose_name=_("Stage Result Payload"))
+    artifact_paths = models.JSONField(default=dict, verbose_name=_("Stage Artifact Paths"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Created At"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Updated At"))
+
+    class Meta:
+        verbose_name = _("Calculation Stage Cache")
+        verbose_name_plural = _("Calculation Stage Caches")
+        indexes = [
+            models.Index(fields=['stage', 'stage_hash'], name='stagecache_stage_hash'),
+        ]
+
+    def __str__(self):
+        return f"{self.stage} [{self.stage_hash}]"
 
 
 class GeneratedSiteNdc(models.Model):

@@ -5,14 +5,18 @@ AVEC PLOT & SANS PLOT INSTRUCTIONS
 
 1. CONTEXT & SCOPE
 --------------------------------------------------------------------------------
-Boîtier de Lovage (Zone Technique) is now a full Robot-calculated auxiliary
-equipment stage supporting BOTH configurations:
-  - AVEC PLOT (`sans_plot == False`, `with_plot == True`)
-    Reference DOCX template:
-      `backend/templates/lovage/boitier_lovage_avec_plot.docx`
-  - SANS PLOT (`sans_plot == True`, `with_plot == False`)
-    Reference DOCX template:
-      `backend/templates/lovage/boitier_lovage_sans_plot.docx`
+8: Boîtier de Lovage (Zone Technique) is now a full Robot-calculated auxiliary
+9: equipment stage supporting BOTH configurations (`avec_plot` / `sans_plot`) and
+10: co-mounted Antenne GPS + Convertisseur MDEA installed on the SAME mast:
+11:   - Lovage only:
+12:       * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage_avec_plot.docx`
+13:       * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitier_lovage_sans_plot.docx`
+14:   - Lovage + GPS:
+15:       * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage+gps_avec_plot.docx`
+16:       * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitier_lovage+gps_sans_plot.docx`
+17:   - Lovage + GPS + MDEA (or Lovage + MDEA):
+18:       * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage+GPS+MDEA_avec_plot.docx`
+19:       * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitiers_lovage+GPS+MDEA_sans_plot.docx`
 
 The Django backend and React frontend are already updated:
   - Frontend Zone Technique (`BoitierLovageEquipmentToggle.tsx`) exposes:
@@ -59,7 +63,42 @@ Incoming `input_data` payload structure from Django:
     "with_plot": true,
     "hauteur_mat_m": 1.5,
     "cf_front": 1.47,
-    "cf_lat": 1.19
+    "cf_lat": 1.19,
+    "has_gps": true,
+    "has_mdea": true,
+    "gps": {
+      "enabled": true,
+      "quantity": 1,
+      "marque": "NOKIA",
+      "reference": "FYGC 474074A",
+      "dimensions": "Ø95 x 72.5",
+      "weight_kg": 0.154
+    },
+    "mdea": {
+      "enabled": true,
+      "quantity": 1,
+      "dimensions": "338*295*140mm",
+      "hauteur_mm": 338,
+      "largeur_mm": 295,
+      "epaisseur_mm": 140,
+      "weight_kg": 10.0,
+      "cf_front": 1.46,
+      "cf_lat": 1.12
+    }
+  },
+  "gps": {
+    "enabled": true,
+    "quantity": 1,
+    "marque": "NOKIA",
+    "reference": "FYGC 474074A"
+  },
+  "convertisseur_mdea": {
+    "enabled": true,
+    "quantite": 1,
+    "dimensions": "338*295*140mm",
+    "poids": 10,
+    "cf_front": 1.46,
+    "cf_lat": 1.12
   },
   "structure_lovage": {
     "mast_section": "TRON 88x3.2",
@@ -116,11 +155,22 @@ Mast height resolution:
     on composite jobs.
 
 
-3. WIND CALCULATION (EN 1991-1-4 / EC1) — BOITIER DE LOVAGE
+3. WIND CALCULATION (EN 1991-1-4 / EC1) — BOITIER DE LOVAGE (+ GPS + MDEA)
 --------------------------------------------------------------------------------
 A. Aerodynamic Drag Coefficients (MANDATORY):
-  - Frontal drag coefficient: `Cf,front = 1.47`
-  - Lateral drag coefficient: `Cf,lat   = 1.19`
+  - Boîtier de lovage:
+      * Frontal drag coefficient: `Cf,front = 1.47`
+      * Lateral drag coefficient: `Cf,lat   = 1.19`
+  - Convertisseur MDEA (when `boitier_lovage.has_mdea == true` or `mdea.enabled == true`):
+      * Default dimensions: `338 x 295 x 140 mm` (`H x W x D`), weight: `10.0 kg`
+      * Frontal drag coefficient: `Cf,front = 1.46`
+      * Lateral drag coefficient: `Cf,lat   = 1.12`
+  - Antenne GPS (when `boitier_lovage.has_gps == true` or `gps.enabled == true`):
+      * Catalog specs (for Table 0 display):
+          - NOKIA `FYGC 474074A` / `FYGB 472748A`: `Ø95 x 72.5 mm`, `0.154 kg` (154 g)
+          - ERICSSON `KRE 101 2395/2`: `Ø78 mm`, `0.225 kg` (225 g)
+      * Negligible weight in FEA (`PE_gps = 0.0 daN`)
+      * Wind force neglected (`Fw_gps = 0.0 daN`); included for report title/description/Table 0.
   - Mast drag coefficient:    `Cf,mat   = 1.00` (tube Ø88.9 mm -> `d = 0.088 m`)
   - Structural factor:        `cs * cd  = 1.00`
 
@@ -135,17 +185,27 @@ B. Peak Velocity Pressure `qp(z)` (daN/m²):
       * `Iv(z) = 1.0 / ln(z / z0)`
       * `qp    = (1 + 7 * Iv(z)) * 0.5 * 1.25 * Vm² / 10.0`  (daN/m²)
 
-C. Wind Forces:
+C. Wind Forces & Combined Mast Load Application (SAME POINT ON MAST):
   - Mast distributed wind load (daN/ml):
       `Fw,mat = 1 * 1.0 * 0.088 * qp`
-  - Boîtier de lovage projected areas (from reference dimensions `H x W x D` in mm):
-      * `A_front = (H_mm * W_mm) / 1e6`  (m²)
-      * `A_lat   = (H_mm * D_mm) / 1e6`  (m²)
-  - Boîtier de lovage wind forces (daN):
-      * `Fw,Frontale = qty * 1.47 * A_front * qp`
-      * `Fw,Latéral  = qty * 1.19 * A_lat   * qp`
-  - Equipment dead load (daN):
-      * `PE = qty * weight_kg`  (`FZ = -PE` daN)
+  - Boîtier de lovage projected areas & forces:
+      * `A_front_lovage = (H_mm * W_mm) / 1e6`  (m²)
+      * `A_lat_lovage   = (H_mm * D_mm) / 1e6`  (m²)
+      * `Fw,Frontale_lovage = qty_lovage * 1.47 * A_front_lovage * qp`
+      * `Fw,Latéral_lovage  = qty_lovage * 1.19 * A_lat_lovage   * qp`
+      * `PE_lovage          = qty_lovage * weight_lovage_kg`
+  - Convertisseur MDEA projected areas & forces (when active):
+      * `A_front_mdea = (338 * 295) / 1e6 = 0.0997 m²`
+      * `A_lat_mdea   = (338 * 140) / 1e6 = 0.0473 m²`
+      * `Fw,Frontale_mdea = qty_mdea * 1.46 * A_front_mdea * qp`
+      * `Fw,Latéral_mdea  = qty_mdea * 1.12 * A_lat_mdea   * qp`
+      * `PE_mdea          = qty_mdea * 10.0`
+  - Antenne GPS (when active):
+      * `PE_gps = 0.0 daN` (negligible weight), `Fw_gps = 0.0 daN`
+  - Combined Robot Load Application (applied at the SAME point on `TRON 88x3.2` mast):
+      * `PE_total = PE_lovage + PE_mdea`  (`FZ = -PE_total` daN)
+      * `Fw,Frontale_total = Fw,Frontale_lovage + Fw,Frontale_mdea`  (applied in `Vent ±X`)
+      * `Fw,Latéral_total  = Fw,Latéral_lovage  + Fw,Latéral_mdea`   (applied in `Vent ±Y`)
 
 
 4. ROBOT FEA MODELING (AVEC PLOT vs SANS PLOT)
@@ -165,21 +225,19 @@ A. Structural Sections & Geometry:
           - Mât principal `TRON 88x3.2` anchored directly (fixed support at `Z = 0.0 m`)
           - NO plot verification, NO assemblage Mât/Plot verification
 
-B. Load Cases:
-  - Case 1 — `PP` (Poids propre, Permanent): self-weight of structure
-  - Case 2 — `PE` (Poids équipements, Permanent): `FZ = -PE` daN on mast
-      * When `boitier_lovage.echelle == "Echelle"` (ONLY allowed when
-        `sans_plot == False` AND `hauteur_mat_m >= 2.0` m): add `+15 daN`
-        ladder dead load to `PE` and insert Case 3 — `CH` (Chute d'homme,
-        Accidental: `Fh = 2.2 kN` / `220 daN`, `Fv = -9.8 kN` / `-980 daN`
-        at top of mast, with `ACC:ACC` combinations, identical to FH/RRH/RRU
-        `+ech` modeling).
-  - Wind cases (`Vent +X`, `Vent -X`, `Vent +Y`, `Vent -Y`) — Cases 3–6
-    without ladder, or Cases 4–7 when Case 3 `CH` is active:
-      * `Vent +X`: mast `Fw,mat` (+X) + equipment `Fw,Frontale` (+X)
-      * `Vent -X`: mast `Fw,mat` (-X) + equipment `Fw,Frontale` (-X)
-      * `Vent +Y`: mast `Fw,mat` (+Y) + equipment `Fw,Latéral` (+Y)
-      * `Vent -Y`: mast `Fw,mat` (-Y) + equipment `Fw,Latéral` (-Y)
+B. Load Cases (NO LADDER / NO `CH` CHUTE D'HOMME ON BOÎTIER DE LOVAGE):
+  - Boîtier de Lovage does NOT support a ladder (`echelle`) or fall-arrest
+    anchor (`CH` / chute d'homme), regardless of mast height or plot type.
+    Ignore any legacy `echelle` field on `boitier_lovage` and NEVER add the
+    `+15 daN` ladder weight or `CH` accidental load case.
+  - Always model strictly 6 load cases:
+      * Case 1 — `PP` (Poids propre, Permanent): self-weight of structure
+      * Case 2 — `PE` (Poids équipements, Permanent): `FZ = -PE_total` daN on mast
+      * Cases 3–6 — Wind cases (`Vent +X`, `Vent -X`, `Vent +Y`, `Vent -Y`):
+          - `Vent +X`: mast `Fw,mat` (+X) + equipment `Fw,Frontale_total` (+X)
+          - `Vent -X`: mast `Fw,mat` (-X) + equipment `Fw,Frontale_total` (-X)
+          - `Vent +Y`: mast `Fw,mat` (+Y) + equipment `Fw,Latéral_total` (+Y)
+          - `Vent -Y`: mast `Fw,mat` (-Y) + equipment `Fw,Latéral_total` (-Y)
 
 C. Load Combinations:
   - Standard Eurocode 1 / Eurocode 3 ELU and ELS combinations (`PP`, `PE`,
@@ -221,7 +279,10 @@ A. Multipart File Field Names:
 
 B. `result_data` JSON Payload Structure:
   Include `"lovage"` in `active_equipments`, set `"has_lovage": true`, and
-  populate `lovage`, `lovage_items`, `lovage_totals`, and `lovage_wind_params`:
+  populate `lovage` (including `has_gps`, `has_mdea`), `lovage_items`,
+  `lovage_gps` (when GPS active), `lovage_mdea` (when MDEA active),
+  `lovage_totals` (summed PE and wind forces across Lovage + MDEA), and
+  `lovage_wind_params`:
 
 ```json
 {
@@ -231,6 +292,8 @@ B. `result_data` JSON Payload Structure:
   "lovage": {
     "sans_plot": false,
     "with_plot": true,
+    "has_gps": true,
+    "has_mdea": true,
     "structure_params": {
       "mast_section": "TRON 88x3.2",
       "plot_section": "TCAR 150x5",
@@ -278,15 +341,41 @@ B. `result_data` JSON Payload Structure:
       "fw_lat_formula": "2 * 1.19 * 0.036 * 86.25 = 7.39 daN"
     }
   ],
+  "lovage_gps": {
+    "enabled": true,
+    "quantity": 1,
+    "marque": "NOKIA",
+    "reference": "FYGC 474074A",
+    "dimensions": "Ø95 x 72.5",
+    "weight_kg": 0.154
+  },
+  "lovage_mdea": {
+    "enabled": true,
+    "quantity": 1,
+    "h_mm": 338,
+    "w_mm": 295,
+    "d_mm": 140,
+    "dimensions_str": "338 x 295 x 140",
+    "weight_kg": 10.0,
+    "cf_front": 1.46,
+    "cf_lat": 1.12,
+    "area_front_m2": 0.0997,
+    "area_lat_m2": 0.0473,
+    "fw_front": 12.56,
+    "fw_lat": 4.57,
+    "pe_dan": 10.0,
+    "fw_front_formula": "1 * 1.46 * 0.0997 * 86.25 = 12.56 daN",
+    "fw_lat_formula": "1 * 1.12 * 0.0473 * 86.25 = 4.57 daN"
+  },
   "lovage_totals": {
     "count": 1,
     "qty_total": 2,
-    "weight_total_kg": 5.0,
-    "pe_dan": 5.0,
-    "fw_front": 16.73,
-    "fw_lat": 7.39,
-    "fw_front_formula": "16.73 daN",
-    "fw_lat_formula": "7.39 daN"
+    "weight_total_kg": 15.0,
+    "pe_dan": 15.0,
+    "fw_front": 29.29,
+    "fw_lat": 11.96,
+    "fw_front_formula": "29.29 daN",
+    "fw_lat_formula": "11.96 daN"
   },
   "lovage_wind_params": {
     "region": 2,
@@ -334,4 +423,13 @@ When `sans_plot == True`:
 3. Submit a composite job (e.g. Antenna + RRU + Boîtier de Lovage):
    - Confirm Lovage files (`_lovage_`) never collide with Antenna, RRH, RRU, or
      FH files, and all annexes render cleanly in the merged site PDF.
+4. Submit a co-mounted job (`Lovage + GPS` and `Lovage + GPS + MDEA`, both AVEC
+   PLOT and SANS PLOT):
+   - Confirm GPS contributes `0` weight (`PE_gps = 0`) and `0` wind force (`Fw_gps = 0`),
+     while MDEA uses `338 x 295 x 140 mm`, `10 kg`, `Cf,front = 1.46`, `Cf,lat = 1.12`.
+   - Confirm Robot applies `PE_total = PE_lovage + PE_mdea`,
+     `Fw,Frontale_total = Fw,Frontale_lovage + Fw,Frontale_mdea`, and
+     `Fw,Latéral_total = Fw,Latéral_lovage + Fw,Latéral_mdea` at the same mast point.
+   - Confirm `lovage_totals` reflects the combined dead load and wind forces,
+     and that Django selects the matching `+gps` / `+GPS+MDEA` DOCX template.
 ================================================================================

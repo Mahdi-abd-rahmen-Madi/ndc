@@ -312,7 +312,7 @@ export interface ZoneTechniqueData {
   boitierLovageQuantity: number;
   boitierLovageFoundationType: 'metallique' | 'beton' | 'dallettes';
   boitierLovageHauteurMatM: number;
-  boitierLovageEchelle: string;
+  boitierLovageEchelle?: string;
 
   hasAtelierEnergie: boolean;
   bcubeReference: string;

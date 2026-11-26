@@ -26,14 +26,14 @@
 </style>
 
 <div class="lovage-page-1">
-    <h1 id="etude-lovage">ÉTUDE BOÎTIERS DE LOVAGE</h1>
+    <h1 id="etude-lovage">ÉTUDE BOÎTIERS DE LOVAGE{% if lovage_has_gps %} + GPS{% endif %}{% if lovage_has_mdea %} + MDEA{% endif %}</h1>
 
     <h2>Description</h2>
     <p>
         Ce document concerne l’étude d’un mât dans le cadre d’une analyse de faisabilité.<br>
         Ajout d’un mât en tube Ø{{ lovage_mat_diam|default:"88.9" }} mm, d’épaisseur {{ lovage_mat_epaisseur|default:"3.2" }} mm
         et de longueur {{ lovage_mat_longueur|default:"1500" }} mm supportant {{ lovage_qty_total|default:"1" }}
-        boitier{% if lovage_qty_total > 1 %}s{% endif %} de lovage.
+        boitier{% if lovage_qty_total > 1 %}s{% endif %} de lovage{% if lovage_has_gps and lovage_has_mdea %}, une antenne GPS et {{ lovage_mdea_item.qty|default:"1" }} convertisseur{% if lovage_mdea_item.qty > 1 %}s{% endif %} MDEA{% elif lovage_has_gps %} et une antenne GPS{% elif lovage_has_mdea %} et {{ lovage_mdea_item.qty|default:"1" }} convertisseur{% if lovage_mdea_item.qty > 1 %}s{% endif %} MDEA{% endif %}.
         {% if not lovage_sans_plot and not is_sans_plot %}
         Le mât sera fixé sur un plot métallique {{ lovage_plot_section|default:"TCAR 150x5" }} ancrés dans la dalle existante en respectant la norme du DTU.
         {% endif %}
@@ -68,12 +68,21 @@
                 <td class="text-center">Projet</td>
             </tr>
             {% endfor %}
-            {% if lovage_has_echelle and not lovage_sans_plot and not is_sans_plot %}
+            {% if lovage_has_gps and lovage_gps_item %}
             <tr>
-                <td>Echelle</td>
-                <td class="text-center">1</td>
-                <td class="text-center">-</td>
-                <td class="text-center">15</td>
+                <td>Antenne GPS{% if lovage_gps_item.reference %} ({{ lovage_gps_item.reference }}){% endif %}</td>
+                <td class="text-center">{{ lovage_gps_item.qty|default:"1" }}</td>
+                <td class="text-center">{{ lovage_gps_item.dimensions_str|default:"N/A" }}</td>
+                <td class="text-center">{{ lovage_gps_item.weight_unit_kg|default:"Négligeable" }}</td>
+                <td class="text-center">Projet</td>
+            </tr>
+            {% endif %}
+            {% if lovage_has_mdea and lovage_mdea_item %}
+            <tr>
+                <td>MDEA</td>
+                <td class="text-center">{{ lovage_mdea_item.qty|default:"1" }}</td>
+                <td class="text-center">{{ lovage_mdea_item.dimensions_str|default:"338 x 295 x 140" }}</td>
+                <td class="text-center">{{ lovage_mdea_item.weight_unit_kg|default:"10" }}</td>
                 <td class="text-center">Projet</td>
             </tr>
             {% endif %}
@@ -116,20 +125,14 @@
             Boitiers de lovage : F<sub>w,Frontale</sub> = 1 * {{ cf_front|default:"1.47" }} * {{ qp_z }} = <strong>{{ fw_front|default:"N/A" }}</strong> daN<br>
             Boitiers de lovage : F<sub>w,Latéral</sub> = 1 * {{ cf_lat|default:"1.19" }} * {{ qp_z }} = <strong>{{ fw_lat|default:"N/A" }}</strong> daN
         {% endif %}
+        {% if lovage_has_mdea and lovage_mdea_item %}
+            <br>MDEA : F<sub>w,Frontale</sub> = {{ lovage_mdea_item.fw_front_formula }}<br>
+            MDEA : F<sub>w,Latéral</sub> = {{ lovage_mdea_item.fw_lat_formula }}
+        {% endif %}
     </p>
 
     <h2>Calcul de chute</h2>
-    {% if lovage_has_echelle and not lovage_sans_plot and not is_sans_plot %}
-    <p>
-        L’effort engendré en cas de chute d'un homme sur un point d'ancrage répondant à la norme NF EN 795 - Ancrage de classe A1 "ancres structurelles conçues pour être fixées sur des surfaces verticales".<br>
-        Un essai statique doit être réalisé en exerçant une force de 10 kN dans la direction dans laquelle la force est susceptible d’être appliquée en service.<br>
-        Cette force doit être maintenue pendant 3 min.<br>
-        Le dispositif d’ancrage doit supporter la force. Dans le cas pratique cette force multidirectionnelle s'applique dans un cône d'action de 25°.<br>
-        La chute de l'homme est prise en compte en tête du mât avec les composantes suivantes : F<sub>h</sub> = 2.2 kN et F<sub>v</sub> = 9.8 kN.
-    </p>
-    {% else %}
     <p>Pas de point d’ancrage sur le mât</p>
-    {% endif %}
 </div>
 
 <div class="page-break"></div>
@@ -188,8 +191,7 @@
 {% else %}
 <p>
     PP : Poids propre de la structure<br>
-    PE : Poids équipements ({{ lovage_qty_total|default:"1" }}x {{ lovage_name|default:"Boîtier de lovage" }})<br>
-    {% if lovage_has_echelle and not lovage_sans_plot and not is_sans_plot %}CH : Chute d’homme<br>{% endif %}
+    PE : Poids équipements ({{ lovage_qty_total|default:"1" }}x {{ lovage_name|default:"Boîtier de lovage" }}{% if lovage_has_gps %} + Antenne GPS{% endif %}{% if lovage_has_mdea %} + {{ lovage_mdea_item.qty|default:"1" }}x MDEA{% endif %})<br>
     Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
 </p>
 {% endif %}

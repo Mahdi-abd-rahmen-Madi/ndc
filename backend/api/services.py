@@ -93,8 +93,32 @@ _DOCX_EQUIPMENT_DEFAULTS = {
         "qp_dan": 45.0,
         "template_rel": os.path.join("templates", "lovage", "boitier_lovage_avec_plot.docx"),
         "template_sans_plot_rel": os.path.join("templates", "lovage", "boitier_lovage_sans_plot.docx"),
+        "template_variants": {
+            ("lovage", False): os.path.join("templates", "lovage", "boitier_lovage_avec_plot.docx"),
+            ("lovage", True): os.path.join("templates", "lovage", "boitier_lovage_sans_plot.docx"),
+            ("lovage_gps", False): os.path.join("templates", "lovage", "boitier_lovage+gps_avec_plot.docx"),
+            ("lovage_gps", True): os.path.join("templates", "lovage", "boitier_lovage+gps_sans_plot.docx"),
+            ("lovage_gps_mdea", False): os.path.join("templates", "lovage", "boitier_lovage+GPS+MDEA_avec_plot.docx"),
+            ("lovage_gps_mdea", True): os.path.join("templates", "lovage", "boitiers_lovage+GPS+MDEA_sans_plot.docx"),
+            ("lovage_mdea", False): os.path.join("templates", "lovage", "boitier_lovage+GPS+MDEA_avec_plot.docx"),
+            ("lovage_mdea", True): os.path.join("templates", "lovage", "boitiers_lovage+GPS+MDEA_sans_plot.docx"),
+        },
     },
 }
+
+
+def select_equipment_docx_template(kind: str, ctx: dict) -> str:
+    """Select the DOCX template relative path for the given equipment kind and context."""
+    cfg = _DOCX_EQUIPMENT_DEFAULTS.get(kind, _DOCX_EQUIPMENT_DEFAULTS["rrh"])
+    is_sans_plot = bool(ctx.get("is_sans_plot") or (ctx.get("structure") or {}).get("sans_plot"))
+    variants = cfg.get("template_variants")
+    if variants:
+        variant = ctx.get("lovage_variant") or ("lovage" if kind == "lovage" else kind)
+        if (variant, is_sans_plot) in variants:
+            return variants[(variant, is_sans_plot)]
+    if is_sans_plot and cfg.get("template_sans_plot_rel"):
+        return cfg["template_sans_plot_rel"]
+    return cfg["template_rel"]
 
 
 def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
@@ -117,25 +141,76 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     # 1. Populate Table 0 ("Équipements considérés")
     if doc.tables:
         table0 = doc.tables[0]
-        for i, item in enumerate(items):
-            if i == 0 and len(table0.rows) > 1:
-                row = table0.rows[1]
-            else:
-                row = table0.add_row()
-            row.cells[0].text = clean_equipment_designation(str(item.get("name", label)))
-            row.cells[1].text = str(item.get("qty", 1))
-            if kind == "fh":
-                row.cells[2].text = str(item.get("dimensions_str") or f"Ø{item.get('diameter_mm', 600):g}")
-                row.cells[3].text = str(item.get("weight_unit_kg") or f"{float(item.get('weight_kg', 0)):g}")
-            else:
+        if kind == "lovage":
+            while len(table0.rows) > 2:
+                tr = table0.rows[-1]._tr
+                tr.getparent().remove(tr)
+            lovage_rows = []
+            for item in items:
                 depth_val = item.get(depth_key, item.get("t_mm", item.get("d_mm", 0)))
-                row.cells[2].text = str(
+                dims = str(
                     item.get("dimensions_str")
                     or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {depth_val:g}"
                 )
-                row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
+                w_str = str(item.get("weight_unit_kg") or f"{float(item.get('weight_kg', 0)):.1f}")
+                lovage_rows.append((
+                    str(item.get("name", label)),
+                    str(item.get("qty", 1)),
+                    dims,
+                    w_str,
+                    "Projet",
+                ))
+            if ctx.get("has_gps") and ctx.get("gps_item"):
+                g = ctx["gps_item"]
+                g_name = f"Antenne GPS ({g['reference']})" if g.get("reference") else "Antenne GPS"
+                lovage_rows.append((
+                    g_name,
+                    str(g.get("qty", 1)),
+                    str(g.get("dimensions_str") or "N/A"),
+                    str(g.get("weight_unit_kg") or "Négligeable"),
+                    "Projet",
+                ))
+            if ctx.get("has_mdea") and ctx.get("mdea_item"):
+                m = ctx["mdea_item"]
+                lovage_rows.append((
+                    "MDEA",
+                    str(m.get("qty", 1)),
+                    str(m.get("dimensions_str") or "338 x 295 x 140"),
+                    str(m.get("weight_unit_kg") or "10"),
+                    "Projet",
+                ))
+
+            for i, (desig, qty_s, dims_s, w_s, state_s) in enumerate(lovage_rows):
+                if i == 0 and len(table0.rows) > 1:
+                    row = table0.rows[1]
+                else:
+                    row = table0.add_row()
+                row.cells[0].text = desig
+                row.cells[1].text = qty_s
+                row.cells[2].text = dims_s
+                row.cells[3].text = w_s
                 if len(row.cells) > 4:
-                    row.cells[4].text = "Projet"
+                    row.cells[4].text = state_s
+        else:
+            for i, item in enumerate(items):
+                if i == 0 and len(table0.rows) > 1:
+                    row = table0.rows[1]
+                else:
+                    row = table0.add_row()
+                row.cells[0].text = clean_equipment_designation(str(item.get("name", label)))
+                row.cells[1].text = str(item.get("qty", 1))
+                if kind == "fh":
+                    row.cells[2].text = str(item.get("dimensions_str") or f"Ø{item.get('diameter_mm', 600):g}")
+                    row.cells[3].text = str(item.get("weight_unit_kg") or f"{float(item.get('weight_kg', 0)):g}")
+                else:
+                    depth_val = item.get(depth_key, item.get("t_mm", item.get("d_mm", 0)))
+                    row.cells[2].text = str(
+                        item.get("dimensions_str")
+                        or f"{item.get('h_mm', 0):g} x {item.get('w_mm', 0):g} x {depth_val:g}"
+                    )
+                    row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
+                    if len(row.cells) > 4:
+                        row.cells[4].text = "Projet"
 
     # 2. Populate Table 1 ("Géométrie des pièces")
     if len(doc.tables) > 1:
@@ -178,14 +253,44 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     fw_mast = float(wind.get("fw_mast", round(1.0 * cf_mast * mast_d_m * qp, 2)) or 0.0)
 
     # 4. Paragraph replacements
+    import re
     qty_total = ctx.get("qty_total") or sum(int(it.get("qty", 1)) for it in items) or 1
+    has_gps = bool(ctx.get("has_gps"))
+    has_mdea = bool(ctx.get("has_mdea"))
+    mdea_item = ctx.get("mdea_item")
+    lovage_variant = ctx.get("lovage_variant") or "lovage"
+    mast_h_val = (
+        ctx.get("hauteur_mat_m")
+        if ctx.get("hauteur_mat_m") is not None
+        else (structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
+    )
     for p in doc.paragraphs:
         txt = p.text
-        if "supportant XX boitiers de lovage" in txt:
-            p.text = txt.replace(
-                "supportant XX boitiers de lovage",
-                f"supportant {qty_total} boitier{'s' if qty_total > 1 else ''} de lovage",
+        if kind == "lovage" and lovage_variant == "lovage_mdea" and "Boitiers de lovage + GPS + MDEA" in txt:
+            p.text = txt.replace("Boitiers de lovage + GPS + MDEA", "Boitiers de lovage + MDEA")
+        elif "supportant XX boitiers de lovage" in txt:
+            lovage_clause = f"supportant {qty_total} boitier{'s' if qty_total > 1 else ''} de lovage"
+            mdea_qty = int((mdea_item or {}).get("qty") or 1)
+            mdea_clause = (
+                f"{mdea_qty} convertisseur{'s' if mdea_qty > 1 else ''} MDEA"
+                if mdea_qty > 1
+                else "un convertisseur MDEA"
             )
+            if has_gps and has_mdea:
+                full_clause = f"{lovage_clause}, une antenne GPS et {mdea_clause}."
+            elif has_gps:
+                full_clause = f"{lovage_clause} et une antenne GPS."
+            elif has_mdea:
+                full_clause = f"{lovage_clause} et {mdea_clause}."
+            else:
+                full_clause = f"{lovage_clause}."
+            updated = re.sub(
+                r"longueur\s+\d+\s*mm",
+                f"longueur {int(round(float(mast_h_val) * 1000))} mm",
+                txt,
+            )
+            updated = re.sub(r"supportant XX boitiers de lovage[^.]*\.", full_clause, updated)
+            p.text = updated
         elif "Région XX" in txt:
             p.text = f"Région {region}"
         elif "Catégorie de terrain" in txt and "XX" in txt:
@@ -218,14 +323,24 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     # 5. Replace equipment aerodynamic force paragraphs
     front_marker = f"{label} : Fw,Frontale"
     lat_marker = f"{label} : Fw,Latéral"
+    lovage_replaced = False
     for idx, p in enumerate(doc.paragraphs):
         norm_txt = " ".join(p.text.split())
-        if front_marker in norm_txt or (kind == "lovage" and "Fw,Frontale" in norm_txt):
+        if kind == "lovage" and "MDEA" in norm_txt:
+            if "Fw,Frontale" in norm_txt:
+                p.text = f"MDEA : Fw,Frontale = {mdea_item.get('fw_front_formula', 'N/A')}" if (has_mdea and mdea_item) else ""
+            elif "Fw,Latéral" in norm_txt:
+                p.text = f"MDEA : Fw,Latéral = {mdea_item.get('fw_lat_formula', 'N/A')}" if (has_mdea and mdea_item) else ""
+            continue
+        if not lovage_replaced and (
+            front_marker in norm_txt
+            or (kind == "lovage" and "Fw,Frontale" in norm_txt and "MDEA" not in norm_txt)
+        ):
             if len(items) == 1:
                 p.text = f"{front_marker} = {items[0].get('fw_front_formula', 'N/A')}"
                 if idx + 1 < len(doc.paragraphs):
                     next_norm = " ".join(doc.paragraphs[idx + 1].text.split())
-                    if lat_marker in next_norm or (kind == "lovage" and "Fw,Latéral" in next_norm):
+                    if lat_marker in next_norm or (kind == "lovage" and "Fw,Latéral" in next_norm and "MDEA" not in next_norm):
                         doc.paragraphs[idx + 1].text = f"{lat_marker} = {items[0].get('fw_lat_formula', 'N/A')}"
             else:
                 lines = []
@@ -236,9 +351,11 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
                 p.text = "\n".join(lines)
                 if idx + 1 < len(doc.paragraphs):
                     next_norm = " ".join(doc.paragraphs[idx + 1].text.split())
-                    if lat_marker in next_norm or (kind == "lovage" and "Fw,Latéral" in next_norm):
+                    if lat_marker in next_norm or (kind == "lovage" and "Fw,Latéral" in next_norm and "MDEA" not in next_norm):
                         doc.paragraphs[idx + 1].text = ""
-            break
+            lovage_replaced = True
+            if kind != "lovage":
+                break
 
 
 def _populate_rrh_docx(doc, ctx):
@@ -690,11 +807,7 @@ def _assemble_equipment_doc(job, kind: str = "rrh"):
     else:
         ctx = extract_ndc_context(job)
 
-    template_rel = (
-        cfg["template_sans_plot_rel"]
-        if ctx.get("is_sans_plot") and cfg.get("template_sans_plot_rel")
-        else cfg["template_rel"]
-    )
+    template_rel = select_equipment_docx_template(kind, ctx)
     template_path = os.path.join(settings.BASE_DIR, template_rel)
     if not os.path.exists(template_path):
         print(f"assemble_ndc_document: Template not found at {template_path}")
@@ -788,7 +901,7 @@ def execute_site_ndc_generation(payload: dict, user_id=None) -> str:
         for key in [
             'site', 'environment', 'structure', 'antenna_4g', 'antenna_5g',
             'fh_equipment', 'rrh_equipment', 'rru_equipment', 'td_equipment',
-            'gps', 'boitier_lovage', 'coffrets_fibre', 'baie', 'cab', 'atelier_energie',
+            'gps', 'boitier_lovage', 'convertisseur_mdea', 'coffrets_fibre', 'baie', 'cab', 'atelier_energie',
         ]:
             val = preview_data.get(key)
             if isinstance(val, str):

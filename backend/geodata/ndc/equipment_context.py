@@ -841,6 +841,9 @@ def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_va
         LOVAGE_DEFAULT_MAST_SECTION,
         LOVAGE_DEFAULT_PLOT_HEIGHT_M,
         LOVAGE_DEFAULT_PLOT_SECTION,
+        MDEA_CF_FRONT,
+        MDEA_CF_LAT,
+        resolve_lovage_comounts,
         resolve_sans_plot,
     )
 
@@ -852,6 +855,7 @@ def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_va
         lovage_in = input_data.get("lovage_equipment")
 
     raw_items = result_data.get("lovage_items") or lovage_sub.get("lovage_items") or []
+    has_worker_totals = bool(result_data.get("lovage_totals") or lovage_sub.get("lovage_totals"))
     totals = result_data.get("lovage_totals") or lovage_sub.get("lovage_totals") or {}
     wind = (
         result_data.get("lovage_wind_params")
@@ -1142,14 +1146,122 @@ def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_va
     except (ValueError, TypeError):
         h_plot = 0.0 if is_sans_plot else LOVAGE_DEFAULT_PLOT_HEIGHT_M
 
-    from utils.domain_constants import resolve_support_has_echelle
-    has_echelle = resolve_support_has_echelle(input_data, result_data, kind="lovage", is_sans_plot=is_sans_plot, hauteur_mat_m=h_mat)
+    has_echelle = False
+
+    comounts = resolve_lovage_comounts(input_data, result_data)
+    has_gps = comounts["has_gps"]
+    has_mdea = comounts["has_mdea"]
+    lovage_variant = comounts["variant"]
+
+    gps_item = None
+    if has_gps and comounts["gps"]:
+        g = comounts["gps"]
+        g_qty = int(g.get("quantity") or 1)
+        g_w = float(g.get("weight_kg") or 0.0)
+        gps_item = {
+            "name": "Antenne GPS",
+            "marque": g.get("marque"),
+            "reference": g.get("reference"),
+            "qty": g_qty,
+            "dimensions_str": g.get("dimensions_str") or "N/A",
+            "weight_kg": g_w,
+            "weight_unit_kg": f"{g_w:g}" if g_w > 0 else "Négligeable",
+            "pe_dan": 0.0,
+            "fw_front": 0.0,
+            "fw_lat": 0.0,
+        }
+
+    mdea_item = None
+    if has_mdea and comounts["mdea"]:
+        m = comounts["mdea"]
+        mdea_res = (
+            result_data.get("lovage_mdea")
+            if isinstance(result_data.get("lovage_mdea"), dict)
+            else (lovage_sub.get("mdea") if isinstance(lovage_sub.get("mdea"), dict) else {})
+        )
+        m_qty = int(m.get("quantity") or 1)
+        mh = float(m.get("h_mm") or 338.0)
+        mw = float(m.get("w_mm") or 295.0)
+        md = float(m.get("d_mm") or 140.0)
+        m_dims = m.get("dimensions_str") or f"{mh:g} x {mw:g} x {md:g}"
+        m_w = float(m.get("weight_kg") if m.get("weight_kg") is not None else 10.0)
+        m_cf_f = float(m.get("cf_front") if m.get("cf_front") is not None else MDEA_CF_FRONT)
+        m_cf_l = float(m.get("cf_lat") if m.get("cf_lat") is not None else MDEA_CF_LAT)
+
+        m_a_front = float(
+            mdea_res.get("area_front_m2")
+            if mdea_res.get("area_front_m2") is not None
+            else (
+                mdea_res.get("a_front")
+                if mdea_res.get("a_front") is not None
+                else (round((mh * mw) / 1e6, 4) if (mh and mw) else 0.0)
+            )
+        )
+        m_a_lat = float(
+            mdea_res.get("area_lat_m2")
+            if mdea_res.get("area_lat_m2") is not None
+            else (
+                mdea_res.get("a_lat")
+                if mdea_res.get("a_lat") is not None
+                else (round((mh * md) / 1e6, 4) if (mh and md) else 0.0)
+            )
+        )
+        m_fw_f_raw = mdea_res.get("fw_front") if mdea_res.get("fw_front") is not None else mdea_res.get("fw_front_dan")
+        m_fw_l_raw = mdea_res.get("fw_lat") if mdea_res.get("fw_lat") is not None else mdea_res.get("fw_lat_dan")
+        m_fw_front = float(m_fw_f_raw) if m_fw_f_raw is not None else (round(m_qty * m_cf_f * m_a_front * qp, 2) if qp else 0.0)
+        m_fw_lat = float(m_fw_l_raw) if m_fw_l_raw is not None else (round(m_qty * m_cf_l * m_a_lat * qp, 2) if qp else 0.0)
+        m_pe = float(mdea_res.get("pe_dan") if mdea_res.get("pe_dan") is not None else round(m_qty * m_w, 2))
+
+        m_fw_front_formula = mdea_res.get("fw_front_formula") or (
+            f"{m_qty} * {m_cf_f:.2f} * {_fmt_area(m_a_front)} * {qp:.2f} = {m_fw_front:.2f} daN"
+            if qp else f"{m_fw_front:.2f} daN"
+        )
+        m_fw_lat_formula = mdea_res.get("fw_lat_formula") or (
+            f"{m_qty} * {m_cf_l:.2f} * {_fmt_area(m_a_lat)} * {qp:.2f} = {m_fw_lat:.2f} daN"
+            if qp else f"{m_fw_lat:.2f} daN"
+        )
+
+        mdea_item = {
+            "name": "MDEA",
+            "qty": m_qty,
+            "h_mm": mh,
+            "w_mm": mw,
+            "d_mm": md,
+            "dimensions_str": m_dims,
+            "weight_kg": m_w,
+            "weight_unit_kg": f"{m_w:g}",
+            "weight_total_kg": m_pe,
+            "cf_front": m_cf_f,
+            "cf_lat": m_cf_l,
+            "a_front": m_a_front,
+            "a_lat": m_a_lat,
+            "fw_front": m_fw_front,
+            "fw_lat": m_fw_lat,
+            "pe_dan": m_pe,
+            "fw_front_formula": m_fw_front_formula,
+            "fw_lat_formula": m_fw_lat_formula,
+        }
+
+    if not has_worker_totals:
+        totals = dict(totals)
+        extra_pe = (mdea_item["pe_dan"] if mdea_item else 0.0) + (gps_item["pe_dan"] if gps_item else 0.0)
+        if extra_pe:
+            totals["weight_total_kg"] = round(float(totals.get("weight_total_kg") or 0.0) + extra_pe, 2)
+            totals["pe_dan"] = round(float(totals.get("pe_dan") or 0.0) + extra_pe, 2)
+        if mdea_item:
+            totals["fw_front"] = round(float(totals.get("fw_front") or 0.0) + mdea_item["fw_front"], 2)
+            totals["fw_lat"] = round(float(totals.get("fw_lat") or 0.0) + mdea_item["fw_lat"], 2)
 
     qty_total = totals.get("qty_total", sum(it.get("qty", 1) for it in items))
     return {
         "is_lovage": True,
         "is_sans_plot": is_sans_plot,
         "has_echelle": has_echelle,
+        "has_gps": has_gps,
+        "has_mdea": has_mdea,
+        "lovage_variant": lovage_variant,
+        "gps_item": gps_item,
+        "mdea_item": mdea_item,
         "items": items,
         "totals": totals,
         "wind": wind,

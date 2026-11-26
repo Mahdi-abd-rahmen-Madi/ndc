@@ -2,7 +2,10 @@ import json
 import hashlib
 from typing import Dict, Any
 
-from utils.domain_constants import normalize_operator, normalize_structure_case, resolve_sans_plot
+from utils.domain_constants import normalize_operator, normalize_structure_case, resolve_lovage_comounts, resolve_sans_plot
+
+STAGE_HASH_VERSION = "v1"
+SUPPORTED_STAGES = ("antenna", "rrh", "rru", "fh", "lovage")
 
 VOLATILE_KEYS = {
     "id", "job_id", "client_id", "client", "project_name", "site_name", "site",
@@ -201,11 +204,35 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
         is_lv_sp = resolve_sans_plot(data, calc_type=normalized_type, kind="lovage")
         lv_copy["sans_plot"] = is_lv_sp
         lv_copy["with_plot"] = not is_lv_sp
-        if is_lv_sp or lv_copy["hauteur_mat_m"] < 2.0:
-            if "echelle" in lv_copy:
-                lv_copy["echelle"] = "Pas d'échelle"
+        lv_copy.pop("echelle", None)
         lv_copy.setdefault("cf_front", 1.47)
         lv_copy.setdefault("cf_lat", 1.19)
+        for k in ("has_gps", "has_mdea", "gps", "mdea"):
+            lv_copy.pop(k, None)
+        comounts = resolve_lovage_comounts(data)
+        if comounts["has_gps"] and comounts["gps"]:
+            g = comounts["gps"]
+            lv_copy["has_gps"] = True
+            lv_copy["gps"] = {
+                "enabled": True,
+                "marque": g.get("marque"),
+                "reference": g.get("reference"),
+                "dimensions": g.get("dimensions"),
+                "weight_kg": g.get("weight_kg", 0.0),
+            }
+        if comounts["has_mdea"] and comounts["mdea"]:
+            m = comounts["mdea"]
+            lv_copy["has_mdea"] = True
+            lv_copy["mdea"] = {
+                "enabled": True,
+                "quantity": m.get("quantity", 1),
+                "h_mm": m.get("h_mm"),
+                "w_mm": m.get("w_mm"),
+                "d_mm": m.get("d_mm"),
+                "weight_kg": m.get("weight_kg"),
+                "cf_front": m.get("cf_front"),
+                "cf_lat": m.get("cf_lat"),
+            }
         canonical["boitier_lovage"] = _normalize(lv_copy)
         if "structure_lovage" in data and isinstance(data["structure_lovage"], dict):
             canonical["structure_lovage"] = _normalize(data["structure_lovage"])
@@ -231,5 +258,190 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
 
     canonical_json = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
     sha = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
-    return f"ndc_{normalized_type}_{sha[:24]}"
+    raw_hash = f"ndc_{normalized_type}_{sha[:24]}"
+    if len(raw_hash) > 150:
+        return f"ndc_v1_{sha[:32]}"
+    return raw_hash
+
+
+def _build_normalized_env(data: Dict[str, Any], include_plot_height: bool = False) -> Dict[str, Any]:
+    environment = data.get("environment") or {}
+    env_keys = ["region", "terrain_type", "building_height_m", "hauteur_batiment", "vb0", "qp_dan"]
+    if include_plot_height:
+        env_keys.append("plot_height_m")
+    top_env = {k: data[k] for k in env_keys if k in data and k not in environment}
+    env_src = (
+        {
+            k: v
+            for k, v in environment.items()
+            if include_plot_height or str(k).strip().lower() != "plot_height_m"
+        }
+        if isinstance(environment, dict)
+        else {}
+    )
+    return _normalize({**top_env, **env_src})
+
+
+def compute_stage_hashes(input_data: Dict[str, Any], calc_type: str = None) -> Dict[str, str]:
+    """
+    Compute isolated, fixed-length content-addressed hashes for each active structural stage
+    (`antenna`, `rrh`, `rru`, `fh`, `lovage`).
+    Changing one stage's physical parameters never invalidates the cache of independent stages.
+    """
+    data = input_data or {}
+    normalized_type = str(calc_type or detect_calculation_type(data)).lower().strip()
+    op = normalize_operator(data.get("operateur") or data.get("operator"), fallback_site=data.get("site"))
+    structure = data.get("structure") or {}
+
+    has_antenna = _has_active_antenna(data)
+    rrh_eq = data.get("rrh_equipment")
+    rru_eq = data.get("rru_equipment")
+    fh_eq = data.get("fh_equipment")
+    lovage_eq = data.get("boitier_lovage") or data.get("lovage_equipment")
+
+    rrh_active = (
+        (isinstance(rrh_eq, dict) and bool(rrh_eq.get("enabled")))
+        or data.get("is_rrh") is True
+        or ("rrh" in normalized_type.split("_") and not (isinstance(rru_eq, dict) and rru_eq.get("enabled")))
+    )
+    rru_active = (not rrh_active) and (
+        (isinstance(rru_eq, dict) and bool(rru_eq.get("enabled")))
+        or data.get("is_rru") is True
+        or "rru" in normalized_type.split("_")
+    )
+    fh_active = (
+        (isinstance(fh_eq, dict) and bool(fh_eq.get("enabled")))
+        or data.get("is_fh") is True
+        or "fh" in normalized_type.split("_")
+    )
+    lovage_active = (
+        (isinstance(lovage_eq, dict) and bool(lovage_eq.get("enabled")))
+        or data.get("is_lovage") is True
+        or "lovage" in normalized_type.split("_")
+    )
+    antenna_active = has_antenna or normalized_type == "antenna" or normalized_type.startswith("antenna_with_")
+
+    def _hash_stage(stage: str, payload: Dict[str, Any]) -> str:
+        body = {"version": STAGE_HASH_VERSION, "stage": stage, **payload}
+        canonical_json = json.dumps(body, sort_keys=True, separators=(",", ":"))
+        sha = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+        return f"stg_{stage}_{STAGE_HASH_VERSION}_{sha[:32]}"
+
+    stage_hashes: Dict[str, str] = {}
+
+    if antenna_active:
+        struct_norm = _normalize(structure) if isinstance(structure, dict) else {}
+        struct_norm["structure_case"] = normalize_structure_case(
+            structure.get("structure_case") or data.get("structure_case")
+        )
+        if isinstance(structure, dict) and structure.get("hauteur_mat_m") is not None:
+            try:
+                struct_norm["hauteur_mat_m"] = round(float(structure["hauteur_mat_m"]), 3)
+            except (ValueError, TypeError):
+                pass
+        ant_payload: Dict[str, Any] = {
+            "environment": _build_normalized_env(data, include_plot_height=True),
+            "structure": struct_norm,
+            "antenna_4g": _normalize(data.get("antenna_4g") or {}),
+            "antenna_5g": _normalize(data.get("antenna_5g") or {}),
+        }
+        if op:
+            ant_payload["operateur"] = op
+        if "deflection_limit" in data:
+            ant_payload["deflection_limit"] = _normalize(data["deflection_limit"])
+        stage_hashes["antenna"] = _hash_stage("antenna", ant_payload)
+
+    for stage, eq_blk in (("rrh", rrh_eq), ("rru", rru_eq), ("fh", fh_eq)):
+        is_active = (
+            (stage == "rrh" and rrh_active)
+            or (stage == "rru" and rru_active)
+            or (stage == "fh" and fh_active)
+        )
+        if not is_active:
+            continue
+        eq_copy = dict(eq_blk) if isinstance(eq_blk, dict) else {}
+        sub_struct = data.get(f"structure_{stage}") or {}
+        raw_h = eq_copy.get("hauteur_mat_m")
+        if raw_h is None and isinstance(sub_struct, dict):
+            raw_h = sub_struct.get("hauteur_mat_m")
+        if raw_h is None and not has_antenna and isinstance(structure, dict):
+            raw_h = structure.get("hauteur_mat_m")
+        default_h = 1.70 if stage == "fh" else 1.50
+        try:
+            h_val = round(float(raw_h), 3) if raw_h is not None else default_h
+        except (ValueError, TypeError):
+            h_val = default_h
+        eq_copy["hauteur_mat_m"] = h_val
+        is_sp = resolve_sans_plot(data, calc_type=normalized_type, kind=stage)
+        eq_copy["sans_plot"] = is_sp
+        eq_copy["with_plot"] = not is_sp
+        if is_sp or h_val < 2.0:
+            if stage == "fh" or "echelle" in eq_copy:
+                eq_copy["echelle"] = "Pas d'échelle"
+
+        st_payload: Dict[str, Any] = {
+            "environment": _build_normalized_env(data, include_plot_height=False),
+            f"{stage}_equipment": _normalize(eq_copy),
+        }
+        if isinstance(sub_struct, dict) and sub_struct:
+            st_payload[f"structure_{stage}"] = _normalize(sub_struct)
+        if stage in ("rrh", "rru") and op:
+            st_payload["operateur"] = op
+        if not has_antenna and isinstance(data.get("equipment"), dict) and data["equipment"]:
+            st_payload["equipment"] = _normalize(data["equipment"])
+        stage_hashes[stage] = _hash_stage(stage, st_payload)
+
+    if lovage_active:
+        lv_copy = dict(lovage_eq) if isinstance(lovage_eq, dict) else {}
+        sub_struct = data.get("structure_lovage") or {}
+        raw_h = lv_copy.get("hauteur_mat_m")
+        if raw_h is None and isinstance(sub_struct, dict):
+            raw_h = sub_struct.get("hauteur_mat_m")
+        if raw_h is None and not has_antenna and isinstance(structure, dict):
+            raw_h = structure.get("hauteur_mat_m")
+        try:
+            lv_copy["hauteur_mat_m"] = round(float(raw_h), 3) if raw_h is not None else 1.5
+        except (ValueError, TypeError):
+            lv_copy["hauteur_mat_m"] = 1.5
+        is_lv_sp = resolve_sans_plot(data, calc_type=normalized_type, kind="lovage")
+        lv_copy["sans_plot"] = is_lv_sp
+        lv_copy["with_plot"] = not is_lv_sp
+        lv_copy.pop("echelle", None)
+        lv_copy.setdefault("cf_front", 1.47)
+        lv_copy.setdefault("cf_lat", 1.19)
+        for k in ("has_gps", "has_mdea", "gps", "mdea"):
+            lv_copy.pop(k, None)
+        comounts = resolve_lovage_comounts(data)
+        if comounts["has_gps"] and comounts["gps"]:
+            g = comounts["gps"]
+            lv_copy["has_gps"] = True
+            lv_copy["gps"] = {
+                "enabled": True,
+                "marque": g.get("marque"),
+                "reference": g.get("reference"),
+                "dimensions": g.get("dimensions"),
+                "weight_kg": g.get("weight_kg", 0.0),
+            }
+        if comounts["has_mdea"] and comounts["mdea"]:
+            m = comounts["mdea"]
+            lv_copy["has_mdea"] = True
+            lv_copy["mdea"] = {
+                "enabled": True,
+                "quantity": m.get("quantity", 1),
+                "h_mm": m.get("h_mm"),
+                "w_mm": m.get("w_mm"),
+                "d_mm": m.get("d_mm"),
+                "weight_kg": m.get("weight_kg"),
+                "cf_front": m.get("cf_front"),
+                "cf_lat": m.get("cf_lat"),
+            }
+        lv_payload: Dict[str, Any] = {
+            "environment": _build_normalized_env(data, include_plot_height=False),
+            "boitier_lovage": _normalize(lv_copy),
+        }
+        if isinstance(sub_struct, dict) and sub_struct:
+            lv_payload["structure_lovage"] = _normalize(sub_struct)
+        stage_hashes["lovage"] = _hash_stage("lovage", lv_payload)
+
+    return stage_hashes
 
