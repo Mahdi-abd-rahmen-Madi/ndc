@@ -4,6 +4,7 @@ from .models import UserProfile, Role, EngineerProfile, CalculationJob, Generate
 from utils.domain_constants import (
     ALLOWED_FH_DIAMETERS,
     DEFAULT_STRUCTURE_CASE,
+    FH_DEFAULT_MAST_SECTION,
     STRUCTURE_CASES,
     normalize_structure_case,
 )
@@ -142,7 +143,7 @@ class AntennaSerializer(serializers.Serializer):
     hauteur_mat_antenne_m = serializers.FloatField(required=False, allow_null=True)
 
 class StructureFHSerializer(serializers.Serializer):
-    mast_section = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="TRON 88x3.2")
+    mast_section = serializers.CharField(required=False, allow_blank=True, allow_null=True, default=FH_DEFAULT_MAST_SECTION)
     plot_section = serializers.CharField(required=False, allow_blank=True, allow_null=True, default="TCAR 150x5")
     hauteur_mat_m = serializers.FloatField(required=False, allow_null=True, default=1.70)
     hauteur_plot_m = serializers.FloatField(required=False, allow_null=True, default=0.50)

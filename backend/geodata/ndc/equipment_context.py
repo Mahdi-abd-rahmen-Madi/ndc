@@ -1,6 +1,10 @@
 """Equipment context extraction (RRH & RRU) for NDC report rendering."""
 import re
-from .wind_ec1 import _parse_envelope_dims_m
+from .wind_ec1 import (
+    _parse_envelope_dims_m,
+    get_support_structure_params,
+    get_support_wind,
+)
 
 
 def clean_equipment_designation(name: str) -> str:
@@ -48,13 +52,8 @@ def extract_rrh_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
 
     items = result_data.get("rrh_items") or rrh_sub.get("rrh_items") or []
     totals = result_data.get("rrh_totals") or rrh_sub.get("rrh_totals") or {}
-    wind = (
-        result_data.get("rrh_wind_params")
-        or rrh_sub.get("wind_params")
-        or result_data.get("wind_params")
-        or {}
-    )
-    structure = rrh_sub.get("structure_params") or result_data.get("structure_params") or {}
+    wind = get_support_wind(result_data, "rrh")
+    structure = get_support_structure_params(result_data, "rrh")
     extremes = result_data.get("extremes") or rrh_sub.get("extremes") or {}
 
     try:
@@ -285,13 +284,8 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         rrh_sub_legacy = result_data.get("rrh") if isinstance(result_data.get("rrh"), dict) else {}
         totals = result_data.get("rrh_totals") or rrh_sub_legacy.get("rrh_totals") or {}
 
-    wind = (
-        result_data.get("rru_wind_params")
-        or rru_sub.get("wind_params")
-        or result_data.get("wind_params")
-        or {}
-    )
-    structure = rru_sub.get("structure_params") or result_data.get("structure_params") or {}
+    wind = get_support_wind(result_data, "rru")
+    structure = get_support_structure_params(result_data, "rru")
     extremes = result_data.get("extremes") or rru_sub.get("extremes") or {}
     operateur = (
         result_data.get("operateur")
@@ -383,11 +377,22 @@ def extract_rru_ndc_context(result_data: dict, input_data: dict = None, qp_val: 
         totals.setdefault("count", len(items))
         totals.setdefault("qty_total", tot_qty)
         totals.setdefault("weight_total_kg", round(tot_weight, 2))
-        totals.setdefault("pe_dan", totals.get("weight_total_kg", round(tot_weight, 2)))
+        if totals.get("pe_dan") is None:
+            totals["pe_dan"] = wind.get("pe_dan") if wind.get("pe_dan") is not None else totals.get("weight_total_kg", round(tot_weight, 2))
         if totals.get("fw_front") is None:
-            totals["fw_front"] = wind.get("fw_front_total_dan") if wind.get("fw_front_total_dan") is not None else round(tot_fw_front, 2)
+            if wind.get("fw_front") is not None:
+                totals["fw_front"] = wind.get("fw_front")
+            elif wind.get("fw_front_total_dan") is not None:
+                totals["fw_front"] = wind.get("fw_front_total_dan")
+            else:
+                totals["fw_front"] = round(tot_fw_front, 2)
         if totals.get("fw_lat") is None:
-            totals["fw_lat"] = wind.get("fw_lat_total_dan") if wind.get("fw_lat_total_dan") is not None else round(tot_fw_lat, 2)
+            if wind.get("fw_lat") is not None:
+                totals["fw_lat"] = wind.get("fw_lat")
+            elif wind.get("fw_lat_total_dan") is not None:
+                totals["fw_lat"] = wind.get("fw_lat_total_dan")
+            else:
+                totals["fw_lat"] = round(tot_fw_lat, 2)
 
     if not items:
         from geodata.catalogue_loader import find_rru_reference
@@ -563,7 +568,12 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
     Golden Rule: Never recalculate qp, d_coef, or FwFH in Django if already computed by worker.
     Table 0 has 4 columns: [Désignation, Quantité, Dimensions (mm), Poids (kg)] (no État column).
     """
-    from utils.domain_constants import FH_DIAMETER_COEFFICIENTS, resolve_sans_plot
+    from utils.domain_constants import (
+        FH_DEFAULT_MAST_SECTION,
+        FH_DIAMETER_COEFFICIENTS,
+        resolve_sans_plot,
+        resolve_support_has_echelle,
+    )
 
     result_data = result_data if isinstance(result_data, dict) else {}
     input_data = input_data if isinstance(input_data, dict) else {}
@@ -571,13 +581,8 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
 
     raw_items = result_data.get("fh_items") or fh_sub.get("fh_items") or []
     totals = result_data.get("fh_totals") or fh_sub.get("fh_totals") or {}
-    wind = (
-        result_data.get("fh_wind_params")
-        or fh_sub.get("wind_params")
-        or result_data.get("wind_params")
-        or {}
-    )
-    structure = fh_sub.get("structure_params") or result_data.get("structure_params") or {}
+    wind = get_support_wind(result_data, "fh")
+    structure = get_support_structure_params(result_data, "fh")
     if not structure:
         structure = input_data.get("structure_fh") or input_data.get("structure") or {}
 
@@ -599,26 +604,13 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
     except (ValueError, TypeError):
         fh_h_mat_num = 1.70
 
-    raw_fh_echelle = (
-        fh_eq_in.get("echelle")
-        or fh_sub.get("echelle")
-        or result_data.get("fh_echelle")
-        or fh_struct_in.get("echelle")
+    fh_has_echelle = resolve_support_has_echelle(
+        input_data,
+        result_data,
+        kind="fh",
+        is_sans_plot=is_sans_plot,
+        hauteur_mat_m=fh_h_mat_num,
     )
-    if is_sans_plot or fh_h_mat_num < 2.0:
-        fh_has_echelle = False
-    elif isinstance(raw_fh_echelle, bool):
-        fh_has_echelle = raw_fh_echelle
-    elif isinstance(raw_fh_echelle, str):
-        norm_ech = raw_fh_echelle.strip().lower()
-        fh_has_echelle = (
-            bool(norm_ech)
-            and "pas d'echelle" not in norm_ech
-            and "pas d'échelle" not in norm_ech
-            and norm_ech not in ("non", "none", "false", "0")
-        )
-    else:
-        fh_has_echelle = False
 
     try:
         qp = float(wind.get("qp_dan") or qp_val or 0.0)
@@ -679,7 +671,12 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
         totals.setdefault("weight_total_kg", round(tot_weight, 2))
         totals.setdefault("pe_dan", totals.get("weight_total_kg", round(tot_weight, 2)))
         if totals.get("fw_fh") is None:
-            totals["fw_fh"] = round(tot_fw_fh, 2)
+            if wind.get("fw_fh") is not None:
+                totals["fw_fh"] = wind.get("fw_fh")
+            elif wind.get("fw_front") is not None:
+                totals["fw_fh"] = wind.get("fw_front")
+            else:
+                totals["fw_fh"] = round(tot_fw_fh, 2)
         if totals.get("fw_front") is None:
             totals["fw_front"] = totals["fw_fh"]
         if totals.get("fw_lat") is None:
@@ -803,9 +800,13 @@ def extract_fh_ndc_context(result_data: dict, input_data: dict = None, qp_val: f
             "fw_fh_formula": it.get("fw_fh_formula", ""),
         })
 
-    mast_sec = structure.get("mast_section", "TRON 88x3.2")
+    mast_sec = (
+        structure.get("mast_section")
+        or (input_data.get("structure_fh") or {}).get("mast_section")
+        or FH_DEFAULT_MAST_SECTION
+    )
     plot_sec = None if is_sans_plot else structure.get("plot_section", "TCAR 150x5")
-    h_mat = float(structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.7)
+    h_mat = fh_h_mat_num
     h_plot = 0.0 if is_sans_plot else float(structure.get("plot_h_m") if structure.get("plot_h_m") is not None else (structure.get("hauteur_plot_m") if structure.get("hauteur_plot_m") is not None else 0.5))
 
     return {
@@ -857,13 +858,8 @@ def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_va
     raw_items = result_data.get("lovage_items") or lovage_sub.get("lovage_items") or []
     has_worker_totals = bool(result_data.get("lovage_totals") or lovage_sub.get("lovage_totals"))
     totals = result_data.get("lovage_totals") or lovage_sub.get("lovage_totals") or {}
-    wind = (
-        result_data.get("lovage_wind_params")
-        or lovage_sub.get("wind_params")
-        or result_data.get("wind_params")
-        or {}
-    )
-    structure = lovage_sub.get("structure_params") or result_data.get("structure_params") or {}
+    wind = get_support_wind(result_data, "lovage")
+    structure = get_support_structure_params(result_data, "lovage")
     if not structure:
         structure = input_data.get("structure_lovage") or input_data.get("structure") or {}
 
@@ -972,11 +968,22 @@ def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_va
         totals.setdefault("count", len(items))
         totals.setdefault("qty_total", tot_qty)
         totals.setdefault("weight_total_kg", round(tot_weight, 2))
-        totals.setdefault("pe_dan", totals.get("weight_total_kg", round(tot_weight, 2)))
+        if totals.get("pe_dan") is None:
+            totals["pe_dan"] = wind.get("pe_dan") if wind.get("pe_dan") is not None else totals.get("weight_total_kg", round(tot_weight, 2))
         if totals.get("fw_front") is None:
-            totals["fw_front"] = wind.get("fw_front_total_dan") if wind.get("fw_front_total_dan") is not None else round(tot_fw_front, 2)
+            if wind.get("fw_front") is not None:
+                totals["fw_front"] = wind.get("fw_front")
+            elif wind.get("fw_front_total_dan") is not None:
+                totals["fw_front"] = wind.get("fw_front_total_dan")
+            else:
+                totals["fw_front"] = round(tot_fw_front, 2)
         if totals.get("fw_lat") is None:
-            totals["fw_lat"] = wind.get("fw_lat_total_dan") if wind.get("fw_lat_total_dan") is not None else round(tot_fw_lat, 2)
+            if wind.get("fw_lat") is not None:
+                totals["fw_lat"] = wind.get("fw_lat")
+            elif wind.get("fw_lat_total_dan") is not None:
+                totals["fw_lat"] = wind.get("fw_lat_total_dan")
+            else:
+                totals["fw_lat"] = round(tot_fw_lat, 2)
         totals.setdefault(
             "fw_front_formula",
             " + ".join(f_front_parts) + f" = {round(tot_fw_front, 2):.2f} daN"
@@ -1146,7 +1153,14 @@ def extract_lovage_ndc_context(result_data: dict, input_data: dict = None, qp_va
     except (ValueError, TypeError):
         h_plot = 0.0 if is_sans_plot else LOVAGE_DEFAULT_PLOT_HEIGHT_M
 
-    has_echelle = False
+    from utils.domain_constants import resolve_support_has_echelle
+    has_echelle = resolve_support_has_echelle(
+        input_data,
+        result_data,
+        kind="lovage",
+        is_sans_plot=is_sans_plot,
+        hauteur_mat_m=h_mat,
+    )
 
     comounts = resolve_lovage_comounts(input_data, result_data)
     has_gps = comounts["has_gps"]

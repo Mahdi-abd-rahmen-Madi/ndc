@@ -1,10 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import type { EquipmentItem } from '../types';
 import { MultiRowEquipmentToggle } from './shared/MultiRowEquipmentToggle';
-import { EquipmentEchelleSelector, SUPPORT_ECHELLE_OPTIONS } from './shared/EquipmentEchelleSelector';
 import { DEFAULT_FH_REFERENCES, FHCatalogItem } from '../../../config/catalogueDefaults';
-
-export const FH_ECHELLE_OPTIONS = SUPPORT_ECHELLE_OPTIONS;
 
 export interface FHEquipmentOption {
   id: string;
@@ -36,8 +33,6 @@ export interface FHEquipmentToggleProps {
   disabledReason?: string;
   foundationType?: 'metallique' | 'beton' | 'dallettes';
   setFoundationType?: (val: 'metallique' | 'beton' | 'dallettes') => void;
-  fhEchelle?: string;
-  setFhEchelle?: (val: string) => void;
   hauteurMatM?: number;
   setHauteurMatM?: (val: number) => void;
 }
@@ -61,8 +56,6 @@ export function FHEquipmentToggle({
   disabledReason,
   foundationType,
   setFoundationType,
-  fhEchelle = "Pas d'échelle",
-  setFhEchelle,
   hauteurMatM,
   setHauteurMatM,
 }: FHEquipmentToggleProps) {
@@ -146,17 +139,7 @@ export function FHEquipmentToggle({
       hauteurMatM={hauteurMatM}
       onHauteurMatMChange={setHauteurMatM}
       defaultHauteurMatM={1.70}
-    >
-      <EquipmentEchelleSelector
-        foundationType={foundationType}
-        hauteurMatM={hauteurMatM}
-        defaultHauteurMatM={1.70}
-        value={fhEchelle}
-        onChange={setFhEchelle}
-        disabled={disabled}
-        accentColor="amber"
-      />
-    </MultiRowEquipmentToggle>
+    />
   );
 }
 

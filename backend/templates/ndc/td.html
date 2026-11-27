@@ -28,6 +28,15 @@
             <td class="text-center">{{ eq_weight|default:"N/A" }}</td>
             <td class="text-center">Projet</td>
         </tr>
+        {% if td_has_echelle %}
+        <tr>
+            <td>Echelle</td>
+            <td class="text-center">1</td>
+            <td class="text-center">-</td>
+            <td class="text-center">15</td>
+            <td class="text-center">Projet</td>
+        </tr>
+        {% endif %}
     </tbody>
 </table>
 
@@ -59,7 +68,17 @@
 </p>
 
 <h2>Calcul de chute</h2>
+{% if td_has_echelle %}
+<p>
+    L’effort engendré en cas de chute d'un homme sur un point d'ancrage répondant à la norme NF EN 795 - Ancrage de classe A1 "ancres structurelles conçues pour être fixées sur des surfaces verticales".<br>
+    Un essai statique doit être réalisé en exerçant une force de 10 kN dans la direction dans laquelle la force est susceptible d’être appliquée en service.<br>
+    Cette force doit être maintenue pendant 3 min.<br>
+    Le dispositif d’ancrage doit supporter la force. Dans le cas pratique cette force multidirectionnelle s'applique dans un cône d'action de 25°.<br>
+    La chute de l'homme est prise en compte en tête du mât avec les composantes suivantes : F<sub>h</sub> = 2.2 kN et F<sub>v</sub> = 9.8 kN.
+</p>
+{% else %}
 <p>Pas de point d’ancrage sur le mât</p>
+{% endif %}
 
 <h2>Modélisation en 3D</h2>
 <p>Géométrie des pièces<br>

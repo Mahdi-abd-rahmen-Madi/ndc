@@ -1,0 +1,105 @@
+================================================================================
+ROBOT STRUCTURAL ANALYSIS WORKER - AUTOMATIC ECHELLE (>= 2.0m) DELTA INSTRUCTIONS
+================================================================================
+
+1. SUMMARY
+--------------------------------------------------------------------------------
+Echelle (+Chute d'homme `CH` / NF EN 795) is now determined AUTOMATICALLY from
+mast height alone for ALL auxiliary supports outside of the main antenna mast
+(FH, RRH, RRU, Boîtier de Lovage, TD, TGBT):
+  - `hauteur_mat_m < 2.0`  -> ALWAYS sans échelle (`"Pas d'échelle"`, `has_echelle = False`)
+  - `hauteur_mat_m >= 2.0` -> ALWAYS with échelle (`"Echelle"`, `has_echelle = True`)
+
+What changed vs. previous instructions:
+  - Removed the `sans_plot` / `dallettes` restriction: `>= 2.0 m` now includes
+    echelle even when `sans_plot == True` (dallettes).
+  - Removed the Boîtier de Lovage exclusion: `boitier_lovage` now follows the
+    exact same `< 2.0 m` vs `>= 2.0 m` rule as FH, RRH, and RRU.
+  - Removed manual `echelle` selection from the UI/payload logic: ignore any
+    legacy `"Pas d'échelle"` / `"Echelle"` override in `input_data` — height
+    alone decides.
+  - Main antenna mast (`structure.echelle`) is UNCHANGED — do NOT apply this
+    rule to the main antenna stage and NEVER read `input_data["structure"]["echelle"]`
+    for auxiliary supports.
+
+
+2. REQUIRED WORKER CHANGES
+--------------------------------------------------------------------------------
+1. Unified auxiliary echelle resolver (replaces `resolve_fh_has_echelle` and
+   applies to `fh`, `rrh`, `rru`, `lovage`, `td`, `tgbt`):
+     ```python
+     def resolve_support_has_echelle(input_data: dict, kind: str) -> bool:
+         k = (kind or "fh").lower().strip()
+         sub_key = "lovage" if k in ("lovage", "boitier_lovage") else k
+         eq_key = "boitier_lovage" if sub_key == "lovage" else f"{sub_key}_equipment"
+         eq_in = input_data.get(eq_key) or (
+             input_data.get("lovage_equipment") if sub_key == "lovage" else {}
+         ) or {}
+         struct_in = input_data.get(f"structure_{sub_key}") or {}
+
+         default_h = 1.70 if sub_key in ("fh", "td") else 1.50
+         raw_h = eq_in.get("hauteur_mat_m")
+         if raw_h is None:
+             raw_h = struct_in.get("hauteur_mat_m")
+         try:
+             h_num = float(raw_h) if raw_h is not None else default_h
+         except (ValueError, TypeError):
+             h_num = default_h
+         return h_num >= 2.0
+     ```
+
+2. FEA Load Cases & Combinations Delta (all auxiliary stages: `fh`, `rrh`, `rru`, `lovage`):
+   - When `resolve_support_has_echelle(input_data, kind) == False` (`hauteur_mat_m < 2.0`):
+       * Keep 6 load cases (`PP`, `PE`, `Vent +X`, `Vent -X`, `Vent +Y`, `Vent -Y`).
+       * NO `+15 daN` ladder weight, NO `CH` load case, NO `ACC:ACC` combinations.
+   - When `resolve_support_has_echelle(input_data, kind) == True` (`hauteur_mat_m >= 2.0`),
+     INCLUDING `sans_plot == True` and `lovage`:
+       * Case 2 (`PE`): add `+15 daN` downward (`FZ = -(PE_equipments + 15.0)` daN)
+         for the ladder. Do NOT add ladder wind force.
+       * Case 3 (`CH`, Accidental / `I_CN_ACCIDENTAL`): apply NF EN 795 Class A1
+         fall-arrest load at the top node of the auxiliary mast:
+           - `Fh = 2.2 kN` (`220 daN`, e.g. `FX = 220 daN`)
+           - `Fv = -9.8 kN` (`-980 daN`, downward `FZ = -980 daN`)
+       * Cases 4–7 (`Vent +X`, `Vent -X`, `Vent +Y`, `Vent -Y`): shifted by Case 3
+         `CH` (keeping existing mast & equipment wind loads unchanged).
+       * Add `ACC` combinations alongside `ELU` and `ELS`:
+           - `ACC:ACC/ 1`: `1*1.00 + 2*1.00 + 3*1.00` (`PP + PE + CH`)
+           - `ACC:ACC/ 2`: `1*1.00 + 2*1.00` (`PP + PE`)
+       * Include `ACC` in steel member verification, assemblage verification
+         (when `sans_plot == False`), and capture updated `*_tableau_charges`
+         and `*_verification_screenshot`.
+
+3. `result_data` Contract:
+   - Echo `"echelle"` (`"Echelle"` or `"Pas d'échelle"`) and `"has_echelle"`
+     (`true` or `false`) inside `result_data[sub_key]` (and optionally
+     `result_data[f"{sub_key}_echelle"]`), e.g. for `fh`, `rrh`, `rru`, `lovage`:
+       ```json
+       {
+         "lovage": {
+           "echelle": "Echelle",
+           "has_echelle": true
+         },
+         "lovage_echelle": "Echelle"
+       }
+       ```
+   - Do NOT insert `"Echelle"` into `fh_items`, `rrh_items`, `rru_items`, or
+     `lovage_items` — the Django HTML/PDF templates insert the `Echelle | 1 | - | 15`
+     row automatically when `hauteur_mat_m >= 2.0`.
+
+
+3. VERIFICATION
+--------------------------------------------------------------------------------
+- Run any auxiliary stage (`fh`, `rrh`, `rru`, `lovage`) with `hauteur_mat_m = 1.70`
+  (or `1.50`), even if `echelle = "Echelle"` is passed:
+  * Confirm `resolve_support_has_echelle` returns `False`.
+  * Confirm 6 load cases only, no `+15 daN` in `PE`, no `CH`, no `ACC:ACC`.
+- Run any auxiliary stage (`fh`, `rrh`, `rru`, `lovage`) with `hauteur_mat_m = 2.00`
+  or `2.50` AND `sans_plot = True` (dallettes), even if `echelle = "Pas d'échelle"`:
+  * Confirm `resolve_support_has_echelle` returns `True`.
+  * Confirm `PE` includes `+15 daN`, Case 3 `CH` (`220 daN` / `-980 daN`) exists,
+    and `ACC:ACC/ 1` & `ACC:ACC/ 2` are included in verifications and `*_tableau_charges`.
+- Confirm Boîtier de Lovage with `hauteur_mat_m >= 2.0` (`lovage`, `lovage + GPS`,
+  `lovage + GPS + MDEA`) includes `+15 daN` in `PE`, Case 3 `CH`, and `ACC:ACC`.
+- Confirm main antenna mast (`structure.echelle`) remains completely independent
+  and unaffected when auxiliary supports have different heights/echelle states.
+================================================================================

@@ -22,6 +22,38 @@ FH_DIAMETER_COEFFICIENTS: Dict[int, float] = {
     900: 0.09,
     1200: 1.2,
 }
+FH_DEFAULT_MAST_SECTION: str = "TRON 114x3.6"
+FH_DEFAULT_MAST_DIAM_MM: float = 114.3
+FH_DEFAULT_MAST_THICKNESS_MM: float = 3.6
+FH_DEFAULT_MAST_DIAM_M: float = 0.1143
+
+FH_MAST_PROFILES: Dict[str, Dict[str, Any]] = {
+    "TRON 114x3.6": {
+        "mast_section": "TRON 114x3.6",
+        "diam_mm": 114.3,
+        "thickness_mm": 3.6,
+        "mast_d_m": 0.1143,
+        "mast_t_m": 0.0036,
+    },
+    "TRON 88x3.2": {
+        "mast_section": "TRON 88x3.2",
+        "diam_mm": 88.9,
+        "thickness_mm": 3.2,
+        "mast_d_m": 0.0889,
+        "mast_t_m": 0.0032,
+    },
+}
+
+
+def resolve_fh_mast_profile(mast_section: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Resolve FH mast profile metadata from a section string.
+    Supports both `TRON 114x3.6` (default) and secondary `TRON 88x3.2`.
+    """
+    raw = str(mast_section or "").strip().lower().replace(",", ".")
+    if raw and ("88x3.2" in raw or "88.9*3.2" in raw or "88.9x3.2" in raw or "88*3.2" in raw):
+        return dict(FH_MAST_PROFILES["TRON 88x3.2"])
+    return dict(FH_MAST_PROFILES["TRON 114x3.6"])
 
 # Boîtier de Lovage (Zone Technique) aerodynamic wind drag coefficients & structural defaults
 LOVAGE_CF_FRONT: float = 1.47
@@ -266,6 +298,25 @@ def resolve_sans_plot(
     return "rrh_sans_plot" in ct or (eq_kind not in ("rrh", "rru", "fh", "lovage") and "sans_plot" in ct)
 
 
+SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M: float = 2.0
+
+
+def resolve_support_echelle_label(
+    hauteur_mat_m: Optional[float],
+    default_h: float = 1.50,
+) -> str:
+    """
+    Canonical ladder label for auxiliary supports:
+    - hauteur_mat_m < 2.0 m  -> "Pas d'échelle"
+    - hauteur_mat_m >= 2.0 m -> "Echelle"
+    """
+    try:
+        h_num = float(hauteur_mat_m) if hauteur_mat_m is not None else default_h
+    except (ValueError, TypeError):
+        h_num = default_h
+    return "Echelle" if h_num >= SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M else "Pas d'échelle"
+
+
 def resolve_support_has_echelle(
     input_data: Optional[Dict[str, Any]] = None,
     result_data: Optional[Dict[str, Any]] = None,
@@ -274,17 +325,15 @@ def resolve_support_has_echelle(
     hauteur_mat_m: Optional[float] = None,
 ) -> bool:
     """
-    Canonical ladder (echelle) resolution for auxiliary supports (FH, RRH, RRU, Boîtier de Lovage).
-    Allowed ONLY when WITH plot (is_sans_plot == False) AND hauteur_mat_m >= 2.0 m.
+    Canonical ladder (echelle) resolution for auxiliary supports (FH, RRH, RRU, Boîtier de Lovage, TD, TGBT).
+    Automatic height-only rule regardless of ancrage / `sans_plot`:
+    - hauteur_mat_m < 2.0 m  -> False ("Pas d'échelle")
+    - hauteur_mat_m >= 2.0 m -> True ("Echelle")
     Never reads main antenna `structure.echelle`.
     """
-    if is_sans_plot:
-        return False
+    del is_sans_plot  # Kept for signature backward-compatibility; height alone governs ladder presence.
 
     k = (kind or "fh").lower().strip()
-    if k in ("lovage", "boitier_lovage"):
-        return False
-
     inp = parse_json_dict(input_data)
     res = parse_json_dict(result_data)
     eq_key = "boitier_lovage" if k in ("lovage", "boitier_lovage") else f"{k}_equipment"
@@ -295,45 +344,22 @@ def resolve_support_has_echelle(
     if not eq_in and sub_key == "lovage" and isinstance(inp.get("lovage_equipment"), dict):
         eq_in = inp.get("lovage_equipment")
     sub_res = res.get(sub_key) if isinstance(res.get(sub_key), dict) else {}
+    sub_res_sp = sub_res.get("structure_params") if isinstance(sub_res.get("structure_params"), dict) else {}
     struct_in = inp.get(struct_key) if isinstance(inp.get(struct_key), dict) else {}
 
-    default_h = 1.70 if sub_key == "fh" else 1.50
+    default_h = 1.70 if sub_key in ("fh", "td") else 1.50
     raw_h = hauteur_mat_m
     if raw_h is None:
         raw_h = eq_in.get("hauteur_mat_m")
+    if raw_h is None:
+        raw_h = sub_res_sp.get("hauteur_mat_m")
     if raw_h is None:
         raw_h = struct_in.get("hauteur_mat_m")
     try:
         h_num = float(raw_h) if raw_h is not None else default_h
     except (ValueError, TypeError):
         h_num = default_h
-    if h_num < 2.0:
-        return False
-
-    raw = (
-        eq_in.get("echelle")
-        if eq_in.get("echelle") is not None
-        else (
-            sub_res.get("echelle")
-            if sub_res.get("echelle") is not None
-            else (
-                res.get(f"{sub_key}_echelle")
-                if res.get(f"{sub_key}_echelle") is not None
-                else struct_in.get("echelle")
-            )
-        )
-    )
-    if isinstance(raw, bool):
-        return raw
-    if isinstance(raw, str):
-        norm = raw.strip().lower()
-        return (
-            bool(norm)
-            and "pas d'echelle" not in norm
-            and "pas d'échelle" not in norm
-            and norm not in ("non", "none", "false", "0")
-        )
-    return False
+    return h_num >= SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M
 
 
 def _parse_dims_triplet_mm(raw_dims: Any) -> Optional[tuple]:

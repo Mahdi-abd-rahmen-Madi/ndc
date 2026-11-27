@@ -56,25 +56,342 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
             self.assertTrue(hasattr(views, sym), f"Missing views.{sym}")
 
     def test_ec1_wind_calculation_and_rtf_sanitizer(self):
+        import math
+
+        self.assertEqual(
+            ndc_generator.TERRAIN_Z0,
+            {"0": 0.003, "II": 0.05, "IIIa": 0.2, "IIIb": 0.5, "IV": 1.0},
+        )
+
         wind = ndc_generator.calculate_wind_params("IIIa", 25.0, 24.0)
         self.assertGreater(wind["qp_dan"], 0)
         self.assertGreater(wind["vm"], 0)
         self.assertEqual(wind["z_used"], 25.0)
 
+        # No zmin clamping: z < old zmin (15 m for IV, 5 m for IIIa) uses exact z
+        wind_iv_low = ndc_generator.calculate_wind_params("IV", 4.5, 24.0)
+        self.assertEqual(wind_iv_low["z_used"], 4.5)
+        kr_expected = 0.19 * (1.0 / 0.05) ** 0.07
+        cr_expected = kr_expected * math.log(4.5 / 1.0)
+        vm_expected = cr_expected * 24.0
+        iv_expected = 1.0 / math.log(4.5 / 1.0)
+        qp_dan_expected = ((1 + 7 * iv_expected) * 0.5 * 1.25 * vm_expected ** 2) / 10.0
+        self.assertEqual(wind_iv_low["kr"], round(kr_expected, 2))
+        self.assertEqual(wind_iv_low["cr_z"], round(cr_expected, 2))
+        self.assertEqual(wind_iv_low["vm"], round(vm_expected, 2))
+        self.assertEqual(wind_iv_low["iv_z"], round(iv_expected, 2))
+        self.assertEqual(wind_iv_low["qp_dan"], round(qp_dan_expected, 2))
+
+        wind_iiia_low = ndc_generator.calculate_wind_params("IIIa", 3.0, 24.0)
+        self.assertEqual(wind_iiia_low["z_used"], 3.0)
+
+        with self.assertRaises(ValueError):
+            ndc_generator.calculate_wind_params("IV", 1.0, 24.0)
+
+        # Exact z helper: sans_plot excludes h_plot; avec_plot includes h_plot
+        self.assertEqual(ndc_generator.compute_wind_z(10.0, 2.0, h_plot=0.5, sans_plot=True), 12.0)
+        self.assertEqual(ndc_generator.compute_wind_z(10.0, 2.0, h_plot=0.5, sans_plot=False), 12.5)
+        self.assertEqual(ndc_generator.compute_wind_z(10.0, 2.0, "[PLOT_HEIGHT_M]", sans_plot=False), 12.0)
+
+        # Support wind resolver respects sans_plot and uses unclamped z
+        env_iv = {"building_height_m": 2.0, "terrain_type": "IV"}
+        sp_wind = ndc_generator._resolve_support_wind_params(
+            {}, {}, env_iv, 24, 0.5, 1.5, sans_plot=True
+        )
+        expected_sp = ndc_generator.calculate_wind_params("IV", 3.5, 24.0)
+        self.assertEqual(sp_wind["cr_z"], expected_sp["cr_z"])
+        self.assertEqual(sp_wind["vm_z"], expected_sp["vm"])
+        self.assertEqual(sp_wind["iv_z"], expected_sp["iv_z"])
+        self.assertEqual(sp_wind["kr_z"], expected_sp["kr"])
+        self.assertEqual(sp_wind["qp_z"], expected_sp["qp_dan"])
+
+        ap_wind = ndc_generator._resolve_support_wind_params(
+            {}, {}, env_iv, 24, 0.5, 1.5, sans_plot=False
+        )
+        expected_ap = ndc_generator.calculate_wind_params("IV", 4.0, 24.0)
+        self.assertEqual(ap_wind["cr_z"], expected_ap["cr_z"])
+        self.assertEqual(ap_wind["vm_z"], expected_ap["vm"])
+        self.assertEqual(ap_wind["iv_z"], expected_ap["iv_z"])
+        self.assertEqual(ap_wind["kr_z"], expected_ap["kr"])
+        self.assertEqual(ap_wind["qp_z"], expected_ap["qp_dan"])
+
         sanitized = ndc_generator.sanitize_assemblage_rtf(r"{\cellx480 test}")
         self.assertIn(r"\cellx9360", sanitized)
 
-    def test_fh_echelle_context_and_template_rendering(self):
-        from django.template.loader import render_to_string
+    def test_robot_worker_wind_source_of_truth_no_recomputation(self):
+        import os
+        from django.conf import settings
+        from docx import Document
+        from api.services import _populate_equipment_docx
+        from api.stage_cache import extract_stage_cache_entry, merge_worker_result_with_cached
 
+        # 1. Extraction helpers (standalone & composite)
+        composite_res = {
+            "wind": {
+                "z_ref_m": 13.5,
+                "z0": 0.005,
+                "vb0": 26.0,
+                "kr": 0.16,
+                "cr": 1.26,
+                "vm": 32.76,
+                "iv": 0.13,
+                "qp_dan_m2": 125.55,
+                "fw_mast_dan_m": 17.45,
+                "fw_4g_front_dan": 192.07,
+                "fw_4g_lat_dan": 78.62,
+                "fw_5g_front_dan": 98.27,
+                "fw_5g_lat_dan": 45.02,
+            },
+            "fh_wind_params": {
+                "region": 2,
+                "terrain_type": "IV",
+                "building_height_m": 10.0,
+                "z_ref": 12.5,
+                "v_b0": 24.0,
+                "kr": 0.23,
+                "cr": 0.58,
+                "vm": 13.92,
+                "iv": 0.40,
+                "qp_dan": 45.06,
+                "fw_mast": 5.15,
+                "fw_front": 1.35,
+                "fw_lat": 1.35,
+                "pe_dan": 6.0,
+                "mast_d_formula": 0.1143,
+                "fw_fh": 1.35,
+            },
+            "fh": {
+                "structure_params": {
+                    "mast_section": "TRON 114x3.6",
+                    "mast_d_m": 0.1143,
+                    "mast_t_m": 0.0036,
+                    "diam_mm": 114.3,
+                    "thickness_mm": 3.6,
+                    "hauteur_mat_m": 2.0,
+                },
+            },
+            "fh_items": [
+                {
+                    "index": 1,
+                    "name": "Antenne FH",
+                    "qty": 1,
+                    "diameter_mm": 300,
+                    "weight_kg": 6.0,
+                    "d_coef": 0.03,
+                    "cf_fh": 1.0,
+                    "fw_fh": 1.35,
+                    "fw_fh_formula": "1 * 1 * 0.03 * 45.06 = 1.35 daN",
+                }
+            ],
+            "fh_totals": {
+                "qty_total": 1,
+                "fw_fh": 1.35,
+                "pe_dan": 6.0,
+                "fw_fh_formula": "1.35 daN",
+            },
+        }
+        standalone_res = {
+            "wind_params": {
+                "region": 2,
+                "terrain_type": "IV",
+                "building_height_m": 10.0,
+                "z_ref": 12.0,
+                "v_b0": 24.0,
+                "kr": 0.23,
+                "cr": 0.57,
+                "vm": 13.68,
+                "iv": 0.40,
+                "qp_dan": 43.50,
+                "fw_mast": 3.83,
+                "fw_front": 2.10,
+                "fw_lat": 1.90,
+                "pe_dan": 12.0,
+            },
+            "fh_items": [
+                {
+                    "index": 1,
+                    "name": "Antenne FH",
+                    "qty": 1,
+                    "diameter_mm": 600,
+                    "weight_kg": 12.0,
+                    "d_coef": 0.06,
+                    "cf_fh": 1.0,
+                    "fw_fh": 2.61,
+                    "fw_fh_formula": "1 * 1 * 0.06 * 43.50 = 2.61 daN",
+                }
+            ],
+            "structure_params": {
+                "mast_section": "TRON 88x3.2",
+                "mast_d_m": 0.0889,
+                "mast_t_m": 0.0032,
+                "diam_mm": 88.9,
+                "thickness_mm": 3.2,
+                "hauteur_mat_m": 2.0,
+                "sans_plot": True,
+            },
+        }
+
+        self.assertEqual(ndc_generator.get_antenna_wind(composite_res)["qp_dan_m2"], 125.55)
+        self.assertEqual(ndc_generator.get_support_wind(composite_res, "fh")["qp_dan"], 45.06)
+        self.assertEqual(ndc_generator.get_support_wind(standalone_res, "rru")["qp_dan"], 43.50)
+        self.assertEqual(ndc_generator.get_support_structure_params(composite_res, "fh")["mast_d_m"], 0.1143)
+        self.assertEqual(ndc_generator.get_support_structure_params(standalone_res, "fh")["mast_d_m"], 0.0889)
+
+        # 2. Antenna resolution from result_data["wind"] must NOT recompute locally
+        with patch("geodata.ndc.wind_ec1.calculate_wind_params", side_effect=AssertionError("must not recompute")):
+            ant_w = ndc_generator.resolve_antenna_wind_params(
+                composite_res,
+                {"terrain_type": "IIIa", "building_height_m": 10.0},
+                3.0,
+                26,
+            )
+        self.assertEqual(ant_w["source"], "worker")
+        self.assertEqual(ant_w["z_total"], 13.5)
+        self.assertEqual(ant_w["vb_m_s"], 26.0)
+        self.assertEqual(ant_w["kr_z"], 0.16)
+        self.assertEqual(ant_w["cr_z"], 1.26)
+        self.assertEqual(ant_w["vm_z"], 32.76)
+        self.assertEqual(ant_w["iv_z"], 0.13)
+        self.assertEqual(ant_w["qp_z"], 125.55)
+        self.assertEqual(ant_w["fw_mast"], 17.45)
+        self.assertEqual(ant_w["fw_4g_front"], 192.07)
+
+        # 3. Antenna resolution from ndc_vars fallback must NOT recompute locally
+        ndc_vars_only = {
+            "ndc_vars": {
+                "var_14": 14.0,
+                "var_15": 24,
+                "var_16": 0.22,
+                "var_17": 0.85,
+                "var_21": 20.4,
+                "var_22": 0.24,
+                "var_23": 59.1,
+                "var_26": 8.21,
+            }
+        }
+        with patch("geodata.ndc.wind_ec1.calculate_wind_params", side_effect=AssertionError("must not recompute")):
+            ant_vars = ndc_generator.resolve_antenna_wind_params(
+                ndc_vars_only,
+                {"terrain_type": "IIIa", "building_height_m": 10.0},
+                3.0,
+                24,
+            )
+        self.assertEqual(ant_vars["source"], "worker_ndc_vars")
+        self.assertEqual(ant_vars["z_total"], 14.0)
+        self.assertEqual(ant_vars["qp_z"], 59.1)
+        self.assertEqual(ant_vars["fw_mast"], 8.21)
+
+        # 4. Legacy empty result_data falls back cleanly
+        ant_legacy = ndc_generator.resolve_antenna_wind_params(
+            {},
+            {"terrain_type": "IIIa", "building_height_m": 10.0, "plot_height_m": 0.5},
+            3.0,
+            24,
+        )
+        self.assertEqual(ant_legacy["source"], "fallback")
+        self.assertEqual(ant_legacy["z_total"], 13.5)
+        self.assertGreater(ant_legacy["qp_z"], 0)
+
+        # 5. Support wind resolution for all 4 modules must NOT recompute when worker wind_params exist
+        with patch("geodata.ndc.wind_ec1.calculate_wind_params", side_effect=AssertionError("must not recompute")):
+            for kind in ("rrh", "rru", "fh", "lovage"):
+                wp = ndc_generator.get_support_wind(
+                    {f"{kind}_wind_params": composite_res["fh_wind_params"]},
+                    kind,
+                )
+                resolved = ndc_generator._resolve_support_wind_params(
+                    wp, {}, {"terrain_type": "IV", "building_height_m": 10.0}, 24, 0.5, 2.0, sans_plot=False
+                )
+                self.assertEqual(resolved["kr_z"], 0.23)
+                self.assertEqual(resolved["cr_z"], 0.58)
+                self.assertEqual(resolved["vm_z"], 13.92)
+                self.assertEqual(resolved["iv_z"], 0.40)
+                self.assertEqual(resolved["qp_z"], 45.06)
+                self.assertEqual(resolved["z_ref"], 12.5)
+                self.assertEqual(resolved["vb_m_s"], 24.0)
+
+        # 6. FH DOCX populator uses worker structure_params & fw_mast directly (114.3 and 88.9)
+        fh_ctx_114 = ndc_generator.extract_fh_ndc_context(
+            composite_res,
+            input_data={"fh_equipment": {"enabled": True}},
+        )
+        self.assertEqual(fh_ctx_114["totals"]["fw_fh"], 1.35)
+        doc_114 = Document(os.path.join(settings.BASE_DIR, "templates", "fh", "NDC FH.docx"))
+        _populate_equipment_docx(doc_114, fh_ctx_114, kind="fh")
+        p_txt_114 = "\n".join(p.text for p in doc_114.paragraphs)
+        self.assertIn("45.06 daN/m²", p_txt_114)
+        self.assertIn("0.1143 * 45.06 = 5.15 daN/ml", p_txt_114)
+        self.assertIn("Ø114.3 mm, d’épaisseur 3.6 mm", p_txt_114)
+
+        fh_ctx_88 = ndc_generator.extract_fh_ndc_context(
+            standalone_res,
+            input_data={"fh_equipment": {"enabled": True, "sans_plot": True}},
+        )
+        doc_88 = Document(os.path.join(settings.BASE_DIR, "templates", "fh", "NDC FH.docx"))
+        _populate_equipment_docx(doc_88, fh_ctx_88, kind="fh")
+        p_txt_88 = "\n".join(p.text for p in doc_88.paragraphs)
+        self.assertIn("43.50 daN/m²", p_txt_88)
+        self.assertIn("0.0889 * 43.50 = 3.83 daN/ml", p_txt_88)
+        self.assertIn("Ø88.9 mm, d’épaisseur 3.2 mm", p_txt_88)
+
+        # 7. Stage cache preserves standalone wind_params/structure_params and antenna wind
+        ant_job = MagicMock(
+            id=101,
+            calculation_type="antenna",
+            input_data={},
+            result_data=composite_res,
+        )
+        for fld in ("screenshot", "verification_screenshot", "note_de_calcul", "note_mat", "note_plot", "assemblage_note", "reactions_file"):
+            setattr(ant_job, fld, None)
+        with patch("api.stage_cache._resolve_field_rel_path", side_effect=lambda j, f, fb, **kw: f"path/{f}"):
+            ant_entry = extract_stage_cache_entry(ant_job, "antenna")
+        self.assertIsNotNone(ant_entry)
+        self.assertEqual(ant_entry["result_payload"]["wind"]["qp_dan_m2"], 125.55)
+
+        fh_job = MagicMock(
+            id=102,
+            calculation_type="fh_sans_plot",
+            input_data={"fh_equipment": {"enabled": True, "sans_plot": True}},
+            result_data=standalone_res,
+        )
+        with patch("geodata.ndc.artifact_locator.find_job_equipment_rtf_paths", return_value={"note_mat": "/tmp/m.rtf"}), \
+             patch("api.stage_cache._first_existing", side_effect=lambda cands: cands[0] or "/tmp/x"), \
+             patch("api.stage_cache._rel_media_path", return_value="notes_fh/m.rtf"):
+            fh_entry = extract_stage_cache_entry(fh_job, "fh")
+        self.assertIsNotNone(fh_entry)
+        self.assertEqual(fh_entry["result_payload"]["fh_wind_params"]["qp_dan"], 43.50)
+        self.assertEqual(fh_entry["result_payload"]["fh"]["structure_params"]["mast_d_m"], 0.0889)
+
+        merged = merge_worker_result_with_cached(
+            ant_entry["result_payload"],
+            {"fh_wind_params": fh_entry["result_payload"]["fh_wind_params"]},
+            ["antenna"],
+        )
+        self.assertEqual(merged["wind"]["qp_dan_m2"], 125.55)
+        self.assertEqual(merged["fh_wind_params"]["qp_dan"], 43.50)
+
+    def test_fh_echelle_context_and_template_rendering(self):
+        import os
+        from django.conf import settings
+        from django.template.loader import render_to_string
+        from docx import Document
+        from api.serializers import StructureFHSerializer
+        from api.services import _populate_equipment_docx
+
+        ser = StructureFHSerializer(data={})
+        self.assertTrue(ser.is_valid(), ser.errors)
+        self.assertEqual(ser.validated_data["mast_section"], "TRON 114x3.6")
+
+        # Height < 2.0 m (default 1.70m) -> always sans echelle even if echelle="Echelle"
         ctx_no = ndc_generator.extract_fh_ndc_context(
             {},
             input_data={
                 "structure": {"echelle": "Echelle Söll"},
-                "fh_equipment": {"enabled": True, "echelle": "Pas d'échelle"},
+                "fh_equipment": {"enabled": True, "echelle": "Echelle"},
             },
         )
         self.assertFalse(ctx_no["has_echelle"])
+        self.assertEqual(ctx_no["mast_section"], "TRON 114x3.6")
 
         ctx_missing = ndc_generator.extract_fh_ndc_context(
             {},
@@ -85,11 +402,12 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         )
         self.assertFalse(ctx_missing["has_echelle"])
 
+        # Height >= 2.0 m -> always with echelle even if echelle="Pas d'échelle" or omitted
         ctx_yes = ndc_generator.extract_fh_ndc_context(
             {},
             input_data={
                 "structure": {"echelle": "Pas d'échelle"},
-                "fh_equipment": {"enabled": True, "hauteur_mat_m": 2.0, "echelle": "Echelle"},
+                "fh_equipment": {"enabled": True, "hauteur_mat_m": 2.0, "echelle": "Pas d'échelle"},
             },
         )
         self.assertTrue(ctx_yes["has_echelle"])
@@ -97,7 +415,7 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         ctx_short = ndc_generator.extract_fh_ndc_context(
             {},
             input_data={
-                "fh_equipment": {"enabled": True, "hauteur_mat_m": 1.7, "echelle": "Echelle"},
+                "fh_equipment": {"enabled": True, "hauteur_mat_m": 1.99, "echelle": "Echelle"},
             },
         )
         self.assertFalse(ctx_short["is_sans_plot"])
@@ -105,23 +423,24 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
 
         ctx_legacy = ndc_generator.extract_fh_ndc_context(
             {},
-            input_data={"fh_equipment": {"enabled": True, "hauteur_mat_m": 2.5, "echelle": "Echelle Söll"}},
+            input_data={"fh_equipment": {"enabled": True, "hauteur_mat_m": 2.5}},
         )
         self.assertTrue(ctx_legacy["has_echelle"])
 
+        # Sans plot (dallettes) with height >= 2.0 m -> ALSO with echelle
         ctx_sans_plot = ndc_generator.extract_fh_ndc_context(
             {},
-            input_data={"fh_equipment": {"enabled": True, "sans_plot": True, "hauteur_mat_m": 2.5, "echelle": "Echelle"}},
+            input_data={"fh_equipment": {"enabled": True, "sans_plot": True, "hauteur_mat_m": 2.5}},
         )
         self.assertTrue(ctx_sans_plot["is_sans_plot"])
-        self.assertFalse(ctx_sans_plot["has_echelle"])
+        self.assertTrue(ctx_sans_plot["has_echelle"])
 
         ctx_without_plot = ndc_generator.extract_fh_ndc_context(
             {},
-            input_data={"fh_equipment": {"enabled": True, "with_plot": False, "hauteur_mat_m": 2.5, "echelle": "Echelle"}},
+            input_data={"fh_equipment": {"enabled": True, "with_plot": False, "hauteur_mat_m": 2.5, "echelle": "Pas d'échelle"}},
         )
         self.assertTrue(ctx_without_plot["is_sans_plot"])
-        self.assertFalse(ctx_without_plot["has_echelle"])
+        self.assertTrue(ctx_without_plot["has_echelle"])
 
         render_ctx = {
             "region": "Region 2",
@@ -147,15 +466,61 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
 
         html_no = render_to_string("ndc/fh.html", {**render_ctx, "fh_has_echelle": False})
         self.assertIn("Pas de point d’ancrage sur le mât", html_no)
+        self.assertIn("Ø114.3 mm", html_no)
+        self.assertIn("d’épaisseur 3.6 mm", html_no)
+        self.assertIn("0.1143", html_no)
+        self.assertIn("TRON 114x3.6", html_no)
         self.assertNotIn("<td>Echelle</td>", html_no)
         self.assertNotIn("NF EN 795", html_no)
         self.assertNotIn("CH : Chute d’homme", html_no)
 
+        fh_doc = Document(os.path.join(settings.BASE_DIR, "templates", "fh", "NDC FH.docx"))
+        _populate_equipment_docx(fh_doc, ctx_no, kind="fh")
+        fh_p_txt = "\n".join(p.text for p in fh_doc.paragraphs)
+        fh_t1_txt = "\n".join(c.text for r in fh_doc.tables[1].rows for c in r.cells)
+        self.assertIn("Ø114.3 mm, d’épaisseur 3.6 mm", fh_p_txt)
+        self.assertIn("0.1143", fh_p_txt)
+        self.assertIn("114.3x3.6", fh_p_txt)
+        self.assertIn("TRON 114x3.6", fh_t1_txt)
+
+        # Secondary FH profile (TRON 88x3.2) remains supported when explicitly specified
+        from utils.domain_constants import resolve_fh_mast_profile
+        from utils.ndc_hash import compute_stage_hashes
+
+        self.assertEqual(resolve_fh_mast_profile(None)["mast_section"], "TRON 114x3.6")
+        self.assertEqual(resolve_fh_mast_profile("88.9*3.2")["mast_section"], "TRON 88x3.2")
+
+        ctx_88 = ndc_generator.extract_fh_ndc_context(
+            {},
+            input_data={
+                "fh_equipment": {"enabled": True},
+                "structure_fh": {"mast_section": "TRON 88x3.2"},
+            },
+        )
+        self.assertEqual(ctx_88["mast_section"], "TRON 88x3.2")
+
+        fh_doc_88 = Document(os.path.join(settings.BASE_DIR, "templates", "fh", "NDC FH.docx"))
+        _populate_equipment_docx(fh_doc_88, ctx_88, kind="fh")
+        fh_p_88 = "\n".join(p.text for p in fh_doc_88.paragraphs)
+        fh_t1_88 = "\n".join(c.text for r in fh_doc_88.tables[1].rows for c in r.cells)
+        self.assertIn("Ø88.9 mm, d’épaisseur 3.2 mm", fh_p_88)
+        self.assertIn("0.0889", fh_p_88)
+        self.assertIn("88.9x3.2", fh_p_88)
+        self.assertIn("TRON 88x3.2", fh_t1_88)
+
+        base_hash_in = {
+            "environment": {"region": 2, "terrain_type": "IIIa", "building_height_m": 15.0},
+            "fh_equipment": {"enabled": True, "diameter_mm": 600, "weight_kg": 15.0},
+        }
+        h_114 = compute_stage_hashes({**base_hash_in, "structure_fh": {"mast_section": "TRON 114x3.6"}}, "fh")["fh"]
+        h_88 = compute_stage_hashes({**base_hash_in, "structure_fh": {"mast_section": "TRON 88x3.2"}}, "fh")["fh"]
+        self.assertNotEqual(h_114, h_88)
+
         html_sans_plot = render_to_string("ndc/fh.html", {**render_ctx, "fh_has_echelle": True, "fh_sans_plot": True})
-        self.assertIn("Pas de point d’ancrage sur le mât", html_sans_plot)
-        self.assertNotIn("<td>Echelle</td>", html_sans_plot)
-        self.assertNotIn("NF EN 795", html_sans_plot)
-        self.assertNotIn("CH : Chute d’homme", html_sans_plot)
+        self.assertIn("<td>Echelle</td>", html_sans_plot)
+        self.assertIn("NF EN 795", html_sans_plot)
+        self.assertIn("CH : Chute d’homme", html_sans_plot)
+        self.assertNotIn("Pas de point d’ancrage sur le mât", html_sans_plot)
 
     def test_lovage_wind_context_hash_and_templates_avec_and_sans_plot(self):
         import os
@@ -204,20 +569,27 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         self.assertTrue(resolve_sans_plot({"rru_equipment": {"enabled": True, "ancrage": "dallettes"}}, kind="rru"))
         self.assertFalse(resolve_sans_plot({"rru_equipment": {"enabled": True, "ancrage": "metallique"}}, kind="rru"))
 
-        # Lovage never supports echelle; RRH/RRU resolve echelle only when with plot AND hauteur >= 2.0m
-        self.assertFalse(
+        # Automatic height-only echelle rule across ALL auxiliary supports (FH, RRH, RRU, Lovage, TD, TGBT):
+        # < 2.0 m => False, >= 2.0 m => True regardless of ancrage / sans_plot or manual echelle value
+        from utils.domain_constants import resolve_support_has_echelle
+        self.assertTrue(
             ndc_generator.extract_lovage_ndc_context(
-                {}, input_data={"boitier_lovage": {"enabled": True, "ancrage": "metallique", "hauteur_mat_m": 2.0, "echelle": "Echelle"}}
+                {}, input_data={"boitier_lovage": {"enabled": True, "ancrage": "metallique", "hauteur_mat_m": 2.0, "echelle": "Pas d'échelle"}}
+            )["has_echelle"]
+        )
+        self.assertTrue(
+            ndc_generator.extract_lovage_ndc_context(
+                {}, input_data={"boitier_lovage": {"enabled": True, "ancrage": "dallettes", "hauteur_mat_m": 2.5}}
             )["has_echelle"]
         )
         self.assertFalse(
             ndc_generator.extract_lovage_ndc_context(
-                {}, input_data={"boitier_lovage": {"enabled": True, "ancrage": "dallettes", "hauteur_mat_m": 2.5, "echelle": "Echelle"}}
+                {}, input_data={"boitier_lovage": {"enabled": True, "ancrage": "metallique", "hauteur_mat_m": 1.95, "echelle": "Echelle"}}
             )["has_echelle"]
         )
         self.assertTrue(
             ndc_generator.extract_rrh_ndc_context(
-                {}, input_data={"rrh_equipment": {"enabled": True, "ancrage": "beton", "hauteur_mat_m": 2.2, "echelle": "Echelle"}}
+                {}, input_data={"rrh_equipment": {"enabled": True, "ancrage": "dallettes", "hauteur_mat_m": 2.2}}
             )["has_echelle"]
         )
         self.assertFalse(
@@ -225,6 +597,35 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
                 {}, input_data={"rru_equipment": {"enabled": True, "ancrage": "metallique", "hauteur_mat_m": 1.5, "echelle": "Echelle"}}
             )["has_echelle"]
         )
+        self.assertFalse(resolve_support_has_echelle({"td_equipment": {"enabled": True, "hauteur_mat_m": 1.7}}, kind="td"))
+        self.assertTrue(resolve_support_has_echelle({"td_equipment": {"enabled": True, "ancrage": "dallettes", "hauteur_mat_m": 2.0}}, kind="td"))
+        self.assertFalse(resolve_support_has_echelle({"tgbt_equipment": {"enabled": True, "hauteur_mat_m": 1.5}}, kind="tgbt"))
+        self.assertTrue(resolve_support_has_echelle({"tgbt_equipment": {"enabled": True, "ancrage": "dallettes", "hauteur_mat_m": 2.1}}, kind="tgbt"))
+
+        # Verify stage hash invariance to legacy/manual echelle strings when height is fixed
+        from utils.ndc_hash import compute_stage_hashes
+        h_lv_a = compute_stage_hashes({"environment": {"region": 2, "terrain_type": "IIIa", "building_height_m": 15.0}, "boitier_lovage": {"enabled": True, "hauteur_mat_m": 2.2, "echelle": "Pas d'échelle"}}, "lovage")["lovage"]
+        h_lv_b = compute_stage_hashes({"environment": {"region": 2, "terrain_type": "IIIa", "building_height_m": 15.0}, "boitier_lovage": {"enabled": True, "hauteur_mat_m": 2.2, "echelle": "Echelle"}}, "lovage")["lovage"]
+        self.assertEqual(h_lv_a, h_lv_b)
+
+        # Render checks for RRH, RRU, Lovage, and TD templates with echelle
+        tpl_common = {
+            "mat_diam": "88",
+            "mat_epaisseur": "3.2",
+            "mat_section": "TRON 88x3.2",
+            "plot_section": "TCAR 150x5",
+            "plot_longueur_m": "0.5",
+            "mat_longueur_m": "2.2",
+            "qp_z": "100.00",
+            "eq_qty": 1,
+        }
+        for tpl, key_prefix in (("ndc/rrh.html", "rrh"), ("ndc/rru.html", "rru"), ("ndc/lovage.html", "lovage"), ("ndc/td.html", "td")):
+            html_ech = render_to_string(tpl, {**tpl_common, f"{key_prefix}_has_echelle": True, f"{key_prefix}_sans_plot": True, "is_sans_plot": True})
+            self.assertIn("<td>Echelle</td>", html_ech)
+            self.assertIn("NF EN 795", html_ech)
+            html_no_ech = render_to_string(tpl, {**tpl_common, f"{key_prefix}_has_echelle": False, f"{key_prefix}_sans_plot": False, "is_sans_plot": False})
+            self.assertNotIn("<td>Echelle</td>", html_no_ech)
+            self.assertIn("Pas de point d’ancrage sur le mât", html_no_ech)
         self.assertEqual(detect_calculation_type(base_inp), "antenna_with_lovage")
         self.assertEqual(detect_calculation_type(sp_inp), "antenna_with_lovage_sans_plot")
         self.assertNotEqual(
@@ -478,7 +879,22 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
         self.assertIn("MDEA : F<sub>w,Frontale</sub>", html_full)
         self.assertIn("MDEA : F<sub>w,Latéral</sub>", html_full)
 
-        # 5. All 6 DOCX templates selection & population
+        # 5. All 8 DOCX templates selection & population
+        mdea_only_payload = {
+            **base_payload,
+            "convertisseur_mdea": {
+                "enabled": True,
+                "quantite": 2,
+                "dimensions": "338*295*140mm",
+                "poids": 10,
+                "cf_front": 1.46,
+                "cf_lat": 1.12,
+            },
+        }
+        sp_mdea_only_payload = {
+            **mdea_only_payload,
+            "boitier_lovage": {**mdea_only_payload["boitier_lovage"], "sans_plot": True, "with_plot": False},
+        }
         sp_gps_payload = {
             **gps_payload,
             "boitier_lovage": {**gps_payload["boitier_lovage"], "sans_plot": True, "with_plot": False},
@@ -487,12 +903,19 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
             **gps_mdea_payload,
             "boitier_lovage": {**gps_mdea_payload["boitier_lovage"], "sans_plot": True, "with_plot": False},
         }
+        ctx_mdea = ndc_generator.extract_lovage_ndc_context({}, input_data=mdea_only_payload, qp_val=100.0)
+        self.assertEqual(ctx_mdea["lovage_variant"], "lovage_mdea")
+        self.assertFalse(ctx_mdea["has_gps"])
+        self.assertTrue(ctx_mdea["has_mdea"])
+        ctx_mdea_sp = ndc_generator.extract_lovage_ndc_context({}, input_data=sp_mdea_only_payload, qp_val=100.0)
         ctx_gps_sp = ndc_generator.extract_lovage_ndc_context({}, input_data=sp_gps_payload, qp_val=100.0)
         ctx_full_sp = ndc_generator.extract_lovage_ndc_context({}, input_data=sp_full_payload, qp_val=100.0)
 
         cases = [
             (ctx_gps, "boitier_lovage+gps_avec_plot.docx", True, False),
             (ctx_gps_sp, "boitier_lovage+gps_sans_plot.docx", True, False),
+            (ctx_mdea, "boitier_lovage+MDEA_avec_plot.docx", False, True),
+            (ctx_mdea_sp, "boitier_lovage+MDEA_sans_plot.docx", False, True),
             (ctx_full, "boitier_lovage+GPS+MDEA_avec_plot.docx", True, True),
             (ctx_full_sp, "boitiers_lovage+GPS+MDEA_sans_plot.docx", True, True),
         ]
@@ -515,6 +938,9 @@ class GeodataModularAndPerfUnitTests(SimpleTestCase):
             if expect_gps:
                 self.assertIn("Antenne GPS (FYGC 474074A)", t0_txt)
                 self.assertIn("une antenne GPS", full_txt)
+            else:
+                self.assertNotIn("Antenne GPS", t0_txt)
+                self.assertNotIn("GPS", full_txt)
             if expect_mdea:
                 self.assertIn("MDEA", t0_txt)
                 self.assertIn("338 x 295 x 140", t0_txt)

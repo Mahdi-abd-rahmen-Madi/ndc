@@ -23,9 +23,36 @@
     .lovage-page-1 table {
         margin-bottom: 3mm;
     }
+
+    .lovage-page-1.lovage-with-echelle h1 {
+        margin-bottom: 3mm;
+        font-size: 18pt;
+    }
+
+    .lovage-page-1.lovage-with-echelle h2 {
+        margin-top: 3mm;
+        margin-bottom: 1.5mm;
+        font-size: 12pt;
+    }
+
+    .lovage-page-1.lovage-with-echelle p {
+        margin: 1.5mm 0;
+        font-size: 9.5pt;
+        line-height: 1.25;
+    }
+
+    .lovage-page-1.lovage-with-echelle table {
+        margin-bottom: 2mm;
+        font-size: 9.5pt;
+    }
+
+    .lovage-page-1.lovage-with-echelle th,
+    .lovage-page-1.lovage-with-echelle td {
+        padding: 3px 5px;
+    }
 </style>
 
-<div class="lovage-page-1">
+<div class="lovage-page-1{% if lovage_has_echelle %} lovage-with-echelle{% endif %}">
     <h1 id="etude-lovage">ÉTUDE BOÎTIERS DE LOVAGE{% if lovage_has_gps %} + GPS{% endif %}{% if lovage_has_mdea %} + MDEA{% endif %}</h1>
 
     <h2>Description</h2>
@@ -86,6 +113,15 @@
                 <td class="text-center">Projet</td>
             </tr>
             {% endif %}
+            {% if lovage_has_echelle %}
+            <tr>
+                <td>Echelle</td>
+                <td class="text-center">1</td>
+                <td class="text-center">-</td>
+                <td class="text-center">15</td>
+                <td class="text-center">Projet</td>
+            </tr>
+            {% endif %}
         </tbody>
     </table>
 
@@ -132,7 +168,17 @@
     </p>
 
     <h2>Calcul de chute</h2>
+    {% if lovage_has_echelle %}
+    <p>
+        L’effort engendré en cas de chute d'un homme sur un point d'ancrage répondant à la norme NF EN 795 - Ancrage de classe A1 "ancres structurelles conçues pour être fixées sur des surfaces verticales".<br>
+        Un essai statique doit être réalisé en exerçant une force de 10 kN dans la direction dans laquelle la force est susceptible d’être appliquée en service.<br>
+        Cette force doit être maintenue pendant 3 min.<br>
+        Le dispositif d’ancrage doit supporter la force. Dans le cas pratique cette force multidirectionnelle s'applique dans un cône d'action de 25°.<br>
+        La chute de l'homme est prise en compte en tête du mât avec les composantes suivantes : F<sub>h</sub> = 2.2 kN et F<sub>v</sub> = 9.8 kN.
+    </p>
+    {% else %}
     <p>Pas de point d’ancrage sur le mât</p>
+    {% endif %}
 </div>
 
 <div class="page-break"></div>
@@ -192,6 +238,7 @@
 <p>
     PP : Poids propre de la structure<br>
     PE : Poids équipements ({{ lovage_qty_total|default:"1" }}x {{ lovage_name|default:"Boîtier de lovage" }}{% if lovage_has_gps %} + Antenne GPS{% endif %}{% if lovage_has_mdea %} + {{ lovage_mdea_item.qty|default:"1" }}x MDEA{% endif %})<br>
+    {% if lovage_has_echelle %}CH : Chute d’homme<br>{% endif %}
     Combinaisons ELU & ELS générées conformément à l'Eurocode 1 & Eurocode 3.
 </p>
 {% endif %}

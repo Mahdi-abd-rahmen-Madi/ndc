@@ -31,7 +31,13 @@ from .tasks import enqueue_task
 from .worker_status import get_or_probe_worker_status, set_worker_status
 from utils.ndc_hash import detect_calculation_type, compute_ndc_hash, compute_stage_hashes
 from utils.validators import validate_calculation_mast_heights
-from utils.domain_constants import OPERATORS_WITHOUT_TD, normalize_operator, resolve_lovage_comounts, resolve_sans_plot
+from utils.domain_constants import (
+    OPERATORS_WITHOUT_TD,
+    normalize_operator,
+    resolve_lovage_comounts,
+    resolve_sans_plot,
+    resolve_support_echelle_label,
+)
 from .stage_cache import (
     apply_cached_stages_to_job_kwargs,
     lookup_cached_stages,
@@ -299,12 +305,15 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                         eq_h_num = float(raw_eq_h) if raw_eq_h is not None else default_h
                     except (ValueError, TypeError):
                         eq_h_num = default_h
-                    if is_sp or eq_h_num < 2.0:
-                        if kind == "fh" or "echelle" in eq_blk:
-                            eq_blk["echelle"] = "Pas d'échelle"
+                    eq_blk["echelle"] = resolve_support_echelle_label(eq_h_num, default_h)
                 else:
                     eq_blk["enabled"] = False
                     eq_blk["items"] = []
+
+        for zt_eq_key, zt_default_h in (("td_equipment", 1.70), ("tgbt_equipment", 1.50)):
+            zt_blk = input_data.get(zt_eq_key)
+            if isinstance(zt_blk, dict) and zt_blk.get("enabled"):
+                zt_blk["echelle"] = resolve_support_echelle_label(zt_blk.get("hauteur_mat_m"), zt_default_h)
 
         if (calc_type in ("fh", "fh_sans_plot", "antenna_with_fh", "antenna_with_fh_sans_plot")
                 or input_data.get("is_fh")
@@ -313,14 +322,14 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
             fh_h = (input_data.get("fh_equipment") or {}).get("hauteur_mat_m") or (input_data.get("structure_fh") or {}).get("hauteur_mat_m") or 1.70
             if not input_data.get("structure_fh") and not input_data.get("is_fh"):
                 input_data["structure_fh"] = {
-                    "mast_section": "TRON 88x3.2",
+                    "mast_section": "TRON 114x3.6",
                     "plot_section": None if is_sp else "TCAR 150x5",
                     "hauteur_mat_m": fh_h,
                     "hauteur_plot_m": 0.0 if is_sp else 0.50,
                 }
             if input_data.get("is_fh") and not input_data.get("structure"):
                 input_data["structure"] = {
-                    "mast_section": "TRON 88x3.2",
+                    "mast_section": "TRON 114x3.6",
                     "plot_section": None if is_sp else "TCAR 150x5",
                     "hauteur_mat_m": fh_h,
                     "hauteur_plot_m": 0.0 if is_sp else 0.50,
@@ -338,7 +347,7 @@ class CalculationJobViewSet(viewsets.ModelViewSet):
                 lovage_blk["sans_plot"] = is_lv_sp
                 lovage_blk["with_plot"] = not is_lv_sp
                 lovage_blk.setdefault("hauteur_mat_m", lv_h)
-                lovage_blk["echelle"] = "Pas d'échelle"
+                lovage_blk["echelle"] = resolve_support_echelle_label(lv_h, 1.50)
                 lovage_blk.setdefault("cf_front", 1.47)
                 lovage_blk.setdefault("cf_lat", 1.19)
                 comounts = resolve_lovage_comounts(input_data)

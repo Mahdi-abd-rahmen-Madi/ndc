@@ -2,7 +2,13 @@ import json
 import hashlib
 from typing import Dict, Any
 
-from utils.domain_constants import normalize_operator, normalize_structure_case, resolve_lovage_comounts, resolve_sans_plot
+from utils.domain_constants import (
+    normalize_operator,
+    normalize_structure_case,
+    resolve_lovage_comounts,
+    resolve_sans_plot,
+    resolve_support_echelle_label,
+)
 
 STAGE_HASH_VERSION = "v1"
 SUPPORTED_STAGES = ("antenna", "rrh", "rru", "fh", "lovage")
@@ -177,9 +183,7 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
                     eq_h_val = float(eq_copy.get("hauteur_mat_m")) if eq_copy.get("hauteur_mat_m") is not None else default_h
                 except (ValueError, TypeError):
                     eq_h_val = default_h
-                if is_kind_sp or eq_h_val < 2.0:
-                    if kind == "fh" or "echelle" in eq_copy:
-                        eq_copy["echelle"] = "Pas d'échelle"
+                eq_copy["echelle"] = resolve_support_echelle_label(eq_h_val, default_h)
             canonical[eq_key] = _normalize(eq_copy)
             sub_struct_key = f"structure_{kind}"
             if sub_struct_key in data and isinstance(data[sub_struct_key], dict):
@@ -204,7 +208,7 @@ def compute_ndc_hash(calc_type: str, input_data: Dict[str, Any]) -> str:
         is_lv_sp = resolve_sans_plot(data, calc_type=normalized_type, kind="lovage")
         lv_copy["sans_plot"] = is_lv_sp
         lv_copy["with_plot"] = not is_lv_sp
-        lv_copy.pop("echelle", None)
+        lv_copy["echelle"] = resolve_support_echelle_label(lv_copy["hauteur_mat_m"], 1.50)
         lv_copy.setdefault("cf_front", 1.47)
         lv_copy.setdefault("cf_lat", 1.19)
         for k in ("has_gps", "has_mdea", "gps", "mdea"):
@@ -375,9 +379,7 @@ def compute_stage_hashes(input_data: Dict[str, Any], calc_type: str = None) -> D
         is_sp = resolve_sans_plot(data, calc_type=normalized_type, kind=stage)
         eq_copy["sans_plot"] = is_sp
         eq_copy["with_plot"] = not is_sp
-        if is_sp or h_val < 2.0:
-            if stage == "fh" or "echelle" in eq_copy:
-                eq_copy["echelle"] = "Pas d'échelle"
+        eq_copy["echelle"] = resolve_support_echelle_label(h_val, default_h)
 
         st_payload: Dict[str, Any] = {
             "environment": _build_normalized_env(data, include_plot_height=False),
@@ -406,7 +408,7 @@ def compute_stage_hashes(input_data: Dict[str, Any], calc_type: str = None) -> D
         is_lv_sp = resolve_sans_plot(data, calc_type=normalized_type, kind="lovage")
         lv_copy["sans_plot"] = is_lv_sp
         lv_copy["with_plot"] = not is_lv_sp
-        lv_copy.pop("echelle", None)
+        lv_copy["echelle"] = resolve_support_echelle_label(lv_copy["hauteur_mat_m"], 1.50)
         lv_copy.setdefault("cf_front", 1.47)
         lv_copy.setdefault("cf_lat", 1.19)
         for k in ("has_gps", "has_mdea", "gps", "mdea"):

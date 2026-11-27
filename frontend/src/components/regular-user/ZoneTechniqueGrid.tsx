@@ -11,6 +11,7 @@ import { CabEquipmentToggle } from './equipment/CabEquipmentToggle';
 import { AtelierEnergieEquipmentToggle } from './equipment/AtelierEnergieEquipmentToggle';
 import { PileAmodEquipmentToggle } from './equipment/PileAmodEquipmentToggle';
 import { ConvertisseurMdeaEquipmentToggle } from './equipment/ConvertisseurMdeaEquipmentToggle';
+import { resolveSupportEchelle } from '../../config/equipmentRegistry';
 import type { CatalogueConfig, ZoneTechniqueData } from './types';
 
 export interface ZoneTechniqueGridProps {
@@ -58,17 +59,12 @@ export function ZoneTechniqueGrid({
           tdReference={data.tdReference}
           setTdReference={(val) => onChange({ tdReference: val })}
           foundationType={data.tdFoundationType || 'dallettes'}
-          setFoundationType={(val) => onChange({
-            tdFoundationType: val,
-            ...(val === 'dallettes' ? { tdEchelle: "Pas d'échelle" } : {}),
-          })}
+          setFoundationType={(val) => onChange({ tdFoundationType: val })}
           hauteurMatM={data.tdHauteurMatM ?? 1.70}
           setHauteurMatM={(val) => onChange({
             tdHauteurMatM: val,
-            ...(val < 2.0 ? { tdEchelle: "Pas d'échelle" } : {}),
+            tdEchelle: resolveSupportEchelle(val, 1.70),
           })}
-          echelle={data.tdEchelle}
-          setEchelle={(val) => onChange({ tdEchelle: val })}
           tdOptions={config?.td_references || []}
           operator={operator}
         />
@@ -93,7 +89,10 @@ export function ZoneTechniqueGrid({
           foundationType={data.boitierLovageFoundationType || 'dallettes'}
           setFoundationType={(val) => onChange({ boitierLovageFoundationType: val })}
           hauteurMatM={data.boitierLovageHauteurMatM ?? 1.50}
-          setHauteurMatM={(val) => onChange({ boitierLovageHauteurMatM: val })}
+          setHauteurMatM={(val) => onChange({
+            boitierLovageHauteurMatM: val,
+            boitierLovageEchelle: resolveSupportEchelle(val, 1.50),
+          })}
           boitierOptions={config?.boitier_lovage_references || []}
           operator={operator}
           coMountedGps={data.hasGps}
@@ -161,17 +160,12 @@ export function ZoneTechniqueGrid({
             tgbtEmplacement={data.tgbtEmplacement}
             setTgbtEmplacement={(val) => onChange({ tgbtEmplacement: val })}
             foundationType={data.tgbtFoundationType || 'dallettes'}
-            setFoundationType={(val) => onChange({
-              tgbtFoundationType: val,
-              ...(val === 'dallettes' ? { tgbtEchelle: "Pas d'échelle" } : {}),
-            })}
+            setFoundationType={(val) => onChange({ tgbtFoundationType: val })}
             hauteurMatM={data.tgbtHauteurMatM ?? 1.50}
             setHauteurMatM={(val) => onChange({
               tgbtHauteurMatM: val,
-              ...(val < 2.0 ? { tgbtEchelle: "Pas d'échelle" } : {}),
+              tgbtEchelle: resolveSupportEchelle(val, 1.50),
             })}
-            echelle={data.tgbtEchelle}
-            setEchelle={(val) => onChange({ tgbtEchelle: val })}
             options={(config?.tgbt_references || []).filter(item => item.id !== 'tgbt_standard_300' && item.reference !== 'TGBT 300x255x160mm' && item.reference !== '300x255x160mm')}
           />
           <GPSEquipmentToggle
@@ -224,7 +218,10 @@ export function ZoneTechniqueGrid({
         foundationType={data.boitierLovageFoundationType || 'dallettes'}
         setFoundationType={(val) => onChange({ boitierLovageFoundationType: val })}
         hauteurMatM={data.boitierLovageHauteurMatM ?? 1.50}
-        setHauteurMatM={(val) => onChange({ boitierLovageHauteurMatM: val })}
+        setHauteurMatM={(val) => onChange({
+          boitierLovageHauteurMatM: val,
+          boitierLovageEchelle: resolveSupportEchelle(val, 1.50),
+        })}
         boitierOptions={config?.boitier_lovage_references || []}
         operator={operator}
         coMountedGps={data.hasGps}

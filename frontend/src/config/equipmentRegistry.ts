@@ -27,12 +27,22 @@ export function isSansPlotFromFoundation(foundationType?: string | null): boolea
   return (foundationType || '').toLowerCase().trim() === 'dallettes';
 }
 
-export const FH_ECHELLE_MIN_MAST_HEIGHT_M = 2.0;
+export const SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M = 2.0;
+export const FH_ECHELLE_MIN_MAST_HEIGHT_M = SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M;
 
-export function isFhEchelleAllowed(sansPlot?: boolean, hauteurMatM?: number | null): boolean {
-  if (sansPlot) return false;
+export function resolveSupportEchelle(
+  hauteurMatM?: number | null,
+  defaultHauteurMatM = 1.50
+): string {
+  const h = Number(hauteurMatM ?? defaultHauteurMatM);
+  return Number.isFinite(h) && h >= SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M
+    ? 'Echelle'
+    : "Pas d'échelle";
+}
+
+export function isFhEchelleAllowed(_sansPlot?: boolean, hauteurMatM?: number | null): boolean {
   const h = Number(hauteurMatM ?? 1.70);
-  return Number.isFinite(h) && h >= FH_ECHELLE_MIN_MAST_HEIGHT_M;
+  return Number.isFinite(h) && h >= SUPPORT_ECHELLE_MIN_MAST_HEIGHT_M;
 }
 
 export function normalizeFhEchelle(val?: string | null): string {
@@ -114,21 +124,15 @@ export function extractSectorAerialState(sector?: SectorData) {
   const fhFoundationType = sector?.fhFoundationType || fallbackFoundation;
   const fhSansPlot = isSansPlotFromFoundation(fhFoundationType);
   const fhHauteurMatM = sector?.fhHauteurMatM ?? 1.70;
-  const fhEchelle = isFhEchelleAllowed(fhSansPlot, fhHauteurMatM)
-    ? normalizeFhEchelle(sector?.fhEchelle)
-    : "Pas d'échelle";
+  const fhEchelle = resolveSupportEchelle(fhHauteurMatM, 1.70);
   const rrhFoundationType = sector?.rrhFoundationType || fallbackFoundation;
   const rrhSansPlot = isSansPlotFromFoundation(rrhFoundationType);
   const rrhHauteurMatM = sector?.rrhHauteurMatM ?? 1.50;
-  const rrhEchelle = isFhEchelleAllowed(rrhSansPlot, rrhHauteurMatM)
-    ? normalizeFhEchelle(sector?.rrhEchelle)
-    : "Pas d'échelle";
+  const rrhEchelle = resolveSupportEchelle(rrhHauteurMatM, 1.50);
   const rruFoundationType = sector?.rruFoundationType || fallbackFoundation;
   const rruSansPlot = isSansPlotFromFoundation(rruFoundationType);
   const rruHauteurMatM = sector?.rruHauteurMatM ?? 1.50;
-  const rruEchelle = isFhEchelleAllowed(rruSansPlot, rruHauteurMatM)
-    ? normalizeFhEchelle(sector?.rruEchelle)
-    : "Pas d'échelle";
+  const rruEchelle = resolveSupportEchelle(rruHauteurMatM, 1.50);
   return {
     hasFhEquipment: !!sector?.hasFhEquipment,
     fhSansPlot,
@@ -324,12 +328,12 @@ export function buildSectorEquipmentPayload({
       quantity: hasFh && primaryFh ? primaryFh.quantity : null,
       weight_kg: hasFh && primaryFh ? primaryFh.weight_kg : null,
       ancrage: hasFh ? aerial.fhFoundationType : null,
-      echelle: hasFh ? (isFhEchelleAllowed(aerial.fhSansPlot, aerial.fhHauteurMatM) ? aerial.fhEchelle : "Pas d'échelle") : null,
+      echelle: hasFh ? resolveSupportEchelle(aerial.fhHauteurMatM, 1.70) : null,
       items: hasFh ? finalFhItems : [],
     },
     structure_fh: hasFh
       ? {
-          mast_section: 'TRON 88x3.2',
+          mast_section: 'TRON 114x3.6',
           plot_section: aerial.fhSansPlot ? null : 'TCAR 150x5',
           hauteur_mat_m: Number(aerial.fhHauteurMatM ?? 1.70),
           hauteur_plot_m: aerial.fhSansPlot ? 0.0 : 0.50,
@@ -342,7 +346,7 @@ export function buildSectorEquipmentPayload({
       ancrage: allowRrh && aerial.hasRrhEquipment ? aerial.rrhFoundationType : null,
       hauteur_mat_m: Number(aerial.rrhHauteurMatM ?? 1.50),
       echelle: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment
-        ? (isFhEchelleAllowed(aerial.rrhSansPlot, aerial.rrhHauteurMatM) ? aerial.rrhEchelle : "Pas d'échelle")
+        ? resolveSupportEchelle(aerial.rrhHauteurMatM, 1.50)
         : null,
       items: allowRrh && aerial.hasRrhEquipment && !aerial.hasRruEquipment
         ? aerial.rrhItems.map(item => ({ reference: resolveRrh(item.reference), quantity: item.quantity }))
@@ -355,7 +359,7 @@ export function buildSectorEquipmentPayload({
       ancrage: aerial.hasRruEquipment ? aerial.rruFoundationType : null,
       hauteur_mat_m: Number(aerial.rruHauteurMatM ?? 1.50),
       echelle: aerial.hasRruEquipment
-        ? (isFhEchelleAllowed(aerial.rruSansPlot, aerial.rruHauteurMatM) ? aerial.rruEchelle : "Pas d'échelle")
+        ? resolveSupportEchelle(aerial.rruHauteurMatM, 1.50)
         : null,
       items: aerial.hasRruEquipment
         ? aerial.rruItems.map(item => ({ reference: resolveRru(item.reference), quantity: item.quantity }))
@@ -366,9 +370,7 @@ export function buildSectorEquipmentPayload({
       const tdFoundation = zt.tdFoundationType || 'dallettes';
       const tdSansPlot = isSansPlotFromFoundation(tdFoundation);
       const tdH = Number(zt.tdHauteurMatM ?? 1.70);
-      const tdEchelle = isFhEchelleAllowed(tdSansPlot, tdH)
-        ? normalizeFhEchelle(zt.tdEchelle)
-        : "Pas d'échelle";
+      const tdEchelle = resolveSupportEchelle(tdH, 1.70);
       return {
         enabled: tdEnabled,
         type: tdEnabled ? zt.tdType : null,
@@ -386,9 +388,7 @@ export function buildSectorEquipmentPayload({
       const tgbtFoundation = zt.tgbtFoundationType || 'dallettes';
       const tgbtSansPlot = isSansPlotFromFoundation(tgbtFoundation);
       const tgbtH = Number(zt.tgbtHauteurMatM ?? 1.50);
-      const tgbtEchelle = isFhEchelleAllowed(tgbtSansPlot, tgbtH)
-        ? normalizeFhEchelle(zt.tgbtEchelle)
-        : "Pas d'échelle";
+      const tgbtEchelle = resolveSupportEchelle(tgbtH, 1.50);
       return {
         enabled: tgbtEnabled,
         reference: tgbtEnabled ? (zt.tgbtReference || STATIC_EQUIPMENT_SPECS.tgbt.defaultRef) : null,
@@ -421,7 +421,7 @@ export function buildSectorEquipmentPayload({
         sans_plot: lovageSansPlot,
         with_plot: !lovageSansPlot,
         hauteur_mat_m: lovageH,
-        echelle: zt.hasBoitierLovage ? "Pas d'échelle" : null,
+        echelle: zt.hasBoitierLovage ? resolveSupportEchelle(lovageH, 1.50) : null,
         cf_front: 1.47,
         cf_lat: 1.19,
         has_gps: hasGpsCoMount,

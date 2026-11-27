@@ -4,6 +4,7 @@ import { RRHEquipmentToggle } from './equipment/RRHEquipmentToggle';
 import { RRUEquipmentToggle } from './equipment/RRUEquipmentToggle';
 import { CoffretEquipmentToggle } from './equipment/CoffretEquipmentToggle';
 import { BoitierJonctionEquipmentToggle } from './equipment/BoitierJonctionEquipmentToggle';
+import { resolveSupportEchelle } from '../../config/equipmentRegistry';
 import type { SectorData, CatalogueConfig } from './types';
 
 export interface SectorEquipmentGridProps {
@@ -69,15 +70,12 @@ export function SectorEquipmentGrid({
             fhFoundationType: val,
             equipmentFoundationType: val,
             fhSansPlot: isSp,
-            ...(isSp ? { fhEchelle: "Pas d'échelle" } : {}),
           });
         }}
-        fhEchelle={sector.fhEchelle}
-        setFhEchelle={(val) => syncUpdates({ fhEchelle: val })}
         hauteurMatM={sector.fhHauteurMatM ?? 1.70}
         setHauteurMatM={(val) => syncUpdates({
           fhHauteurMatM: val,
-          ...(val < 2.0 ? { fhEchelle: "Pas d'échelle" } : {}),
+          fhEchelle: resolveSupportEchelle(val, 1.70),
         })}
       />
       )}
@@ -110,16 +108,13 @@ export function SectorEquipmentGrid({
               rrhFoundationType: val,
               equipmentFoundationType: val,
               rrhSansPlot: isSp,
-              ...(isSp ? { rrhEchelle: "Pas d'échelle" } : {}),
             });
           }}
           hauteurMatM={sector.rrhHauteurMatM ?? 1.50}
           setHauteurMatM={(val) => syncUpdates({
             rrhHauteurMatM: val,
-            ...(val < 2.0 ? { rrhEchelle: "Pas d'échelle" } : {}),
+            rrhEchelle: resolveSupportEchelle(val, 1.50),
           })}
-          echelle={sector.rrhEchelle}
-          setEchelle={(val) => syncUpdates({ rrhEchelle: val })}
         />
       )}
 
@@ -150,16 +145,13 @@ export function SectorEquipmentGrid({
             rruFoundationType: val,
             equipmentFoundationType: val,
             rruSansPlot: isSp,
-            ...(isSp ? { rruEchelle: "Pas d'échelle" } : {}),
           });
         }}
         hauteurMatM={sector.rruHauteurMatM ?? 1.50}
         setHauteurMatM={(val) => syncUpdates({
           rruHauteurMatM: val,
-          ...(val < 2.0 ? { rruEchelle: "Pas d'échelle" } : {}),
+          rruEchelle: resolveSupportEchelle(val, 1.50),
         })}
-        echelle={sector.rruEchelle}
-        setEchelle={(val) => syncUpdates({ rruEchelle: val })}
       />
 
       {/* 4. Boîtier de jonction FO (Free) ou Coffrets fibre (hors Free) */}

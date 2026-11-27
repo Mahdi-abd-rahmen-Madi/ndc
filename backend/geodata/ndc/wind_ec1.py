@@ -2,14 +2,14 @@
 import math
 import re
 
-# z0 roughness lengths and z_min per terrain category
+# z0 roughness lengths (m) per terrain category
 # Keys match the canonical frontend/DB values: '0', 'II', 'IIIa', 'IIIb', 'IV'
 TERRAIN_Z0 = {
-    '0': (0.003, 1),     # (z0 in m, zmin in m)
-    'II': (0.05, 2),
-    'IIIa': (0.2, 5),
-    'IIIb': (0.5, 10),
-    'IV': (1.0, 15),
+    '0': 0.003,
+    'II': 0.05,
+    'IIIa': 0.2,
+    'IIIb': 0.5,
+    'IV': 1.0,
 }
 
 # Reference terrain is always Terrain II
@@ -17,6 +17,28 @@ Z0_II = 0.05
 
 # Air density (kg/m^3) -- standard EN 1991-1-4 value
 RHO_AIR = 1.25
+
+
+def _to_float(val) -> float:
+    """Safely convert numeric inputs to float, returning 0.0 for placeholders or blanks."""
+    if val is None or val == '':
+        return 0.0
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def compute_wind_z(h_bat, h_mat, h_plot=0.0, sans_plot: bool = False) -> float:
+    """
+    Compute exact EC1 reference height z (m):
+    - sans_plot=True:  z = h_bat + h_mat
+    - sans_plot=False: z = h_bat + h_mat + h_plot
+    """
+    hb = _to_float(h_bat)
+    hm = _to_float(h_mat)
+    hp = 0.0 if sans_plot else _to_float(h_plot)
+    return hb + hm + hp
 
 
 def _parse_section_dimensions(section_str):
@@ -41,12 +63,14 @@ def _parse_envelope_dims_m(env_str: str):
 def calculate_wind_params(terrain_type: str, z_total: float, vb: float) -> dict:
     """
     Compute the EC1 wind chain for a given terrain category, total height z,
-    and reference wind speed Vb.
+    and reference wind speed Vb (without z_min clamping).
     """
-    z0, zmin = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
-
-    # Clamp z to zmin (EC1 §4.3.2)
-    z_used = max(z_total, zmin)
+    z0 = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
+    z_used = float(z_total)
+    if z_used <= z0:
+        raise ValueError(
+            f"z_total ({z_used}) must be greater than z0 ({z0}) for terrain '{terrain_type}'"
+        )
 
     # kr -- terrain roughness factor (EC1 eq. 4.5)
     kr = 0.19 * (z0 / Z0_II) ** 0.07
@@ -80,13 +104,220 @@ def calculate_wind_params(terrain_type: str, z_total: float, vb: float) -> dict:
     }
 
 
-def _resolve_support_wind_params(wind_p: dict, context: dict, env: dict, vb, h_plot_m, h_mat_m) -> dict:
-    """Resolve EC1 wind chain for an auxiliary support (RRH or RRU) consistently."""
-    qp_z = wind_p.get('qp_dan') or context.get('qp_z')
-    cr_z = wind_p.get('cr_z') or wind_p.get('cr')
-    vm_z = wind_p.get('vm_z') or wind_p.get('vm')
-    iv_z = wind_p.get('iv_z') or wind_p.get('iv')
-    kr_z = wind_p.get('kr_z') or wind_p.get('kr')
+def _first_non_none(*vals):
+    """Return the first value that is not None."""
+    for v in vals:
+        if v is not None:
+            return v
+    return None
+
+
+def _is_non_placeholder(val) -> bool:
+    """Return True if val is present and not a template bracket placeholder like '[VAR_23]'."""
+    if val is None:
+        return False
+    if isinstance(val, str):
+        s = val.strip()
+        return bool(s) and not (s.startswith('[') and s.endswith(']'))
+    return True
+
+
+def get_antenna_wind(result_data: dict) -> dict:
+    """Return Robot-computed wind dictionary for the Base Antenna stage."""
+    if not isinstance(result_data, dict):
+        return {}
+    wind = result_data.get("wind")
+    return wind if isinstance(wind, dict) else {}
+
+
+def get_support_wind(result_data: dict, kind: str) -> dict:
+    """
+    Return Robot-computed `wind_params` for a support module
+    (`kind` in {'rrh', 'rru', 'fh', 'lovage'}), handling both composite
+    and standalone result payloads.
+    """
+    if not isinstance(result_data, dict):
+        return {}
+    kind = str(kind or "").lower()
+    sub = result_data.get(kind)
+    sub_wind = sub.get("wind_params") if isinstance(sub, dict) else None
+    kind_wind = result_data.get(f"{kind}_wind_params")
+    top_wind = result_data.get("wind_params")
+    if isinstance(kind_wind, dict) and kind_wind:
+        return kind_wind
+    if isinstance(sub_wind, dict) and sub_wind:
+        return sub_wind
+    if isinstance(top_wind, dict) and top_wind:
+        return top_wind
+    return {}
+
+
+def get_support_structure_params(result_data: dict, kind: str) -> dict:
+    """Return Robot-resolved `structure_params` for a support module."""
+    if not isinstance(result_data, dict):
+        return {}
+    kind = str(kind or "").lower()
+    sub = result_data.get(kind)
+    if isinstance(sub, dict) and isinstance(sub.get("structure_params"), dict) and sub["structure_params"]:
+        return sub["structure_params"]
+    top_struct = result_data.get("structure_params")
+    return top_struct if isinstance(top_struct, dict) else {}
+
+
+def resolve_antenna_wind_params(
+    result_data,
+    env: dict,
+    mast_height_m,
+    vb,
+    structure_data: dict = None,
+    active_data: dict = None,
+) -> dict:
+    """
+    Resolve Base Antenna EC1 wind parameters treating Robot's `result_data["wind"]`
+    (and `result_data["ndc_vars"]`) as the single source of truth, falling back to
+    local calculation only for legacy historical jobs, previews, or fast-track.
+    """
+    res = result_data if isinstance(result_data, dict) else {}
+    env = env if isinstance(env, dict) else {}
+    structure_data = structure_data if isinstance(structure_data, dict) else {}
+    active_data = active_data if isinstance(active_data, dict) else {}
+
+    worker_wind = get_antenna_wind(res)
+    ndc_vars = res.get("ndc_vars") if isinstance(res.get("ndc_vars"), dict) else {}
+
+    has_worker_wind = any(
+        worker_wind.get(k) is not None
+        for k in ("qp_dan_m2", "qp_dan", "cr", "cr_z", "vm", "vm_z")
+    )
+    if has_worker_wind:
+        z_total = _first_non_none(worker_wind.get("z_ref_m"), worker_wind.get("z_ref"), ndc_vars.get("var_14"))
+        vb_m_s = _first_non_none(
+            worker_wind.get("vb0"),
+            worker_wind.get("v_b0"),
+            ndc_vars.get("var_15"),
+            ndc_vars.get("var_20"),
+            vb,
+        )
+        kr_z = _first_non_none(worker_wind.get("kr"), worker_wind.get("kr_z"), ndc_vars.get("var_16"))
+        cr_z = _first_non_none(
+            worker_wind.get("cr"),
+            worker_wind.get("cr_z"),
+            ndc_vars.get("var_17"),
+            ndc_vars.get("var_18"),
+        )
+        vm_z = _first_non_none(worker_wind.get("vm"), worker_wind.get("vm_z"), ndc_vars.get("var_21"))
+        iv_z = _first_non_none(worker_wind.get("iv"), worker_wind.get("iv_z"), ndc_vars.get("var_22"))
+        qp_z = _first_non_none(worker_wind.get("qp_dan_m2"), worker_wind.get("qp_dan"), ndc_vars.get("var_23"))
+
+        return {
+            "source": "worker",
+            "z_total": z_total if z_total is not None else "[z]",
+            "vb_m_s": vb_m_s,
+            "kr_z": kr_z if kr_z is not None else "[kr]",
+            "cr_z": cr_z if cr_z is not None else "[cr(z)]",
+            "vm_z": vm_z if vm_z is not None else "[Vm]",
+            "iv_z": iv_z if iv_z is not None else "[Iv(z)]",
+            "qp_z": qp_z if qp_z is not None else "[qp]",
+            "fw_mast": _first_non_none(worker_wind.get("fw_mast_dan_m"), worker_wind.get("fw_mast"), ndc_vars.get("var_26")),
+            "fw_4g_front": _first_non_none(worker_wind.get("fw_4g_front_dan"), ndc_vars.get("var_30")),
+            "fw_4g_lat": _first_non_none(worker_wind.get("fw_4g_lat_dan"), ndc_vars.get("var_34")),
+            "fw_5g_front": _first_non_none(worker_wind.get("fw_5g_front_dan"), ndc_vars.get("var_38")),
+            "fw_5g_lat": _first_non_none(worker_wind.get("fw_5g_lat_dan"), ndc_vars.get("var_42")),
+        }
+
+    var_cr = _first_non_none(ndc_vars.get("var_17"), ndc_vars.get("var_18"))
+    var_qp = ndc_vars.get("var_23")
+    if _is_non_placeholder(var_qp) and _is_non_placeholder(var_cr):
+        z_total = ndc_vars.get("var_14")
+        vb_m_s = _first_non_none(ndc_vars.get("var_15"), ndc_vars.get("var_20"), vb)
+        kr_z = ndc_vars.get("var_16")
+        vm_z = ndc_vars.get("var_21")
+        iv_z = ndc_vars.get("var_22")
+        return {
+            "source": "worker_ndc_vars",
+            "z_total": z_total if _is_non_placeholder(z_total) else "[z]",
+            "vb_m_s": vb_m_s if _is_non_placeholder(vb_m_s) else vb,
+            "kr_z": kr_z if _is_non_placeholder(kr_z) else "[kr]",
+            "cr_z": var_cr,
+            "vm_z": vm_z if _is_non_placeholder(vm_z) else "[Vm]",
+            "iv_z": iv_z if _is_non_placeholder(iv_z) else "[Iv(z)]",
+            "qp_z": var_qp,
+            "fw_mast": ndc_vars.get("var_26") if _is_non_placeholder(ndc_vars.get("var_26")) else None,
+            "fw_4g_front": ndc_vars.get("var_30") if _is_non_placeholder(ndc_vars.get("var_30")) else None,
+            "fw_4g_lat": ndc_vars.get("var_34") if _is_non_placeholder(ndc_vars.get("var_34")) else None,
+            "fw_5g_front": ndc_vars.get("var_38") if _is_non_placeholder(ndc_vars.get("var_38")) else None,
+            "fw_5g_lat": ndc_vars.get("var_42") if _is_non_placeholder(ndc_vars.get("var_42")) else None,
+        }
+
+    # Fallback for legacy jobs, fast-track, and template previews
+    terrain_type_str = str(env.get("terrain_type") or "IIIa")
+    is_antenna_sans_plot = bool(
+        structure_data.get("sans_plot") is True
+        or structure_data.get("with_plot") is False
+        or active_data.get("sans_plot") is True
+        or active_data.get("with_plot") is False
+    )
+    h_plot_raw = (
+        env.get("plot_height_m")
+        if env.get("plot_height_m") is not None
+        else (
+            structure_data.get("plot_h_m")
+            if structure_data.get("plot_h_m") is not None
+            else structure_data.get("hauteur_plot_m")
+        )
+    )
+    z_total = compute_wind_z(
+        env.get("building_height_m"),
+        mast_height_m,
+        h_plot=h_plot_raw,
+        sans_plot=is_antenna_sans_plot,
+    )
+    z0_val = TERRAIN_Z0.get(terrain_type_str, TERRAIN_Z0["IIIa"])
+    if vb is not None and z_total > z0_val:
+        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
+        return {
+            "source": "fallback",
+            "z_total": wind["z_used"],
+            "vb_m_s": vb,
+            "kr_z": wind["kr"],
+            "cr_z": wind["cr_z"],
+            "vm_z": wind["vm"],
+            "iv_z": wind["iv_z"],
+            "qp_z": wind["qp_dan"],
+        }
+
+    return {
+        "source": "fallback",
+        "z_total": "[z]",
+        "vb_m_s": vb,
+        "kr_z": "[kr]",
+        "cr_z": "[cr(z)]",
+        "vm_z": "[Vm]",
+        "iv_z": "[Iv(z)]",
+        "qp_z": "[qp]",
+    }
+
+
+def _resolve_support_wind_params(
+    wind_p: dict,
+    context: dict,
+    env: dict,
+    vb,
+    h_plot_m,
+    h_mat_m,
+    sans_plot: bool = False,
+) -> dict:
+    """Resolve EC1 wind chain for an auxiliary support (RRH, RRU, FH, or Lovage) consistently."""
+    wind_p = wind_p if isinstance(wind_p, dict) else {}
+    context = context if isinstance(context, dict) else {}
+    env = env if isinstance(env, dict) else {}
+
+    qp_z = wind_p.get('qp_dan') if wind_p.get('qp_dan') is not None else context.get('qp_z')
+    cr_z = _first_non_none(wind_p.get('cr_z'), wind_p.get('cr'))
+    vm_z = _first_non_none(wind_p.get('vm_z'), wind_p.get('vm'))
+    iv_z = _first_non_none(wind_p.get('iv_z'), wind_p.get('iv'))
+    kr_z = _first_non_none(wind_p.get('kr_z'), wind_p.get('kr'))
+    z_ref = _first_non_none(wind_p.get('z_ref'), wind_p.get('z_ref_m'))
 
     raw_region = wind_p.get('region')
     if raw_region is not None:
@@ -103,10 +334,11 @@ def _resolve_support_wind_params(wind_p: dict, context: dict, env: dict, vb, h_p
         if wind_p.get('building_height_m') is not None
         else context.get('building_height')
     )
-    vb_m_s = (
-        wind_p.get('vb0_ms')
-        if wind_p.get('vb0_ms') is not None
-        else (wind_p.get('v_b0') if wind_p.get('v_b0') is not None else context.get('vb_m_s'))
+    vb_m_s = _first_non_none(
+        wind_p.get('vb0_ms'),
+        wind_p.get('v_b0'),
+        wind_p.get('vb0'),
+        context.get('vb_m_s'),
     )
 
     try:
@@ -118,14 +350,14 @@ def _resolve_support_wind_params(wind_p: dict, context: dict, env: dict, vb, h_p
     except (ValueError, TypeError):
         vb_num = float(vb) if vb is not None else None
 
-    if not cr_z:
+    if cr_z is None:
         try:
             target_qp_dan = float(wind_p.get('qp_dan') or 0.0)
         except (ValueError, TypeError):
             target_qp_dan = 0.0
 
         if target_qp_dan > 0 and vb_num is not None and vb_num > 0:
-            z0_val, _ = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
+            z0_val = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
             kr_val = 0.19 * (z0_val / Z0_II) ** 0.07
             a_coeff = 0.5 * RHO_AIR * (vb_num ** 2) * (kr_val ** 2)
             qp_pa_target = target_qp_dan * 10.0
@@ -140,24 +372,24 @@ def _resolve_support_wind_params(wind_p: dict, context: dict, env: dict, vb, h_p
                 iv_z = round(iv_calc, 2)
                 kr_z = round(kr_val, 2)
 
-    if not cr_z:
-        try:
-            h_bat = float(env.get('building_height_m') or 0)
-            h_plot = float(h_plot_m or 0)
-            h_mat = float(h_mat_m or 0)
-            z_tot = h_bat + h_plot + h_mat
-            if z_tot <= 0:
-                z_tot = h_bat
-        except (ValueError, TypeError):
-            z_tot = 0
+    if cr_z is None:
+        z_tot = compute_wind_z(
+            env.get('building_height_m'),
+            h_mat_m,
+            h_plot=h_plot_m,
+            sans_plot=sans_plot,
+        )
+        z0_val = TERRAIN_Z0.get(terrain_type, TERRAIN_Z0['IIIa'])
 
-        if vb_num is not None and vb_num > 0 and z_tot > 0:
+        if vb_num is not None and vb_num > 0 and z_tot > z0_val:
             wind_calc = calculate_wind_params(terrain_type, z_tot, vb_num)
             cr_z = wind_calc['cr_z']
             vm_z = wind_calc['vm']
             iv_z = wind_calc['iv_z']
             kr_z = wind_calc['kr']
-            if not qp_z:
+            if z_ref is None:
+                z_ref = wind_calc['z_used']
+            if wind_p.get('qp_dan') is None:
                 qp_z = wind_calc['qp_dan']
         else:
             cr_z = context.get('cr_z')
@@ -169,6 +401,7 @@ def _resolve_support_wind_params(wind_p: dict, context: dict, env: dict, vb, h_p
         'region': region_str,
         'terrain_type': terrain_type,
         'building_height': building_height,
+        'z_ref': z_ref,
         'vb_m_s': vb_m_s,
         'cr_z': cr_z,
         'vm_z': vm_z,

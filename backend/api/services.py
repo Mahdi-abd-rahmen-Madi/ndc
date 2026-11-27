@@ -5,7 +5,7 @@ import tempfile
 from django.conf import settings
 from django.core.files import File
 from .models import CalculationJob
-from utils.domain_constants import parse_json_dict, resolve_sans_plot
+from utils.domain_constants import parse_json_dict, resolve_fh_mast_profile, resolve_sans_plot
 
 
 def extract_ndc_context(job) -> dict:
@@ -76,12 +76,14 @@ _DOCX_EQUIPMENT_DEFAULTS = {
     "fh": {
         "label": "FH",
         "depth_key": "diameter_mm",
-        "mast_section": "TRON 88x3.2",
+        "mast_section": "TRON 114x3.6",
+        "mast_d_m": 0.1143,
         "plot_section": "TCAR 150x5",
         "terrain_type": "II",
         "vb0": 24.0,
         "qp_dan": 95.36,
         "template_rel": os.path.join("templates", "fh", "NDC FH.docx"),
+        "template_ech_rel": os.path.join("templates", "fh", "NDC FH +ech.docx"),
     },
     "lovage": {
         "label": "Boitiers de lovages",
@@ -100,8 +102,8 @@ _DOCX_EQUIPMENT_DEFAULTS = {
             ("lovage_gps", True): os.path.join("templates", "lovage", "boitier_lovage+gps_sans_plot.docx"),
             ("lovage_gps_mdea", False): os.path.join("templates", "lovage", "boitier_lovage+GPS+MDEA_avec_plot.docx"),
             ("lovage_gps_mdea", True): os.path.join("templates", "lovage", "boitiers_lovage+GPS+MDEA_sans_plot.docx"),
-            ("lovage_mdea", False): os.path.join("templates", "lovage", "boitier_lovage+GPS+MDEA_avec_plot.docx"),
-            ("lovage_mdea", True): os.path.join("templates", "lovage", "boitiers_lovage+GPS+MDEA_sans_plot.docx"),
+            ("lovage_mdea", False): os.path.join("templates", "lovage", "boitier_lovage+MDEA_avec_plot.docx"),
+            ("lovage_mdea", True): os.path.join("templates", "lovage", "boitier_lovage+MDEA_sans_plot.docx"),
         },
     },
 }
@@ -111,6 +113,8 @@ def select_equipment_docx_template(kind: str, ctx: dict) -> str:
     """Select the DOCX template relative path for the given equipment kind and context."""
     cfg = _DOCX_EQUIPMENT_DEFAULTS.get(kind, _DOCX_EQUIPMENT_DEFAULTS["rrh"])
     is_sans_plot = bool(ctx.get("is_sans_plot") or (ctx.get("structure") or {}).get("sans_plot"))
+    if kind == "fh" and ctx.get("has_echelle") and cfg.get("template_ech_rel"):
+        return cfg["template_ech_rel"]
     variants = cfg.get("template_variants")
     if variants:
         variant = ctx.get("lovage_variant") or ("lovage" if kind == "lovage" else kind)
@@ -136,6 +140,7 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     items = ctx.get("items", [])
     wind = ctx.get("wind", {})
     structure = ctx.get("structure", {})
+    fh_profile = resolve_fh_mast_profile(structure.get("mast_section") or ctx.get("mast_section")) if kind == "fh" else None
     is_sans_plot = bool(ctx.get("is_sans_plot") or structure.get("sans_plot"))
 
     # 1. Populate Table 0 ("Équipements considérés")
@@ -192,6 +197,10 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
                 if len(row.cells) > 4:
                     row.cells[4].text = state_s
         else:
+            if kind == "fh":
+                while len(table0.rows) > 2:
+                    tr = table0.rows[-1]._tr
+                    tr.getparent().remove(tr)
             for i, item in enumerate(items):
                 if i == 0 and len(table0.rows) > 1:
                     row = table0.rows[1]
@@ -211,11 +220,17 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
                     row.cells[3].text = f"{float(item.get('weight_kg', 0)):.1f}"
                     if len(row.cells) > 4:
                         row.cells[4].text = "Projet"
+            if kind == "fh" and ctx.get("has_echelle"):
+                ech_row = table0.add_row()
+                ech_row.cells[0].text = "Echelle"
+                ech_row.cells[1].text = "1"
+                ech_row.cells[2].text = "-"
+                ech_row.cells[3].text = "15"
 
     # 2. Populate Table 1 ("Géométrie des pièces")
     if len(doc.tables) > 1:
         table1 = doc.tables[1]
-        mast_sec = structure.get("mast_section") or cfg["mast_section"]
+        mast_sec = structure.get("mast_section") or (fh_profile["mast_section"] if fh_profile else cfg["mast_section"])
         mast_h = (
             ctx.get("hauteur_mat_m")
             if ctx.get("hauteur_mat_m") is not None
@@ -237,20 +252,39 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
                 table1.rows[2].cells[1].text = f"{float(plot_h):g}"
                 table1.rows[2].cells[2].text = "Plot"
 
-    # 3. Wind variables
-    region = wind.get("region", 2)
-    terrain = wind.get("terrain_type", cfg["terrain_type"])
-    building_h = float(wind.get("building_height_m", 0.0) or 0.0)
-    vb0 = float(wind.get("vb0_ms") or wind.get("v_b0") or cfg["vb0"])
-    kr = float(wind.get("kr_z") or wind.get("kr") or 0.19)
-    cr = float(wind.get("cr_z") or wind.get("cr") or 1.25)
-    vm = float(wind.get("vm_z") or wind.get("vm") or round(cr * vb0, 2))
-    iv = float(wind.get("iv_z") or wind.get("iv") or 0.15)
-    qp = float(wind.get("qp_dan", cfg["qp_dan"]) or cfg["qp_dan"])
+    # 3. Wind variables (Worker wind_params as single source of truth)
+    region = wind.get("region") if wind.get("region") is not None else 2
+    terrain = wind.get("terrain_type") if wind.get("terrain_type") is not None else cfg["terrain_type"]
+    building_h = float(wind.get("building_height_m") if wind.get("building_height_m") is not None else 0.0)
+    vb0_raw = (
+        wind.get("vb0_ms")
+        if wind.get("vb0_ms") is not None
+        else (wind.get("v_b0") if wind.get("v_b0") is not None else (wind.get("vb0") if wind.get("vb0") is not None else cfg["vb0"]))
+    )
+    vb0 = float(vb0_raw)
+    kr_raw = wind.get("kr_z") if wind.get("kr_z") is not None else wind.get("kr")
+    kr = float(kr_raw if kr_raw is not None else 0.19)
+    cr_raw = wind.get("cr_z") if wind.get("cr_z") is not None else wind.get("cr")
+    cr = float(cr_raw if cr_raw is not None else 1.25)
+    vm_raw = wind.get("vm_z") if wind.get("vm_z") is not None else wind.get("vm")
+    vm = float(vm_raw if vm_raw is not None else round(cr * vb0, 2))
+    iv_raw = wind.get("iv_z") if wind.get("iv_z") is not None else wind.get("iv")
+    iv = float(iv_raw if iv_raw is not None else 0.15)
+    qp = float(wind.get("qp_dan") if wind.get("qp_dan") is not None else cfg["qp_dan"])
 
-    cf_mast = float(wind.get("cf_mast", 1.0) or 1.0)
-    mast_d_m = float(structure.get("mast_d_m", 0.088) or 0.088)
-    fw_mast = float(wind.get("fw_mast", round(1.0 * cf_mast * mast_d_m * qp, 2)) or 0.0)
+    cf_mast = float(wind.get("cf_mast") if wind.get("cf_mast") is not None else 1.0)
+    default_mast_d = fh_profile["mast_d_m"] if fh_profile else cfg.get("mast_d_m", 0.088)
+    raw_mast_d = (
+        wind.get("mast_d_formula")
+        if (kind == "fh" and wind.get("mast_d_formula") is not None)
+        else (structure.get("mast_d_m") if structure.get("mast_d_m") is not None else default_mast_d)
+    )
+    mast_d_m = float(raw_mast_d)
+    fw_mast = float(
+        wind.get("fw_mast")
+        if wind.get("fw_mast") is not None
+        else round(1.0 * cf_mast * mast_d_m * qp, 2)
+    )
 
     # 4. Paragraph replacements
     import re
@@ -262,11 +296,35 @@ def _populate_equipment_docx(doc, ctx, kind: str = "rrh"):
     mast_h_val = (
         ctx.get("hauteur_mat_m")
         if ctx.get("hauteur_mat_m") is not None
-        else (structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else 1.5)
+        else (structure.get("hauteur_mat_m") if structure.get("hauteur_mat_m") is not None else (1.7 if kind == "fh" else 1.5))
+    )
+    fh_diam_mm = (
+        float(structure["diam_mm"])
+        if structure.get("diam_mm") is not None
+        else (fh_profile["diam_mm"] if fh_profile else None)
+    )
+    fh_thickness_mm = (
+        float(structure["thickness_mm"])
+        if structure.get("thickness_mm") is not None
+        else (fh_profile["thickness_mm"] if fh_profile else None)
     )
     for p in doc.paragraphs:
         txt = p.text
-        if kind == "lovage" and lovage_variant == "lovage_mdea" and "Boitiers de lovage + GPS + MDEA" in txt:
+        if kind == "fh" and ("tube Ø88.9 mm" in txt or "d’épaisseur 2.5 mm" in txt or "d'épaisseur 2.5 mm" in txt):
+            updated = re.sub(
+                r"Ø88\.9\s*mm,\s*d[’']épaisseur\s*2\.5\s*mm",
+                f"Ø{fh_diam_mm:g} mm, d’épaisseur {fh_thickness_mm:g} mm",
+                txt,
+            )
+            updated = re.sub(
+                r"longueur\s+(?:\d+|XXX)\s*mm",
+                f"longueur {int(round(float(mast_h_val) * 1000))} mm",
+                updated,
+            )
+            p.text = updated
+        elif kind == "fh" and "Vérification de mat principal" in txt and "88x2.5" in txt:
+            p.text = txt.replace("88x2.5", f"{fh_diam_mm:g}x{fh_thickness_mm:g}")
+        elif kind == "lovage" and lovage_variant == "lovage_mdea" and "Boitiers de lovage + GPS + MDEA" in txt:
             p.text = txt.replace("Boitiers de lovage + GPS + MDEA", "Boitiers de lovage + MDEA")
         elif "supportant XX boitiers de lovage" in txt:
             lovage_clause = f"supportant {qty_total} boitier{'s' if qty_total > 1 else ''} de lovage"

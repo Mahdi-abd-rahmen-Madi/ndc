@@ -4,7 +4,6 @@ import { DEFAULT_TGBT_OPTIONS } from '../../../config/catalogueDefaults';
 import { SelectEquipmentToggle } from './shared/SelectEquipmentToggle';
 import { EquipmentAncrageSelector, EquipmentFoundationType } from './shared/EquipmentAncrageSelector';
 import { MastHeightInput } from './shared/MastHeightInput';
-import { EquipmentEchelleSelector } from './shared/EquipmentEchelleSelector';
 
 export interface TGBTItem {
   id: string;
@@ -30,8 +29,6 @@ export interface TGBTEquipmentToggleProps {
   setFoundationType?: (val: EquipmentFoundationType) => void;
   hauteurMatM?: number;
   setHauteurMatM?: (val: number) => void;
-  echelle?: string;
-  setEchelle?: (val: string) => void;
   options?: TGBTItem[];
 }
 
@@ -46,8 +43,6 @@ export function TGBTEquipmentToggle({
   setFoundationType,
   hauteurMatM = 1.50,
   setHauteurMatM,
-  echelle = "Pas d'échelle",
-  setEchelle,
   options = [],
 }: TGBTEquipmentToggleProps) {
   const availableOptions = useMemo(
@@ -121,15 +116,6 @@ export function TGBTEquipmentToggle({
           defaultValue={1.50}
         />
       )}
-
-      <EquipmentEchelleSelector
-        foundationType={foundationType}
-        hauteurMatM={hauteurMatM}
-        defaultHauteurMatM={1.50}
-        value={echelle}
-        onChange={setEchelle}
-        accentColor="violet"
-      />
     </SelectEquipmentToggle>
   );
 }

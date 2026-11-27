@@ -244,6 +244,15 @@ def extract_stage_cache_entry(job, stage: str) -> Optional[Dict[str, Any]]:
             continue
         if k in res_data:
             result_payload[k] = copy.deepcopy(res_data[k])
+    if f"{stage}_wind_params" not in result_payload and isinstance(res_data.get("wind_params"), dict):
+        result_payload[f"{stage}_wind_params"] = copy.deepcopy(res_data["wind_params"])
+    if isinstance(res_data.get("structure_params"), dict):
+        stage_sub = result_payload.get(stage)
+        if not isinstance(stage_sub, dict):
+            stage_sub = {}
+            result_payload[stage] = stage_sub
+        if not isinstance(stage_sub.get("structure_params"), dict) or not stage_sub.get("structure_params"):
+            stage_sub["structure_params"] = copy.deepcopy(res_data["structure_params"])
     result_payload[f"has_{stage}"] = True
     result_payload[f"{stage}_files"] = stage_files
 

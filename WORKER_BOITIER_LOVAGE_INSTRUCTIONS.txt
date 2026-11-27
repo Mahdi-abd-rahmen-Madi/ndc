@@ -14,9 +14,12 @@ AVEC PLOT & SANS PLOT INSTRUCTIONS
 14:   - Lovage + GPS:
 15:       * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage+gps_avec_plot.docx`
 16:       * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitier_lovage+gps_sans_plot.docx`
-17:   - Lovage + GPS + MDEA (or Lovage + MDEA):
-18:       * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage+GPS+MDEA_avec_plot.docx`
-19:       * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitiers_lovage+GPS+MDEA_sans_plot.docx`
+17:   - Lovage + MDEA:
+18:       * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage+MDEA_avec_plot.docx`
+19:       * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitier_lovage+MDEA_sans_plot.docx`
+  - Lovage + GPS + MDEA:
+      * AVEC PLOT (`sans_plot == False`): `backend/templates/lovage/boitier_lovage+GPS+MDEA_avec_plot.docx`
+      * SANS PLOT (`sans_plot == True`):  `backend/templates/lovage/boitiers_lovage+GPS+MDEA_sans_plot.docx`
 
 The Django backend and React frontend are already updated:
   - Frontend Zone Technique (`BoitierLovageEquipmentToggle.tsx`) exposes:

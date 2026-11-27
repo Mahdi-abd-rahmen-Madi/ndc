@@ -5,7 +5,6 @@ import { CustomSelect } from '../../ui/CustomSelect';
 import { DEFAULT_TD_OPTIONS } from '../../../config/catalogueDefaults';
 import { EquipmentAncrageSelector, EquipmentFoundationType } from './shared/EquipmentAncrageSelector';
 import { MastHeightInput } from './shared/MastHeightInput';
-import { EquipmentEchelleSelector } from './shared/EquipmentEchelleSelector';
 
 export interface TDEquipmentToggleProps {
   hasTdEquipment: boolean;
@@ -20,8 +19,6 @@ export interface TDEquipmentToggleProps {
   setFoundationType?: (val: EquipmentFoundationType) => void;
   hauteurMatM?: number;
   setHauteurMatM?: (val: number) => void;
-  echelle?: string;
-  setEchelle?: (val: string) => void;
   tdOptions?: { id: string; vendor?: string; name: string; reference?: string; weight?: number; dimensions?: string; phase?: string }[];
   operator?: string;
 }
@@ -37,8 +34,6 @@ export function TDEquipmentToggle({
   setFoundationType,
   hauteurMatM = 1.70,
   setHauteurMatM,
-  echelle = "Pas d'échelle",
-  setEchelle,
   tdOptions = [],
   operator = 'free'
 }: TDEquipmentToggleProps) {
@@ -127,15 +122,6 @@ export function TDEquipmentToggle({
           defaultValue={1.70}
         />
       )}
-
-      <EquipmentEchelleSelector
-        foundationType={foundationType}
-        hauteurMatM={hauteurMatM}
-        defaultHauteurMatM={1.70}
-        value={echelle}
-        onChange={setEchelle}
-        accentColor="violet"
-      />
     </EquipmentToggleCard>
   );
 }

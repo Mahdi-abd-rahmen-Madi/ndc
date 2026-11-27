@@ -11,6 +11,7 @@ from weasyprint import HTML
 from utils.domain_constants import (
     WIND_REGION_VB0,
     OPERATORS_WITHOUT_TD,
+    FH_DEFAULT_MAST_SECTION,
     LOVAGE_CF_FRONT,
     LOVAGE_CF_LAT,
     LOVAGE_DEFAULT_MAST_HEIGHT_M,
@@ -18,7 +19,9 @@ from utils.domain_constants import (
     LOVAGE_DEFAULT_PLOT_HEIGHT_M,
     LOVAGE_DEFAULT_PLOT_SECTION,
     normalize_operator,
+    resolve_fh_mast_profile,
     resolve_sans_plot,
+    resolve_support_has_echelle,
 )
 from utils.path_security import safe_media_path
 from utils.validators import get_support_mast_height_m
@@ -47,9 +50,13 @@ from .image_cropper import (
 )
 from .rtf_converter import _convert_rtf_file_to_images
 from .wind_ec1 import (
+    TERRAIN_Z0,
     _parse_section_dimensions,
     _resolve_support_wind_params,
     calculate_wind_params,
+    compute_wind_z,
+    get_support_structure_params,
+    resolve_antenna_wind_params,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,10 +83,15 @@ def generate_ndc_pdf(
     }
 
     input_data = job.input_data if job else {}
+    res_data = job.result_data if (job and isinstance(getattr(job, 'result_data', None), dict)) else {}
 
     if not job:
         for i in range(1, 64):
             context[f'var_{i}'] = f'[VAR_{i}]'
+    elif isinstance(res_data.get('ndc_vars'), dict):
+        for k, v in res_data['ndc_vars'].items():
+            if v is not None:
+                context[k] = v
 
     site_info = input_data.get('site', {})
     if not job and preview_data:
@@ -211,36 +223,25 @@ def generate_ndc_pdf(
     vb = WIND_REGION_VB0.get(region_num)
     context['vb_m_s'] = vb if vb is not None else '[Vb_m/s]'
 
-    terrain_type_str = str(env.get('terrain_type') or 'IIIa')
-    try:
-        h_bat = float(env.get('building_height_m') or 0)
-    except (ValueError, TypeError):
-        h_bat = 0.0
-    try:
-        h_plot = float(env.get('plot_height_m') or 0)
-    except (ValueError, TypeError):
-        h_plot = 0.0
-    try:
-        h_mat = float(mast_height_m or 0)
-    except (ValueError, TypeError):
-        h_mat = 0.0
-
-    z_total = h_bat + h_plot + h_mat
-    if vb is not None and z_total > 0:
-        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
-        context['vm_z'] = wind['vm']
-        context['iv_z'] = wind['iv_z']
-        context['qp_z'] = wind['qp_dan']
-        context['cr_z'] = wind['cr_z']
-        context['kr_z'] = wind['kr']
-        context['z_total'] = wind['z_used']
-    else:
-        context['vm_z'] = '[Vm]'
-        context['iv_z'] = '[Iv(z)]'
-        context['qp_z'] = '[qp]'
-        context['cr_z'] = '[cr(z)]'
-        context['kr_z'] = '[kr]'
-        context['z_total'] = '[z]'
+    antenna_wind = resolve_antenna_wind_params(
+        res_data,
+        env,
+        mast_height_m,
+        vb,
+        structure_data=structure_data,
+        active_data=active_data,
+    )
+    context['vm_z'] = antenna_wind['vm_z']
+    context['iv_z'] = antenna_wind['iv_z']
+    context['qp_z'] = antenna_wind['qp_z']
+    context['cr_z'] = antenna_wind['cr_z']
+    context['kr_z'] = antenna_wind['kr_z']
+    context['z_total'] = antenna_wind['z_total']
+    if antenna_wind.get('vb_m_s') is not None:
+        context['vb_m_s'] = antenna_wind['vb_m_s']
+    for force_key in ('fw_mast', 'fw_4g_front', 'fw_4g_lat', 'fw_5g_front', 'fw_5g_lat'):
+        if antenna_wind.get(force_key) is not None:
+            context[force_key] = antenna_wind[force_key]
 
     # Client Logo & Site Photo (confined to MEDIA_ROOT)
     client_logo_url = site_info.get('client_logo_url')
@@ -457,28 +458,23 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     vb = WIND_REGION_VB0.get(region_num)
     context['vb_m_s'] = vb if vb is not None else '[Vb]'
 
-    try:
-        h_bat = float(env.get('building_height_m') or 0)
-        h_plot = float(env.get('plot_height_m') or 0)
-        h_mat = float(mast_height_m or 0)
-        z_total = h_bat + h_plot + h_mat
-    except (ValueError, TypeError):
-        z_total = 0
-
-    if vb is not None and z_total > 0:
-        terrain_type_str = str(env.get('terrain_type') or 'IIIa')
-        wind = calculate_wind_params(terrain_type_str, z_total, float(vb))
-        context['vm_z'] = wind['vm']
-        context['iv_z'] = wind['iv_z']
-        context['qp_z'] = wind['qp_dan']
-        context['cr_z'] = wind['cr_z']
-        context['kr_z'] = wind['kr']
-    else:
-        context['vm_z'] = '[Vm]'
-        context['iv_z'] = '[Iv(z)]'
-        context['qp_z'] = '[qp]'
-        context['cr_z'] = '[cr(z)]'
-        context['kr_z'] = '[kr]'
+    terrain_type_str = str(env.get('terrain_type') or 'IIIa')
+    res_data_base = getattr(job, 'result_data', {}) if (job and isinstance(getattr(job, 'result_data', None), dict)) else {}
+    base_wind = resolve_antenna_wind_params(
+        res_data_base,
+        env,
+        mast_height_m,
+        vb,
+        structure_data=structure_data,
+        active_data=input_data,
+    )
+    context['vm_z'] = base_wind['vm_z']
+    context['iv_z'] = base_wind['iv_z']
+    context['qp_z'] = base_wind['qp_z']
+    context['cr_z'] = base_wind['cr_z']
+    context['kr_z'] = base_wind['kr_z']
+    if base_wind.get('vb_m_s') is not None:
+        context['vb_m_s'] = base_wind['vb_m_s']
 
     site_info = input_data.get('site', {})
     client_logo_url = site_info.get('client_logo_url')
@@ -512,11 +508,40 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
     td_eq = input_data.get('td_equipment', {})
     operator = normalize_operator(input_data.get('operateur'), fallback_site=input_data.get('site'))
     if td_eq.get('enabled') and operator not in OPERATORS_WITHOUT_TD:
-        generated_pdfs.append(_render_and_save('td', {
+        is_td_sans_plot = bool(td_eq.get('sans_plot') is True or td_eq.get('with_plot') is False)
+        td_h_mat = td_eq.get('hauteur_mat_m') if td_eq.get('hauteur_mat_m') is not None else mast_height_m
+        td_h_plot = 0.0 if is_td_sans_plot else env.get('plot_height_m')
+        z_td = compute_wind_z(
+            env.get('building_height_m'),
+            td_h_mat,
+            h_plot=td_h_plot,
+            sans_plot=is_td_sans_plot,
+        )
+        td_has_echelle = resolve_support_has_echelle(
+            input_data,
+            None,
+            kind="td",
+            is_sans_plot=is_td_sans_plot,
+            hauteur_mat_m=td_h_mat if td_h_mat is not None else 1.70,
+        )
+        td_ctx = {
             'eq_qty': 1,
             'eq_dims': '[TD_DIMS]',
             'eq_weight': '[TD_WEIGHT]',
-        }))
+            'td_has_echelle': td_has_echelle,
+            'td_sans_plot': is_td_sans_plot,
+            'is_sans_plot': is_td_sans_plot,
+        }
+        if vb is not None and z_td > TERRAIN_Z0.get(terrain_type_str, TERRAIN_Z0['IIIa']):
+            td_wind = calculate_wind_params(terrain_type_str, z_td, float(vb))
+            td_ctx.update({
+                'kr_z': td_wind['kr'],
+                'cr_z': td_wind['cr_z'],
+                'vm_z': td_wind['vm'],
+                'iv_z': td_wind['iv_z'],
+                'qp_z': td_wind['qp_dan'],
+            })
+        generated_pdfs.append(_render_and_save('td', td_ctx))
 
     fh_eq = input_data.get('fh_equipment', {})
     rru_eq = input_data.get('rru_equipment', {})
@@ -620,22 +645,63 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         eq_weight = first_item.get('weight_kg', '[RRH_WEIGHT]')
         cx_front = first_item.get('cf_front', 0.1352)
         cx_lat = first_item.get('cf_lat', 0.0523)
-        fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
-        fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+        fw_front = (
+            totals.get('fw_front')
+            if totals.get('fw_front') is not None
+            else (
+                wind_p.get('fw_front')
+                if wind_p.get('fw_front') is not None
+                else (round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
+            )
+        )
+        fw_lat = (
+            totals.get('fw_lat')
+            if totals.get('fw_lat') is not None
+            else (
+                wind_p.get('fw_lat')
+                if wind_p.get('fw_lat') is not None
+                else (round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+            )
+        )
 
         worker_rrh = res_data.get('rrh', {}) if isinstance(res_data.get('rrh'), dict) else {}
         extremes = rrh_ctx.get('extremes') or worker_rrh.get('extremes', {}) or res_data.get('extremes', {})
-        struct_p = rrh_ctx.get('structure') or worker_rrh.get('structure_params', {}) or res_data.get('structure_params', {})
+        struct_p = rrh_ctx.get('structure') or get_support_structure_params(res_data, 'rrh')
+
+        res_d = getattr(job, 'result_data', {}) if isinstance(getattr(job, 'result_data', None), dict) else {}
+        inp_d = getattr(job, 'input_data', {}) if isinstance(getattr(job, 'input_data', None), dict) else (input_data if isinstance(input_data, dict) else {})
+        is_rrh_sans_plot = resolve_sans_plot(
+            inp_d,
+            res_d,
+            calc_type=getattr(job, "calculation_type", ""),
+            kind="rrh",
+        )
 
         rrh_mat_section = struct_p.get('mast_section') or 'TRON 88x3.2'
-        rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
-        rrh_plot_longueur_m = struct_p.get('plot_h_m') or context.get('plot_longueur_m')
+        if is_rrh_sans_plot:
+            rrh_plot_section = None
+            rrh_plot_longueur_m = 0.0
+        else:
+            rrh_plot_section = struct_p.get('plot_section') or context.get('plot_section')
+            rrh_plot_longueur_m = (
+                struct_p.get('plot_h_m')
+                if struct_p.get('plot_h_m') is not None
+                else context.get('plot_longueur_m')
+            )
         rrh_mat_longueur_m = get_support_mast_height_m(
             res_data, 'rrh',
             fallback_h=struct_p.get('hauteur_mat_m') or (input_data.get('rrh_equipment') or {}).get('hauteur_mat_m', 1.50)
         )
 
-        rrh_wind = _resolve_support_wind_params(wind_p, context, env, vb, rrh_plot_longueur_m, rrh_mat_longueur_m)
+        rrh_wind = _resolve_support_wind_params(
+            wind_p,
+            context,
+            env,
+            vb,
+            rrh_plot_longueur_m,
+            rrh_mat_longueur_m,
+            sans_plot=is_rrh_sans_plot,
+        )
         rrh_qp_z = rrh_wind['qp_z']
 
         try:
@@ -722,15 +788,6 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         rrh_note_plot_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_note_plot", rrh_paths.get('note_plot'), rrh_convert_dir)
         rrh_assemblage_images = _get_or_convert_rtf_images(f"job_{job_id_lbl}_rrh_assemblage", rrh_paths.get('assemblage_note'), rrh_convert_dir, is_assemblage=True)
 
-        res_d = getattr(job, 'result_data', {}) if isinstance(getattr(job, 'result_data', None), dict) else {}
-        inp_d = getattr(job, 'input_data', {}) if isinstance(getattr(job, 'input_data', None), dict) else (input_data if isinstance(input_data, dict) else {})
-        is_rrh_sans_plot = resolve_sans_plot(
-            inp_d,
-            res_d,
-            calc_type=getattr(job, "calculation_type", ""),
-            kind="rrh",
-        )
-
         if job and job.id != 'preview' and job.id != 'fast':
             missing_rrh = []
             if not rrh_screenshot_abs or not os.path.exists(rrh_screenshot_abs):
@@ -789,7 +846,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'rrh_is_multi': is_multi,
             'rrh_qty_total': qty_total,
             'is_sans_plot': is_rrh_sans_plot,
-            'rrh_has_echelle': False if is_rrh_sans_plot or float(rrh_mat_longueur_m or 1.5) < 2.0 else bool(rrh_ctx.get('has_echelle', False)),
+            'rrh_has_echelle': resolve_support_has_echelle(input_data, res_data, kind="rrh", hauteur_mat_m=rrh_mat_longueur_m),
         }))
 
     # 2. Check for RRU (Stage 2b)
@@ -812,12 +869,28 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         eq_weight = first_item.get('weight_kg', '[RRU_WEIGHT]')
         cx_front = first_item.get('cf_front', 1.38)
         cx_lat = first_item.get('cf_lat', 1.11)
-        fw_front = totals.get('fw_front', round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
-        fw_lat = totals.get('fw_lat', round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+        fw_front = (
+            totals.get('fw_front')
+            if totals.get('fw_front') is not None
+            else (
+                wind_p.get('fw_front')
+                if wind_p.get('fw_front') is not None
+                else (round(cx_front * qp_val, 2) if qp_val else '[Fw,Front]')
+            )
+        )
+        fw_lat = (
+            totals.get('fw_lat')
+            if totals.get('fw_lat') is not None
+            else (
+                wind_p.get('fw_lat')
+                if wind_p.get('fw_lat') is not None
+                else (round(cx_lat * qp_val, 2) if qp_val else '[Fw,Lat]')
+            )
+        )
 
         worker_rru = res_data.get('rru', {}) if isinstance(res_data.get('rru'), dict) else {}
         extremes = rru_ctx.get('extremes') or worker_rru.get('extremes', {}) or res_data.get('extremes', {})
-        struct_p = rru_ctx.get('structure') or worker_rru.get('structure_params', {}) or res_data.get('structure_params', {})
+        struct_p = rru_ctx.get('structure') or get_support_structure_params(res_data, 'rru')
         is_standalone_rru = bool(input_data.get('is_rru') and not input_data.get('antenna_4g') and not input_data.get('antenna_5g'))
 
         rru_mat_section = (
@@ -844,7 +917,15 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
                 else (structure_data.get('plot_h_m') if is_standalone_rru and structure_data.get('plot_h_m') is not None else 0.5)
             )
 
-        rru_wind = _resolve_support_wind_params(wind_p, context, env, vb, rru_plot_longueur_m, rru_mat_longueur_m)
+        rru_wind = _resolve_support_wind_params(
+            wind_p,
+            context,
+            env,
+            vb,
+            rru_plot_longueur_m,
+            rru_mat_longueur_m,
+            sans_plot=rru_sans_plot,
+        )
         rru_qp_z = rru_wind['qp_z']
 
         if (not wind_p.get('qp_dan')) and rru_qp_z and rru_qp_z != '[qp]':
@@ -977,7 +1058,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'rru_totals': totals,
             'rru_is_multi': is_multi,
             'rru_qty_total': qty_total,
-            'rru_has_echelle': False if rru_sans_plot or float(rru_mat_longueur_m or 1.5) < 2.0 else bool(rru_ctx.get('has_echelle', False)),
+            'rru_has_echelle': resolve_support_has_echelle(input_data, res_data, kind="rru", hauteur_mat_m=rru_mat_longueur_m),
         }))
 
     # 3. Check for FH (Stage 3: Faisceau Hertzien)
@@ -994,32 +1075,36 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         is_multi = fh_ctx['is_multi']
         qty_total = fh_ctx['qty_total']
         is_fh_sans_plot = fh_ctx['is_sans_plot']
-        fh_has_echelle = False if is_fh_sans_plot else bool(fh_ctx.get('has_echelle', False))
 
         first_item = items[0] if items else {}
         eq_dims = first_item.get('dimensions_str', 'Ø600')
         eq_weight = first_item.get('weight_unit_kg', '15')
-        fw_fh = totals.get('fw_fh', 0.0)
+        fw_fh = (
+            totals.get('fw_fh')
+            if totals.get('fw_fh') is not None
+            else (
+                wind_p.get('fw_fh')
+                if wind_p.get('fw_fh') is not None
+                else (wind_p.get('fw_front') if wind_p.get('fw_front') is not None else 0.0)
+            )
+        )
 
         worker_fh = res_data.get('fh', {}) if isinstance(res_data.get('fh'), dict) else {}
         extremes = fh_ctx.get('extremes') or worker_fh.get('extremes', {}) or res_data.get('extremes', {})
-        struct_p = fh_ctx.get('structure') or worker_fh.get('structure_params', {}) or res_data.get('structure_params', {})
+        struct_p = fh_ctx.get('structure') or get_support_structure_params(res_data, 'fh')
         is_standalone_fh = bool(input_data.get('is_fh') and not input_data.get('antenna_4g') and not input_data.get('antenna_5g') and not is_rrh_active and not is_rru_active)
 
         fh_mat_section = (
             struct_p.get('mast_section')
+            or (input_data.get('structure_fh') or {}).get('mast_section')
             or (structure_data.get('mast_section') if is_standalone_fh else None)
-            or 'TRON 88x3.2'
+            or FH_DEFAULT_MAST_SECTION
         )
         fh_mat_longueur_m = get_support_mast_height_m(
             res_data, 'fh',
             fallback_h=struct_p.get('hauteur_mat_m') or (structure_data.get('hauteur_mat_m') if is_standalone_fh else (input_data.get('fh_equipment') or {}).get('hauteur_mat_m', 1.70))
         )
-        try:
-            if float(fh_mat_longueur_m) < 2.0:
-                fh_has_echelle = False
-        except (ValueError, TypeError):
-            pass
+        fh_has_echelle = resolve_support_has_echelle(input_data, res_data, kind="fh", hauteur_mat_m=fh_mat_longueur_m)
 
         if is_fh_sans_plot:
             fh_plot_section = None
@@ -1036,7 +1121,15 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
                 else (structure_data.get('plot_h_m') if is_standalone_fh and structure_data.get('plot_h_m') is not None else 0.50)
             )
 
-        fh_wind = _resolve_support_wind_params(wind_p, context, env, vb, fh_plot_longueur_m, fh_mat_longueur_m)
+        fh_wind = _resolve_support_wind_params(
+            wind_p,
+            context,
+            env,
+            vb,
+            fh_plot_longueur_m,
+            fh_mat_longueur_m,
+            sans_plot=is_fh_sans_plot,
+        )
         fh_qp_z = fh_wind['qp_z']
 
         if (not wind_p.get('qp_dan')) and fh_qp_z and fh_qp_z != '[qp]':
@@ -1055,27 +1148,46 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
         except (ValueError, TypeError):
             fh_mat_longueur = 1700
 
+        fh_profile = resolve_fh_mast_profile(fh_mat_section)
         m_diam, m_ep = parse_dimensions(fh_mat_section)
         try:
-            fh_mat_diam = m_diam or (f"{float(struct_p.get('mast_d_m')) * 1000:g}" if struct_p.get('mast_d_m') else '88.9')
+            if struct_p.get('diam_mm') is not None:
+                fh_mat_diam = f"{float(struct_p['diam_mm']):g}"
+            elif struct_p.get('mast_d_m') is not None:
+                fh_mat_diam = f"{float(struct_p['mast_d_m']) * 1000:g}"
+            else:
+                fh_mat_diam = m_diam or f"{fh_profile['diam_mm']:g}"
         except (ValueError, TypeError):
-            fh_mat_diam = '88.9'
-        if str(fh_mat_diam).strip() == '88':
+            fh_mat_diam = m_diam or f"{fh_profile['diam_mm']:g}"
+        if str(fh_mat_diam).strip() == '114':
+            fh_mat_diam = '114.3'
+        elif str(fh_mat_diam).strip() == '88':
             fh_mat_diam = '88.9'
 
         try:
-            fh_mat_epaisseur = m_ep or (round(float(struct_p.get('mast_t_m')) * 1000, 1) if struct_p.get('mast_t_m') else '3.2')
+            if struct_p.get('thickness_mm') is not None:
+                fh_mat_epaisseur = f"{float(struct_p['thickness_mm']):g}"
+            elif struct_p.get('mast_t_m') is not None:
+                fh_mat_epaisseur = round(float(struct_p['mast_t_m']) * 1000, 1)
+            else:
+                fh_mat_epaisseur = m_ep or f"{fh_profile['thickness_mm']:g}"
         except (ValueError, TypeError):
-            fh_mat_epaisseur = '3.2'
+            fh_mat_epaisseur = m_ep or f"{fh_profile['thickness_mm']:g}"
 
         fh_cf_mat = struct_p.get('cf_mast') or wind_p.get('cf_mast') or 1.0
         try:
-            m_diam_m = float(
-                struct_p.get('mast_d_m')
-                or (float(fh_mat_diam) / 1000.0 if fh_mat_diam and str(fh_mat_diam).replace('.', '').isdigit() else 0.088)
-            )
+            if wind_p.get('mast_d_formula') is not None:
+                m_diam_m = float(wind_p['mast_d_formula'])
+            elif struct_p.get('mast_d_m') is not None:
+                m_diam_m = float(struct_p['mast_d_m'])
+            else:
+                m_diam_m = float(
+                    float(fh_mat_diam) / 1000.0
+                    if fh_mat_diam and str(fh_mat_diam).replace('.', '').isdigit()
+                    else fh_profile['mast_d_m']
+                )
         except (ValueError, TypeError):
-            m_diam_m = 0.088
+            m_diam_m = fh_profile['mast_d_m']
 
         if wind_p.get('fw_mast') is not None:
             fw_mat = wind_p.get('fw_mast')
@@ -1175,7 +1287,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'fh_mat_longueur_m': fh_mat_longueur_m,
             'fh_plot_section': fh_plot_section,
             'fh_plot_longueur_m': fh_plot_longueur_m,
-            'fh_mat_diam_m': f"{m_diam_m:.3f}" if isinstance(m_diam_m, (int, float)) else "0.088",
+            'fh_mat_diam_m': f"{m_diam_m:g}" if isinstance(m_diam_m, (int, float)) else "0.1143",
             'fh_cf_mat': fh_cf_mat,
             'fh_screenshot_abs': fh_screenshot_abs,
             'fh_tableau_charges_abs': fh_tableau_charges_abs,
@@ -1219,7 +1331,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
 
         worker_lovage = res_data.get('lovage', {}) if isinstance(res_data.get('lovage'), dict) else {}
         extremes = lovage_ctx.get('extremes') or worker_lovage.get('extremes', {}) or res_data.get('extremes', {})
-        struct_p = lovage_ctx.get('structure') or worker_lovage.get('structure_params', {}) or res_data.get('structure_params', {})
+        struct_p = lovage_ctx.get('structure') or get_support_structure_params(res_data, 'lovage')
         is_standalone_lovage = bool(
             (input_data.get('is_lovage') or 'lovage' in calc_type.split('_'))
             and not input_data.get('antenna_4g')
@@ -1271,7 +1383,15 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
                 )
             )
 
-        lovage_wind = _resolve_support_wind_params(wind_p, context, env, vb, lovage_plot_longueur_m, lovage_mat_longueur_m)
+        lovage_wind = _resolve_support_wind_params(
+            wind_p,
+            context,
+            env,
+            vb,
+            lovage_plot_longueur_m,
+            lovage_mat_longueur_m,
+            sans_plot=is_lovage_sans_plot,
+        )
         lovage_qp_z = lovage_wind['qp_z']
 
         if (not wind_p.get('qp_dan')) and lovage_qp_z and lovage_qp_z != '[qp]':
@@ -1411,7 +1531,7 @@ def generate_auxiliary_pdfs(job, start_page=1, preconverted_images=None):
             'extremes': extremes,
             'lovage_sans_plot': is_lovage_sans_plot,
             'is_sans_plot': is_lovage_sans_plot,
-            'lovage_has_echelle': False,
+            'lovage_has_echelle': resolve_support_has_echelle(input_data, res_data, kind="lovage", hauteur_mat_m=lovage_mat_longueur_m),
             'lovage_mat_section': lovage_mat_section,
             'lovage_mat_diam': lovage_mat_diam,
             'lovage_mat_epaisseur': lovage_mat_epaisseur,
